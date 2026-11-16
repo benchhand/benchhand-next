@@ -27,11 +27,16 @@ class FilePair(NamedTuple):
     content: bytes | None = None
 
 
-def installer_content(source: Path, harness: str, home: Path | None) -> bytes | None:
-    """Use Kiro's documented home-expanded skill URI for user-scope profiles."""
-    if harness != "kiro" or home is None or source.parent != GENERATED / "kiro" / "agents":
-        return None
-    profile = json.loads(source.read_text(encoding="utf-8"))
+def installer_content(source: Path, harness: str, home: Path | None, rendered: str | None = None) -> bytes | None:
+    """Return the bytes to install when they differ from the committed source.
+
+    Kiro user-scope profiles use the documented home-expanded skill URI. `rendered` is
+    source text regenerated with tier models; without it the committed file is used.
+    """
+    is_kiro_user = harness == "kiro" and home is not None and source.parent == GENERATED / "kiro" / "agents"
+    if not is_kiro_user:
+        return None if rendered is None else rendered.encode("utf-8")
+    profile = json.loads(rendered if rendered is not None else source.read_text(encoding="utf-8"))
     profile["resources"] = [
         resource.replace("skill://.kiro/skills/", "skill://~/.kiro/skills/")
         for resource in profile.get("resources", [])
@@ -87,7 +92,23 @@ def relative_key(target: Path, root: Path) -> str:
     return key
 
 
-def file_pairs(harnesses: tuple[str, ...], scope: Path, home: Path | None = None) -> list[FilePair]:
+def tier_rendered(tier_specs: list[str]) -> dict[Path, str]:
+    """Render agents with the user's tier models; empty without any, so default installs copy committed files."""
+    if not tier_specs:
+        return {}
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import generate  # imported lazily: it needs PyYAML, which a default install does not
+    except ModuleNotFoundError as error:
+        if error.name != "yaml":
+            raise
+        raise ValueError("--tier-model needs PyYAML to render agents; run `pip install pyyaml` or `uv run --with pyyaml python harness/install.py ...`") from error
+
+    return generate.generated(generate.parse_tier_models(tier_specs))
+
+
+def file_pairs(harnesses: tuple[str, ...], scope: Path, home: Path | None = None, tier_specs: list[str] | None = None) -> list[FilePair]:
+    rendered = tier_rendered(tier_specs or [])
     pairs: list[FilePair] = []
     project = scope if home is None else home
     for harness in harnesses:
@@ -99,7 +120,7 @@ def file_pairs(harnesses: tuple[str, ...], scope: Path, home: Path | None = None
         for source in sorted(agent_root.iterdir()):
             if source.is_file():
                 target = agents_dir / source.name
-                pairs.append(FilePair(source, target, relative_key(target, scope), installer_content(source, harness, home)))
+                pairs.append(FilePair(source, target, relative_key(target, scope), installer_content(source, harness, home, rendered.get(source))))
         if commands_dir is not None:
             source = GENERATED / "opencode/commands/cad-flow.md"
             target = commands_dir / source.name
@@ -299,6 +320,9 @@ def main(argv: list[str] | None = None) -> int:
     scope_group.add_argument("--project", type=Path, help="project directory (default: current directory)")
     parser.add_argument("--dry-run", action="store_true", help="show exact paths without changing files")
     parser.add_argument("--uninstall", action="store_true", help="remove files recorded as installed by this tool")
+    parser.add_argument("--tier-model", action="append", default=[], metavar="[HARNESS:]TIER=MODEL",
+                        help="model for agents of a tier (cheap|standard|strong); repeatable. A bare spec covers claude, codex and kiro; "
+                        "OpenCode needs `opencode:TIER=provider/model[#variant]`. Without any, agents get no model line")
     args = parser.parse_args(argv)
     harnesses = HARNESS_NAMES if args.harness == "all" else (args.harness,)
     if not args.user and args.project is not None and not args.project.expanduser().resolve().is_dir():
@@ -314,7 +338,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError(f"project/user install root must be an existing directory: {scope}")
         if args.uninstall:
             return uninstall(scope, harnesses, args.dry_run)
-        return install(file_pairs(harnesses, scope, home), scope, args.dry_run)
+        return install(file_pairs(harnesses, scope, home, args.tier_model), scope, args.dry_run)
     except (OSError, ValueError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1

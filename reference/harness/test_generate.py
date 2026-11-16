@@ -15,11 +15,15 @@ from pathlib import Path
 import yaml
 
 CAD = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(CAD / "harness"))
+import generate  # noqa: E402
 AGENT_NAMES = sorted(path.stem for path in (CAD / "agents").glob("*.md"))
 CAPABILITIES = {"read", "write-scratch", "shell-uv", "web"}
 
 
-class HarnessGeneratorTests(unittest.TestCase):
+class GeneratorCopyCase(unittest.TestCase):
+    """Runs generate.py inside a throwaway copy of the checkout."""
+
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-harness-test-")
         self.addCleanup(temporary.cleanup)
@@ -40,6 +44,8 @@ class HarnessGeneratorTests(unittest.TestCase):
         result = self.run_generator()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+
+class HarnessGeneratorTests(GeneratorCopyCase):
     def test_round_trip_check_and_drift_detection(self) -> None:
         self.generate()
         current = self.run_generator("--check")
@@ -64,7 +70,8 @@ class HarnessGeneratorTests(unittest.TestCase):
         for path in sorted((self.cad / "agents").glob("*.md")):
             text = path.read_text(encoding="utf-8")
             source = yaml.safe_load(text.split("---", 2)[1])
-            self.assertEqual(set(source), {"name", "description", "capabilities", "skills"})
+            self.assertEqual(set(source) - {"tier"}, {"name", "description", "capabilities", "skills"})
+            self.assertIn(source.get("tier", "standard"), {"cheap", "standard", "strong"})
             self.assertEqual(source["name"], path.stem)
             self.assertIsInstance(source["capabilities"], list)
             self.assertIsInstance(source["skills"], list)
@@ -189,6 +196,114 @@ class HarnessGeneratorTests(unittest.TestCase):
                     self.assertIn(message, result.stderr)
         finally:
             source.write_text(original, encoding="utf-8")
+
+
+class TierRenderingTests(unittest.TestCase):
+    """Tier to model rendering, through generate.render and parse_tier_models."""
+
+    MODELS = {
+        "claude": {"cheap": "haiku"},
+        "codex": {"cheap": "gpt-5-mini"},
+        "opencode": {"cheap": "anthropic/claude-haiku-4-5#low"},
+        "kiro": {"cheap": "claude-haiku-4.5"},
+    }
+
+    def agent(self, name: str) -> "generate.Agent":
+        return next(agent for agent in generate.agents() if agent.name == name)
+
+    def test_cad_clerk_is_the_cheap_tier_agent(self) -> None:
+        self.assertEqual(self.agent("cad-clerk").tier, "cheap")
+        self.assertEqual([a.name for a in generate.agents() if a.tier == "cheap"], ["cad-clerk"])
+
+    def test_claude_renders_alias_and_keeps_inherit_without_a_mapping(self) -> None:
+        mapped = generate.render(self.agent("cad-clerk"), "claude", self.MODELS)
+        self.assertEqual(yaml.safe_load(mapped.split("---", 2)[1])["model"], "haiku")
+        unmapped = generate.render(self.agent("cad-clerk"), "claude", {})
+        self.assertEqual(yaml.safe_load(unmapped.split("---", 2)[1])["model"], "inherit")
+
+    def test_opencode_renders_provider_model_variant_and_never_inherit(self) -> None:
+        mapped = generate.render(self.agent("cad-clerk"), "opencode", self.MODELS)
+        self.assertEqual(yaml.safe_load(mapped.split("---", 2)[1])["model"], "anthropic/claude-haiku-4-5#low")
+        for agent in generate.agents():
+            for models in ({}, self.MODELS):
+                text = generate.render(agent, "opencode", models)
+                with self.subTest(agent=agent.name, mapped=bool(models)):
+                    self.assertNotIn("inherit", text.split("---", 2)[1])
+        bare = generate.render(self.agent("cad-clerk"), "opencode", {})
+        self.assertNotIn("model", yaml.safe_load(bare.split("---", 2)[1]))
+
+    def test_codex_and_kiro_render_a_model_field(self) -> None:
+        codex = tomllib.loads(generate.render(self.agent("cad-clerk"), "codex", self.MODELS))
+        self.assertEqual(codex["model"], "gpt-5-mini")
+        kiro = json.loads(generate.render(self.agent("cad-clerk"), "kiro", self.MODELS))
+        self.assertEqual(kiro["model"], "claude-haiku-4.5")
+        self.assertNotIn("model", tomllib.loads(generate.render(self.agent("cad-clerk"), "codex", {})))
+        self.assertNotIn("model", json.loads(generate.render(self.agent("cad-clerk"), "kiro", {})))
+
+    def test_untiered_agent_is_unchanged_by_a_tier_map(self) -> None:
+        analyst = self.agent("cad-analyst")
+        self.assertIsNone(analyst.tier)
+        for harness in generate.OUTPUTS:
+            with self.subTest(harness=harness):
+                self.assertEqual(generate.render(analyst, harness, self.MODELS), generate.render(analyst, harness))
+
+    def test_no_tier_models_matches_committed_output(self) -> None:
+        for path, text in generate.generated().items():
+            with self.subTest(path=path.name):
+                self.assertEqual(path.read_text(encoding="utf-8"), text)
+
+    def test_parse_tier_models_scopes_by_optional_harness_prefix(self) -> None:
+        parsed = generate.parse_tier_models(["cheap=m1", "opencode:cheap=a/b#c", "kiro:strong=x:0"])
+        self.assertEqual(parsed["claude"], {"cheap": "m1"})
+        self.assertEqual(parsed["codex"], {"cheap": "m1"})
+        self.assertEqual(parsed["opencode"], {"cheap": "a/b#c"})
+        self.assertEqual(parsed["kiro"], {"cheap": "m1", "strong": "x:0"})
+        self.assertNotEqual(parsed["opencode"].get("cheap"), "m1")  # bare spec skips OpenCode
+
+    def test_parse_tier_models_rejects_bad_specs(self) -> None:
+        cases = (
+            ("cheap", "TIER=MODEL"),
+            ("premium=m", "unknown tier"),
+            ("vim:cheap=m", "unknown harness"),
+            ("cheap=", "TIER=MODEL"),
+            ("opencode:cheap=inherit", "inherit"),
+            ("claude:cheap=inherit", "inherit"),
+            ("opencode:cheap=haiku", "provider/model"),
+        )
+        for spec, message in cases:
+            with self.subTest(spec=spec), self.assertRaisesRegex(ValueError, message):
+                generate.parse_tier_models([spec])
+
+
+class TierSourceTests(GeneratorCopyCase):
+    """Front-matter validation and the cheap-tier guard, through generate.py --check."""
+
+    def set_tier(self, name: str, tier: str, *args: str) -> subprocess.CompletedProcess[str]:
+        source = self.cad / "agents" / f"{name}.md"
+        source.write_text(source.read_text(encoding="utf-8").replace("skills: [", f"tier: {tier}\nskills: [", 1), encoding="utf-8")
+        return self.run_generator(*args)
+
+    def test_rejects_unknown_tier(self) -> None:
+        result = self.set_tier("cad-analyst", "premium", "--check")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("tier must be one of", result.stderr)
+
+    def test_cheap_tier_guard_rejects_reviewers_analysts_and_researchers(self) -> None:
+        for name in ("cad-analyst", "cad-mech-reviewer", "cad-dfm-reviewer", "cad-sourcing-researcher"):
+            with self.subTest(agent=name):
+                self.setUp()
+                result = self.set_tier(name, "cheap", "--check")
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("never cheap", result.stderr)
+
+    def test_non_cheap_tier_is_allowed_on_a_reviewer(self) -> None:
+        result = self.set_tier("cad-mech-reviewer", "strong")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_clerk_prompt_denies_verdicts_and_cites_packets(self) -> None:
+        text = (self.cad / "agents/cad-clerk.md").read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?i)never issue[^.]*verdicts?")
+        self.assertRegex(text, r"(?i)evidence packets?")
 
 
 if __name__ == "__main__":
