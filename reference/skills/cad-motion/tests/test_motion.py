@@ -8,6 +8,7 @@ The STEP tests need `uv`; the FreeCAD test also needs freecadcmd and skips witho
 from __future__ import annotations
 
 import contextlib
+import copy
 import hashlib
 import importlib.util
 import io
@@ -535,7 +536,12 @@ class StepTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        cls.tmp.cleanup()
+        try:
+            # no test may have changed the sweep it shares
+            if cls._timed_v6_memo is not None and cls.folder_digests(cls._timed_v6_memo[0]) != cls._timed_v6_digests:
+                raise AssertionError("a test changed the memoised sweep folder")
+        finally:
+            cls.tmp.cleanup()
 
     def hw(self, j2_max: float) -> Path:
         folder = Path(tempfile.mkdtemp(dir=self.root))
@@ -1126,6 +1132,42 @@ class StepTests(unittest.TestCase):
                                        "--worst-step", str(hw / "worst.step"), *options)
         return hw, proc, result
 
+    @staticmethod
+    def folder_digests(folder: Path) -> dict[str, str]:
+        return {path.relative_to(folder).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in sorted(folder.rglob("*")) if path.is_file()}
+
+    _timed_v6_memo: tuple[Path, subprocess.CompletedProcess[str], dict] | None = None
+    _timed_v6_digests: dict[str, str] = {}
+
+    def timed_v6_sweep(self) -> tuple[Path, subprocess.CompletedProcess[str], dict]:
+        """v6_sweep(None, "minimum_clearance") with the default options (one job, a fresh cache), run once per
+        class on first use and handed out as a private copy: its result, its folder and its paths are the
+        caller's own, so a test that reads it cannot change what another reads."""
+        cls = type(self)
+        if cls._timed_v6_memo is None:
+            cls._timed_v6_memo = self.v6_sweep(None, "minimum_clearance")
+            original = cls._timed_v6_memo[0]
+            cls._timed_v6_digests = self.folder_digests(original)
+        source, proc, result = cls._timed_v6_memo
+        hw = Path(tempfile.mkdtemp(dir=self.root))
+        hw.rmdir()  # copytree makes it: a sibling of the source, so both share one parent folder
+        shutil.copytree(source, hw)
+        evidence = hw / "worst.step.json"
+        if evidence.is_file():
+            evidence.write_text(evidence.read_text(encoding="utf-8").replace(str(source), str(hw)), encoding="utf-8")
+
+        def moved(value: object) -> object:
+            if isinstance(value, str):
+                return value.replace(str(source), str(hw))
+            if isinstance(value, list):
+                return [moved(item) for item in value]
+            if isinstance(value, dict):
+                return {key: moved(item) for key, item in value.items()}
+            return value
+
+        return hw, copy.deepcopy(proc), moved(result)  # type: ignore[return-value]
+
     def sealed_v6_version(self, single: bool = False) -> Path:
         """A verified v1 of the V6 record split into two subassemblies: the bottom end (block, crank,
         pistons, rods) and the valvetrain (cams, valves), so valve / piston pairs are `interface`.
@@ -1287,7 +1329,8 @@ class StepTests(unittest.TestCase):
     def test_worker_processes_report_exactly_what_one_process_does(self) -> None:
         """The tie-sensitive minimum_clearance worst case of the V6 sweep, in one process and in three
         workers: the same JSON, evidence and worst-case STEP."""
-        runs = [self.v6_sweep(None, "minimum_clearance", "--jobs", jobs) for jobs in ("1", "3")]
+        # --jobs 1 is the default, so the one-job run is the sweep the correctly-timed test reads too
+        runs = [self.timed_v6_sweep(), self.v6_sweep(None, "minimum_clearance", "--jobs", "3")]
         for hw, proc, _ in runs:
             self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
         self.assert_same_sweeps([(hw, result) for hw, _, result in runs])
@@ -1385,7 +1428,7 @@ class StepTests(unittest.TestCase):
                 assert_close(self, row, expected_row, places=6)
 
     def test_the_correctly_timed_v6_passes_and_reports_its_minimum_clearance(self) -> None:
-        hw, proc, result = self.v6_sweep(None, "minimum_clearance")
+        hw, proc, result = self.timed_v6_sweep()
         self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
         self.assertEqual((result["status"], result["collisions"], result["limit_findings"]), ("pass", [], []))
         between = result["continuous"]  # continuous on by default: a proof gap warns, never fails
