@@ -256,7 +256,9 @@ class DeterministicTextTests(unittest.TestCase):
 
 
     def test_freecad_lookup_uses_the_preflight_candidate_order(self) -> None:
-        with mock.patch.dict(os.environ, {"FREECADCMD": "/selected/freecadcmd"}):
+        # A lookup-order case with a made-up path: CI's CAD_REQUIRE_FREECAD=1 would reject it.
+        environ = {key: value for key, value in os.environ.items() if key != "CAD_REQUIRE_FREECAD"}
+        with mock.patch.dict(os.environ, {**environ, "FREECADCMD": "/selected/freecadcmd"}, clear=True):
             self.assertEqual(fonts._freecadcmd(), Path("/selected/freecadcmd"))
 
     def test_osifont_resolver_rejects_unexpected_font_bytes(self) -> None:

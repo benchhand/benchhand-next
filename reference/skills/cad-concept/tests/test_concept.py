@@ -27,6 +27,7 @@ import urllib.error
 import urllib.request
 import zlib
 from pathlib import Path
+from unittest.mock import patch
 
 
 SKILL = Path(__file__).resolve().parent.parent
@@ -347,7 +348,6 @@ class ServerLive(unittest.TestCase):
         resp = urllib.request.urlopen(self.url + "events", timeout=10)
         self.assertEqual(resp.readline().strip(), b"event: hello")
         resp.readline(), resp.readline()
-        time.sleep(0.3)
         scene = example()
         scene["title"] = "Edited"
         self.scene_path.write_text(json.dumps(scene), encoding="utf-8")
@@ -614,6 +614,26 @@ class ServerTimeout(unittest.TestCase):
         time.sleep(0.6)
         self.assertFalse(self._server_done.is_set(), "0 disables idle expiry")
         self.stop_server()
+
+    def test_an_edit_right_after_ready_is_pushed_although_the_watcher_starts_late(self) -> None:
+        real_snapshot = serve.scene_snapshot
+
+        def late_snapshot(scene_dir: Path) -> dict[str, tuple[int, int]]:
+            time.sleep(0.5)
+            return real_snapshot(scene_dir)
+
+        with patch.object(serve, "scene_snapshot", late_snapshot):
+            self.start_server(None)
+            resp = urllib.request.urlopen(self.url + "events", timeout=5)
+            self.assertEqual(resp.readline().strip(), b"event: hello")
+            resp.readline(), resp.readline()
+            scene = example()
+            scene["title"] = "Edited"
+            (self.dir / EXAMPLE.name).write_text(json.dumps(scene), encoding="utf-8")
+            lines = [resp.readline().strip() for _ in range(2)]
+            resp.close()
+        self.assertEqual(lines[0], b"event: change")
+        self.assertEqual(json.loads(lines[1].removeprefix(b"data: ")), {"files": [EXAMPLE.name]})
 
 def wait_until(predicate, timeout: float) -> bool:
     deadline = time.monotonic() + timeout
