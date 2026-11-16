@@ -155,50 +155,48 @@ def generated_marker(path: Path) -> bool:
         return False
 
 
-def install(pairs: list[FilePair], scope: Path, dry_run: bool) -> int:
-    state_path = scope / STATE_NAME
-    safe_destination(state_path, scope)
-    previous = load_state(state_path)
-    planned: list[tuple[FilePair, bool, bool]] = []
-    for pair in pairs:
-        source, target = pair.source, pair.target
-        safe_destination(target, scope)
-        owned_hash = previous.get(pair.key)
-        if not target.exists():
-            planned.append((pair, True, True))
-            continue
-        target_hash = sha256(target)
-        installed_content = pair.content if pair.content is not None else source.read_bytes()
-        install_hash = hashlib.sha256(installed_content).hexdigest()
-        if owned_hash is not None:
-            if target_hash != owned_hash:
-                raise ValueError(f"installed CAD file was modified; refusing to overwrite {target}")
-            planned.append((pair, target_hash != install_hash, True))
-            continue
-        if target.read_bytes() == installed_content:
-            planned.append((pair, False, True))
-            continue
-        if generated_marker(target):
-            raise ValueError(f"generated CAD file differs from the current source; refusing to overwrite {target}")
-        raise ValueError(f"refusing to overwrite non-cad file {target}")
+def plan_pair(pair: FilePair, scope: Path, previous: dict[str, str]) -> tuple[FilePair, bool, bool]:
+    """Return (pair, needs_write, claim_ownership), or raise when overwriting is unsafe."""
+    target = pair.target
+    safe_destination(target, scope)
+    if not target.exists():
+        return pair, True, True
+    owned_hash = previous.get(pair.key)
+    target_hash = sha256(target)
+    installed_content = pair.content if pair.content is not None else pair.source.read_bytes()
+    if owned_hash is not None:
+        if target_hash != owned_hash:
+            raise ValueError(f"installed CAD file was modified; refusing to overwrite {target}")
+        return pair, target_hash != hashlib.sha256(installed_content).hexdigest(), True
+    if target.read_bytes() == installed_content:
+        return pair, False, True
+    if generated_marker(target):
+        raise ValueError(f"generated CAD file differs from the current source; refusing to overwrite {target}")
+    raise ValueError(f"refusing to overwrite non-cad file {target}")
 
-    if dry_run:
-        for pair, needs_write, _claim in planned:
-            print(f"would {'install' if needs_write else 'keep'} {pair.target}")
-        if any(claim for _pair, _write, claim in planned) and not state_path.exists():
-            print(f"would record ownership {state_path}")
-        return 0
 
+def report_install_plan(planned: list[tuple[FilePair, bool, bool]], state_path: Path) -> None:
+    for pair, needs_write, _claim in planned:
+        print(f"would {'install' if needs_write else 'keep'} {pair.target}")
+    if any(claim for _pair, _write, claim in planned) and not state_path.exists():
+        print(f"would record ownership {state_path}")
+
+
+def write_pair(pair: FilePair) -> None:
+    pair.target.parent.mkdir(parents=True, exist_ok=True)
+    if pair.content is None:
+        shutil.copyfile(pair.source, pair.target)
+    else:
+        pair.target.write_bytes(pair.content)
+    print(f"installed {pair.target}")
+
+
+def apply_install_plan(planned: list[tuple[FilePair, bool, bool]], previous: dict[str, str], state_path: Path) -> None:
     owned = dict(previous)
     wrote = False
     for pair, needs_write, claim in planned:
         if needs_write:
-            pair.target.parent.mkdir(parents=True, exist_ok=True)
-            if pair.content is None:
-                shutil.copyfile(pair.source, pair.target)
-            else:
-                pair.target.write_bytes(pair.content)
-            print(f"installed {pair.target}")
+            write_pair(pair)
             wrote = True
         if claim:
             owned[pair.key] = sha256(pair.target)
@@ -208,6 +206,17 @@ def install(pairs: list[FilePair], scope: Path, dry_run: bool) -> int:
             print(f"recorded {state_path}")
     elif not wrote:
         print("already installed; no files changed")
+
+
+def install(pairs: list[FilePair], scope: Path, dry_run: bool) -> int:
+    state_path = scope / STATE_NAME
+    safe_destination(state_path, scope)
+    previous = load_state(state_path)
+    planned = [plan_pair(pair, scope, previous) for pair in pairs]
+    if dry_run:
+        report_install_plan(planned, state_path)
+    else:
+        apply_install_plan(planned, previous, state_path)
     return 0
 
 
@@ -224,49 +233,61 @@ def matching_prefixes(harnesses: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(prefixes)
 
 
-def uninstall(scope: Path, harnesses: tuple[str, ...], dry_run: bool) -> int:
-    state_path = scope / STATE_NAME
-    safe_destination(state_path, scope)
-    owned = load_state(state_path)
-    prefixes = matching_prefixes(harnesses)
-    selected = {key: digest for key, digest in owned.items() if key.startswith(prefixes)}
+def check_removable(selected: dict[str, str], scope: Path) -> None:
     for key, digest in selected.items():
         target = (scope / key).resolve()
         relative_key(target, scope)
         safe_destination(target, scope)
         if target.is_file() and sha256(target) != digest:
             raise ValueError(f"installed CAD file was modified; refusing to remove {target}")
-    if dry_run:
-        for key in sorted(selected):
-            print(f"would uninstall {scope / key}")
-        if selected:
-            remaining = {key: value for key, value in owned.items() if key not in selected}
-            print(f"would {'update' if remaining else 'remove'} ownership {state_path}")
-        else:
-            print("no installed CAD files found")
-        return 0
 
-    for key in sorted(selected, reverse=True):
-        target = scope / key
-        if target.is_file():
-            target.unlink()
-            print(f"uninstalled {target}")
-        parent = target.parent
-        while parent != scope:
-            try:
-                parent.rmdir()
-            except OSError:
-                break
-            parent = parent.parent
-    remaining = {key: value for key, value in owned.items() if key not in selected}
+
+def report_uninstall_plan(selected: dict[str, str], remaining: dict[str, str], scope: Path, state_path: Path) -> None:
+    for key in sorted(selected):
+        print(f"would uninstall {scope / key}")
     if selected:
-        if remaining:
-            write_state(state_path, remaining)
-        elif state_path.exists():
-            state_path.unlink()
-            print(f"removed {state_path}")
+        print(f"would {'update' if remaining else 'remove'} ownership {state_path}")
     else:
         print("no installed CAD files found")
+
+
+def remove_owned_file(target: Path, scope: Path) -> None:
+    if target.is_file():
+        target.unlink()
+        print(f"uninstalled {target}")
+    parent = target.parent
+    while parent != scope:
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+        parent = parent.parent
+
+
+def apply_uninstall(selected: dict[str, str], remaining: dict[str, str], scope: Path, state_path: Path) -> None:
+    for key in sorted(selected, reverse=True):
+        remove_owned_file(scope / key, scope)
+    if not selected:
+        print("no installed CAD files found")
+    elif remaining:
+        write_state(state_path, remaining)
+    elif state_path.exists():
+        state_path.unlink()
+        print(f"removed {state_path}")
+
+
+def uninstall(scope: Path, harnesses: tuple[str, ...], dry_run: bool) -> int:
+    state_path = scope / STATE_NAME
+    safe_destination(state_path, scope)
+    owned = load_state(state_path)
+    prefixes = matching_prefixes(harnesses)
+    selected = {key: digest for key, digest in owned.items() if key.startswith(prefixes)}
+    check_removable(selected, scope)
+    remaining = {key: value for key, value in owned.items() if key not in selected}
+    if dry_run:
+        report_uninstall_plan(selected, remaining, scope, state_path)
+    else:
+        apply_uninstall(selected, remaining, scope, state_path)
     return 0
 
 
