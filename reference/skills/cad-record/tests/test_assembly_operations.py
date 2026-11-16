@@ -6,7 +6,6 @@ order checks of plan section 11 row 15 are in skills/cad-motion/tests/test_acces
 from __future__ import annotations
 
 import copy
-import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -17,15 +16,8 @@ HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
 
 
-def load(name: str, path: Path):
-    if name in sys.modules:
-        return sys.modules[name]
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_module as load  # noqa: E402
 
 
 ops = load("cad_record_assembly_operations", SCRIPTS / "assembly_operations.py")

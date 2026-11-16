@@ -13,7 +13,6 @@ from unittest import mock
 import asyncio
 import hashlib
 import base64
-import importlib.util
 import json
 import os
 import re
@@ -36,13 +35,8 @@ RENDER_EXAMPLE = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
 TEMPLATE_HW = RENDER_EXAMPLE
 COMPARE_PY = SKILL / "scripts" / "compare_renders.py"
 PARITY_PY = SKILL / "scripts" / "parity_policy.py"
-def load(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_fresh as load  # noqa: E402
 
 
 render = load("cad_render", RENDER_PY)

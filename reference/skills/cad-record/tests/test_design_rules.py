@@ -4,7 +4,6 @@ a copy of the lamp example migrated to record version 2, and through design_rule
 
 from __future__ import annotations
 
-import importlib.util
 import math
 import sys
 import tempfile
@@ -19,13 +18,8 @@ SCRIPTS = SKILL / "scripts"
 LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
 
 
-def load(name: str, path: Path) -> Any:
-    if name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec and spec.loader
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
-    return sys.modules[name]
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_module as load  # noqa: E402
 
 
 rules = load("cad_record_design_rules", SCRIPTS / "design_rules.py")

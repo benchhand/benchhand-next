@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import importlib.util
 import json
 import os
 import shutil
@@ -55,13 +54,8 @@ def project_for_scene(temp: Path, scene_path: Path) -> Path:
         "process: cnc\nfinish: As machined\nmass_target: null\nmake_buy: make\nintent:\n" + intent, encoding="utf-8")
     return project
 
-def load(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_fresh as load  # noqa: E402
 
 
 concept = load("cad_concept", CONCEPT_PY)

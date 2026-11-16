@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import importlib.util
 import io
 import json
 import sys
@@ -26,13 +25,8 @@ import yaml
 HERE = Path(__file__).resolve().parent
 
 
-def load(name: str, path: Path) -> Any:
-    if name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec and spec.loader
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
-    return sys.modules[name]
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_module as load  # noqa: E402
 
 
 acceptance = load("cad_record_acceptance_fixtures", HERE / "fixtures" / "acceptance.py")

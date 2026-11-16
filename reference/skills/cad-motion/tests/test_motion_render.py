@@ -11,7 +11,6 @@ cross-check needs `uv` and freecadcmd. Each skips without its tool.
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
 import json
 import math
@@ -40,13 +39,8 @@ import v6_record  # noqa: E402 - the kernel-free V6-like record
 from cadmodel import scriptenv  # noqa: E402
 
 
-def load(name: str, path: Path) -> Any:
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_fresh as load  # noqa: E402
 
 
 # freecad_assembly.py loads pose.py itself; motion.py then reuses that module, so one MotionError serves both.

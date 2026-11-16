@@ -41,13 +41,8 @@ sys.path.insert(0, str(SCRIPTS))
 from cadviewer import LimitError, ViewerError, capture, host, motion, record, session  # noqa: E402
 
 
-def load(name: str, path: Path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_fresh as load  # noqa: E402
 
 
 viewer = load("cad_viewer_cli", SCRIPTS / "viewer.py")

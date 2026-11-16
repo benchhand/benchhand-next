@@ -7,7 +7,6 @@ Run: python3 -m unittest discover -s cad/skills/cad-motion/tests -p test_continu
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import math
 import sys
@@ -23,17 +22,8 @@ sys.path.insert(0, str(HERE / "fixtures"))
 import continuous_collision as fixture  # noqa: E402 - the kernel-free between-sample collision
 
 
-def load(name: str, path: Path):
-    """One module per name: the scripts load their siblings under these names, so a second copy
-    would leave a module bound to the first."""
-    if name in sys.modules:
-        return sys.modules[name]
-    spec = importlib.util.spec_from_file_location(name, path)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_module as load  # noqa: E402
 
 
 pose = load("cad_motion_pose", SCRIPTS / "pose.py")

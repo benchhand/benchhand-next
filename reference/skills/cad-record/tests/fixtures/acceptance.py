@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -23,13 +22,8 @@ HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE.parents[1] / "scripts"
 
 
-def _load(name: str, path: Path) -> Any:
-    if name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec and spec.loader
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
-    return sys.modules[name]
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "scripts"))
+from modload import load_module as _load  # noqa: E402
 
 
 fx = _load("cad_record_mi_fixtures", HERE / "manufacturing_intent.py")

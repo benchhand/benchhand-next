@@ -7,7 +7,6 @@ records from tests/fixtures/selection/scenarios.py."""
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -26,13 +25,8 @@ SKILL = HERE.parent
 SCRIPT = SKILL / "scripts" / "selection.py"
 
 
-def load(name: str, path: Path) -> Any:
-    if name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec and spec.loader
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
-    return sys.modules[name]
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_module as load  # noqa: E402
 
 
 scenarios = load("cad_record_selection_scenarios", HERE / "fixtures" / "selection" / "scenarios.py")
