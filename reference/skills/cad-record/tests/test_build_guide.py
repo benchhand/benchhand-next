@@ -7,9 +7,11 @@ import csv
 import json
 import shutil
 import subprocess
+import sys
 import tempfile
 import tomllib
 import unittest
+from importlib import util
 from pathlib import Path
 
 import yaml
@@ -18,6 +20,19 @@ SKILL = Path(__file__).resolve().parents[1]
 SCRIPT = SKILL / "scripts" / "build_guide.py"
 TEMPLATE = SKILL / "assets" / "project-template" / "hw"
 LAMP_EXAMPLE = SKILL.parent.parent / "examples" / "lamp-arm"
+
+
+def _fixtures():
+    name = "cad_record_mi_fixtures"
+    if name not in sys.modules:
+        spec = util.spec_from_file_location(name, SKILL / "tests" / "fixtures" / "manufacturing_intent.py")
+        assert spec and spec.loader
+        sys.modules[name] = util.module_from_spec(spec)
+        spec.loader.exec_module(sys.modules[name])
+    return sys.modules[name]
+
+
+fx = _fixtures()
 COVERAGE = {"rows": [
     {"kind": "assembly_operation", "operation": operation, "measured": {"gap": 0.3}}
     for operation in ("press_base_pin", "press_elbow_pin", "press_head_pin")
@@ -34,6 +49,11 @@ class BuildGuide(unittest.TestCase):
         self.out = self.root / ".cad-work" / "docs"
 
     def copy_lamp_example(self) -> Path:
+        """The lamp example migrated to record version 2, which build_guide.py requires."""
+        self.hw.rmdir()
+        return fx.migrated_copy(LAMP_EXAMPLE / "hw", self.hw)
+
+    def copy_v1_lamp_example(self) -> Path:
         shutil.copytree(LAMP_EXAMPLE / "hw", self.hw, dirs_exist_ok=True)
         return self.hw
 
@@ -187,7 +207,7 @@ class BuildGuide(unittest.TestCase):
         hw = self.copy_lamp_example()
         self.make_version(hw, "v1")
         self.out = hw / "docs"
-        self.out.mkdir()
+        self.out.mkdir(exist_ok=True)
         own = "# Our assembly notes\n"
         (self.out / "index.md").write_text(own, encoding="utf-8")
         result = self.run_guide(hw)
@@ -219,7 +239,7 @@ class BuildGuide(unittest.TestCase):
         hw = self.copy_lamp_example()
         self.make_version(hw, "v1")
         (hw / "motion" / "v1" / "elbow-sweep").mkdir(parents=True)
-        (hw / "docs").mkdir()
+        (hw / "docs").mkdir(exist_ok=True)
         (hw / "docs" / "inspection.md").write_text("# Inspection\n", encoding="utf-8")
         self.set_evidence(hw, {"REQ-002": "sweep hw/motion/v1/elbow-sweep passed",
                                "REQ-004": "hw/analysis/v1/arm-load/results.json",
@@ -287,7 +307,7 @@ class BuildGuide(unittest.TestCase):
         hw = self.root / "minimal-hw"
         (hw / "parts" / "TST-0001").mkdir(parents=True)
         (hw / "versions" / "v1" / "parts").mkdir(parents=True)
-        (hw / "product.yaml").write_text("id: minimal\n", encoding="utf-8")
+        (hw / "product.yaml").write_text("record_version: 2\nid: minimal\n", encoding="utf-8")
         (hw / "parts" / "TST-0001" / "part.yaml").write_text(
             "PN: TST-0001\nrev: A\ntitle: Test part\nmaterial: steel\nprocess: cnc\nmake_buy: make\n",
             encoding="utf-8",
@@ -320,6 +340,7 @@ class BuildGuide(unittest.TestCase):
     def test_generic_empty_record_outputs_not_recorded_values(self) -> None:
         hw = self.root / "empty-hw"
         hw.mkdir()
+        (hw / "product.yaml").write_text("record_version: 2\n", encoding="utf-8")
         (hw / "versions" / "v1").mkdir(parents=True)
         (hw / "versions" / "v1" / "manifest.json").write_text(
             json.dumps({"label": "v1", "parts": {}}), encoding="utf-8"
@@ -339,7 +360,7 @@ class BuildGuide(unittest.TestCase):
             (hw / "versions" / version).mkdir(parents=True)
             (hw / "versions" / version / "manifest.json").write_text(
                 json.dumps({"label": version, "parts": {}}), encoding="utf-8")
-        (hw / "product.yaml").write_text("id: released\n", encoding="utf-8")
+        (hw / "product.yaml").write_text("record_version: 2\nid: released\n", encoding="utf-8")
         for rev, version, released_at in (("A", "v3", "2026-10-01T00:00:00Z"), ("B", "v4", "2026-10-02T00:00:00Z")):
             (hw / "releases" / rev).mkdir(parents=True)
             (hw / "releases" / rev / "manifest.json").write_text(json.dumps({
@@ -376,6 +397,7 @@ class BuildGuide(unittest.TestCase):
     def test_missing_version_manifest_fails_without_output(self) -> None:
         hw = self.root / "missing-build"
         hw.mkdir()
+        (hw / "product.yaml").write_text("record_version: 2\n", encoding="utf-8")
         (hw / "versions" / "v1").mkdir(parents=True)
         result = subprocess.run(
             ["uv", "run", "--script", str(SCRIPT), str(hw), "--version", "v1", "--out", str(self.out)],
@@ -384,6 +406,27 @@ class BuildGuide(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("version manifest is missing", result.stderr)
         self.assertFalse((self.out / "index.md").exists())
+
+    def test_a_version_1_record_is_refused_with_the_migration_finding_and_nothing_is_written(self) -> None:
+        hw = self.copy_v1_lamp_example()
+        self.make_version(hw, "v1")
+        result = self.run_guide(hw)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("record.migration_required", result.stderr)
+        self.assertIn("migrate.py", result.stderr)
+        self.assertFalse(self.out.exists())
+
+    def test_an_unsupported_record_version_is_refused_with_the_version_finding(self) -> None:
+        hw = self.copy_lamp_example()
+        self.make_version(hw, "v1")
+        path = hw / "product.yaml"
+        product = yaml.safe_load(path.read_text(encoding="utf-8"))
+        product["record_version"] = 3
+        path.write_text(yaml.safe_dump(product, sort_keys=False), encoding="utf-8")
+        result = self.run_guide(hw)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("record.version_unsupported", result.stderr)
+        self.assertFalse(self.out.exists())
 
 
 if __name__ == "__main__":

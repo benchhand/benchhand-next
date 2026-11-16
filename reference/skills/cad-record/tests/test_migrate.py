@@ -100,6 +100,11 @@ class LampExample(MigrationCase):
         self.assertIn("Nothing was changed.", text)
         self.assertEqual(tree(self.project), before)
 
+    def test_dry_run_is_the_default_and_reports_what_no_flag_reports(self) -> None:
+        before = tree(self.project)
+        self.assertEqual(self.run_cli("--dry-run", "--json"), self.run_cli("--json"))
+        self.assertEqual(tree(self.project), before)
+
     def test_apply_writes_a_valid_version_2_record_of_explicit_unknowns(self) -> None:
         untouched = {rel: digest for rel, digest in tree(self.hw).items()
                      if rel.endswith("model.py") or rel in ("bom.csv", "verification.csv") or rel.startswith("decisions/")}
@@ -199,8 +204,11 @@ class Refusals(MigrationCase):
         self.assert_refused("interfaces")
 
     def test_dry_run_and_apply_are_exclusive(self) -> None:
-        code, _ = self.run_cli("--dry-run", "--apply")
+        before = tree(self.project)
+        code, message = self.run_cli("--dry-run", "--apply")
         self.assertEqual(code, 2)
+        self.assertIn("not allowed with argument", message)
+        self.assertEqual(tree(self.project), before)
 
 
 class EdgeCases(MigrationCase):

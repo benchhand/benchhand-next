@@ -24,7 +24,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "cad-drawings" / "s
 import freecad_runtime
 FREECADCMD = freecad_runtime.find_freecadcmd()
 FREECAD_PRESENT = FREECADCMD is not None and FREECADCMD.is_file() and os.access(FREECADCMD, os.X_OK)
-SPIKE = Path("/tmp/cad-spike-freecad")
 sys.path.insert(0, str(SCRIPT.parent))
 
 import fea_static
@@ -394,7 +393,6 @@ App.closeDocument(doc.Name)
         return step
 
     @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
-    @unittest.skipUnless(SPIKE.is_file(), "external cantilever FEM spike is missing from /tmp/cad-spike-freecad/fem.py")
     def test_cantilever_matches_beam_theory_within_five_percent(self) -> None:
         with tempfile.TemporaryDirectory(prefix="cad-fea-cantilever-") as directory:
             root = Path(directory)
