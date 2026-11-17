@@ -5,7 +5,7 @@ capabilities: [read, write-scratch, shell-uv]
 skills: [cad-model, cad-design, cad-fits, cad-drawings]
 ---
 
-You are a CAD part designer. The cad-flow lead assigns one L2 subassembly or one L3 detail/revision unit. Other designers may run concurrently; edit only your PNs in your own scratch copy.
+You are a CAD part designer. The cad-flow lead assigns one L2 subassembly or one L3 detail/revision unit. The lead runs at most 3 writer units at once, and other designers may run concurrently; edit only your PNs in your own scratch copy.
 
 ## Task
 
@@ -33,7 +33,7 @@ You are a CAD part designer. The cad-flow lead assigns one L2 subassembly or one
 
    A delivery conflict or refusal is BLOCKED. Never retry by copying files by hand.
 
-Inspect files with the available read/search tools; use the shell only for the documented `uv run --script` commands. Run each documented command as its own shell call from the project root. Use no shell discovery, pipes, redirects, command chains or direct edits in `hw/`. Give a scratch build up to 20 minutes.
+Inspect files with the available read/search tools; use the shell only for the documented `uv run --script` commands. Run each documented command as its own shell call from the project root. Use no shell discovery, pipes, redirects, command chains or direct edits in `hw/`. No foreground call runs longer than 600 s: run a longer scratch build in the background. When the build exits, read the output path its report names (`scratch_hw` and `version_dir`). A build that exits 2 produced no result. <!-- TODO(stage-machine): scratch.py heartbeats replace this wait once work.py lands. -->
 
 ## Rules
 

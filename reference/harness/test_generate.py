@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -304,6 +305,125 @@ class TierSourceTests(GeneratorCopyCase):
         text = (self.cad / "agents/cad-clerk.md").read_text(encoding="utf-8")
         self.assertRegex(text, r"(?i)never issue[^.]*verdicts?")
         self.assertRegex(text, r"(?i)evidence packets?")
+
+
+class ProcessRuleTests(unittest.TestCase):
+    """The cad-flow process rules stay written in the lead and worker prompts."""
+
+    FLOW = CAD / "skills/cad-flow"
+    SHELL_AGENTS = ("cad-analyst", "cad-clerk", "cad-concept-designer", "cad-part-designer")
+
+    def read(self, path: Path) -> str:
+        return path.read_text(encoding="utf-8")
+
+    def test_lead_prompts_state_the_writer_cap_and_merge_on_final_report(self) -> None:
+        for path in (self.FLOW / "SKILL.md", self.FLOW / "references/flow.md"):
+            with self.subTest(path=path.name):
+                text = self.read(path)
+                self.assertRegex(text, r"at most 3 writer units")
+                self.assertRegex(text, r"(?i)final report")
+                self.assertRegex(text, r"(?i)still running[^.]*partial")
+
+    def test_lead_prompts_cap_foreground_commands_at_600_seconds(self) -> None:
+        for path in (self.FLOW / "SKILL.md", self.FLOW / "references/flow.md"):
+            with self.subTest(path=path.name):
+                self.assertRegex(self.read(path), r"no foreground command longer than 600 s")
+
+    def test_shell_workers_cap_foreground_calls_at_600_seconds(self) -> None:
+        for name in self.SHELL_AGENTS:
+            with self.subTest(agent=name):
+                self.assertRegex(self.read(CAD / "agents" / f"{name}.md"), r"(?i)foreground (shell )?call[^.]*600 s")
+
+    def test_no_prompt_still_grants_a_20_minute_foreground_call(self) -> None:
+        for path in (CAD / "agents").glob("*.md"):
+            with self.subTest(agent=path.stem):
+                self.assertNotRegex(self.read(path), r"(?i)20[- ]minute")
+
+    def test_flow_reference_states_stall_handling(self) -> None:
+        text = self.read(self.FLOW / "references/flow.md")
+        self.assertRegex(text, r"(?i)lease expired[^.]*no live run[^.]*one follow-up")
+        self.assertRegex(text, r"(?is)10 more minutes:\s*- interrupt it\.\s*- release its claim\.\s*- dispatch it again")
+        self.assertRegex(text, r"(?i)new unit id[^.]*`<unit>-r2`[^.]*`-r3`")
+        self.assertRegex(text, r"(?i)leave the old workspace untouched")
+        self.assertNotIn("init --reset", text)
+        self.assertIn("TODO(stage-machine step 6): stale workspace cleanup", text)
+
+    def test_agent_prompts_wait_for_the_command_not_a_result_filename(self) -> None:
+        for path in (CAD / "agents").glob("*.md"):
+            with self.subTest(agent=path.stem):
+                text = self.read(path)
+                self.assertNotRegex(text, r"(?i)wait for[^.]*\bresults?\.json\b")
+                self.assertNotRegex(text, r"(?i)wait for[^.]*result file")
+        for name in ("cad-analyst", "cad-part-designer"):
+            with self.subTest(agent=name):
+                self.assertRegex(self.read(CAD / "agents" / f"{name}.md"), r"(?i)when the (command|build) exits, read the output path")
+
+    def test_flow_reference_lists_unit_sizes_and_each_iteration(self) -> None:
+        text = self.read(self.FLOW / "references/flow.md")
+        for phrase in ("at most 4 PNs", "at most 3 PNs", "cores ÷ solver threads"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+    ITERATIONS = {
+        "Inner loop": (
+            "`validate.py`", "scratch build", "form check on the unit's PNs", "`evidence.py check --hw .cad-work/<unit>/hw",
+            "`--changed-only`", "scope inner", "fits and stack-up", "smoke sweep", "coarse-mesh FEA",
+            "Never run these in the loop", "the full sweep", "the motion render", "the integrated drawings",
+        ),
+        "Commit (batch vN)": (
+            "`validate.py`", "static `--changed-only`", "the BOM", "fits and stack-up", "form check", "smoke sweep",
+            "drawings", "recheck stamp", "motion render",
+        ),
+        "Provisional gate": (
+            "`validate.py`", "4-view render", "default motion render", "the BOM", "fits and stack-up",
+            "smoke results", "`evidence.py check`",
+        ),
+        "Full gate (approval)": (
+            "`validate.py`", "static check over every pair", "form check for every due obligation", "motion render",
+            "the BOM", "fits and stack-up", "`evidence.py check`", "recheck stamp", "Run the full sweep",
+            "TODO(stage-machine): carry-forward", "draw the parts and the assembly", "run every FEA case",
+            "sourcing and selection",
+        ),
+        "Design freeze": ("`validate.py`", "the BOM", "fits and stack-up", "`evidence.py check`", "the stamp", "full sweep"),
+        "Release": ("`validate.py`", "the BOM", "`build_guide.py`", "`release.py`"),
+    }
+
+    def iteration_sections(self) -> dict[str, str]:
+        text = self.read(self.FLOW / "references/flow.md")
+        start = text.index("## Checks by iteration")
+        body = text[start : text.index("\n## ", start + 1)]
+        parts = re.split(r"^\*\*(.+?)\.?\*\*", body, flags=re.MULTILINE)
+        return {parts[i].strip(): parts[i + 1] for i in range(1, len(parts) - 1, 2)}
+
+    def test_each_iteration_section_lists_its_required_producers(self) -> None:
+        sections = self.iteration_sections()
+        self.assertEqual(list(self.ITERATIONS), list(sections))
+        for name, required in self.ITERATIONS.items():
+            for producer in required:
+                with self.subTest(section=name, producer=producer):
+                    self.assertIn(producer, sections[name])
+
+    @staticmethod
+    def strip_todo_markers(text: str) -> str:
+        """Drop each HTML comment whose own text starts with a well-formed TODO(stage-machine...) header."""
+        header = re.compile(r"<!--\s*TODO\(stage-machine(?: step \d+)?\):")
+        return re.sub(r"<!--.*?-->", lambda m: "" if header.match(m.group(0)) else m.group(0), text, flags=re.DOTALL)
+
+    def test_a_malformed_todo_header_does_not_hide_the_prose_after_it(self) -> None:
+        text = (
+            "<!-- TODO(stage-machine step 6: header without a closing paren -->\n"
+            "Run flow.py now.\n"
+            "<!-- TODO(stage-machine): a later, valid marker -->\n"
+        )
+        stripped = self.strip_todo_markers(text)
+        self.assertIn("flow.py", stripped)
+        self.assertNotIn("a later, valid marker", stripped)
+
+    def test_unbuilt_tools_are_only_future_work_in_a_todo_marker(self) -> None:
+        for path in (self.FLOW / "SKILL.md", self.FLOW / "references/flow.md", *(CAD / "agents").glob("*.md")):
+            text = self.strip_todo_markers(self.read(path))
+            with self.subTest(path=path.name):
+                self.assertNotRegex(text, r"\b(flow\.py|work\.py|evidence\.py run)\b")
 
 
 if __name__ == "__main__":

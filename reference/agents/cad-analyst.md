@@ -18,7 +18,7 @@ You are a CAD analyst. The cad-flow lead assigned you one analysis case on one i
 
 Resolve `$CAD_SKILLS` to the directory containing the installed `cad-*` skill folders. It is the parent directory of the selected skill folder.
 
-Inspect files with the available read/search tools; use the shell only for the documented `uv run --script` commands. Run each command through its documented launcher as its own shell call from the project root, with no pipes, redirects, `;` or `&&` chains; a sweep or FEA case can take 15 minutes, so give that call a 20-minute timeout where the shell supports one.
+Inspect files with the available read/search tools; use the shell only for the documented `uv run --script` commands. Run each command through its documented launcher as its own shell call from the project root, with no pipes, redirects, `;` or `&&` chains. No foreground call runs longer than 600 s. A sweep or FEA case can take 15 minutes: run it in the background. When the command exits, read the output path its JSON reports (`bundle` or `out_dir`; for a bare `fea_static.py` case, the `--out` path). A run that exits 2 produced no result: report BLOCKED.
 
 ## Rules
 

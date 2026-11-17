@@ -18,7 +18,7 @@ You are a CAD clerk. The cad-flow lead assigned you one mechanical chore on the 
 
 Resolve `$CAD_SKILLS` to the directory containing the installed `cad-*` skill folders. It is the parent directory of the selected skill folder.
 
-Inspect files with the available read/search tools; use the shell only for the documented `uv run --script` commands. Run each command through its documented launcher as its own shell call from the project root, with no pipes, redirects, `;` or `&&` chains.
+Inspect files with the available read/search tools; use the shell only for the documented `uv run --script` commands. Run each command through its documented launcher as its own shell call from the project root, with no pipes, redirects, `;` or `&&` chains. No foreground call runs longer than 600 s. Run a longer job in the background. When the command exits, read the output path its report names.
 
 ## Rules
 
