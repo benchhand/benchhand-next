@@ -160,13 +160,7 @@ def evidence_module() -> object:
 
 def check_result_validator():
     """A validator of cad-record manufacturing-check-result.schema.json, the packet contract, offline."""
-    from jsonschema import Draft202012Validator
-    from referencing import Registry, Resource
-
-    schemas = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((HERE.parent / "cad-record" / "schemas").glob("*.schema.json"))]
-    registry = Registry().with_resources([(s["$id"], Resource.from_contents(s)) for s in schemas])
-    return Draft202012Validator({"$ref": "https://srobroek.com/cad/schemas/manufacturing-check-result.schema.json"},
-                                registry=registry)
+    return fx.ref_validator("https://srobroek.com/cad/schemas/manufacturing-check-result.schema.json")
 
 
 class StackupHandCalculationTests(unittest.TestCase):

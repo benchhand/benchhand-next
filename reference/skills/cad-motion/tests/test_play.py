@@ -208,14 +208,7 @@ class PlayGeometryTests(unittest.TestCase):
 
 
 def validator(definition: str):
-    from jsonschema import Draft202012Validator
-    from referencing import Registry, Resource
-
-    schemas = SKILLS / "cad-record" / "schemas"
-    resources = [(c["$id"], Resource.from_contents(c))
-                 for c in (json.loads(p.read_text(encoding="utf-8")) for p in sorted(schemas.glob("*.schema.json")))]
-    return Draft202012Validator({"$ref": f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}"},
-                                registry=Registry().with_resources(resources))
+    return fx.ref_validator(f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}")
 
 
 if __name__ == "__main__":

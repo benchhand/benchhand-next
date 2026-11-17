@@ -6,7 +6,6 @@ properties, calibrated capability limits and required checks)."""
 from __future__ import annotations
 
 import copy
-import json
 import math
 import shutil
 import sys
@@ -16,8 +15,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
-from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
 
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
@@ -456,9 +453,7 @@ class RequiredChecks(unittest.TestCase):
 
     def test_every_obligation_validates_and_is_enumerated_once(self) -> None:
         checks = mi.required_checks(mi.normalize_record(fx.tst_record()))
-        registry = Registry().with_resources((s["$id"], Resource.from_contents(s)) for s in (
-            json.loads(p.read_text(encoding="utf-8")) for p in (SKILL / "schemas").glob("*.schema.json")))
-        schema = Draft202012Validator({"$ref": "https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/obligation"}, registry=registry)
+        schema = fx.ref_validator("https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/obligation")
         self.assertEqual([o.id for o in checks], sorted({o.id for o in checks}))
         for obligation in checks:
             with self.subTest(obligation.id):

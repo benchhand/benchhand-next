@@ -398,14 +398,9 @@ class QualifiedProfile(SourcedFEACase):
         self.assertIn("--replace", report["error"]["message"])
 
     def validate_packet(self, packet: dict[str, Any]) -> None:
-        from jsonschema import Draft202012Validator
-        from referencing import Registry, Resource
-
-        schemas = SKILLS / "cad-record" / "schemas"
-        contents = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(schemas.glob("*.schema.json"))]
-        registry = Registry().with_resources((c["$id"], Resource.from_contents(c)) for c in contents)
-        schema = json.loads((schemas / "manufacturing-check-result.schema.json").read_text(encoding="utf-8"))
-        errors = [f"{list(e.absolute_path)}: {e.message}" for e in Draft202012Validator(schema, registry=registry).iter_errors(packet)]
+        validator = fx.schema_registry_module().document_validator(
+            SKILLS / "cad-record" / "schemas", "manufacturing-check-result.schema.json")
+        errors = [f"{list(e.absolute_path)}: {e.message}" for e in validator.iter_errors(packet)]
         self.assertEqual(errors, [])
 
 

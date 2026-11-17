@@ -173,16 +173,8 @@ _VALIDATOR: Any = None
 def packet_errors(packet: dict[str, Any]) -> list[str]:
     global _VALIDATOR
     if _VALIDATOR is None:
-        from jsonschema import Draft202012Validator
-        from referencing import Registry, Resource
-
-        schemas = {}
-        for path in (SKILLS / "cad-record" / "schemas").glob("*.json"):
-            data = json.loads(path.read_text(encoding="utf-8"))
-            schemas[data["$id"]] = data
-        registry = Registry().with_resources([(key, Resource.from_contents(value)) for key, value in schemas.items()])
-        schema = schemas["https://srobroek.com/cad/schemas/manufacturing-check-result.schema.json"]
-        _VALIDATOR = Draft202012Validator(schema, registry=registry)
+        _VALIDATOR = FX.schema_registry_module().document_validator(
+            SKILLS / "cad-record" / "schemas", "manufacturing-check-result.schema.json")
     return [f"{list(e.absolute_path)}: {e.message[:300]}" for e in _VALIDATOR.iter_errors(packet)]
 
 

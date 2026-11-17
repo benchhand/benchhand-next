@@ -53,15 +53,9 @@ def inventory():
 
 
 def validator(definition: str):
-    from jsonschema import Draft202012Validator
-    from referencing import Registry, Resource
-
-    schemas = SKILLS / "cad-record" / "schemas"
-    resources = [(c["$id"], Resource.from_contents(c))
-                 for c in (json.loads(p.read_text(encoding="utf-8")) for p in sorted(schemas.glob("*.schema.json")))]
     target = definition if definition.startswith("https:") else \
         f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}"
-    return Draft202012Validator({"$ref": target}, registry=Registry().with_resources(resources))
+    return fx.ref_validator(target)
 
 
 class OrderTests(unittest.TestCase):

@@ -45,6 +45,16 @@ def intent_module() -> Any:
     return _module("cad_record_manufacturing_intent", SCRIPTS / "manufacturing_intent.py")
 
 
+def schema_registry_module() -> Any:
+    """cad-record schema_registry.py under its shared name: the one place a validator is built."""
+    return _module("cad_record_schema_registry", SCRIPTS / "schema_registry.py")
+
+
+def ref_validator(ref: str) -> Any:
+    """A validator of one schema or definition of cad-record's schemas by its `$ref`, offline."""
+    return schema_registry_module().ref_validator(SKILL / "schemas", ref)
+
+
 def migrate_module() -> Any:
     """cad-record migrate.py (needs PyYAML and jsonschema)."""
     return _module("cad_record_migrate", SCRIPTS / "migrate.py")

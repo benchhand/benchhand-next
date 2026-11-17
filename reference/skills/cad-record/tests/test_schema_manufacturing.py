@@ -14,8 +14,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 import yaml
-from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
 
 SKILL = Path(__file__).resolve().parents[1]
 SCHEMAS = SKILL / "schemas"
@@ -29,22 +27,19 @@ from modload import load_module as load  # noqa: E402
 
 fx = load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures" / "manufacturing_intent.py")
 intent = fx.intent_module()
-REGISTRY = Registry().with_resources(
-    (s["$id"], Resource.from_contents(s)) for s in (json.loads(p.read_text(encoding="utf-8")) for p in sorted(SCHEMAS.glob("*.schema.json"))))
+registry = fx.schema_registry_module()
 
 
-def validator(name: str) -> Draft202012Validator:
-    schema = json.loads((SCHEMAS / name).read_text(encoding="utf-8"))
-    return Draft202012Validator(schema, registry=REGISTRY)
+def validator(name: str) -> Any:
+    return registry.document_validator(SCHEMAS, name)
 
 
 def errors(name: str, document: Any) -> list[str]:
     return [f"{'/'.join(map(str, e.absolute_path))}: {e.message}" for e in validator(name).iter_errors(document)]
 
 
-def shared(definition: str) -> Draft202012Validator:
-    return Draft202012Validator({"$ref": f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}"},
-                                registry=REGISTRY)
+def shared(definition: str) -> Any:
+    return fx.ref_validator(f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}")
 
 
 class SchemaCase(unittest.TestCase):
@@ -74,9 +69,8 @@ class SharedDefinitions(SchemaCase):
     def test_every_schema_is_draft_2020_12_and_resolves_offline(self) -> None:
         for path in sorted(SCHEMAS.glob("*.schema.json")):
             with self.subTest(path.name):
-                schema = json.loads(path.read_text(encoding="utf-8"))
-                Draft202012Validator.check_schema(schema)
-                list(Draft202012Validator(schema, registry=REGISTRY).iter_errors({}))
+                registry.check_schema(registry.schema(SCHEMAS, path.name))
+                list(validator(path.name).iter_errors({}))
 
     def test_a_fact_is_known_with_sources_unknown_with_a_reason_or_not_applicable(self) -> None:
         self.assert_shared("fact", {

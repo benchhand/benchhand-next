@@ -16,8 +16,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
 
 SKILL = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL / "scripts"
@@ -98,11 +96,9 @@ class TempProject(unittest.TestCase):
 
 class LayoutData(TempProject):
     def test_layout_json_matches_its_schema(self) -> None:
-        schemas = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((SKILL / "schemas").glob("*.schema.json"))]
-        registry = Registry().with_resources((s["$id"], Resource.from_contents(s)) for s in schemas)
-        schema = json.loads((SKILL / "schemas" / "layout.schema.json").read_text(encoding="utf-8"))
-        Draft202012Validator.check_schema(schema)
-        errors = list(Draft202012Validator(schema, registry=registry).iter_errors(layout.load().data))
+        schemas = load("cad_record_schema_registry", SCRIPTS / "schema_registry.py")
+        schemas.check_schema(schemas.schema(SKILL / "schemas", "layout.schema.json"))
+        errors = list(schemas.document_validator(SKILL / "schemas", "layout.schema.json").iter_errors(layout.load().data))
         self.assertEqual([e.message for e in errors], [])
 
     def test_layout_md_is_generated_from_layout_json(self) -> None:
@@ -248,8 +244,9 @@ class Publication(TempProject):
         self.assertTrue(again.reused)
         self.assertEqual((self.target / "manifest.json").read_bytes(), before)
         self.assertEqual(list((self.project / ".cad-work" / "publication").iterdir()), [])
-        schema = json.loads((SKILL / "schemas" / "bundle-manifest.schema.json").read_text(encoding="utf-8"))
-        self.assertEqual([e.message for e in Draft202012Validator(schema).iter_errors(manifest)], [])
+        check = load("cad_record_schema_registry", SCRIPTS / "schema_registry.py").document_validator(
+            SKILL / "schemas", "bundle-manifest.schema.json")
+        self.assertEqual([e.message for e in check.iter_errors(manifest)], [])
 
     def test_a_different_recipe_needs_replace_and_the_manifest_records_what_it_replaced(self) -> None:
         old = publish(self.hw, "bundle.renders", self.params, {"iso.png": "old\n"}, recipe={"size": 800})

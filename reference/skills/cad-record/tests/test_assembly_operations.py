@@ -6,7 +6,6 @@ order checks of plan section 11 row 15 are in skills/cad-motion/tests/test_acces
 from __future__ import annotations
 
 import copy
-import json
 from pathlib import Path
 import sys
 import tempfile
@@ -30,14 +29,7 @@ PRESS = {"id": "fit-bearing", "kind": "press_fit", "part": "TST-0003", "into": "
 
 
 def validator(definition: str):
-    from jsonschema import Draft202012Validator
-    from referencing import Registry, Resource
-
-    schemas = HERE.parent / "schemas"
-    resources = [(c["$id"], Resource.from_contents(c))
-                 for c in (json.loads(p.read_text(encoding="utf-8")) for p in sorted(schemas.glob("*.schema.json")))]
-    return Draft202012Validator({"$ref": f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}"},
-                                registry=Registry().with_resources(resources))
+    return fx.ref_validator(f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}")
 
 
 class NormalizeTests(unittest.TestCase):

@@ -17,8 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
 
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
@@ -35,14 +33,8 @@ mi = fx.intent_module()
 selection = load("cad_record_selection", SCRIPT)
 
 
-def _validator(ref: str) -> Draft202012Validator:
-    contents = [json.loads(path.read_text(encoding="utf-8")) for path in sorted((SKILL / "schemas").glob("*.schema.json"))]
-    registry = Registry().with_resources([(item["$id"], Resource.from_contents(item)) for item in contents])
-    return Draft202012Validator({"$ref": ref}, registry=registry)
-
-
-FINDING = _validator("https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/finding")
-RECOMMENDATION = _validator("https://srobroek.com/cad/schemas/manufacturing-selection.schema.json#/$defs/recommendation")
+FINDING = fx.ref_validator("https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/finding")
+RECOMMENDATION = fx.ref_validator("https://srobroek.com/cad/schemas/manufacturing-selection.schema.json#/$defs/recommendation")
 
 
 def write_at(hw: Path, documents: dict[str, Any], *, current_digest: bool = True) -> Path:
