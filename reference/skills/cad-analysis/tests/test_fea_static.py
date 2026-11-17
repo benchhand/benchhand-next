@@ -29,8 +29,9 @@ sys.path.insert(0, str(SCRIPT.parent))
 import fea_static
 from fea_static import CaseError, apply_required_safety_factor, error, load_case, result_exit_code, run_directory
 from ccx_failure import ccx_failure
-from fea_part_selection import select_occurrence, select_solid_index
+from fea_part_selection import MultipleSolids, SceneObject, select_occurrence, select_part_solid, select_solid_index
 OCCURRENCE_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "build_occurrence_step.py"
+CONTAINER_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "build_container_steps.py"
 LAYOUT_PATH = SCRIPT.parents[2] / "cad-record" / "scripts" / "layout.py"
 LAYOUT_SPEC = importlib.util.spec_from_file_location("cad_record_layout", LAYOUT_PATH)
 assert LAYOUT_SPEC and LAYOUT_SPEC.loader
@@ -75,6 +76,33 @@ runpy.run_path(sys.argv[1], run_name="__main__")
 """, encoding="utf-8")
     freecad.chmod(0o755)
     return freecad
+
+
+def failing_freecad(root: Path) -> Path:
+    """A FreeCAD stand-in that runs the real job script and fails in its STEP import."""
+    freecad = root / "freecadcmd"
+    freecad.write_text(f"""#!{sys.executable}
+import runpy, sys
+from unittest import mock
+for name in ("Part", "Import", "ObjectsFem", "femmesh", "femmesh.gmshtools", "femtools", "femtools.ccxtools"):
+    sys.modules[name] = mock.MagicMock()
+app = mock.MagicMock()
+app.newDocument.side_effect = RuntimeError("import exploded")
+sys.modules["FreeCAD"] = app
+runpy.run_path(sys.argv[1], run_name="__main__")
+""", encoding="utf-8")
+    freecad.chmod(0o755)
+    return freecad
+
+
+def job_of(script: str) -> dict:
+    """The job data a generated fea_job.py carries."""
+    import ast
+    import re
+
+    match = re.search(r"^JOB=json[.]loads\((.*)\)$", script, flags=re.M)
+    assert match is not None
+    return json.loads(ast.literal_eval(match.group(1)))
 
 
 def hanging_case(step: Path, timeout_seconds: float) -> dict:
@@ -138,6 +166,46 @@ class SolidSelectionContracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'matches 2 STEP solids; a part placed more than once is selected by '
                                                 'occurrence: "@id"'):
             select_solid_index([["TST-0301 Beam"], ["TST-0301 Beam001"]], "TST-0301")
+
+
+class PartCandidateContracts(unittest.TestCase):
+    """The imported document as FreeCAD's Import.insert builds it, described without FreeCAD: cad-model's part
+    STEP of LMP-0008 imports as the App::Part "LMP-0008 Bushing" around one unnamed Part::Feature "SOLID"."""
+
+    LMP_0008 = [SceneObject(("SOLID", "Part__Feature"), True, (100.0,), (1,)),
+                SceneObject(("LMP-0008 Bushing", "LMP_0008_Bushing"), False, (100.0,))]
+
+    def test_the_container_is_not_a_candidate_and_names_its_unnamed_child(self) -> None:
+        self.assertEqual(select_part_solid(self.LMP_0008, "LMP-0008", None), (0, 0))
+        self.assertEqual(select_part_solid(self.LMP_0008, None, None), (0, 0))
+
+    def test_solid_index_counts_the_solids_of_the_leaves_only(self) -> None:
+        objects = [SceneObject(("TST-0401 Plate", "Plate"), True, (6400.0,), (3,)),
+                   SceneObject(("SOLID", "Beam"), True, (5000.0,), (2, 3)),
+                   SceneObject(("TST-0402 Beam", "TST_0402_Beam"), False, (5000.0,), (3,)),
+                   SceneObject(("top", "top"), False, (6400.0, 5000.0))]
+        self.assertEqual(select_part_solid(objects, None, 2), (1, 0))
+        with self.assertRaisesRegex(ValueError, "solid_index 3 is out of range for 2 STEP solids"):
+            select_part_solid(objects, None, 3)
+
+    def test_a_part_of_several_solids_is_refused_with_their_volumes(self) -> None:
+        # A part STEP of two disjoint solids: FreeCAD names each child after the part.
+        objects = [SceneObject(("TST-0403 Pair", "Part__Feature"), True, (1000.0,), (2,)),
+                   SceneObject(("TST-0403 Pair001", "Part__Feature001"), True, (2000.0,), (2,)),
+                   SceneObject(("TST-0403 Pair002", "TST_0403_Pair"), False, (1000.0, 2000.0))]
+        for part in ("TST-0403", None):
+            with self.subTest(part=part), self.assertRaises(MultipleSolids) as raised:
+                select_part_solid(objects, part, None)
+            self.assertEqual(raised.exception.details, {"count": 2, "volumes_mm3": [1000.0, 2000.0],
+                                                        "solid_indices": [1, 2]})
+            self.assertRegex(str(raised.exception), "solid_index.*occurrence.*one solid")
+
+    def test_a_part_placed_twice_still_points_to_the_occurrence_selector(self) -> None:
+        objects = [SceneObject(("TST-0301 Beam", "Part__Feature"), True, (5000.0,), (2,)),
+                   SceneObject(("TST-0301 Beam001", "Part__Feature001"), True, (5000.0,), (2,)),
+                   SceneObject(("beam-pair", "beam_pair"), False, (5000.0, 5000.0))]
+        with self.assertRaisesRegex(ValueError, 'matches 2 STEP solids; a part placed more than once'):
+            select_part_solid(objects, "TST-0301", None)
 
 
 class OccurrenceSelectionContracts(unittest.TestCase):
@@ -276,7 +344,92 @@ class OccurrenceAnalysis(unittest.TestCase):
         self.assertIn("Available occurrences: @beam-a, @beam-b", report["error"]["message"])
 
 
+@unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+class ContainerAnalysis(unittest.TestCase):
+    """STEPs FreeCAD writes (fixtures/build_container_steps.py). In two-roots.step the cantilever is the unnamed child
+    of the App::Part "TST-0402 Beam", whose placement puts its end faces on y = 50 and y = 150: the form of cad-model's
+    LMP-0008 part STEP. multi-solid.step is the part "TST-0403 Pair" of two solids, 1000 and 2000 mm^3."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory(prefix="cad-fea-container-")
+        cls.root = Path(cls.tmp.name)
+        built = subprocess.run([str(FREECADCMD), str(CONTAINER_FIXTURE)], capture_output=True, text=True, timeout=300,
+                               env={**os.environ, "CAD_FIXTURE_OUT": str(cls.root)}, check=False)
+        if not all((cls.root / name).is_file() for name in ("two-roots.step", "multi-solid.step")):
+            raise RuntimeError(f"container fixture build failed: {built.stdout[-2000:]} {built.stderr[-2000:]}")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def analyse(self, name: str, step: str, selection: str) -> tuple[int, dict]:
+        case = self.root / name / "case.yaml"
+        case.parent.mkdir()
+        case.write_text(f"step: {self.root / step}\n{selection}\n{CASE_TAIL}", encoding="utf-8")
+        run = subprocess.run([sys.executable, str(SCRIPT), str(case)], capture_output=True, text=True, timeout=900)
+        return run.returncode, json.loads(run.stdout)
+
+    def test_a_part_inside_a_container_is_analysed_at_its_placement(self) -> None:
+        status, report = self.analyse("beam", "two-roots.step", "part: TST-0402")
+        self.assertEqual(status, 0, report)
+        # The cantilever of test_cantilever_matches_beam_theory_within_five_percent: 120 MPa, 2.31884 mm.
+        self.assertLess(abs(report["max_von_mises_mpa"] / 120.0 - 1), 0.05)
+        self.assertLess(abs(report["max_displacement_mm"] / 2.31884 - 1), 0.05)
+
+    def test_a_part_of_several_solids_is_refused_with_their_volumes(self) -> None:
+        status, report = self.analyse("pair", "multi-solid.step", "part: TST-0403")
+        self.assertEqual(status, 2, report)
+        self.assertEqual(report["error"]["code"], "part_multiple_solids", report)
+        details = report["error"]["details"]
+        self.assertEqual((details["count"], details["solid_indices"]), (2, [1, 2]))
+        for volume, expected in zip(details["volumes_mm3"], (1000.0, 2000.0)):
+            self.assertAlmostEqual(volume, expected, places=6)
+
+
 class StaticFEAContracts(unittest.TestCase):
+    def generated_job(self, case: dict) -> tuple[dict, str, Path]:
+        """Start `case` with lifecycle.run stubbed: its keyword arguments, the job script and the run directory."""
+        root = Path(tempfile.mkdtemp(prefix="cad-fea-job-"))
+        self.addCleanup(shutil.rmtree, root, True)
+        with patch("fea_static.find_freecad", return_value=Path("/fake/freecadcmd")), \
+             patch("fea_static.lifecycle.run", side_effect=subprocess.TimeoutExpired("freecadcmd", 1)) as run:
+            result, _ = fea_static.run_job(root / "case.yaml", {"_step": str(root / "beam.step"), **case},
+                                           scratch_root=root)
+        run_dir = Path(result["run_directory"])
+        return run.call_args.kwargs, (run_dir / "fea_job.py").read_text(encoding="utf-8"), run_dir
+
+    CASE = {"material": {"E": 1, "nu": 0.3, "density": 1, "yield": 1}, "fixed_faces": {"indices": [1]},
+            "loads": [], "mesh_size": 1}
+
+    def test_an_explicit_null_timeout_takes_the_default(self) -> None:
+        kwargs, _, _ = self.generated_job({**self.CASE, "timeout_seconds": None})
+        self.assertEqual(kwargs["timeout"], fea_static.DEFAULT_TIMEOUT_SECONDS)
+
+    def test_the_job_runs_with_its_own_freecad_profile_outside_the_evidence(self) -> None:
+        kwargs, _, run_dir = self.generated_job(self.CASE)
+        env = kwargs["env"]
+        self.assertEqual(env["QT_QPA_PLATFORM"], "offscreen")
+        for key in ("HOME", "FREECAD_USER_HOME", "FREECAD_USER_DATA", "XDG_CONFIG_HOME"):
+            with self.subTest(key=key):
+                self.assertNotEqual(env[key], os.environ.get(key))
+                self.assertNotIn(run_dir, Path(env[key]).parents)
+
+    def test_the_job_pins_every_ccx_thread_count_to_one(self) -> None:
+        _, script, _ = self.generated_job(self.CASE)
+        self.assertEqual(job_of(script)["ccx_environment"], {"CCX_NPROC_EQUATION_SOLVER": "1",
+                                                             "CCX_NPROC_STIFFNESS": "1", "CCX_NPROC_RESULTS": "1"})
+
+    def test_a_failed_job_keeps_its_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            case = {**self.CASE, "_step": str(root / "beam.step"), "timeout_seconds": 60}
+            with patch("fea_static.find_freecad", return_value=failing_freecad(root)):
+                result, status = fea_static.run_job(root / "case.yaml", case, scratch_root=root)
+        self.assertEqual((status, result["error"]["code"]), (2, "analysis_failed"), result)
+        self.assertIn("Traceback (most recent call last)", result["traceback"])
+        self.assertIn("RuntimeError: import exploded", result["traceback"])
+
     def test_run_directory_is_nested_under_case_runs(self) -> None:
         case = Path(tempfile.gettempdir()) / "analysis" / "case.yaml"
         self.assertEqual(run_directory(case, "abc123"), case.parent.resolve() / "runs" / "abc123")
@@ -491,8 +644,8 @@ if len(sys.argv) > 1:
             ccx.chmod(0o755)
             case_path = root / "case.yaml"
             case_path.write_text(f"step: {step}\n{CANTILEVER_TAIL}", encoding="utf-8")
-            result, status = run_job(case_path, load_case(case_path),
-                                     solver_versions={"calculix": {"path": str(ccx), "version": "2.23"}})
+            with patch.dict(os.environ, {"CCX": str(ccx)}):  # the job's ccx override
+                result, status = run_job(case_path, load_case(case_path))
             self.assertEqual(status, 2, result)
             self.assertEqual(result["error"]["code"], "solver_crashed", result)
             details = result["error"]["details"]
@@ -500,6 +653,60 @@ if len(sys.argv) > 1:
             self.assertGreater(details["node_count"], 0)
             self.assertEqual(details["degrees_of_freedom"], 3 * details["node_count"])
             self.assertIn("inside the SPOOLES equation solver", result["error"]["message"])
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_gmsh_tools_mesh_with_the_gmsh_the_job_resolved(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cad-fea-gmsh-override-") as directory:
+            root = Path(directory)
+            step = self.make_cantilever_step(root)
+            calls = root / "gmsh-calls.log"
+            gmsh = root / "override" / "gmsh"  # $GMSH: logs its arguments, then runs FreeCAD's Gmsh from PATH
+            gmsh.parent.mkdir()
+            gmsh.write_text(f'#!/bin/sh\necho "$*" >> "{calls}"\nexec gmsh "$@"\n', encoding="utf-8")
+            gmsh.chmod(0o755)
+            case_path = root / "case.yaml"
+            case_path.write_text(f"step: {step}\n{CANTILEVER_TAIL}", encoding="utf-8")
+            with patch.dict(os.environ, {"GMSH": str(gmsh)}):
+                result, status = fea_static.run_job(case_path, load_case(case_path))
+            self.assertEqual(status, 0, result)
+            meshed = [line for line in calls.read_text(encoding="utf-8").splitlines() if line.endswith(".geo")]
+        self.assertEqual(len(meshed), 1, meshed)
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_ccx_starts_with_one_thread_in_each_parallel_stage(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cad-fea-ccx-threads-") as directory:
+            root = Path(directory)
+            step = self.make_cantilever_step(root)
+            seen = root / "ccx-environment.json"
+            ccx = root / "ccx"  # a ccx that records the environment it solves in, then fails
+            ccx.write_text(f"""#!{sys.executable}
+import json, os, sys
+print("CalculiX Version 2.23", flush=True)
+if len(sys.argv) > 1:
+    json.dump({{key: os.environ.get(key) for key in {sorted(fea_static.CCX_ENVIRONMENT)!r}}}, open({str(seen)!r}, "w"))
+    sys.exit(1)
+""", encoding="utf-8")
+            ccx.chmod(0o755)
+            case_path = root / "case.yaml"
+            case_path.write_text(f"step: {step}\n{CANTILEVER_TAIL}", encoding="utf-8")
+            with patch.dict(os.environ, {"CCX": str(ccx)}):
+                result, status = fea_static.run_job(case_path, load_case(case_path))
+            self.assertEqual(status, 2, result)
+            self.assertEqual(json.loads(seen.read_text(encoding="utf-8")),
+                             {"CCX_NPROC_EQUATION_SOLVER": "1", "CCX_NPROC_RESULTS": "1", "CCX_NPROC_STIFFNESS": "1"})
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_solver_whose_version_changed_since_the_probe_is_refused_before_meshing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cad-fea-solver-changed-") as directory:
+            root = Path(directory)
+            step = self.make_cantilever_step(root)
+            case_path = root / "case.yaml"
+            case_path.write_text(f"step: {step}\n{CANTILEVER_TAIL}", encoding="utf-8")
+            result, status = fea_static.run_job(case_path, load_case(case_path),
+                                                solver_versions={"calculix": {"path": "/elsewhere/ccx", "version": "0.1"}})
+            self.assertEqual((status, result["error"]["code"]), (2, "solver_changed"), result)
+            self.assertIn("not the recorded 0.1", result["error"]["message"])
+            self.assertEqual(list(Path(result["run_directory"]).glob("GmshMesh*")), [])
 
     def test_case_timeout_names_the_phase_its_knob_and_stops_the_jobs_children(self) -> None:
         from fea_static import run_job
@@ -766,22 +973,70 @@ class VersionedPublicationTests(unittest.TestCase):
                                    solver_versions={"calculix": {"path": "/fake/ccx", "version": "2.23"}})
             self.assertEqual(Path(run.call_args.args[0][1]).name, "fea_job.py")
 
-    def test_solver_versions_resolve_tools_beside_freecad_and_record_paths(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            folder = Path(directory)
-            freecad, gmsh, ccx = (folder / name for name in ("freecadcmd", "gmsh", "ccx"))
-            for command in (freecad, gmsh, ccx):
-                command.write_text("", encoding="utf-8")
-                command.chmod(0o755)
-            def result(command, *args, **kwargs):
-                version = {"freecadcmd": "FreeCAD 1.1.4", "gmsh": "4.15.0", "ccx": "This is Version 2.23"}[Path(command[0]).name]
-                return subprocess.CompletedProcess(command, 201 if Path(command[0]).name == "ccx" else 0, version, "")
-            with patch("fea_static.find_freecad", return_value=freecad), \
-                 patch("fea_static.subprocess.run", side_effect=result):
-                versions = fea_static.solver_versions()
-        self.assertEqual(versions["freecad"], {"path": str(freecad.resolve()), "version": "1.1.4"})
-        self.assertEqual(versions["gmsh"], {"path": str(gmsh.resolve()), "version": "4.15.0"})
-        self.assertEqual(versions["calculix"], {"path": str(ccx.resolve()), "version": "2.23"})
+    PROBED = {"freecad": {"path": "/tmp/.mount_x/usr/bin/freecadcmd", "version": "1.1.4"},
+              "resource_dir": "/tmp/.mount_x/usr/share/",
+              "gmsh": {"path": "/tmp/.mount_x/usr/bin/gmsh", "version": "4.15.0", "source": "FreeCAD's lookup"},
+              "calculix": {"path": "/tmp/.mount_x/usr/bin/ccx", "version": "2.23", "source": "FreeCAD's lookup"}}
+
+    def test_solver_versions_record_the_tools_freecad_resolves(self) -> None:
+        freecad = Path(self.temporary.name) / "freecadcmd"
+        with patch("fea_static.find_freecad", return_value=freecad), \
+             patch.object(fea_static.SOLVERS, "probe", return_value=self.PROBED) as probe:
+            versions = fea_static.solver_versions()
+        probe.assert_called_once_with(freecad)
+        self.assertEqual(versions, {"freecad": {"path": str(freecad.resolve()), "version": "1.1.4"},
+                                    "gmsh": {"path": "/tmp/.mount_x/usr/bin/gmsh", "version": "4.15.0"},
+                                    "calculix": {"path": "/tmp/.mount_x/usr/bin/ccx", "version": "2.23"}})
+
+    def test_a_solver_freecad_cannot_resolve_is_solver_unavailable(self) -> None:
+        probed = {**self.PROBED, "calculix": {"error": "ccx not found: $CCX is unset"}}
+        with patch("fea_static.find_freecad", return_value=Path("/fake/freecadcmd")), \
+             patch.object(fea_static.SOLVERS, "probe", return_value=probed):
+            with self.assertRaisesRegex(fea_static.SolverUnavailable, r"ccx not found: \$CCX is unset"):
+                fea_static.solver_versions()
+        output = __import__("io").StringIO()
+        with patch("fea_static.find_freecad", return_value=Path("/fake/freecadcmd")), \
+             patch("fea_static.solver_versions", side_effect=fea_static.SolverUnavailable("ccx not found")), \
+             patch("fea_static.run_job", side_effect=AssertionError("no solver, no run")), patch("sys.stdout", output):
+            status = fea_static.main([str(self.case), "--hw", str(self.hw), "--version", "v1"])
+        self.assertEqual((status, json.loads(output.getvalue())["error"]["code"]), (2, "solver_unavailable"))
+
+    def test_changed_ccx_thread_counts_change_the_recipe(self) -> None:
+        self.assertEqual(self.call()[0], 0)
+        manifest = json.loads((self.hw / "analysis" / "v1" / "cantilever" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["recipe"]["options"]["mesh_settings"]["calculix_environment"],
+                         {"CCX_NPROC_EQUATION_SOLVER": "1", "CCX_NPROC_STIFFNESS": "1", "CCX_NPROC_RESULTS": "1"})
+        with patch.dict(fea_static.CCX_ENVIRONMENT, {"CCX_NPROC_STIFFNESS": "8"}):
+            status, report = self.call()
+        self.assertEqual(status, 2)
+        self.assertIn("--replace", report["error"]["message"])
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_wrapper_script_freecadcmd_runs_the_bundled_solvers(self) -> None:
+        # An AppImage install: FREECADCMD is a wrapper outside the bundle and PATH has neither ccx nor gmsh.
+        assert FREECADCMD is not None
+        wrapper = Path(self.temporary.name) / "wrapper" / "freecadcmd"
+        wrapper.parent.mkdir()
+        wrapper.write_text(f'#!/bin/sh\nexec "{FREECADCMD.resolve()}" "$@"\n', encoding="utf-8")
+        wrapper.chmod(0o755)
+        step = StaticFEAContracts.make_cantilever_step(self, Path(self.temporary.name))
+        shutil.copyfile(step, self.case_dir / "cantilever.step")
+        self.case.write_text(f"step: cantilever.step\n{CANTILEVER_TAIL}", encoding="utf-8")
+        env = {key: value for key, value in os.environ.items() if key not in ("CCX", "GMSH")}
+        run = subprocess.run([sys.executable, str(SCRIPT), "hw/analysis/cases/cantilever/case.yaml",
+                              "--hw", "hw", "--version", "v1"], cwd=self.project, capture_output=True, text=True,
+                             timeout=600, env={**env, "FREECADCMD": str(wrapper), "PATH": "/usr/bin:/bin"})
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        report = json.loads(run.stdout)
+        self.assertLess(abs(report["max_von_mises_mpa"] / 120.0 - 1), 0.05)
+        self.assertLess(abs(report["max_displacement_mm"] / 2.31884 - 1), 0.05)
+        for tool in ("gmsh", "calculix"):  # the wrapper's directory and PATH hold neither tool
+            with self.subTest(tool=tool):
+                path = Path(report["solver_versions"][tool]["path"])
+                self.assertTrue(path.is_absolute())
+                self.assertNotEqual(path.parent, wrapper.parent)
+        manifest = json.loads((self.hw / "analysis" / "v1" / "cantilever" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(manifest["recipe"]["solver_versions"]), {"freecad", "gmsh", "calculix"})
 
     @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
     def test_relative_hw_publishes_a_solved_bundle(self) -> None:

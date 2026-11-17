@@ -153,6 +153,27 @@ class FreeCADDiscovery(unittest.TestCase):
         self.assertEqual(freecad_runtime.templates_dir(link),
                          command.resolve().parents[1] / "share" / "Mod" / "TechDraw" / "Templates")
 
+    def test_templates_of_a_bundle_are_listed_on_the_host(self) -> None:
+        command = self.executable(self.root / "squashfs-root" / "usr" / "bin" / "freecadcmd")
+        templates = command.parents[1] / "share" / "Mod" / "TechDraw" / "Templates"
+        (templates / "ISO").mkdir(parents=True)
+        (templates / "ISO" / "A4.svg").write_text("<svg/>", encoding="utf-8")
+        with patch("fea_solvers.probe", side_effect=AssertionError("a bundle needs no probe")):
+            self.assertEqual(freecad_runtime.techdraw_templates(command),
+                             (str(templates.resolve()), frozenset({"ISO/A4.svg"})))
+
+    def test_templates_of_a_wrapper_script_are_listed_inside_freecad_while_its_mount_exists(self) -> None:
+        # An AppImage's resources live under a /tmp/.mount_* directory that ends with the FreeCAD process,
+        # so the probe lists the templates in that process and nothing reads the directory afterwards.
+        wrapper = self.executable(self.root / "wrappers" / "freecadcmd")
+        gone = self.root / "mount_gone" / "usr" / "share" / "Mod" / "TechDraw" / "Templates"
+        report = {"techdraw_templates": {"dir": str(gone), "files": ["ASME/ANSIA_Landscape.svg"]}}
+        with patch("fea_solvers.probe", return_value=report) as probe:
+            found = freecad_runtime.techdraw_templates(wrapper)
+        probe.assert_called_once_with(wrapper)
+        self.assertFalse(gone.exists())
+        self.assertEqual(found, (str(gone), frozenset({"ASME/ANSIA_Landscape.svg"})))
+
 class FreeCADConcurrency(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="cad-freecad-parallel-")
@@ -197,6 +218,82 @@ class FreeCADConcurrency(unittest.TestCase):
         self.assertTrue(all(value and value["directories_exist"] for value in values))
         first, second = (value["environment"] for value in values if value)
         self.assertTrue(all(first[key] != second[key] for key in first))
+    def fake_freecad(self, script_text: str) -> tuple[Path, Path]:
+        command = self.root / "fake-freecad"
+        command.write_text("#!/bin/sh\nexec python3 \"$1\"\n", encoding="utf-8")
+        command.chmod(0o755)
+        script = self.root / "job.py"
+        script.write_text(script_text, encoding="utf-8")
+        return command, script
+
+    def test_a_failed_job_reports_its_error_with_its_traceback(self) -> None:
+        command, script = self.fake_freecad("import json, os\njob = json.load(open(os.environ['CAD_DRAWING_JOB']))\n"
+                                            "json.dump({'status': 'error', 'error': 'probe failed', "
+                                            "'traceback': 'Traceback (most recent call last):\\n  boom'}, "
+                                            "open(job['result'], 'w'))\n")
+        result, reason = freecad_runtime.run_job(command, script, {}, self.root, 10)
+        self.assertIsNone(result)
+        self.assertTrue(reason.startswith("probe failed"), reason)
+        self.assertIn("Traceback (most recent call last):\n  boom", reason)
+
+    def test_a_job_without_a_result_reports_its_stdout_and_stderr(self) -> None:
+        command, script = self.fake_freecad("import sys\nprint('stdout tail')\nprint('stderr tail', file=sys.stderr)\n"
+                                            "sys.exit(3)\n")
+        result, reason = freecad_runtime.run_job(command, script, {}, self.root, 10)
+        self.assertIsNone(result)
+        for text in ("exit 3", "stdout tail", "stderr tail"):
+            self.assertIn(text, reason)
+
+    def test_a_job_gets_the_given_environment_with_its_isolation(self) -> None:
+        command, script = self.fake_freecad("import json, os\njob = json.load(open(os.environ['CAD_DRAWING_JOB']))\n"
+                                            "json.dump({'status': 'pass', 'mark': os.environ.get('CAD_TEST_MARK'), "
+                                            "'home': os.environ['HOME']}, open(job['result'], 'w'))\n")
+        result, _ = freecad_runtime.run_job(command, script, {}, self.root, 10,
+                                            environ={**os.environ, "CAD_TEST_MARK": "given", "HOME": "/nowhere"})
+        assert result is not None
+        self.assertEqual(result["mark"], "given")
+        self.assertNotEqual(result["home"], "/nowhere")
+
+    def test_a_group_that_ends_on_sigterm_gets_no_sigkill(self) -> None:
+        import subprocess
+        process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], start_new_session=True,
+                                   text=True)
+        with patch.object(freecad_runtime.os, "killpg", wraps=os.killpg) as killpg:
+            freecad_runtime._terminate_process_group(process)
+        self.assertEqual([call.args for call in killpg.call_args_list if call.args[1] != 0],
+                         [(process.pid, signal.SIGTERM)])
+        self.assertIsNotNone(process.poll())
+
+    def test_a_child_that_ignores_sigterm_dies_after_its_leader_exits(self) -> None:
+        import subprocess
+        child = ("import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print('ready', flush=True); "
+                 "time.sleep(60)")
+        leader = (f"import subprocess, sys, time; c = subprocess.Popen([sys.executable, '-c', {child!r}], "
+                  "stdout=subprocess.PIPE, text=True); c.stdout.readline(); print(c.pid, flush=True); time.sleep(60)")
+        process = subprocess.Popen([sys.executable, "-c", leader], start_new_session=True, stdout=subprocess.PIPE,
+                                   text=True)
+        assert process.stdout is not None
+        pid = int(process.stdout.readline())
+        freecad_runtime._terminate_process_group(process)
+        process.stdout.close()
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.05)
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+
+    def test_a_group_owned_by_another_user_is_not_an_error(self) -> None:
+        import subprocess
+        process = subprocess.Popen([sys.executable, "-c", "pass"], start_new_session=True, text=True)
+        process.wait()
+        with patch.object(freecad_runtime.os, "killpg", side_effect=PermissionError):
+            freecad_runtime._terminate_process_group(process)
+            freecad_runtime._terminate_active_processes((process,))
+
     def test_sigterm_terminates_and_reaps_every_process_group(self) -> None:
         command = self.root / "fake-freecad"
         command.write_text("#!/bin/sh\nexec python3 \"$1\"\n", encoding="utf-8")
