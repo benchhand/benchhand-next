@@ -467,6 +467,28 @@ class PairRequirementTests(unittest.TestCase):
         self.assertEqual(allowed, {("TST-0201", "arm-b")})
         self.assertEqual(fitted, {("TST-0201", "arm-a"), ("TST-0201", "arm-b"), ("arm-a", "arm-b")})
 
+    def test_engagement_length_survives_every_declared_fit_and_heat_set_reader(self) -> None:
+        def fit(kind: str, number: int, **extra: object) -> dict:
+            return {"id": f"IF-00{number}", "from": "a", "to": "b", "type": "mounting", "description": "Fits.",
+                    "limits": {kind: {"fit": "5 H7/p6", "pair": ["@arm-a", "TST-0201"], **extra}}}
+
+        def insert(**extra: object) -> dict:
+            entry = HEAT_SET["limits"]["heat_set"][0]
+            return {**HEAT_SET, "limits": {"heat_set": [{**entry, **extra}]}}
+
+        assembly, hw = assembly_of(GAP_YAML), Path("hw")
+        readers = {"press_fit": self.policy.declared_press_fits, "running_fit": self.policy.declared_running_fits,
+                   "locating_fit": self.policy.declared_locating_fits}
+        for kind, reader in readers.items():
+            with self.subTest(kind):
+                with_length = reader(hw, [fit(kind, 1, engagement_length_mm=6.5)], assembly)
+                without = reader(hw, [fit(kind, 1)], assembly)
+                self.assertEqual([item.get("engagement_length_mm") for item in with_length], [6.5])
+                self.assertNotIn("engagement_length_mm", without[0])
+        with_length = self.policy.declared_heat_sets(hw, [insert(engagement_length_mm=5.7)], assembly)
+        self.assertEqual([item.get("engagement_length_mm") for item in with_length], [5.7])
+        self.assertNotIn("engagement_length_mm", self.policy.declared_heat_sets(hw, [insert()], assembly)[0])
+
     def test_a_running_fit_on_one_occurrence_twice_is_refused(self) -> None:
         twice = {"id": "IF-001", "from": "a", "to": "b", "type": "motion", "description": "Pivots.",
                  "limits": {"running_fit": {"fit": "5 f7", "pair": ["TST-0202", "@arm-p"]}}}

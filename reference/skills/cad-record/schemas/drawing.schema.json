@@ -342,6 +342,7 @@
         "pair": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"$ref": "assembly.schema.json#/$defs/part_ref"}},
         "hole": {"$ref": "#/$defs/fit_endpoint"},
         "shaft": {"$ref": "#/$defs/fit_endpoint"},
+        "engagement_length_mm": {"description": "How far the pin, shaft or insert enters its mating bore during assembly, in mm", "type": "number", "exclusiveMinimum": 0},
         "note": {"type": "string", "minLength": 1},
         "axial_retainer": {"$ref": "#/$defs/axial_retainer"}
       },
@@ -367,6 +368,7 @@
         "hole_d": {"type": "number", "exclusiveMinimum": 0},
         "hole_tol": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
         "depth_min": {"type": "number", "exclusiveMinimum": 0},
+        "engagement_length_mm": {"description": "How far the pin, shaft or insert enters its mating bore during assembly, in mm", "type": "number", "exclusiveMinimum": 0},
         "insert": {"type": "string", "minLength": 1},
         "source": {"type": "string", "pattern": "^https?://\\S+$"},
         "note": {"type": "string", "minLength": 1},

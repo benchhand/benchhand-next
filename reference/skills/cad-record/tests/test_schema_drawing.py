@@ -352,6 +352,25 @@ class DrawingRecordAdditions(unittest.TestCase):
         }
         self.run_cases(cases, lambda: self.docs["interfaces.yaml"]["interfaces"][0]["limits"])
 
+    def test_engagement_length_is_optional_and_positive_on_every_fit_and_heat_set(self) -> None:
+        limits = lambda: self.docs["interfaces.yaml"]["interfaces"][0]["limits"]  # noqa: E731
+        targets: dict[str, Callable[[dict], dict]] = {
+            "press_fit": lambda l: l["press_fit"], "running_fit": lambda l: l["running_fit"],
+            "locating_fit": lambda l: l.setdefault("locating_fit", {"fit": "5 H7/h6", "pair": ["TST-0001", "TST-0002"],
+                                                    "axial_retainer": {"type": "adhesive"}}),
+            "heat_set": lambda l: l["heat_set"][0]}
+        pristine = copy.deepcopy((self.docs, self.parts))
+        for name, target in targets.items():
+            for label, value, accepted in (("positive", 6.5, True), ("zero", 0, False), ("negative", -1, False),
+                                           ("string", "6", False)):
+                with self.subTest(name, value=label):
+                    self.docs, self.parts = copy.deepcopy(pristine)
+                    target(limits())["engagement_length_mm"] = value
+                    if accepted:
+                        self.assert_valid()
+                    else:
+                        self.assert_rejected("engagement_length_mm")
+
     def test_bom_procurement_columns(self) -> None:
         def designation(rows: list[dict[str, str]]) -> None:
             rows[1]["designation"] = "ISO 2338 5 x 20"
