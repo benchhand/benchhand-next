@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -13,6 +16,7 @@ import unittest
 import zlib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from defusedxml import ElementTree as SafeET
@@ -314,6 +318,47 @@ class FreeCADConcurrency(unittest.TestCase):
                     self.assertEqual(len(list(self.root.glob("*.result.json.pid"))), 2)
                     os.kill(os.getpid(), signal.SIGTERM)
 
+class EpochCli(unittest.TestCase):
+    """An oversized SOURCE_DATE_EPOCH stops each producer with a structured error before any FreeCAD job."""
+
+    SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory(prefix="cad-epoch-cli-")
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        self.marker = self.root / "freecad-launched"
+        fake = self.root / "freecadcmd"
+        fake.write_text(f"#!/bin/sh\necho launched >> '{self.marker}'\n", encoding="utf-8")
+        fake.chmod(0o755)
+        self.fake = fake
+
+    def run_cli(self, script: str, *args: str, epoch: str) -> tuple[int, dict]:
+        env = {**os.environ, "FREECADCMD": str(self.fake), "SOURCE_DATE_EPOCH": epoch}
+        proc = subprocess.run([sys.executable, str(self.SCRIPTS / script), str(self.root / "hw"), "--version", "v1", *args],
+                              capture_output=True, text=True, env=env, timeout=120)
+        try:
+            return proc.returncode, json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            raise AssertionError(f"no JSON from {script} (exit {proc.returncode}): {proc.stderr[-2000:]}") from None
+
+    def test_part_drawing_refuses_an_oversized_epoch(self) -> None:
+        code, out = self.run_cli("drawing.py", "--part", "LMP-0005", epoch="9" * 40)
+        self.assertEqual((code, out["error"]["code"]), (2, "invalid_source_date_epoch"), out)
+        self.assertFalse(self.marker.exists())
+
+    def test_assembly_drawing_refuses_an_oversized_epoch(self) -> None:
+        code, out = self.run_cli("assembly_drawing.py", epoch="9" * 40)
+        self.assertEqual((code, out["findings"][0]["code"]), (2, "invalid_source_date_epoch"), out)
+        self.assertFalse(self.marker.exists())
+
+    def test_a_valid_epoch_is_not_what_stops_either_cli(self) -> None:
+        for script, extra in (("drawing.py", ("--part", "LMP-0005")), ("assembly_drawing.py", ())):
+            with self.subTest(script=script):
+                _, out = self.run_cli(script, *extra, epoch="1700000000")
+                self.assertNotIn("invalid_source_date_epoch", json.dumps(out))
+
+
 class SheetExportParts(unittest.TestCase):
     """Text splitting and PDF reading without FreeCAD; the lamp drawings exercise the Qt export itself."""
 
@@ -392,6 +437,224 @@ class SheetExportParts(unittest.TestCase):
                                               "family", "bold", "fill", "matrix"} for run in runs))
         self.assertEqual(content.text, "Aa 0123")
         self.assertEqual(content.fonts, ["osifont"])
+    @staticmethod
+    def qt_style_pdf(creation: str = "D:20261116203848+04'00'", xmp: str = "2026-11-16T20:38:48+04:00") -> bytes:
+        """A tiny PDF laid out like Qt's: an Info dictionary, plain XMP, an xref table with real offsets."""
+        xmp_body = (f'<x:xmpmeta><rdf:Description xmp:CreatorTool="cad-drawings" xmp:CreateDate="{xmp}" '
+                    f'xmp:ModifyDate="{xmp}" xmp:MetadataDate="{xmp}"/></x:xmpmeta>').encode()
+        bodies = [b"<< /Type /Catalog /Pages 2 0 R /Metadata 4 0 R >>",
+                  b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+                  b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >>",
+                  b"<< /Type /Metadata /Subtype /XML /Length %d >>\nstream\n%s\nendstream" % (len(xmp_body), xmp_body),
+                  f"<< /Creator (cad-drawings) /CreationDate ({creation}) /ModDate ({creation}) >>".encode()]
+        out = bytearray(b"%PDF-1.4\n")
+        offsets = []
+        for number, body in enumerate(bodies, start=1):
+            offsets.append(len(out))
+            out += b"%d 0 obj\n%s\nendobj\n" % (number, body)
+        start = len(out)
+        out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(bodies) + 1)
+        out += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+        out += b"trailer\n<< /Size %d /Root 1 0 R /Info 5 0 R /ID [<aa> <aa>] >>\nstartxref\n%d\n%%%%EOF\n" % (len(bodies) + 1, start)
+        return bytes(out)
+
+    @staticmethod
+    def assert_xref_intact(test: unittest.TestCase, data: bytes) -> None:
+        """Every classic xref entry points at its own object, as a PDF reader needs."""
+        start = int(re.search(rb"startxref\s+(\d+)", data).group(1))
+        lines = data[start:].split(b"trailer")[0].splitlines()
+        count = int(lines[1].split()[1])
+        entries = [line for line in lines[2:] if line.endswith(b" n ")]
+        test.assertEqual(len(entries), count - 1)
+        for number, line in enumerate(entries, start=1):
+            test.assertTrue(data[int(line[:10]):].startswith(b"%d 0 obj" % number), (number, line))
+
+    def test_pdf_dates_are_pinned_without_moving_a_byte_offset(self) -> None:
+        data = self.qt_style_pdf()
+        pinned = sheet_export.pin_pdf_dates(data, 1_700_000_000)   # 2023-11-14 22:13:20 UTC
+        self.assertEqual(len(pinned), len(data))
+        self.assertEqual(re.findall(rb"/(?:CreationDate|ModDate) \(([^)]*)\)", pinned), [b"D:20231114221320+00'00'"] * 2)
+        self.assertEqual(re.findall(rb'xmp:\w+Date="([^"]*)"', pinned), [b"2023-11-14T22:13:20+00:00"] * 3)
+        self.assert_xref_intact(self, pinned)
+        self.assertEqual(re.sub(rb"20231114221320\+00'00'|2023-11-14T22:13:20\+00:00", b"", pinned).replace(b"D:", b""),
+                         re.sub(rb"20261116203848\+04'00'|2026-11-16T20:38:48\+04:00", b"", data).replace(b"D:", b""))
+
+    def test_real_qt_dates_are_pinned_in_their_own_form_at_the_same_length(self) -> None:
+        # The strings Qt 6.8.3 wrote on dev (aarch64) and pace (x86_64, the CI runner's build), by TZ. TZ=UTC makes
+        # Qt write "Z" in the Info dictionary, which is six bytes shorter than "+00'00'".
+        xmp_zone = {"TZ unset": "+00:00", "TZ=UTC": "+00:00", "Europe/Amsterdam": "+01:00", "Asia/Dubai": "+04:00"}
+        cases = [
+            ("TZ unset", "D:20261117091914+00'00'", "2026-11-17T09:19:14+00:00", "D:20231114221320+00'00'"),
+            ("TZ=UTC", "D:20261117091913Z", "2026-11-17T09:19:13+00:00", "D:20231114221320Z"),
+            ("Europe/Amsterdam", "D:20261117101855+01'00'", "2026-11-17T10:18:55+01:00", "D:20231114221320+00'00'"),
+            ("Asia/Dubai", "D:20261117131856+04'00'", "2026-11-17T13:18:56+04:00", "D:20231114221320+00'00'"),
+        ]
+        for name, info, xmp, expected_info in cases:
+            with self.subTest(tz=name):
+                self.assertTrue(xmp.endswith(xmp_zone[name]))
+                data = self.qt_style_pdf(info, xmp)
+                pinned = sheet_export.pin_pdf_dates(data, 1_700_000_000)
+                self.assertEqual(len(pinned), len(data))
+                self.assertEqual(re.findall(rb"/(?:CreationDate|ModDate) \(([^)]*)\)", pinned), [expected_info.encode()] * 2)
+                self.assertEqual(re.findall(rb'xmp:\w+Date="([^"]*)"', pinned), [b"2023-11-14T22:13:20+00:00"] * 3)
+                self.assert_xref_intact(self, pinned)
+
+    def test_pdf_date_grammar_is_pinned_field_for_field(self) -> None:
+        pdf_dates = {
+            "D:2026": "D:2023", "D:202611": "D:202311", "D:20261117": "D:20231114", "D:2026111709": "D:2023111422",
+            "D:202611170918": "D:202311142213", "D:20261117091856": "D:20231114221320",
+            "D:20261117091856Z": "D:20231114221320Z", "D:20261117091856+01'00'": "D:20231114221320+00'00'",
+            "D:20261117091856-07'30'": "D:20231114221320+00'00'", "D:20261117091856+01'00": "D:20231114221320+00'00",
+            "D:20261117091856+0100": "D:20231114221320+0000", "D:20261117091856+01": "D:20231114221320+00",
+            "D:20261117091856Z00'00'": "D:20231114221320Z00'00'",
+        }
+        for original, expected in pdf_dates.items():
+            with self.subTest(info=original):
+                pinned = sheet_export.pin_pdf_dates(self.qt_style_pdf(original), 1_700_000_000)
+                self.assertEqual(re.findall(rb"/(?:CreationDate|ModDate) \(([^)]*)\)", pinned), [expected.encode()] * 2)
+                self.assertEqual(len(pinned), len(self.qt_style_pdf(original)))
+        xmp_dates = {
+            "2026": "2023", "2026-11": "2023-11", "2026-11-17": "2023-11-14", "2026-11-17T09:18Z": "2023-11-14T22:13Z",
+            "2026-11-17T09:18:56": "2023-11-14T22:13:20", "2026-11-17T09:18:56Z": "2023-11-14T22:13:20Z",
+            "2026-11-17T09:18:56+05:30": "2023-11-14T22:13:20+00:00", "2026-11-17T09:18:56-07:00": "2023-11-14T22:13:20+00:00",
+            "2026-11-17T09:18:56.123Z": "2023-11-14T22:13:20.000Z",
+            "2026-11-17T09:18:56.123456+01:00": "2023-11-14T22:13:20.000000+00:00",
+            "2026-11-17T09:18:56.5": "2023-11-14T22:13:20.0",
+        }
+        for original, expected in xmp_dates.items():
+            with self.subTest(xmp=original):
+                data = self.qt_style_pdf(xmp=original)
+                pinned = sheet_export.pin_pdf_dates(data, 1_700_000_000)
+                self.assertEqual(re.findall(rb'xmp:\w+Date="([^"]*)"', pinned), [expected.encode()] * 3)
+                self.assertEqual(len(pinned), len(data))
+
+    def test_a_date_form_that_cannot_keep_its_length_is_refused(self) -> None:
+        for original in ("D:2026-11-17", "D:abc", "D:20261117091856X", "D:2026111", "D:20261117091856+01'00'x", "D:"):
+            with self.subTest(info=original), self.assertRaisesRegex(sheet_export.ExportError, "PDF date"):
+                sheet_export.pin_pdf_dates(self.qt_style_pdf(original), 0)
+        for original in ("2026-11-17 09:18:56", "20261117T091856Z", "12026-11-17T09:18:56Z", "2026-11-17T09:18:56.Z", ""):
+            with self.subTest(xmp=original), self.assertRaisesRegex(sheet_export.ExportError, "XMP date"):
+                sheet_export.pin_pdf_dates(self.qt_style_pdf(xmp=original), 0)
+
+    def test_pinned_dates_do_not_depend_on_the_original_clock_or_zone(self) -> None:
+        first = sheet_export.pin_pdf_dates(self.qt_style_pdf(), 0)
+        second = sheet_export.pin_pdf_dates(self.qt_style_pdf("D:20300101000000-07'00'", "2030-01-01T00:00:00-07:00"), 0)
+        self.assertEqual(first, second)
+
+    def test_pdf_without_a_creation_date_is_refused(self) -> None:
+        with self.assertRaisesRegex(sheet_export.ExportError, "CreationDate"):
+            sheet_export.pin_pdf_dates(b"%PDF-1.4\n1 0 obj\n<< >>\nendobj\n", 0)
+
+    def test_an_unterminated_date_literal_is_refused_not_left_unpinned(self) -> None:
+        whole = self.qt_style_pdf()
+        for name in ("CreationDate", "ModDate"):
+            with self.subTest(date=name):
+                cut = whole.replace(b"/" + name.encode() + b" (D:20261116203848+04'00')",
+                                    b"/" + name.encode() + b" (D:20261116203848+04'00'", 1)
+                self.assertNotEqual(cut, whole)
+                with self.assertRaisesRegex(sheet_export.ExportError, f"unterminated /{name}"):
+                    sheet_export.pin_pdf_dates(cut, 0)
+
+    def test_pdf_with_only_a_mod_date_is_refused(self) -> None:
+        data = self.qt_style_pdf().replace(b"/CreationDate (D:20261116203848+04'00') ", b"")
+        self.assertIn(b"/ModDate", data)
+        self.assertNotIn(b"/CreationDate", data)
+        with self.assertRaisesRegex(sheet_export.ExportError, "CreationDate"):
+            sheet_export.pin_pdf_dates(data, 0)
+
+    def test_pdf_timestamp_follows_source_date_epoch_else_a_fixed_date_never_the_clock(self) -> None:
+        with patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "1700000000"}):
+            self.assertEqual(sheet_export.pdf_timestamp(), 1_700_000_000)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SOURCE_DATE_EPOCH", None)
+            with patch.object(time, "time", return_value=1_999_999_999.0):
+                self.assertEqual(sheet_export.pdf_timestamp(), sheet_export.DEFAULT_PDF_EPOCH)
+        for bad in ("", "yesterday", "-1", "+5", " 5", "1.5", "²", "١٢٣"):
+            with self.subTest(value=bad), patch.dict(os.environ, {"SOURCE_DATE_EPOCH": bad}):
+                with self.assertRaisesRegex(sheet_export.ExportError, "SOURCE_DATE_EPOCH"):
+                    sheet_export.pdf_timestamp()
+
+    def test_source_date_epoch_is_accepted_up_to_the_last_four_digit_year_and_refused_beyond(self) -> None:
+        last = 253_402_300_799   # 9999-12-31T23:59:59Z: the PDF date has a four-digit year
+        for value, accepted in ((str(last), True), ("0", True), (str(last + 1), False), ("9" * 40, False),
+                                ("9" * 5000, False)):
+            with self.subTest(digits=len(value), value=value[:14]), patch.dict(os.environ, {"SOURCE_DATE_EPOCH": value}):
+                if accepted:
+                    self.assertEqual(sheet_export.pdf_timestamp(), int(value))
+                else:
+                    with self.assertRaisesRegex(sheet_export.ExportError, "SOURCE_DATE_EPOCH"):
+                        sheet_export.pdf_timestamp()
+        pinned = sheet_export.pin_pdf_dates(self.qt_style_pdf(), last)
+        self.assertIn(b"D:99991231235959+00'00'", pinned)
+        self.assertEqual(len(pinned), len(self.qt_style_pdf()))
+        with self.assertRaisesRegex(sheet_export.ExportError, "epoch"):
+            sheet_export.pin_pdf_dates(self.qt_style_pdf(), last + 1)
+
+    def test_a_bad_source_date_epoch_stops_the_export_before_freecad_starts(self) -> None:
+        launched: list[str] = []
+        with tempfile.TemporaryDirectory(prefix="cad-epoch-") as tmp, \
+                patch.object(freecad_runtime, "run_job", lambda *a, **k: launched.append("job") or (None, "")), \
+                patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "9" * 40}):
+            svg = Path(tmp) / "s.svg"
+            svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="150mm">'
+                           '<text font-size="5">Aa</text></svg>', encoding="utf-8")
+            with self.assertRaisesRegex(sheet_export.ExportError, "SOURCE_DATE_EPOCH"):
+                sheet_export.export_sheet(Path("fc"), svg, Path(tmp) / "a.pdf", Path(tmp) / "a.png", ["Aa"], 5)
+        self.assertEqual(launched, [])
+
+    def test_part_recipe_names_the_pdf_epoch_so_another_epoch_is_another_recipe(self) -> None:
+        import drawing
+        context = SimpleNamespace(provenance=lambda pn: {"pn": pn})
+        with patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "1700000000"}):
+            first = drawing.part_recipe(context, "LMP-0005")
+            self.assertEqual(first, drawing.part_recipe(context, "LMP-0005"))
+        with patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "1700003600"}):
+            second = drawing.part_recipe(context, "LMP-0005")
+        with patch.dict(os.environ):   # restored on exit, so a caller's epoch survives the test
+            os.environ.pop("SOURCE_DATE_EPOCH", None)
+            default = drawing.part_recipe(context, "LMP-0005")
+        self.assertEqual(first["pdf_epoch"], 1_700_000_000)
+        self.assertEqual(default["pdf_epoch"], sheet_export.DEFAULT_PDF_EPOCH)
+        self.assertEqual(len({json.dumps(r, sort_keys=True) for r in (first, second, default)}), 3)
+
+    def test_document_id_follows_the_sheet_and_is_a_uuid(self) -> None:
+        one = sheet_export.document_id(b"<svg>one</svg>", [10.0, 20.0])
+        self.assertEqual(one, sheet_export.document_id(b"<svg>one</svg>", [10.0, 20.0]))
+        self.assertNotEqual(one, sheet_export.document_id(b"<svg>two</svg>", [10.0, 20.0]))
+        self.assertNotEqual(one, sheet_export.document_id(b"<svg>one</svg>", [10.0, 21.0]))
+        self.assertRegex(one, r"^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+
+    @unittest.skipUnless(FREECAD_PRESENT, "PDF reproducibility needs FreeCAD 1.1.4 freecadcmd")
+    def test_same_sheet_exports_byte_identical_pdfs(self) -> None:
+        command = freecad_runtime.find_freecadcmd()
+        with tempfile.TemporaryDirectory(prefix="cad-pdf-repro-") as tmp:
+            root = Path(tmp)
+            svg = root / "input.svg"
+            svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="150mm" viewBox="0 0 200 150">'
+                           '<path d="M 10 10 L 100 10 L 100 60 Z" fill="none" stroke="#000"/>'
+                           '<text x="10" y="20" font-size="10">Aa 0123</text>'
+                           '<text x="10" y="40" font-size="6" font-weight="bold">Bold 456</text>'
+                           '<text x="10" y="55" font-size="5">⟂∥ 12.50 H7</text></svg>', encoding="utf-8")
+            outputs = []
+            with patch.dict(os.environ):   # the default date, whatever epoch the caller has set
+                os.environ.pop("SOURCE_DATE_EPOCH", None)
+                for name in ("a", "b"):
+                    sheet_export.export_sheet(command, svg, root / f"{name}.pdf", root / f"{name}.png", ["Aa 0123"], 300)
+                    if name == "a":
+                        time.sleep(1.1)   # a wall-clock date would differ by a second
+                    outputs.append((root / f"{name}.pdf").read_bytes())
+            self.assertEqual(outputs[0], outputs[1])
+            self.assert_xref_intact(self, outputs[0])
+            with patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "1700000000"}):
+                sheet_export.export_sheet(command, svg, root / "c.pdf", root / "c.png", ["Aa 0123"], 300)
+            dated = (root / "c.pdf").read_bytes()
+            self.assertRegex(dated, rb"/CreationDate \(D:20231114221320(?:Z|\+00'00')\)")
+            self.assertNotEqual(dated, outputs[0])
+            svg.write_text(svg.read_text(encoding="utf-8").replace("Aa 0123", "Bb 0123"), encoding="utf-8")
+            sheet_export.export_sheet(command, svg, root / "d.pdf", root / "d.png", ["Bb 0123"], 300)
+            ids = [re.search(rb"/ID \[ <([0-9a-f]+)>", data).group(1) for data in (outputs[0], (root / "d.pdf").read_bytes())]
+            self.assertNotEqual(ids[0], ids[1])
+
     def test_svg_unknown_glyph_is_rejected(self) -> None:
         root = SafeET.fromstring('<svg xmlns="http://www.w3.org/2000/svg"><text font-family="serif" font-size="10">☃</text></svg>')
         with self.assertRaisesRegex(sheet_export.ExportError, "unsupported glyph.*U\\+2603"):

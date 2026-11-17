@@ -13,6 +13,7 @@ import csv
 import hashlib
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -146,7 +147,8 @@ def write_project(root: Path, regime: str = "iso", bom_pin_qty: int = 2) -> Path
     return hw
 
 
-def run_cli(hw: Path, out: Path | None = None, jobs: int | None = None, replace: bool = False) -> tuple[int, dict]:
+def run_cli(hw: Path, out: Path | None = None, jobs: int | None = None, replace: bool = False,
+            env: dict[str, str] | None = None) -> tuple[int, dict]:
     command = [CLI, str(hw), "--version", "v1", "--timeout", "600"]
     if out is not None:
         command += ["--output-dir", str(out)]
@@ -154,7 +156,8 @@ def run_cli(hw: Path, out: Path | None = None, jobs: int | None = None, replace:
         command += ["--jobs", str(jobs)]
     if replace:
         command.append("--replace")
-    proc = subprocess.run(scriptenv.script_command(*command), capture_output=True, text=True, timeout=1800)
+    proc = subprocess.run(scriptenv.script_command(*command), capture_output=True, text=True, timeout=1800,
+                          env={**os.environ, **(env or {})})
     try:
         return proc.returncode, json.loads(proc.stdout)
     except json.JSONDecodeError:
@@ -208,6 +211,23 @@ class EndToEnd(unittest.TestCase):
                 self.assertEqual(rechecked["status"], "fail")
                 self.assertIn("item 2 has 0 balloons in view exploded_iso; expected one",
                               [f["message"] for f in rechecked["findings"]])
+
+    def test_a_published_bundle_is_not_reused_under_another_source_date_epoch(self) -> None:
+        hw = write_project(self.root / "epoch")
+        first_env, second_env = {"SOURCE_DATE_EPOCH": "1700000000"}, {"SOURCE_DATE_EPOCH": "1700003600"}
+        status, first = run_cli(hw, env=first_env)
+        self.assertEqual((status, first["status"]), (0, "pass"), first.get("findings"))
+        package = hw.parent / first["output_dir"]
+        self.assertRegex((package / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114221320(?:Z|\+00'00')\)")
+        status, again = run_cli(hw, env=first_env)
+        self.assertEqual((status, again.get("cache")), (0, "hit"))
+        status, refused = run_cli(hw, env=second_env)
+        self.assertEqual(status, 2, refused)
+        self.assertIn("recipe", json.dumps(refused))
+        self.assertIn(b"D:20231114221320", (package / "sheet-1.pdf").read_bytes())   # the sealed bundle is untouched
+        status, replaced = run_cli(hw, env=second_env, replace=True)
+        self.assertEqual((status, replaced["status"], replaced.get("cache")), (0, "pass", None), replaced.get("findings"))
+        self.assertRegex((hw.parent / replaced["output_dir"] / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114231320(?:Z|\+00'00')\)")
 
     def test_parallel_assembly_sheets_match_sequential_report_order(self) -> None:
         hw = write_project(self.root / "parallel")

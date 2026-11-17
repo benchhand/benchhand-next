@@ -123,8 +123,9 @@ class AnnotationClasses(unittest.TestCase):
         self.assertIn("annotation text 'R3' overlaps the dimension line or frame of dim-e", problems)
 
 
-def run(*args: str, timeout: float = 3600) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([*args], capture_output=True, text=True, env=ENV, timeout=timeout, check=False)
+def run(*args: str, timeout: float = 3600, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([*args], capture_output=True, text=True, env={**ENV, **(env or {})}, timeout=timeout,
+                          check=False)
 
 
 class RepeatedDimensions(unittest.TestCase):
@@ -261,11 +262,12 @@ class PinDrawingGate(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.tmp.cleanup()
 
-    def draw(self, label: str, out: str, pn: str = "LMP-0005", *, output: bool = True) -> tuple[int, dict]:
-        command = [UV, "run", "--script", str(DRAWING), str(self.hw), "--version", label, "--part", pn]
+    def draw(self, label: str, out: str, pn: str = "LMP-0005", *, output: bool = True, hw: Path | None = None,
+             env: dict[str, str] | None = None, extra: tuple[str, ...] = ()) -> tuple[int, dict]:
+        command = [UV, "run", "--script", str(DRAWING), str(hw or self.hw), "--version", label, "--part", pn, *extra]
         if output:
             command += ["--output-dir", str(Path(self.tmp.name) / ".cad-work" / out)]
-        proc = run(*command, timeout=900)
+        proc = run(*command, timeout=900, env=env)
         try:
             result = json.loads(proc.stdout)["parts"][0]
         except json.JSONDecodeError as exc:
@@ -286,6 +288,23 @@ class PinDrawingGate(unittest.TestCase):
         code, reused = self.draw("v1", "unused", output=False)
         self.assertEqual((code, reused.get("cache"), reused["output_dir"]), (0, "hit", str(package)))
         self.assertEqual((package / "manifest.json").read_bytes(), manifest)
+
+    def test_a_published_bundle_is_not_reused_under_another_source_date_epoch(self) -> None:
+        hw = Path(self.tmp.name) / "epoch" / "hw"
+        shutil.copytree(self.hw, hw)
+        first_env, second_env = {"SOURCE_DATE_EPOCH": "1700000000"}, {"SOURCE_DATE_EPOCH": "1700003600"}
+        code, first = self.draw("v1", "unused", output=False, hw=hw, env=first_env)
+        self.assertEqual((code, first["status"]), (0, "pass"), first.get("findings"))
+        package = Path(first["output_dir"])
+        self.assertRegex((package / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114221320(?:Z|\+00'00')\)")
+        code, again = self.draw("v1", "unused", output=False, hw=hw, env=first_env)
+        self.assertEqual((code, again.get("cache")), (0, "hit"))
+        code, refused = self.draw("v1", "unused", output=False, hw=hw, env=second_env)
+        self.assertEqual((code, refused["error"]["code"]), (2, "publish_conflict"), refused)
+        self.assertIn(b"D:20231114221320", (package / "sheet-1.pdf").read_bytes())   # the sealed bundle is untouched
+        code, replaced = self.draw("v1", "unused", output=False, hw=hw, env=second_env, extra=("--replace",))
+        self.assertEqual((code, replaced["status"], replaced.get("cache")), (0, "pass", None), replaced.get("findings"))
+        self.assertRegex((Path(replaced["output_dir"]) / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114231320(?:Z|\+00'00')\)")
 
     def test_explicit_output_outside_cad_work_is_refused(self) -> None:
         outside = Path(self.tmp.name) / "outside"
