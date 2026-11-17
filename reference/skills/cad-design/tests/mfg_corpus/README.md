@@ -88,3 +88,14 @@ rate command prints `known gap: <family>/<pair>: <why>`. Remove the field when t
 `false_positive_rate`, `ran`). `../test_mfg_corpus.py` fails when a family's detection rate falls or its
 false-positive rate rises past its baseline. After a check improves, raise the rates in that family's baseline file
 in the same PR. A new family adds its own file; one file per family keeps stacked PRs from conflicting.
+
+## fdm_horizontal_hole
+
+Horizontal holes (axis parallel to the bed) against the FDM support obligation, five pairs built in code, no fixture files.
+The TEST profile has no self-supporting-hole calibration, so no round roof counts as support-free. Each pair changes one
+thing: a round roof against a 45 deg teardrop or diamond roof of the same width, at a fixed height. The square pair uses
+the 5 mm bridge calibration.
+
+The `square_roof_bridge` pair is a known gap. Its 4 mm twin and 12 mm mutant both FAIL on the same wrong span, because
+the probe measures the roof length (30 mm) instead of the width (`form_check.py:862-867`). It counts as a miss until item 9
+fixes the span. The twin's FAIL is a false positive.
