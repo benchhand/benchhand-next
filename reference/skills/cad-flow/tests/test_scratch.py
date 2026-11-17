@@ -103,6 +103,49 @@ class InitAndDeliver(ScratchCase):
         self.assertEqual(baseline["parts"], ["PRT-0001"])
         self.assertEqual(sorted(baseline["files"]), sorted(tree(self.hw)))
 
+    @staticmethod
+    def snapshot(root: Path) -> dict[str, str]:
+        """Every path below `root`: a file's sha256, or <dir>, <symlink>. Nothing may appear, vanish or change."""
+        found = {}
+        for path in sorted(root.rglob("*")):
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                found[relative] = "<symlink>"
+            elif path.is_dir():
+                found[relative] = "<dir>"
+            else:
+                found[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        return found
+
+    def test_a_plain_init_over_a_workspace_without_baseline_refuses_and_changes_nothing(self) -> None:
+        work = Path(self.init("part-base_sub", "PRT-0001")["scratch_hw"]).parent
+        scratch_hw = work / "hw"
+        (scratch_hw / "parts" / "PRT-0001" / "model.py").write_text("def build(params):\n    return None\n", encoding="utf-8")
+        (scratch_hw / "parts" / "PRT-0001" / "notes.txt").write_text("work in progress\n", encoding="utf-8")
+        (scratch_hw / "versions" / "v1").mkdir(parents=True)
+        (scratch_hw / "versions" / "v1" / "manifest.json").write_text("{}\n", encoding="utf-8")
+        (work / "logs").mkdir()
+        (work / "logs" / "build.log").write_text("step 3 of 9\n", encoding="utf-8")
+        (work / "baseline.json").unlink()
+        before = self.snapshot(self.project / ".cad-work")
+        self.assertIn("part-base_sub/hw/parts/PRT-0001/model.py", before)
+        code, report = self.scratch("init", "--hw", "hw", "--unit", "part-base_sub", "--part", "PRT-0001")
+        self.assertEqual((code, report["status"]), (2, "error"), report)
+        self.assertIn("has no baseline.json", report["error"])
+        self.assertEqual(self.snapshot(self.project / ".cad-work"), before)
+
+    def test_a_plain_init_over_a_workspace_with_baseline_keeps_it_and_reset_replaces_it(self) -> None:
+        work = Path(self.init("part-base_sub", "PRT-0001")["scratch_hw"]).parent
+        note = work / "hw" / "parts" / "PRT-0001" / "notes.txt"
+        note.write_text("work in progress\n", encoding="utf-8")
+        before = self.snapshot(self.project / ".cad-work")
+        code, report = self.scratch("init", "--hw", "hw", "--unit", "part-base_sub", "--part", "PRT-0001")
+        self.assertEqual((code, report["status"]), (0, "exists"), report)
+        self.assertEqual(self.snapshot(self.project / ".cad-work"), before)
+        code, report = self.scratch("init", "--hw", "hw", "--unit", "part-base_sub", "--part", "PRT-0001", "--reset")
+        self.assertEqual((code, report["status"]), (0, "created"), report)
+        self.assertFalse(note.exists())
+
     def test_init_rejects_unsafe_units_and_malformed_part_numbers(self) -> None:
         for args in (("--unit", "../escape", "--part", "PRT-0001"), ("--unit", "ok", "--part", "bad"),
                      ("--unit", "ok")):
