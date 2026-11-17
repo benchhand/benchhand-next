@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.11,<3.15"
+# requires-python = ">=3.12,<3.15"
 # dependencies = ["cadquery==2.8.0", "cadquery-ocp==7.9.3.1.1", "vtk==9.6.2"]
 # ///
 """Realistic FEA test parts, built with the kernel cad-model's run_cadquery.py uses.
