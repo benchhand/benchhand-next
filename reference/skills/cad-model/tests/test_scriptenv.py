@@ -107,5 +107,60 @@ class ScriptEnvTests(unittest.TestCase):
                 self.assertEqual(command[command.index("--with-requirements") + 1], str(runner))
 
 
+class SharedCacheEnvironmentTests(unittest.TestCase):
+    """cad-model and cad-motion scripts share cached results only when their envs match."""
+
+    # This class holds the pin. A move to another Python or numpy changes these constants and the headers.
+    PYTHON = ">=3.12,<3.15"
+    RUNNER_PYTHON = ">=3.12,<3.13"   # the kernel runners and their test doubles stay on the Python of their sealed results
+    # Only these scripts may declare RUNNER_PYTHON. The doubles run in the cadquery runner's environment.
+    RUNNER_SCRIPTS = frozenset({
+        "cad-model/scripts/run_cadquery.py", "cad-model/scripts/run_build123d.py",
+        "cad-model/tests/fixtures/run_cadquery_breaking_submit.py",
+        "cad-model/tests/fixtures/run_cadquery_reusing_workers.py",
+    })
+    NUMPY = "numpy==2.5.5"
+
+    def headers(self) -> dict[Path, dict]:
+        found = {}
+        for skill in ("cad-model", "cad-motion"):
+            for folder in (SKILLS / skill / "scripts", SKILLS / skill / "tests" / "fixtures"):
+                for script in sorted(folder.glob("*.py")):
+                    try:
+                        found[script] = scriptenv.metadata(script)
+                    except ValueError:
+                        continue  # no PEP 723 block: not a script env
+        return found
+
+    def drifted(self, found: dict[str, str | None]) -> dict[str, str | None]:
+        """The scripts whose requires-python is not the one this class allows them."""
+        return {name: value for name, value in found.items()
+                if value != (self.RUNNER_PYTHON if name in self.RUNNER_SCRIPTS else self.PYTHON)}
+
+    def test_every_script_header_of_both_skills_declares_one_python(self) -> None:
+        scripts = self.headers()
+        names = {script.name for script in scripts}
+        self.assertTrue({"cad_model.py", "run_cadquery.py", "motion.py", "mesh_probe.py"} <= names, sorted(names))
+        found = {str(script.relative_to(SKILLS)): meta.get("requires-python") for script, meta in scripts.items()}
+        self.assertLessEqual(self.RUNNER_SCRIPTS, set(found))
+        self.assertEqual(self.drifted(found), {})
+
+    def test_the_runner_range_is_refused_on_any_unlisted_script(self) -> None:
+        runners = {str(runner.relative_to(SKILLS)) for runner in build.RUNNERS.values()}
+        self.assertLessEqual(runners, self.RUNNER_SCRIPTS)
+        stray = {"cad-motion/scripts/run_something.py": self.RUNNER_PYTHON}
+        self.assertEqual(self.drifted(stray), stray)
+        self.assertEqual(self.drifted({"cad-model/scripts/run_cadquery.py": self.PYTHON}),
+                         {"cad-model/scripts/run_cadquery.py": self.PYTHON})
+
+    def test_every_declared_numpy_is_one_exact_pin(self) -> None:
+        pins = {str(script.relative_to(SKILLS)): requirement
+                for script, meta in self.headers().items()
+                for requirement in meta.get("dependencies", [])
+                if scriptenv.normalize(scriptenv.NAME.match(requirement).group("name")) == "numpy"}
+        self.assertTrue({"cad-model/scripts/cad_model.py", "cad-motion/tests/fixtures/mesh_probe.py"} <= set(pins), pins)
+        self.assertEqual(set(pins.values()), {self.NUMPY}, pins)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 # /// script
-# requires-python = ">=3.11,<3.15"
-# dependencies = ["cadquery-ocp-novtk==8.0.1.1.0", "pyyaml>=6.0", "numpy>=1.26", "python-fcl==0.7.0.11"]
+# requires-python = ">=3.12,<3.15"
+# dependencies = ["cadquery-ocp-novtk==8.0.1.1.0", "pyyaml>=6.0", "numpy==2.5.5", "python-fcl==0.7.0.11"]
 # ///
 """Feed check's pair geometry a degenerate kernel reading, as BRepExtrema gave a stand and a clutch
 8.04 mm apart (0.0 mm), and report what the static check makes of it.
