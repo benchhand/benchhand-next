@@ -98,6 +98,22 @@ profiles:
       url: https://example.invalid/tst-fixture
       accessed: '2026-01-01'
     date: '2026-01-01'
+  - id: bed_contact_coupon
+    characteristic: min_bed_contact_area
+    scope:
+      material: test_polymer
+    result:
+      limits:
+        lower: 20.0
+        upper: 25.0
+        units: mm2
+      samples: 5
+    source:
+      kind: calibration
+      reference: TST calibration coupon
+      url: https://example.invalid/tst-fixture
+      accessed: '2026-01-01'
+    date: '2026-01-01'
   envelope:
     x:
       status: known

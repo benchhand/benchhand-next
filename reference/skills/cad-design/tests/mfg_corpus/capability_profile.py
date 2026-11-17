@@ -3,7 +3,7 @@
 `materials()` and `capabilities()` are the lists a record's manufacturing/materials.yaml and
 manufacturing/capabilities.yaml hold (cad-record's fixtures `record(capabilities=..., materials=...)` takes them).
 Calibrations for MATERIAL: overhang_angle 45-50 deg, bridge_span 5-6 mm, min_wall 1.2-1.6 mm, min_feature
-2.0-2.4 mm, in a 200 mm cube envelope. Each call returns fresh copies, so callers may edit them.
+2.0-2.4 mm, min_bed_contact_area 20-25 mm2, in a 200 mm cube envelope. Each call returns fresh copies, so callers may edit them.
 """
 
 from __future__ import annotations

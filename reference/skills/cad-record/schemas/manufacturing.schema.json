@@ -32,7 +32,7 @@
     "vector": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}},
     "units": {
       "description": "The closed unit set; manufacturing_intent.UNITS gives each its dimension and conversion. An unlisted unit is refused, never guessed",
-      "enum": ["mm", "um", "m", "mm3", "deg", "rad", "N", "kN", "N_mm", "N_m", "MPa", "GPa", "bar", "g", "kg", "kg_m3", "g_cm3",
+      "enum": ["mm", "um", "m", "mm2", "mm3", "deg", "rad", "N", "kN", "N_mm", "N_m", "MPa", "GPa", "bar", "g", "kg", "kg_m3", "g_cm3",
                "deg_C", "K", "s", "min", "h", "d", "cycles", "count", "rpm", "Hz", "mm_s", "m_s", "percent", "dimensionless",
                "J", "J_m", "kJ_m2", "W", "kW", "W_m_K", "um_m_K", "per_K"]
     },

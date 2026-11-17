@@ -9,6 +9,7 @@ Shapes (mm, the frame they are probed in):
   seat    a 30 x 20 x 20 block on the bed with a horizontal 10 mm bore along Y at x 15, z 10
   pocket  a 40 x 30 x 25 block with a 20 x 10 pocket 20 deep from the top, its vertical corners R2
   plate   a 40 x 30 x 3 plate with a through 6 mm hole at x 20, y 15
+  disc    a 100 mm disc, 5 mm thick, on the bed; its cylinder seam is turned 5.625 degrees off +X
   pair    two 10 x 10 x 2 plates 20 mm apart: one component of two equivalent members
 Usage: uv run --script process_probe.py
 stdout: {case: probe facts (process_checks Geometry)}.
@@ -29,6 +30,8 @@ from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse  # noqa: E402
 from OCP.BRepFilletAPI import BRepFilletAPI_MakeFillet  # noqa: E402
 from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder  # noqa: E402
 from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt  # noqa: E402
+
+import math  # noqa: E402
 from OCP.TopAbs import TopAbs_EDGE  # noqa: E402
 from OCP.TopExp import TopExp_Explorer  # noqa: E402
 
@@ -75,6 +78,12 @@ def bore(ident, point, normal, kind="bore"):
                     "patches": [{"support_type": "cylinder", "point_mm": list(point), "normal": list(normal)}]}}
 
 
+def turned_disc(radius, height, seam_degrees):
+    seam = math.radians(seam_degrees)
+    axes = gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1), gp_Dir(math.cos(seam), math.sin(seam), 0))
+    return BRepPrimAPI_MakeCylinder(axes, radius, height).Shape()
+
+
 CASES = {
     "shelf": (fuse(box(0, 0, 0, 10, 10, 30), box(10, 0, 20, 30, 10, 25)), "bed",
               {**plane("shelf_underside", (20, 5, 20), (0, 0, -1)), **plane("shelf_top", (20, 5, 25), (0, 0, 1))}, {}),
@@ -84,6 +93,7 @@ CASES = {
                plane("pocket_floor", (20, 15, 5), (0, 0, 1)), {"directions": {"+z": [0.0, 0.0, 1.0]}}),
     "plate": (cut(box(0, 0, 0, 40, 30, 3), cylinder((20, 15, -1), (0, 0, 1), 3, 5)), "model",
               bore("ream_bore", (23, 15, 1.5), (-1, 0, 0)), {"directions": {"+z": [0.0, 0.0, 1.0], "-x": [-1.0, 0.0, 0.0]}}),
+    "disc": (turned_disc(50.0, 5.0, 5.625), "bed", {}, {}),
     "pair": (occ.compound([box(0, 0, 0, 10, 10, 2), box(30, 0, 0, 40, 10, 2)]), "bed", {}, {}),
 }
 
