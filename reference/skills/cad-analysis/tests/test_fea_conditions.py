@@ -98,13 +98,11 @@ def bracket(profile: Any = "tst_alloy_rod", route: list[dict[str, Any]] | None =
 
 def documents(*, profiles: list[dict[str, Any]] | None = None, part: dict[str, Any] | None = None,
               service_class: str = "working_prototype", direction: Any = (0, 0, -1)) -> dict[str, Any]:
-    """`direction` is the unit vector of the force head_load stands for (cad-record #64 makes it a required
-    [x, y, z] list); a string is written as a text fact, the form the record takes today."""
+    """`direction` is the unit vector of the force head_load stands for: the required [x, y, z] list of the load
+    schema. Any other value is written as given, to test what the record and the reader refuse; None leaves it out."""
     load = {"id": "head_load", "kind": "static", "magnitude": fx.known(fx.quantity(50, "N")), "requirements": ["REQ-001"]}
-    if isinstance(direction, str):
-        load["direction"] = fx.known(direction)
-    elif direction is not None:
-        load["direction"] = list(direction)
+    if direction is not None:
+        load["direction"] = list(direction) if isinstance(direction, (tuple, list)) else direction
     use = fx.use_case("draft", service_class=fx.known(service_class), loads=[load])
     use["environment"]["temperature"] = fx.known(fx.quantity(lower=15, upper=30, units="deg_C"))
     requirements = fx.requirements([
@@ -474,39 +472,69 @@ class QualificationBypasses(SourcedFEACase):
         report = self.solve(self.loads_case(([2], [0, 0, -50]), ([3], [0, 0, 50])))
         self.assert_unproven(report, loads=True)
 
-    def test_a_service_direction_that_is_not_a_vector_keeps_the_verdict_unknown(self) -> None:
-        for direction in (None, "downwards", "0 0"):
-            with self.subTest(direction=direction):
-                self.solved.clear()
-                self.build(documents(direction=direction))
-                self.assert_unproven(self.solve(self.loads_case(([2], [0, 0, -50]))), loads=True)
+    def assert_direction_never_passes(self, direction: Any) -> None:
+        """A direction that is not a valid unit vector either stops the case at the record (nothing is solved) or
+        leaves its loads unproven."""
+        self.solved.clear()
+        self.build(documents(direction=direction))
+        status, report = self.call(self.loads_case(([2], [0, 0, -50])), "--replace")
+        if status == 2:
+            self.assertEqual(self.solved, [], "a refused case must never reach the solver")
+            return
+        self.assertEqual(status, 0, report)
+        self.assert_unproven(report, loads=True)
 
-    def test_a_malformed_vector_direction_keeps_the_verdict_unknown(self) -> None:
-        for direction in ((0, 0), (0, 0, 0), (0, 0, "down"), (0, 0, -1, 0)):
+    def test_a_service_direction_that_is_missing_or_not_a_vector_never_passes(self) -> None:
+        for direction in (None, "downwards", "0 0", {}, 7):
             with self.subTest(direction=direction):
-                self.solved.clear()
-                self.build(documents(direction=direction))
-                self.assert_unproven(self.solve(self.loads_case(([2], [0, 0, -50]))), loads=True)
+                self.assert_direction_never_passes(direction)
 
-    def test_a_non_finite_service_direction_keeps_the_verdict_unknown(self) -> None:
+    def test_a_malformed_vector_direction_never_passes(self) -> None:
+        for direction in ((0, 0), (0, 0, 0), (0, 0, "down"), (0, 0, -1, 0), (0, 0, -2), (0.6, 0, -0.6)):
+            with self.subTest(direction=direction):
+                self.assert_direction_never_passes(direction)
+
+    def test_a_non_finite_service_direction_never_passes(self) -> None:
         """YAML carries .nan and .inf where JSON cannot, so the fixture goes through the same YAML path the CLI reads."""
         nan, inf = float("nan"), float("inf")
-        for direction in ([nan, 0, 1], [0, nan, 0], [inf, 0, 0], [0, 0, inf], [-inf, 0, 0], [0, -inf, 0],
-                          "nan 0 1", "0 0 nan", "inf 0 0", "-inf 0 0", "[0, inf, 0]", "(nan, nan, nan)"):
+        for direction in ([nan, 0, 1], [0, nan, 0], [inf, 0, 0], [0, 0, inf], [-inf, 0, 0], [0, -inf, 0], [nan, nan, nan]):
             with self.subTest(direction=direction):
-                self.solved.clear()
-                self.build(documents(direction=direction))
-                if not isinstance(direction, str):   # the bare list reached product.yaml as .nan or .inf
-                    written = (self.hw / "product.yaml").read_text(encoding="utf-8")
-                    self.assertTrue(".nan" in written or ".inf" in written)
-                self.assert_unproven(self.solve(self.loads_case(([2], [0, 0, -50]))), loads=True)
+                self.assert_direction_never_passes(direction)
+                written = (self.hw / "product.yaml").read_text(encoding="utf-8")
+                self.assertTrue(".nan" in written or ".inf" in written)   # the bare list reached product.yaml
 
-    def test_text_forms_of_a_service_direction_are_read_as_vectors(self) -> None:
-        for direction in ("0 0 -1", "[0, 0, -1]", "(0,0,-2)", "-Z", "-z"):
+    def test_text_forms_of_a_service_direction_are_no_longer_read(self) -> None:
+        """The free-text forms were parsed before direction became a required [x, y, z] list; there is no fallback."""
+        for direction in ("0 0 -1", "[0, 0, -1]", "(0,0,-2)", "-Z", "-z", fx.known("0 0 -1"), fx.known("-Z")):
+            with self.subTest(direction=direction):
+                self.assert_direction_never_passes(direction)
+
+    def test_a_direction_within_the_unit_tolerance_covers_a_load_of_exactly_its_magnitude(self) -> None:
+        """The record accepts a norm within 1e-6 of 1; the reader must project on the direction, not on its length.
+        50 N along -Z reached 49.999975 N along (0, 0, -0.9999995) and the load was wrongly left unproven."""
+        for scale in (1 - 0.9e-6, 1 + 0.9e-6):
+            for axis, force in (((0, 0, -1), [0, 0, -50]), ((0.6, 0, -0.8), [30, 0, -40])):
+                direction = tuple(c * scale for c in axis)
+                with self.subTest(direction=direction):
+                    self.solved.clear()
+                    self.build(documents(direction=direction))
+                    report = self.solve(self.loads_case(([2], force)))
+                    self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
+
+    def test_a_direction_just_outside_the_unit_tolerance_is_still_refused(self) -> None:
+        for scale in (1 - 1.1e-6, 1 + 1.1e-6):
+            direction = (0, 0, -scale)
+            with self.subTest(direction=direction):
+                self.assert_direction_never_passes(direction)
+
+    def test_a_unit_vector_direction_is_read_as_given(self) -> None:
+        for direction in ((0, 0, -1), (0.0, 0.0, -1.0), (0, -1, 0), (0.6, 0, -0.8)):
             with self.subTest(direction=direction):
                 self.solved.clear()
                 self.build(documents(direction=direction))
-                self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [0, 0, -50])))), ("pass", "pass"))
+                force = [50 * c for c in direction]
+                report = self.solve(self.loads_case(([2], force)))
+                self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
 
     # -- a convergence decision counts only as an approved, bound, converged study ---------------------------------
 
