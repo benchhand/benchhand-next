@@ -106,8 +106,17 @@ class LampArmTests(unittest.TestCase):
                 self.assertLessEqual(len(agent.stdout), len(plain.stdout) + 1)
 
     def test_the_json_flag_prints_full_json_though_the_environment_says_compact(self) -> None:
-        agent = self.tool(VALIDATE, str(self.hw), "--json", env=AGENT_ENV)
-        self.assertEqual(result_payload(agent.stdout)["ok"], False)
+        # check's result is large, so compact mode summarizes it whatever lamp-arm's verdict; a full envelope
+        # under CAD_OUTPUT=compact can then only come from --json
+        args = ("check", "v1", "--hw", str(self.hw), "--no-cache")
+        # the control runs first: the first check publishes the readback packet, so both compared runs reuse it
+        control = self.tool(CAD_MODEL, *args, env=AGENT_ENV)
+        self.assertIn("full JSON: ", control.stdout)
+        plain = self.tool(CAD_MODEL, *args, env=PLAIN_ENV)
+        agent = self.tool(CAD_MODEL, *args, "--json", env=AGENT_ENV)
+        self.assertEqual(agent.returncode, plain.returncode, agent.stderr[-2000:])
+        self.assertNotIn("full JSON: ", agent.stdout)
+        self.assertEqual(without_timings(result_payload(agent.stdout)), without_timings(result_payload(plain.stdout)))
 
     def sealed(self, hw: Path) -> dict[str, str]:
         """sha256 of every file the build sealed under hw/versions, by path below hw/."""
