@@ -17,6 +17,8 @@ import textwrap
 import time
 import unittest
 from pathlib import Path
+from typing import Any
+from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "process_lifecycle.py"
 spec = importlib.util.spec_from_file_location("cad_flow_process_lifecycle", SCRIPT)
@@ -26,6 +28,8 @@ sys.modules[spec.name] = lifecycle
 spec.loader.exec_module(lifecycle)
 
 POSIX = os.name == "posix"
+# A supervised family gets this long to start on a loaded host. A test that waits longer gives up.
+STARTUP_SECONDS = 120.0
 LOAD = ("import importlib.util, sys\n"
         f"spec = importlib.util.spec_from_file_location('cad_flow_process_lifecycle', {str(SCRIPT)!r})\n"
         "lifecycle = importlib.util.module_from_spec(spec)\n"
@@ -100,8 +104,8 @@ class Case(unittest.TestCase):
             except (ProcessLookupError, PermissionError):
                 pass
 
-    def family_pids(self, path: Path) -> tuple[int, int]:
-        self.assertTrue(wait_until(path.exists), "the supervised command did not start")
+    def family_pids(self, path: Path, timeout: float = 10.0) -> tuple[int, int]:
+        self.assertTrue(wait_until(path.exists, timeout), "the supervised command did not start")
         child, grandchild = (int(pid) for pid in path.read_text().split())
         self.pids += [child, grandchild]
         return child, grandchild
@@ -165,10 +169,20 @@ class SupervisedGroupTests(Case):
     def test_a_timeout_terminates_the_whole_family_before_raising(self) -> None:
         pids = self.root / "pids"
         command = [sys.executable, "-c", FAMILY, str(pids)]
-        with self.assertRaises(subprocess.TimeoutExpired) as raised:
-            lifecycle.run(command, timeout=1.5)
+        communicate = lifecycle.Supervised.communicate
+        started: list[tuple[int, int]] = []
+
+        def communicate_once_started(process: lifecycle.Supervised, *args: Any, **kwargs: Any) -> Any:
+            # run() times out from this call. It waits for the family's pid file first, so the
+            # timeout always fires on a running family, however slowly the host starts processes.
+            started.append(self.family_pids(pids, timeout=STARTUP_SECONDS))
+            return communicate(process, *args, **kwargs)
+
+        with mock.patch.object(lifecycle.Supervised, "communicate", communicate_once_started):
+            with self.assertRaises(subprocess.TimeoutExpired) as raised:
+                lifecycle.run(command, timeout=0.5)
         self.assertEqual(raised.exception.cmd, command)
-        child, grandchild = self.family_pids(pids)
+        [(child, grandchild)] = started
         self.assert_gone(child, grandchild)
 
     def test_run_relays_the_commands_status_and_output(self) -> None:
