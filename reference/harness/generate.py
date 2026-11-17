@@ -8,12 +8,14 @@ skills. Generated files are committed under harness/{claude,codex,opencode,kiro}
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 import re
 import sys
+from typing import Any
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +37,19 @@ CLAUDE_TOOLS = {
     "read": ("Read", "Grep", "Glob"), "write-scratch": ("Edit", "Write"),
     "shell-uv": ("Bash",), "web": ("WebSearch", "WebFetch"),
 }
+
+
+def _yaml_loader() -> Any:
+    """cad-record's shared YAML reader (yaml.safe_load on libyaml), loaded by path once per process."""
+    name = "cad_record_yaml_loader"
+    if name not in sys.modules:
+        path = SKILLS / "cad-record" / "scripts" / "yaml_loader.py"
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"{path} not found")
+        sys.modules[name] = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sys.modules[name])
+    return sys.modules[name]
 
 
 @dataclass(frozen=True)
@@ -65,7 +80,7 @@ def parse_agent(path: Path) -> Agent:
     if not match:
         raise ValueError(f"{path}: expected YAML frontmatter followed by a Markdown prompt")
     try:
-        fields = yaml.safe_load(match.group(1))
+        fields = _yaml_loader().safe_load(match.group(1))
     except yaml.YAMLError as error:
         raise ValueError(f"{path}: invalid YAML frontmatter: {error}") from error
     if not isinstance(fields, dict) or not all(isinstance(key, str) for key in fields):

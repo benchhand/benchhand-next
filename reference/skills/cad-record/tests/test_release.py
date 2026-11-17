@@ -194,10 +194,25 @@ class ReleaseCase(unittest.TestCase):
         self.root = Path(temporary.name)
         self.count = 0
 
+    @classmethod
+    def default_project(cls) -> Path:
+        """The project directory of frozen_lamp() with its default options, built once per test class.
+        The fixture holds no absolute path or link, so each test copies it instead of building it again."""
+        if "_default_project" not in cls.__dict__:
+            temporary = tempfile.TemporaryDirectory(prefix="cad-release-fixture-")
+            cls.addClassCleanup(temporary.cleanup)
+            project = Path(temporary.name) / "project"
+            frozen_lamp(project / "hw")
+            cls._default_project = project
+        return cls.__dict__["_default_project"]
+
     def project(self, **options: Any) -> Path:
         self.count += 1
         hw = self.root / f"project-{self.count}" / "hw"
-        frozen_lamp(hw, **options)
+        if options:
+            frozen_lamp(hw, **options)
+        else:
+            shutil.copytree(self.default_project(), hw.parent, symlinks=True)
         return hw
 
     def release(self, hw: Path, rev: str = "A", version: str = "v1", decision: str = "DR-005",
