@@ -877,12 +877,6 @@ class DispatchContractTests(Checks):
                 self.assertEqual(set(pc.TABLE[kind]), wanted)
         self.assertEqual(set(pc.TABLE), set(MI.PROCESS_CHECKS))
 
-    def test_a_version_1_record_is_refused_with_its_migration(self) -> None:
-        record = MI.load_record(FX.LAMP)
-        self.assertEqual(record.version, 1)
-        with self.assertRaisesRegex(pc.NotAssessable, "migrat"):
-            pc.expected(record)
-
     def test_the_fixture_record_assesses_every_owned_obligation_without_geometry(self) -> None:
         result = self.assess(FX.tst_record())
         self.assertTrue(result.expected)

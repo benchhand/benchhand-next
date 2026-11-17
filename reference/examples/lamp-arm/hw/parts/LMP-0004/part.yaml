@@ -74,3 +74,9 @@ drawing:
   manufacturing:
     interface_condition: post_processed
   sheet: {sizes: [A3, A2], scale: auto}
+intent:
+  functions: {status: unknown, reason: not recorded before record version 2, question: Q-015}
+  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material PETG is a declaration, not a sourced grade', question: Q-015}
+  service: {status: unknown, reason: not recorded before record version 2, question: Q-015}
+  critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-015}
+  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label fdm names no operations, capability, orientation, supports or inspection', question: Q-015}

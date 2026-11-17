@@ -39,3 +39,9 @@ drawing:
     - {kind: general, text: "The thread is the ordering requirement; length L and the knurl diameter OD are to drawing LF646. The envelope does not model the insert's pilot."}
     - {kind: inspection, text: "Heat-set into the LMP-0004 insert hole, flush with the socket-boss face (DR-004)."}
   sheet: {sizes: [A4, A3], scale: auto}
+intent:
+  functions: {status: unknown, reason: not recorded before record version 2, question: Q-021}
+  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Brass is a declaration, not a sourced grade', question: Q-021}
+  service: {status: unknown, reason: not recorded before record version 2, question: Q-021}
+  critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-021}
+  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label purchased names no operations, capability, orientation, supports or inspection', question: Q-021}

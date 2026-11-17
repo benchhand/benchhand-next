@@ -19,3 +19,9 @@ procurement:
     revision: "undated, retrieved 2026-10-27"
     url: https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf
     sha256: 0fe9e28736fde2bd995a269da97c057a612a5ed72fa4c5bdcafd7cf95e0a6baf
+intent:
+  functions: {status: unknown, reason: not recorded before record version 2, question: Q-022}
+  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Spring steel C60S is a declaration, not a sourced grade', question: Q-022}
+  service: {status: unknown, reason: not recorded before record version 2, question: Q-022}
+  critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-022}
+  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label purchased names no operations, capability, orientation, supports or inspection', question: Q-022}

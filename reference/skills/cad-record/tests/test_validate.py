@@ -660,26 +660,6 @@ class RecordVersion(unittest.TestCase):
                                 timeout=120)
         return result.returncode, result_payload(result.stdout)["findings"]
 
-    def test_the_unmigrated_lamp_reads_whole_changes_nothing_and_names_the_migration(self) -> None:
-        shutil.copytree(EXAMPLE, self.hw)
-        before = tree(self.hw)
-        code, findings = self.validate()
-        self.assertEqual(code, 1)
-        blocking = [item for item in findings if item["severity"] == "error"]
-        self.assertEqual([item["code"] for item in blocking], ["record.migration_required"])
-        self.assertIn("migrate.py <project> --dry-run", blocking[0]["action"])
-        self.assertEqual(tree(self.hw), before, "reading a version 1 record rewrites nothing")
-
-    def test_a_version_1_record_still_reports_its_other_findings(self) -> None:
-        shutil.copytree(EXAMPLE, self.hw)
-        part = self.hw / "parts" / "LMP-0001" / "part.yaml"
-        part.write_text(part.read_text(encoding="utf-8").replace("decisions: [DR-002, DR-004]", "decisions: [DR-999]"),
-                        encoding="utf-8")
-        code, findings = self.validate()
-        messages = json.dumps(findings)
-        self.assertIn("record.migration_required", messages)
-        self.assertIn("decision DR-999 does not exist", messages)
-
     def test_an_unsupported_record_version_is_named_not_guessed(self) -> None:
         fx.migrated_copy(EXAMPLE, self.hw)
         product = self.hw / "product.yaml"

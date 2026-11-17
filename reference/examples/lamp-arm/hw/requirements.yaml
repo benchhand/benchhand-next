@@ -41,3 +41,222 @@ requirements:
     source: "Project brief"
     priority: could
     verification: {method: D, criteria: "Demonstrate installation and removal using standard metric hex keys."}
+preferences: []
+assumptions: []
+open_questions:
+  - id: Q-001
+    question: 'Which service class applies: appearance or concept model, fit or assembly prototype, functional demonstration with limited loads and supervised operation, working prototype, production or end-use product, or safety-critical, regulated or high-consequence application?'
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-002
+    question: What must the product do, and who uses it?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: false
+    status: open
+  - id: Q-003
+    question: What operating temperature range and heat sources apply?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-004
+    question: What moisture, chemical, UV and corrosion exposure applies?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: false
+    status: open
+  - id: Q-005
+    question: 'Which loads act on it: magnitude, direction, static or sustained, cyclic, impact and vibration?'
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-006
+    question: 'Which motions occur: speed, range, duty cycle, friction, wear and expected service life?'
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: false
+    status: open
+  - id: Q-007
+    question: What accuracy, repeatability, surface finish and dimensional stability are required?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: false
+    status: open
+  - id: Q-008
+    question: What are the consequences of failure, the forbidden outcomes, the applicable standards or safety requirements, the supervision and the approving authority?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-009
+    question: What quantity, budget, lead time, maintenance and repair needs apply?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: false
+    status: open
+  - id: Q-010
+    question: Which equipment and operators are available, and is outsourcing acceptable?
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: false
+    status: open
+  - id: Q-011
+    question: 'What may a release claim: its purpose, operating limits, exclusions and the evidence each requirement needs?'
+    subjects:
+      - {product: true}
+    owner: lead
+    material_to_choice: false
+    safety_relevant: true
+    status: open
+  - id: Q-012
+    question: 'LMP-0001 (Base plate and pivot boss): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material PETG and process fdm; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0001}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-013
+    question: 'LMP-0002 (Lower link): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Aluminum 6061-T6 and process cnc; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0002}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-014
+    question: 'LMP-0003 (Upper link): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Aluminum 6061-T6 and process cnc; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0003}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-015
+    question: 'LMP-0004 (Lamp head housing): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material PETG and process fdm; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0004}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-016
+    question: 'LMP-0005 (M5 x 30 shoulder pin): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Stainless steel A2 and process cnc; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0005}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-017
+    question: 'LMP-0006 (M5 x 25 shoulder pin): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Stainless steel A2 and process cnc; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0006}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-018
+    question: 'LMP-0007 (M5 x 20 shoulder pin): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Stainless steel A2 and process cnc; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0007}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-019
+    question: 'LMP-0008 (Bushing SPIROL CMPL 4 X 8 EK CL8000): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Brass C36000 and process purchased; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0008}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-020
+    question: 'LMP-0009 (Bushing SPIROL CMPL 4 X 6 EK CL8100): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Brass C36000 and process purchased; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0009}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-021
+    question: 'LMP-0010 (Heat-set insert QT M10x1 x 12.7 OD 12.6): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Brass and process purchased; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0010}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-022
+    question: 'LMP-0011 (Retaining ring DIN 471 - 5x0.6): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Spring steel C60S and process purchased; they stay declarations, not evidence.'
+    subjects:
+      - {PN: LMP-0011}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-023
+    question: 'IF-001 (motion, base_sub to lower_link): is it critical, which functions does it serve, and which acceptance criteria, stack and contact evidence verify it?'
+    subjects:
+      - {interface: IF-001}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-024
+    question: 'IF-002 (motion, lower_link to upper_link): is it critical, which functions does it serve, and which acceptance criteria, stack and contact evidence verify it?'
+    subjects:
+      - {interface: IF-002}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-025
+    question: 'IF-003 (motion, upper_link to head): is it critical, which functions does it serve, and which acceptance criteria, stack and contact evidence verify it?'
+    subjects:
+      - {interface: IF-003}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-026
+    question: 'IF-004 (mounting, base_plate to work_surface): is it critical, which functions does it serve, and which acceptance criteria, stack and contact evidence verify it?'
+    subjects:
+      - {interface: IF-004}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open
+  - id: Q-027
+    question: 'IF-005 (mounting, head to lampholder): is it critical, which functions does it serve, and which acceptance criteria, stack and contact evidence verify it?'
+    subjects:
+      - {interface: IF-005}
+    owner: lead
+    material_to_choice: true
+    safety_relevant: true
+    status: open

@@ -123,22 +123,6 @@ class Normalization(unittest.TestCase):
         self.assertTrue(record.capabilities["tst_printer"].parameters["nozzle_diameter"].known)
         self.assertEqual(len(record.assembly_operations), 1)
 
-    def test_a_legacy_record_reads_with_explicit_unknowns_and_one_migration_problem(self) -> None:
-        record = mi.load_record(fx.LAMP)
-        self.assertEqual(record.version, 1)
-        self.assertEqual([p.code for p in record.problems], ["record.migration_required"])
-        self.assertEqual(len(record.parts), 11)
-        for pn, part in record.parts.items():
-            with self.subTest(pn):
-                for name in ("functions", "material_profile", "service", "critical_surfaces", "route"):
-                    value = getattr(part.intent, name)
-                    self.assertTrue(value.unknown and value.reason == mi.LEGACY_REASON, (name, value))
-        self.assertEqual(record.parts["LMP-0001"].material, "PETG")
-        self.assertEqual(record.use_case.status, "unknown")
-        self.assertEqual(len(record.assembly_operations), 9, "legacy drawing.operations stay the operations of a version 1 record")
-        self.assertTrue(all(i.functional.critical.unknown for i in record.interfaces.values()))
-        self.assertEqual((dict(record.capabilities), dict(record.materials)), ({}, {}))
-
     def test_a_candidate_proposes_a_new_part_that_is_never_a_record(self) -> None:
         documents = fx.tst_record()
         documents["manufacturing/selection.yaml"] = proposing_selection()

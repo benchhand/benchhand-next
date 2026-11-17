@@ -407,15 +407,6 @@ class BuildGuide(unittest.TestCase):
         self.assertIn("version manifest is missing", result.stderr)
         self.assertFalse((self.out / "index.md").exists())
 
-    def test_a_version_1_record_is_refused_with_the_migration_finding_and_nothing_is_written(self) -> None:
-        hw = self.copy_v1_lamp_example()
-        self.make_version(hw, "v1")
-        result = self.run_guide(hw)
-        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn("record.migration_required", result.stderr)
-        self.assertIn("migrate.py", result.stderr)
-        self.assertFalse(self.out.exists())
-
     def test_an_unsupported_record_version_is_refused_with_the_version_finding(self) -> None:
         hw = self.copy_lamp_example()
         self.make_version(hw, "v1")

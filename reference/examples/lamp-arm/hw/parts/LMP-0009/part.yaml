@@ -40,3 +40,9 @@ drawing:
     - {kind: general, text: "Inner diameter A, head diameter H, length L and OAL per the specification; head thickness T and the knurl diameter C are its published reference and nominal values."}
     - {kind: inspection, text: "Heat-set into the LMP-0004 bushing seat with the head in the counterbore (DR-004)."}
   sheet: {sizes: [A4, A3], scale: auto}
+intent:
+  functions: {status: unknown, reason: not recorded before record version 2, question: Q-020}
+  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Brass C36000 is a declaration, not a sourced grade', question: Q-020}
+  service: {status: unknown, reason: not recorded before record version 2, question: Q-020}
+  critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-020}
+  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label purchased names no operations, capability, orientation, supports or inspection', question: Q-020}

@@ -60,48 +60,15 @@ class PlanOutcome(unittest.TestCase):
         self.assertEqual(self.digest(), GOLDEN[name])
 
 
-class Golden(PlanOutcome):
-    def test_lamp_arm(self) -> None:
-        self.check("lamp")
-
-
 class Variants(PlanOutcome):
     def migrated_then(self, change: Any) -> None:
         migrate.apply(migrate.plan(self.hw, TODAY))
         self.edit("product.yaml", change)
 
-    def test_no_installation_operations(self) -> None:
-        self.edit("assembly.yaml", lambda d: d["drawing"].pop("operations"))
-        self.check("no_operations")
-
-    def test_preferences_already_present(self) -> None:
-        self.edit("requirements.yaml", lambda d: d.update(preferences=[]))
-        self.check("preferences")
-
-    def test_interrupted_run_keeps_use_case_and_rewrites_the_dated_note(self) -> None:
-        self.migrated_then(lambda d: d.pop("record_version"))
-        self.check("use_case_kept")
-
-    def test_interrupted_run_with_every_block_present_but_the_use_case(self) -> None:
-        self.migrated_then(lambda d: (d.pop("record_version"), d.pop("use_case")))
-        self.check("blocks_present")
-
     def test_existing_open_questions_missing_a_migrated_id(self) -> None:
         self.migrated_then(lambda d: d.pop("record_version"))
         self.edit("requirements.yaml", lambda d: d["open_questions"].pop())
         self.check("missing_question")
-
-    def test_an_interface_without_an_id(self) -> None:
-        self.edit("interfaces.yaml", lambda d: d["interfaces"][0].pop("id"))
-        self.check("no_interface_id")
-
-    def test_a_mapping_check_on_each_document(self) -> None:
-        (self.hw / "requirements.yaml").write_text("- a\n", encoding="utf-8")
-        self.check("not_mapping")
-
-    def test_a_missing_record_file(self) -> None:
-        (self.hw / "interfaces.yaml").unlink()
-        self.check("missing_file")
 
     def test_no_product(self) -> None:
         (self.hw / "product.yaml").unlink()

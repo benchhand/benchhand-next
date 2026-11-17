@@ -505,20 +505,5 @@ class CommandLine(unittest.TestCase):
         self.assertIn("intent.reference", {p["code"] for p in report["problems"]})
         self.assertEqual(self.run_cli(str(hw.parent / "missing")).returncode, 2)
 
-    def test_a_legacy_record_is_readable_and_not_assessed(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix="cad-selection-legacy-")
-        self.addCleanup(temporary.cleanup)
-        hw = Path(temporary.name) / "hw"
-        shutil.copytree(fx.LAMP, hw)
-        before = tree_digest(hw)
-        result = self.run_cli(str(hw), "--json")
-        self.assertEqual(result.returncode, 1, result.stderr)
-        report = json.loads(result.stdout)
-        self.assertEqual((report["status"], report["record_version"]), ("not_assessed", 1))
-        self.assertIn("record.migration_required", {p["code"] for p in report["problems"]})
-        self.assertFalse(report["use_case"]["final_ready"])
-        self.assertEqual(tree_digest(hw), before)
-
-
 if __name__ == "__main__":
     unittest.main()

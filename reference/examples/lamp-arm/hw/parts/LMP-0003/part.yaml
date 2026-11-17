@@ -59,3 +59,9 @@ drawing:
     - {kind: process, text: "CNC machined from 6061-T6; ream the tip bore through both cheeks in one pass."}
     - {kind: finish, text: "As machined, no coating; the 5 H8 and 5 H7 bores are final as machined."}
   sheet: {sizes: [A3, A2], scale: auto}
+intent:
+  functions: {status: unknown, reason: not recorded before record version 2, question: Q-014}
+  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Aluminum 6061-T6 is a declaration, not a sourced grade', question: Q-014}
+  service: {status: unknown, reason: not recorded before record version 2, question: Q-014}
+  critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-014}
+  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label cnc names no operations, capability, orientation, supports or inspection', question: Q-014}
