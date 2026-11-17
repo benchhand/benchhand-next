@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.11,<3.15"
+# requires-python = ">=3.12,<3.15"
 # dependencies = ["cadquery-ocp-novtk==8.0.1.1.0", "pyyaml>=6.0"]
 # ///
 """Probe small OCP shapes with form_check's manufacturing-state probe and print the facts per case.

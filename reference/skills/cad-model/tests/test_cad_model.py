@@ -2076,7 +2076,7 @@ class DiffRuleTests(unittest.TestCase):
 
 
 FAKE_RUNNER = """# /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.12,<3.15"
 # dependencies = []
 # ///
 import atexit, json, pathlib, sys, time

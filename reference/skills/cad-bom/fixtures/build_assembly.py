@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.11,<3.15"
+# requires-python = ">=3.12,<3.15"
 # dependencies = ["cadquery-ocp-novtk==8.0.1.1.0"]
 # ///
 """Write the cad-bom test assembly as a STEP AP242 file.

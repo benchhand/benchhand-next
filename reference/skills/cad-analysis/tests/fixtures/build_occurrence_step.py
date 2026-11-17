@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.11,<3.15"
+# requires-python = ">=3.12,<3.15"
 # dependencies = ["cadquery-ocp-novtk==8.0.1.1.0", "pyyaml>=6.0"]
 # ///
 """Write an assembly STEP AP242 that places one part definition twice, through cad-motion's writer.
