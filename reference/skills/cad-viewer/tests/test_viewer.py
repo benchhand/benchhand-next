@@ -858,23 +858,18 @@ class PixelHelpers(unittest.TestCase):
 
 
 class VersionList(Fixture):
-    def test_every_version_folder_newest_first_with_build_time_and_part_count(self) -> None:
+    def test_every_version_folder_newest_first_with_part_count(self) -> None:
         for label in ("v1", "v2", "v10"):
             make_version(self.hw, label)
-        version_manifest = self.hw / "versions" / "v2" / "manifest.json"
-        data = json.loads(version_manifest.read_text(encoding="utf-8"))
-        updated = {**data, "created_utc": "2026-10-28T09:15:00Z"}
-        version_manifest.write_text(json.dumps(updated), encoding="utf-8")
+        data = json.loads((self.hw / "versions" / "v2" / "manifest.json").read_text(encoding="utf-8"))
         (self.hw / "versions" / "v3").mkdir()
         (self.hw / "versions" / "v3" / "manifest.json").write_text(json.dumps({"schema_version": 2, "label": "v3", "files": {}}))
         (self.hw / "versions" / ".v11-partial").mkdir()
         listed = record.version_list(self.hw)
         self.assertEqual([entry["label"] for entry in listed], ["v10", "v3", "v2", "v1"])
         v2 = next(entry for entry in listed if entry["label"] == "v2")
-        self.assertEqual(v2["built_utc"], "2026-10-28T09:15:00Z")
         self.assertEqual(v2["parts"], len(data["occurrences"]))
         self.assertEqual(v2["previews"], {"renders": [], "captures": [], "drawings": []})
-        self.assertRegex(listed[0]["built_utc"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
         self.assertEqual(record.latest_label(self.hw), "v10")
 
     def test_latest_label_is_none_without_a_readable_latest_json(self) -> None:

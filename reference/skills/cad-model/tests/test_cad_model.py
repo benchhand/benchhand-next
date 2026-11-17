@@ -775,6 +775,14 @@ class ManufacturingStateTests(unittest.TestCase):
         self.assertEqual(tools["cadquery"], "2.8.0")
         self.assertNotIn("import_s", tools)  # the kernel never started
 
+    def test_the_hashed_manifest_holds_no_volatile_field(self) -> None:
+        """v1 started the kernel: its import time stays in stdout `timings_s`, not in the hashed manifest,
+        and no build clock is recorded either, so equal inputs give equal manifest facts."""
+        manifest = json.loads((self.hw / "versions" / "v1" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertGreater(self.runs["v1"][1]["timings_s"]["cadquery_import_s"], 0)
+        self.assertNotIn("created_utc", manifest)
+        self.assertNotIn("import_s", manifest["tools"]["cadquery"])
+
     def test_manufacturing_outputs_follow_their_own_inputs(self) -> None:
         """A printer volume, an STL deflection, a material or a process change remakes exactly the outputs
         it changes; no definition is built again."""
