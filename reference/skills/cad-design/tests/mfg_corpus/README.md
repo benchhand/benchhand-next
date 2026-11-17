@@ -14,7 +14,7 @@ The rates are a baseline for ratcheting, not a gate. A low rate for a defect no 
     uv run --script skills/cad-design/tests/mfg_corpus/rates.py [--family ID ...] [--out PATH]
 
 It prints a table, writes the JSON report (default `<tempdir>/mfg-corpus-rates.json`) and prints
-`report: <path>`. The JSON is `{"format": 1, "families": [{family, check, owner, pairs, ran, skipped, errors,
+`report: <path>`. The JSON is `{"format": 1, "families": [{family, check, owner, pairs, ran, skipped, errors, rejected, known_gaps,
 detected, abstained, missed, false_positives, detection_rate, abstention_rate, false_positive_rate, results}]}`.
 Rates are `null` when no pair ran. Pairs that raise `Skip` are excluded from the rates and counted in `skipped`.
 
@@ -48,8 +48,39 @@ Add `families/<family_id>.py`; nothing else needs editing, so stacked PRs do not
                     pairs=(Pair("<pair_id>", "what the mutant gets wrong", run),))
 
 `run(True)` builds the mutant and `run(False)` its twin from the same code, so the pair cannot drift. Map the
-check's own verdict onto `fail`, `pass` or `unknown`. Import heavy tools (OCP, yaml) inside `run`, and
+verdict onto `fail`, `pass` or `unknown`. Import heavy tools (OCP, yaml) inside `run`, and
 `raise Skip("why")` when they are absent. A crash counts as a miss. Family and pair ids are unique.
+
+## Verdicts are taken at the packet
+
+A verdict is what the packet a user or release gate sees, and cad-record evidence's assessment of it, conclude for the
+obligations the family is about. Never call an inner check function (`check_order`, `pc.assess`, `probe`, a script's own
+report) from a family: take the verdict through a helper in `support.py`, which runs the real path with the arguments a
+real build passes.
+
+| helper | path | obligations |
+| --- | --- | --- |
+| `printed_verdict(shape, prefix)` | `form_check.probe` (with the bed build axis) -> `process_checks.assess(...).packet()` -> packet schema -> `evidence.assess` | `process.fdm.*@` |
+| `assembly_verdict(items, *prefixes)` | the `access.py` command's packet (order check over the chain's inventory, then path planning) -> schema -> `evidence.assess` | `assembly.order@`, `intent.assembly_operations@`, `assembly.access@` |
+| `readback_verdict(model_source)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
+
+An evidence state maps to a verdict: `fail` is fail, `pass` and `not_applicable` are pass, anything else (unknown, stale,
+planned, waived, or no packet at all) is unknown. A stage that refuses before it produces a packet (the build of a
+part, a guide) has no obligation of its own: evidence shows the obligation unevidenced, so the verdict is unknown. A record
+that expects no such obligation at all raises `Rejected` (the release asks nothing of the check). Say so in the family's
+notes and open a gap for it.
+
+One departure from a sealed release, stated so nobody reads it as the real thing: the `access.py` and additive packets go
+to evidence in memory (assessed for a version label no repository uses, `v9000`) instead of from a sealed `hw/checks/`
+bundle, and the `access.py` packet drops its `detail` key. The packet and evidence logic are the real ones.
+`tests/test_mfg_corpus.py` fails when a family imports or calls an inner check.
+
+A packet the schema or evidence refuses is not a verdict: `support` raises `corpus.Rejected(reason)`, the pair is a miss
+and the reason is in the report (`rejected`).
+
+`Pair(..., known_gap="why")` marks a mutant whose verdict is not trusted, for example one that FAILs for a wrong reason.
+The pair counts in `ran` and as a miss whatever the mutant returned, its twin's false positive still counts, and the
+rate command prints `known gap: <family>/<pair>: <why>`. Remove the field when the check is fixed.
 
 ## Baseline and ratchet
 

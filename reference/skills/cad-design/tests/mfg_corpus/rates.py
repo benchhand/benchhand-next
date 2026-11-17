@@ -42,6 +42,10 @@ def main(argv: list[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({"format": 1, "families": rows}, indent=2) + "\n", encoding="utf-8")
     print(corpus.table(rows))
+    for row in rows:
+        for item in row["results"]:
+            if item["known_gap"]:
+                print(f"known gap: {row['family']}/{item['id']}: {item['known_gap']}")
     print(f"report: {args.out}")
     if args.check_baseline:
         problems = corpus.check_baseline(rows, args.baseline_dir, whole_registry=not args.family)

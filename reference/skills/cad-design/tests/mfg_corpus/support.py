@@ -1,4 +1,4 @@
-"""Shared helpers for corpus families: module loading, verdict mapping, cases for assembly operations.
+"""Shared helpers for corpus families: module loading, verdicts taken at the packet, cases for assembly operations.
 
 Heavy imports (yaml, OCP, the check modules) happen inside the functions, so importing this is free.
 """
@@ -6,11 +6,12 @@ Heavy imports (yaml, OCP, the check modules) happen inside the functions, so imp
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import date
 from pathlib import Path
 from typing import Any
 
-from corpus import HERE, Outcome, Skip
+from corpus import HERE, Outcome, Rejected, Skip
 
 SKILLS = HERE.parents[2]
 REPO = SKILLS.parent
@@ -49,6 +50,46 @@ def require(module: str) -> None:
         raise Skip(f"{module} is not installed")
 
 
+# --- the packet a release sees ---------------------------------------------------------------------------------------
+
+BUILD = "v9000"  # the version label evidence assesses the in-memory packet for. No repository version uses it
+MANIFEST_SHA256 = "0" * 64
+_STATE_OUTCOME = {"fail": "fail", "pass": "pass", "not_applicable": "pass"}  # any other state is not a pass
+
+
+def _evidence() -> Any:
+    return load("cad_record_evidence", SKILLS / "cad-record" / "scripts" / "evidence.py")
+
+
+def state_verdict(record: Any, produced: Sequence[Any], version: str, manifest_sha256: str, prefixes: tuple[str, ...],
+                  today: Any = None) -> Outcome:
+    """What cad-record evidence.assess concludes for the obligations of `record` whose id starts with a prefix, given the
+    version's producer packets (ProducerPacket objects of evidence): fail if any failed, pass if all passed, else unknown. Evidence
+    refusing a packet (packet.invalid) raises Rejected: a miss with the reason, not a verdict. A record with no such
+    obligation also raises it: the release asks nothing of the check."""
+    assessment = _evidence().assess(record, version=version, manifest_sha256=manifest_sha256, packets=list(produced),
+                                    today=today or TODAY)
+    refused = [f.message for f in assessment.findings if f.code == "packet.invalid"]
+    if refused:
+        raise Rejected("evidence: " + "; ".join(refused))
+    states = {i: s.result for i, s in assessment.statuses.items() if i.startswith(prefixes)}
+    if not states:
+        raise Rejected(f"the record expects no obligation starting {prefixes}")
+    return verdict(_STATE_OUTCOME.get(state, "unknown") for state in states.values())
+
+
+def release_verdict(record: Any, packet: Mapping[str, Any], *prefixes: str, today: Any = None) -> Outcome:
+    """`state_verdict` for one producer `packet` as its script would publish it, after the schema check every producer
+    runs before it seals one (a packet that breaks it raises Rejected)."""
+    packets = load("cad_record_check_packet", SKILLS / "cad-record" / "scripts" / "check_packet.py")
+    try:
+        packets.validate(packet)
+    except packets.PacketError as error:
+        raise Rejected(f"schema: {error}") from error
+    produced = _evidence().ProducerPacket(f"hw/checks/{BUILD}/corpus", "0" * 64, packet)
+    return state_verdict(record, [produced], BUILD, MANIFEST_SHA256, prefixes, today)
+
+
 # --- assembly operations (cad-record/scripts/assembly_operations.py) ---------------------------------------------
 
 def operations_file(name: str, socket_sha256: str = "0" * 64) -> list[dict[str, Any]]:
@@ -67,16 +108,6 @@ def reordered(items: list[dict[str, Any]], *ids: str) -> list[dict[str, Any]]:
     return [copy.deepcopy(by_id[ident]) for ident in ids]
 
 
-def check_order(items: list[dict[str, Any]]) -> Mapping[str, str]:
-    """{obligation: outcome} of assembly_operations.check_order over the access fixture's five parts."""
-    require("yaml")
-    ops = load("cad_record_assembly_operations", SKILLS / "cad-record" / "scripts" / "assembly_operations.py")
-    data = load("cad_record_assembly_data", SKILLS / "cad-record" / "scripts" / "assembly_data.py")
-    inventory = data.normalize({"subassemblies": [{"id": "main", "title": "Main", "parts": list(PNS)}]})
-    report = ops.check_order(ops.normalize({"operations": items}), inventory)
-    return {row["obligation"]: row["outcome"] for row in report.outcomes}
-
-
 # --- additive (FDM) checks on real B-rep (cad-design process_checks) ---------------------------------------------
 
 APPROVED = {"status": "approved", "rotation": {"quaternion": [1, 0, 0, 0]}, "decision": "DR-001"}
@@ -89,13 +120,13 @@ def solids() -> Any:
     return load("mfg_corpus_access_fixture", MOTION_FIXTURES / "access_fixture.py")
 
 
-def assess_printed(shape: Any, supports: Mapping[str, Any] | None = None, frame: str = "bed") -> Mapping[str, str]:
-    """{obligation: outcome} of the fdm checks for one printed part: `shape` probed by form_check.probe with the
-    plan the record asks for, then assessed against the TEST profile."""
-    import tempfile
-    from datetime import date
+TODAY = date(2026, 6, 1)
 
-    require("OCP")
+
+def printed_record(supports: Mapping[str, Any] | None = None) -> tuple[Any, Any]:
+    """(the record, the process_checks module) of one printed part on the TEST profile, with the support plan the record asks for."""
+    import tempfile
+
     require("yaml")
     require("jsonschema")
     import capability_profile
@@ -105,7 +136,6 @@ def assess_printed(shape: Any, supports: Mapping[str, Any] | None = None, frame:
             sys.path.insert(0, str(folder))
     import process_checks as pc
 
-    form_check = load("cad_design_form_check", SKILLS / "cad-design" / "scripts" / "form_check.py")
     fx = load("cad_record_mi_fixtures", SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
     route = [fx.operation("print", "fdm", capability_profile.PRINTER, output_state="printed", orientation=dict(APPROVED),
                           supports=dict(supports or {"strategy": "none"}))]
@@ -120,16 +150,24 @@ def assess_printed(shape: Any, supports: Mapping[str, Any] | None = None, frame:
     errors = [f"{p.code} {p.path}: {p.message}" for p in problems if p.severity == "error"]
     if errors:
         raise ValueError(f"the corpus record is invalid: {errors}")
-    today = date(2026, 6, 1)
-    facts = form_check.probe(shape, frame=frame, locators={}, plan=pc.probe_plan(record, PN, "main", today=today))
-    evidence = ({"path": f"hw/versions/v1/manufacturing/{PN}/part.step", "sha256": "0" * 64},)
-    result = pc.assess(record, {(PN, "main"): pc.Geometry(PN, "main", facts, evidence)}, today=today)
-    return {row["obligation"]: row["outcome"] for row in result.outcomes}
+    return record, pc
 
 
-def printed_verdict(outcomes: Mapping[str, str], prefix: str) -> Outcome:
-    """The verdict over the obligations whose id starts with `prefix`, e.g. "process.fdm.support@"."""
-    return verdict(v for k, v in outcomes.items() if k.startswith(prefix))
+def printed_verdict(shape: Any, prefix: str, supports: Mapping[str, Any] | None = None, frame: str = "bed") -> Outcome:
+    """What a release concludes about the obligations whose id starts with `prefix` (e.g. "process.fdm.support@") for one
+    printed part. The path is form_check.check_version's: `shape` probed by form_check.probe with the plan the record
+    asks for and the build axis a bed placement gives, assessed by the process checks into the packet, validated against
+    its schema, then assessed by cad-record evidence."""
+    require("OCP")
+    record, pc = printed_record(supports)
+    form_check = load("cad_design_form_check", SKILLS / "cad-design" / "scripts" / "form_check.py")
+    build_axis = [0.0, 0.0, 1.0] if frame == "bed" else None  # form_check.version_geometry: R^T z of a bed placement
+    facts = form_check.probe(shape, frame=frame, locators={}, plan=pc.probe_plan(record, PN, "main", today=TODAY),
+                             build_axis=build_axis)
+    evidence = ({"path": f"hw/versions/{BUILD}/manufacturing/{PN}/part.step", "sha256": "0" * 64},)
+    packet = pc.assess(record, {(PN, "main"): pc.Geometry(PN, "main", facts, evidence)}, today=TODAY).packet(
+        {"version_manifest": MANIFEST_SHA256, "producer_code": "0" * 64})
+    return release_verdict(record, packet, prefix, today=TODAY)
 
 
 # --- assembly access (cad-motion/scripts/access.py on the access fixture's geometry) -----------------------------
@@ -165,8 +203,10 @@ def socket_operations(name: str) -> list[dict[str, Any]]:
     return operations_file(name, _access_geometry()[1])
 
 
-def access_outcomes(items: list[dict[str, Any]]) -> Mapping[str, str]:
-    """{obligation: outcome} of access.py over the five parts with `items` as the assembly operations."""
+def assembly_verdict(items: list[dict[str, Any]], *prefixes: str) -> Outcome:
+    """What a release concludes about the obligations whose id starts with one of `prefixes` for the five parts with
+    `items` as the assembly operations. The packet is access.py's own (its order check over the chain's inventory, then
+    the path planning), as the access.py command prints it."""
     import json
     import shutil
     import subprocess
@@ -175,6 +215,7 @@ def access_outcomes(items: list[dict[str, Any]]) -> Mapping[str, str]:
     require("yaml")
     root, _ = _access_geometry()
     fx = load("cad_record_mi_fixtures", SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
+    intent = load("cad_record_manufacturing_intent", SKILLS / "cad-record" / "scripts" / "manufacturing_intent.py")
     parts = [fx.part(pn, TITLES[pn], process="cnc") for pn in PNS]
     interface = fx.interface("IF-001", "TST-0101", "TST-0102", "mounting",
                              limits={"press_fit": {"fit": "22 H7/p6", "pair": ["TST-0102", "TST-0101"]}})
@@ -190,5 +231,55 @@ def access_outcomes(items: list[dict[str, Any]]) -> Mapping[str, str]:
                              capture_output=True, text=True, timeout=1800, check=False)
         if run.returncode not in (0, 1):
             raise RuntimeError(f"access.py exited {run.returncode}: {(run.stdout + run.stderr)[-1500:]}")
-        result = json.loads(run.stdout)
-    return {row["obligation"]: row["outcome"] for row in result["outcomes"]}
+        printed = json.loads(run.stdout)
+        record, problems = intent.check_record(hw)
+    printed.pop("detail")
+    return release_verdict(record, printed, *prefixes)
+
+
+# --- kernel validity (cad-model check: the cad.readback packet of a built version) ------------------------------
+
+def readback_verdict(model_source: str) -> Outcome:
+    """What a release concludes about the cad.readback obligation of a one-part project whose model.py is
+    `model_source`: cad_model run builds the version, cad_model check publishes its packet to hw/checks/<V>/cad/, and
+    evidence.collect_packets reads it back sealed, as the release gate does. A build that refuses the part leaves no version and so no
+    packet: evidence then has nothing for the obligation and calls it unknown."""
+    import hashlib
+    import shutil
+    import subprocess
+    import tempfile
+
+    require("yaml")
+    require("jsonschema")
+    if shutil.which("uv") is None:
+        raise Skip("uv is required to build the version")
+    projects = load("cad_model_manufacturing_projects", SKILLS / "cad-model" / "tests" / "fixtures" / "manufacturing_projects.py")
+    projects.ENVELOPE_MM = (1000.0, 1000.0, 1000.0)  # the defect models are long: the build volume is not what is under test
+    fx = projects.shared()
+    intent = load("cad_record_manufacturing_intent", SKILLS / "cad-record" / "scripts" / "manufacturing_intent.py")
+    cad_model = str(SKILLS / "cad-model" / "scripts" / "cad_model.py")
+    with tempfile.TemporaryDirectory() as tmp:
+        hw = fx.write_record(Path(tmp) / "project" / "hw", projects.documents())
+        model = hw / "parts" / projects.PN / "model.py"
+        model.parent.mkdir(parents=True, exist_ok=True)
+        model.write_text(model_source, encoding="utf-8")
+        record, problems = intent.check_record(hw)
+        errors = [f"{p.code} {p.path}: {p.message}" for p in problems if p.severity == "error"]
+        if errors:
+            raise ValueError(f"the corpus record is invalid: {errors}")
+        build = subprocess.run(["uv", "run", "--quiet", "--script", cad_model, "run", str(hw), "--label", "v1"],
+                               capture_output=True, text=True, timeout=1800, check=False)
+        manifest = hw / "versions" / "v1" / "manifest.json"
+        if build.returncode not in (0, 1) or (build.returncode == 0) != manifest.is_file():
+            raise RuntimeError(f"cad_model run exited {build.returncode}: {(build.stdout + build.stderr)[-1500:]}")
+        if not manifest.is_file():  # the build refused the part: no version exists, so no packet and nothing a release can cite
+            return state_verdict(record, [], "v1", MANIFEST_SHA256, ("cad.readback@",))
+        check = subprocess.run(["uv", "run", "--quiet", "--script", cad_model, "check", "v1", "--hw", str(hw)],
+                               capture_output=True, text=True, timeout=1800, check=False)
+        if check.returncode not in (0, 1):
+            raise RuntimeError(f"cad_model check exited {check.returncode}: {(check.stdout + check.stderr)[-1500:]}")
+        sha = hashlib.sha256(manifest.read_bytes()).hexdigest()
+        found, findings = _evidence().collect_packets(hw, "v1", sha)
+        if findings:
+            raise Rejected("evidence: " + "; ".join(f.message for f in findings))
+        return state_verdict(record, found, "v1", sha, ("cad.readback@",))

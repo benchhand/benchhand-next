@@ -7,14 +7,14 @@ reuse cad-motion's operation files. Each twin holds the same operations in an or
 from typing import Any
 
 from corpus import Family, Outcome, Pair
-from support import access_outcomes, reordered, socket_operations, verdict
+from support import assembly_verdict, reordered, socket_operations
 
 ACCESS = "assembly.access@"
 VALID = ("seat-bearing", "fit-cover", "fasten-cover", "mount-bracket")  # screw driven before the bracket goes on
 
 
 def _verdict(items: list[dict[str, Any]]) -> Outcome:
-    return verdict(v for k, v in access_outcomes(items).items() if k.startswith(ACCESS))
+    return assembly_verdict(items, ACCESS)
 
 
 def socket_blocked_by_bracket(mutant: bool) -> Outcome:

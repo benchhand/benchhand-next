@@ -28,11 +28,17 @@ class Skip(Exception):
     """Raised by `run` when the case needs a tool this machine lacks. The rates leave the pair out."""
 
 
+class Rejected(Exception):
+    """Raised by `run` when the packet check or the evidence assessment refuses the case's packet. Neither a detection
+    nor an abstention. The pair counts as a miss and the run records the reason."""
+
+
 @dataclass(frozen=True)
 class Pair:
     id: str  # unique within the family
     defect: str  # the one thing the mutant gets wrong, in a phrase
     run: Callable[[bool], Outcome]  # run(True) is the must-FAIL mutant, run(False) its must-PASS twin
+    known_gap: str | None = None  # why the mutant's verdict is not trusted (e.g. it FAILs for a wrong reason): a miss whatever it returns
 
 
 @dataclass(frozen=True)
@@ -52,6 +58,8 @@ class PairResult:
     twin: str | None = None
     skipped: str | None = None
     error: str | None = None
+    rejected: str | None = None
+    known_gap: str | None = None
 
 
 def load_families(directory: Path = FAMILIES_DIR) -> list[Family]:
@@ -83,13 +91,17 @@ def validate(families: Iterable[Family]) -> None:
 
 
 def run_pair(pair: Pair) -> PairResult:
-    result = PairResult(pair.id, pair.defect)
+    result = PairResult(pair.id, pair.defect, known_gap=pair.known_gap)
     try:
         result.mutant = pair.run(True)
         result.twin = pair.run(False)
     except Skip as skip:
         result.mutant = result.twin = None
         result.skipped = str(skip) or "skipped"
+        return result
+    except Rejected as refusal:
+        result.mutant = result.twin = None
+        result.rejected = str(refusal) or "rejected"
         return result
     except Exception as exc:  # record the crash, never hide it as a pass
         return _errored(result, f"{type(exc).__name__}: {exc}")
@@ -112,16 +124,19 @@ def rate(count: int, total: int) -> float | None:
 
 def summarise(family: Family, results: list[PairResult]) -> dict[str, Any]:
     """Rates over the pairs that ran: detection = FAIL on mutant, abstention = UNKNOWN on mutant,
-    false positive = FAIL on twin. A pair that errored on either side has no verdicts: it is a miss."""
+    false positive = FAIL on twin. A pair that errored, or whose packet evidence rejected on either side, has no verdicts
+    and counts as a miss. A pair with a known gap counts as a miss whatever its mutant returned. Its twin still counts."""
     ran = [r for r in results if not r.skipped]
     n = len(ran)
-    detected = sum(r.mutant == "fail" for r in ran)
-    abstained = sum(r.mutant == "unknown" for r in ran)
-    missed = n - detected - abstained  # a pass on the mutant, or a pair that errored
+    trusted = [r for r in ran if not r.known_gap]
+    detected = sum(r.mutant == "fail" for r in trusted)
+    abstained = sum(r.mutant == "unknown" for r in trusted)
+    missed = n - detected - abstained  # a pass on the mutant, or a pair that errored or got rejected
     false_pos = sum(r.twin == "fail" for r in ran)
     return {
         "family": family.id, "check": family.check, "owner": family.owner,
         "pairs": len(results), "ran": n, "skipped": len(results) - n, "errors": sum(bool(r.error) for r in ran),
+        "rejected": sum(bool(r.rejected) for r in ran), "known_gaps": sum(bool(r.known_gap) for r in ran),
         "detected": detected, "abstained": abstained, "missed": missed, "false_positives": false_pos,
         "detection_rate": rate(detected, n), "abstention_rate": rate(abstained, n),
         "false_positive_rate": rate(false_pos, n),

@@ -7,13 +7,13 @@ Geometry is real B-rep probed by form_check.probe, never hand-written facts. Mil
 from typing import Any
 
 from corpus import Family, Outcome, Pair
-from support import assess_printed, printed_verdict, solids
+from support import printed_verdict, solids
 
 SUPPORT = "process.fdm.support@"
 
 
 def _verdict(shape: Any) -> Outcome:
-    return printed_verdict(assess_printed(shape), SUPPORT)
+    return printed_verdict(shape, SUPPORT)
 
 
 def flat_shelf(mutant: bool) -> Outcome:
