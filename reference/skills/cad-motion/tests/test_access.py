@@ -72,7 +72,9 @@ class OrderTests(unittest.TestCase):
             self.assertEqual(list(outcome.iter_errors(row)), [], row["obligation"])
 
     def test_a_bearing_cannot_be_installed_after_the_cover_closes_it(self) -> None:
-        report = self.check(operations("closed_bearing_install.yaml"))
+        # The bracket and screw complete the assembly, so the closure is the only defect.
+        rest = reordered(operations("blocked_socket.yaml"), "mount-bracket", "fasten-cover")
+        report = self.check(operations("closed_bearing_install.yaml") + rest)
         self.assert_schema_valid(report)
         self.assertEqual(report.outcome("assembly.order@op:fit-cover")["outcome"], "pass")
         failed = report.outcome("assembly.order@op:seat-bearing")
@@ -87,8 +89,9 @@ class OrderTests(unittest.TestCase):
         report = self.check(operations("blocked_socket.yaml"))
         self.assert_schema_valid(report)
         self.assertEqual({row["obligation"]: row["outcome"] for row in report.outcomes},
-                         {f"assembly.order@op:{ident}": "pass"
-                          for ident in ("seat-bearing", "fit-cover", "mount-bracket", "fasten-cover")})
+                         {**{f"assembly.order@op:{ident}": "pass"
+                             for ident in ("seat-bearing", "fit-cover", "mount-bracket", "fasten-cover")},
+                          "assembly.order@product": "pass"})
         self.assertEqual(report.findings, ())
         self.assertIn("part paths and tool reach are assembly.access", report.outcomes[0]["coverage"])
 
@@ -105,9 +108,8 @@ class OrderTests(unittest.TestCase):
         self.assertIn("assembly.order_impossible", {f["code"] for f in report.findings})
 
     def test_an_enclosed_part_cannot_be_disassembled_or_adjusted(self) -> None:
-        items = operations("blocked_socket.yaml")[:2] + [
-            {"id": "pull-bearing", "kind": "disassemble", "part": "TST-0102", "into": "TST-0101", "direction": [0, 0, 1]}]
-        report = self.check(items)
+        pull = {"id": "pull-bearing", "kind": "disassemble", "part": "TST-0102", "into": "TST-0101", "direction": [0, 0, 1]}
+        report = self.check(operations("blocked_socket.yaml") + [pull])  # the full sequence, then the pull
         self.assertEqual(report.outcome("assembly.order@op:pull-bearing")["outcome"], "fail")
         self.assertEqual({f["code"] for f in report.findings}, {"assembly.closed_before_install"})
 

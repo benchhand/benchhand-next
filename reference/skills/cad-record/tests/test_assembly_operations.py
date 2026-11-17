@@ -20,8 +20,11 @@ from modload import load_module as load  # noqa: E402
 
 
 ops = load("cad_record_assembly_operations", SCRIPTS / "assembly_operations.py")
+assembly_data = load("cad_record_assembly_data", SCRIPTS / "assembly_data.py")
 fx = load("cad_record_mi_fixtures", HERE / "fixtures" / "manufacturing_intent.py")
 intent = fx.intent_module()
+evidence = load("cad_record_evidence", SCRIPTS / "evidence.py")
+check_packet = load("cad_record_check_packet", SCRIPTS / "check_packet.py")
 
 PRESS = {"id": "fit-bearing", "kind": "press_fit", "part": "TST-0003", "into": "TST-0001", "interface": "IF-001",
          "direction": [0, 0, -2], "acceptance": {"kind": "seated", "features": ["bearing_face", "seat_floor"]},
@@ -245,6 +248,129 @@ class JointTests(unittest.TestCase):
         wide = ops.check_joints(self.fasten(edge_distance={"criterion": between, "distance": fx.known(fx.quantity(lower=5, upper=7))}),
                                 record, intent.resolve_property)
         self.assertEqual(self.codes(wide), {"assembly.edge_distance": "fail"}, "a between criterion bounds the upper end too")
+
+
+class NeverInstalledTests(unittest.TestCase):
+    """An occurrence no operation installs, other than the one base, is a missing installing operation."""
+
+    PNS = ("TST-0101", "TST-0102", "TST-0103")
+    SEAT = {"id": "seat-bearing", "kind": "press_fit", "part": "TST-0102", "into": "TST-0101", "interface": "IF-001",
+            "direction": [0, 0, -1], "acceptance": {"kind": "seated", "features": ["outer_face", "seat_floor"]}}
+    COVER = {"id": "fit-cover", "kind": "join", "part": "TST-0103", "into": "TST-0101", "direction": [0, 0, -1],
+             "acceptance": {"kind": "standoff", "features": ["cover_foot", "housing_top"]}}
+
+    def check(self, items: list[dict], pns: tuple[str, ...] = PNS, with_inventory: bool = True):
+        inventory = assembly_data.normalize({"subassemblies": [{"id": "main", "title": "Main", "parts": list(pns)}]})
+        return ops.check_order(ops.normalize({"operations": items}), inventory if with_inventory else None)
+
+    def test_an_occurrence_no_operation_names_fails_the_product_order(self) -> None:
+        report = self.check([self.SEAT])
+        [finding] = report.findings
+        self.assertEqual((finding["code"], finding["subject"], finding["severity"]),
+                         ("assembly.never_installed", {"PN": "TST-0103"}, "critical"))
+        self.assertIn("TST-0103", finding["measured"]["text"])
+        row = report.outcome("assembly.order@product")
+        self.assertEqual((row["outcome"], row["findings"]), ("fail", [finding["id"]]))
+        self.assertEqual(report.outcome("assembly.order@op:seat-bearing")["outcome"], "pass")
+        for item in report.findings:
+            self.assertEqual(list(validator("finding").iter_errors(item)), [], item["id"])
+        for outcome in report.outcomes:
+            self.assertEqual(list(validator("obligation_outcome").iter_errors(outcome)), [], outcome["obligation"])
+
+    def test_every_occurrence_installed_or_receiving_passes(self) -> None:
+        report = self.check([self.SEAT, self.COVER])
+        self.assertEqual(report.findings, ())
+        self.assertEqual({row["obligation"] for row in report.outcomes},
+                         {"assembly.order@op:seat-bearing", "assembly.order@op:fit-cover", "assembly.order@product"})
+        self.assertEqual(report.outcome("assembly.order@product")["outcome"], "pass")
+
+    def test_each_missing_installer_is_named(self) -> None:
+        report = self.check([self.SEAT], pns=(*self.PNS, "TST-0104"))
+        self.assertEqual(sorted(f["subject"]["PN"] for f in report.findings), ["TST-0103", "TST-0104"])
+
+    def test_a_receiver_nobody_installs_is_a_second_base(self) -> None:
+        # The screw fastens into the cover. The bearing presses into the housing. Nothing installs either
+        # receiver. The sequence names the housing first, so the housing is the base and the cover floats.
+        screw = {**self.SEAT, "id": "fasten-cover", "kind": "fasten", "part": "TST-0104", "into": "TST-0103"}
+        report = self.check([self.SEAT, screw], pns=(*self.PNS, "TST-0104"))
+        [finding] = report.findings
+        self.assertEqual((finding["code"], finding["subject"]), ("assembly.never_installed", {"PN": "TST-0103"}))
+        self.assertIn("TST-0101", finding["measured"]["text"], "the finding names the base it floats beside")
+        self.assertEqual(report.outcome("assembly.order@product")["outcome"], "fail")
+
+    def test_a_part_only_closed_over_is_a_second_base(self) -> None:
+        close = {"id": "fit-cover", "kind": "close", "part": "TST-0103", "into": "TST-0101", "closes": ["TST-0102"],
+                 "direction": [0, 0, -1]}
+        report = self.check([close])
+        self.assertEqual([f["subject"]["PN"] for f in report.findings], ["TST-0102"])
+
+    def test_occurrences_whose_ids_differ_only_by_dash_or_underscore_get_distinct_finding_ids(self) -> None:
+        record = {"occurrences": [{"id": name, "PN": pn} for name, pn in
+                                  (("base", "TST-0101"), ("clip-a", "TST-0102"), ("clip_a", "TST-0102"),
+                                   ("clip-b", "TST-0102"))],
+                  "subassemblies": [{"id": "main", "title": "Main", "occurrences": ["@base", "@clip-a", "@clip_a", "@clip-b"]}]}
+        join = {**self.COVER, "id": "mount-clip", "part": "@clip-b", "into": "@base"}
+        report = ops.check_order(ops.normalize({"operations": [join]}),
+                                assembly_data.normalize(record, {"TST-0102": "part_local"}))
+        ids = [f["id"] for f in report.findings]
+        self.assertEqual(len(report.findings), 2, ids)
+        self.assertEqual(len(set(ids)), 2, ids)
+        self.assertEqual(report.outcome("assembly.order@product")["findings"], ids)
+
+    def test_one_base_plus_installed_parts_is_clean(self) -> None:
+        chain = {**self.SEAT, "id": "mount-cover", "part": "TST-0103", "into": "TST-0102"}
+        self.assertEqual(self.check([self.SEAT, chain]).findings, ())
+
+    def test_an_empty_known_sequence_over_two_parts_leaves_one_floating(self) -> None:
+        report = self.check([], pns=("TST-0101", "TST-0102"))
+        [finding] = report.findings
+        self.assertEqual(finding["code"], "assembly.never_installed")
+        self.assertEqual(report.outcome("assembly.order@product")["outcome"], "fail")
+
+    def test_an_empty_known_sequence_over_one_part_is_its_base(self) -> None:
+        report = self.check([], pns=("TST-0101",))
+        self.assertEqual(report.findings, ())
+        self.assertEqual(report.outcome("assembly.order@product")["outcome"], "pass")
+
+    def test_without_an_inventory_there_is_no_occurrence_to_miss(self) -> None:
+        self.assertEqual(self.check([self.SEAT], with_inventory=False).findings, ())
+
+
+class NeverInstalledPacketTests(unittest.TestCase):
+    """A missing installer reaches the user through the packet and the evidence assessment, not only check_order."""
+
+    PNS = ("TST-0101", "TST-0102", "TST-0103")
+    SEAT = NeverInstalledTests.SEAT
+
+    def assessed(self, items: list[dict]):
+        documents = fx.record(parts=[fx.part(pn, pn, process="cnc") for pn in self.PNS], operations=items,
+                              interfaces=[fx.interface("IF-001", "TST-0101", "TST-0102", "mounting")])
+        record = intent.normalize_record({rel: doc for rel, doc in documents.items() if not rel.startswith("_")})
+        inventory = assembly_data.normalize(documents["assembly.yaml"])
+        report = ops.check_order(ops.normalize({"operations": items}), inventory)
+        expected = [o for o in intent.required_checks(record) if o.family == "assembly.order"]
+        data = check_packet.build(record, expected, "test producer", list(report.outcomes), list(report.findings), {})
+        packet = evidence.ProducerPacket("hw/checks/v1/assembly-access", "b" * 64, data)
+        result = evidence.assess(record, version="v1", manifest_sha256="a" * 64, packets=[packet])
+        return expected, result
+
+    def test_the_product_order_obligation_is_required_and_fails_a_missing_installer(self) -> None:
+        expected, result = self.assessed([self.SEAT])
+        self.assertIn("assembly.order@product", {o.id for o in expected})
+        self.assertEqual(result.statuses["assembly.order@product"].result, "fail")
+        self.assertNotIn("packet.invalid", {f.code for f in result.findings})
+
+    def test_removing_the_sole_installer_of_a_two_part_assembly_fails_the_product_order(self) -> None:
+        self.PNS = ("TST-0101", "TST-0102")  # the operation is the sole installer, so removing it empties the list
+        full = self.assessed([self.SEAT])[1]
+        self.assertEqual(full.statuses["assembly.order@product"].result, "pass")
+        _, result = self.assessed([])
+        self.assertEqual(result.statuses["assembly.order@product"].result, "fail")
+
+    def test_a_complete_sequence_passes_the_product_order_obligation(self) -> None:
+        cover = NeverInstalledTests.COVER
+        _, result = self.assessed([self.SEAT, cover])
+        self.assertEqual(result.statuses["assembly.order@product"].result, "pass")
 
 
 if __name__ == "__main__":

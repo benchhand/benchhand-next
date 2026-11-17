@@ -23,8 +23,9 @@ def _valid() -> list[dict[str, Any]]:
 
 
 def closed_before_install(mutant: bool) -> Outcome:
-    items = socket_operations("closed_bearing_install.yaml")  # the cover closes the bearing's seat, then the bearing goes in
-    return _verdict(items if mutant else reordered(items, "seat-bearing", "fit-cover"))
+    # The mutant closes the cover over the bearing's seat first. The bearing goes in after. The bracket and screw complete the assembly.
+    order = ("fit-cover", "seat-bearing", "mount-bracket", "fasten-cover") if mutant else VALID
+    return _verdict(reordered(socket_operations("blocked_socket.yaml"), *order))
 
 
 def receiving_part_installed_later(mutant: bool) -> Outcome:
@@ -41,9 +42,10 @@ def predecessor_after(mutant: bool) -> Outcome:
 
 
 def enclosed_part_removed(mutant: bool) -> Outcome:
-    items = socket_operations("blocked_socket.yaml")[:2]
+    items = _valid()
     pull = {"id": "pull-bearing", "kind": "disassemble", "part": "TST-0102", "into": "TST-0101", "direction": [0, 0, 1]}
-    items = items + [pull] if mutant else [items[0], pull]  # the twin leaves the cover off the bearing
+    if mutant:
+        items.append(pull)  # the mutant pulls the bearing the cover encloses. The twin leaves it in place.
     return _verdict(items)
 
 

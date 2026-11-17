@@ -132,6 +132,76 @@ class Variants(unittest.TestCase):
         self.assertEqual((result.changed, result.earliest_stage, result.proposed_flow), ({}, None, None))
 
 
+class ProductOrderStaleness(unittest.TestCase):
+    """assembly.order@product must go stale when the whole assembly sequence changes, including an installer
+    that names its parts by occurrence (`@id`), and only then."""
+
+    PRODUCT = "assembly.order@product"
+
+    def occurrence_docs(self, operations: list[dict[str, Any]]) -> dict[str, Any]:
+        docs = fx.record(parts=[fx.part("TST-0101", "Housing", process="cnc"), fx.part("TST-0102", "Clip", process="cnc")],
+                         operations=operations)
+        docs["assembly.yaml"]["subassemblies"] = [{"id": "main", "title": "Main",
+                                                    "occurrences": ["@housing", "@clip-a", "@clip-b"]}]
+        docs["assembly.yaml"]["occurrences"] = [{"id": "housing", "PN": "TST-0101"}, {"id": "clip-a", "PN": "TST-0102"},
+                                                {"id": "clip-b", "PN": "TST-0102"}]
+        return {rel: data for rel, data in docs.items() if not rel.startswith("_")}
+
+    @staticmethod
+    def join(ident: str, part: str) -> dict[str, Any]:
+        return {"id": ident, "kind": "join", "part": part, "into": "@housing", "direction": [0, 0, -1],
+                "acceptance": {"kind": "standoff", "features": ["foot", "top"]}}
+
+    def compare(self, before: dict[str, Any], after: dict[str, Any], after_geometry: dict[str, str] | None = None) -> Any:
+        return impact.compare(normalized(before), normalized(after), before_geometry={}, after_geometry=after_geometry or {},
+                              since="v1", version="v2")
+
+    def test_deleting_an_installer_named_by_occurrence_stales_the_product_order(self) -> None:
+        both = [self.join("mount-a", "@clip-a"), self.join("mount-b", "@clip-b")]
+        result = self.compare(self.occurrence_docs(both), self.occurrence_docs(both[:1]))
+        self.assertIn(self.PRODUCT, result.stale_obligations)
+
+    def test_an_occurrence_no_operation_names_stales_the_product_order(self) -> None:
+        both = [self.join("mount-a", "@clip-a"), self.join("mount-b", "@clip-b")]
+        before = self.occurrence_docs(both)
+        after = copy.deepcopy(before)
+        after["assembly.yaml"]["occurrences"].append({"id": "clip-c", "PN": "TST-0102"})
+        after["assembly.yaml"]["subassemblies"][0]["occurrences"].append("@clip-c")
+        self.assertIn(self.PRODUCT, self.compare(before, after).stale_obligations)
+
+    def test_a_sequence_only_change_stales_the_product_order(self) -> None:
+        """The operations swap places and nothing else changes. access.py plans paths in sequence order."""
+        both = [self.join("mount-a", "@clip-a"), self.join("mount-b", "@clip-b")]
+        result = self.compare(self.occurrence_docs(both), self.occurrence_docs(both[::-1]))
+        self.assertIn(self.PRODUCT, result.stale_obligations)
+
+    def test_a_product_policy_obligation_goes_stale_on_the_same_change_through_everything(self) -> None:
+        """A non-assembly family, shown for reference. policy.*@product depends on every domain (_EVERYTHING), so it
+        already goes stale on any change, including the sequence-only one that stales the product order."""
+        both = [self.join("mount-a", "@clip-a"), self.join("mount-b", "@clip-b")]
+        docs = self.occurrence_docs(both)
+        docs["product.yaml"]["use_case"] = acceptance.confirmed_use_case(
+            "prototype", evidence_policy={"obligations": [{"subject": {"product": True}, "level": "cad_valid"}],
+                                          "decision": "DR-001"})
+        reordered = copy.deepcopy(docs)
+        reordered["assembly.yaml"]["operations"] = both[::-1]
+        self.assertIn("policy.cad_valid@product", {o.id for o in impact.mi.required_checks(normalized(docs))})
+        result = self.compare(docs, reordered)
+        self.assertEqual(result.stale_obligations.get("policy.cad_valid@product"), ("interface",))
+        self.assertIn(self.PRODUCT, result.stale_obligations)
+
+    def test_an_edit_outside_the_assembly_domains_leaves_the_product_order_fresh(self) -> None:
+        """A finish edit moves the part's finish fingerprint, which no assembly.* check depends on (geometry and
+        interface are the assembly domains)."""
+        both = [self.join("mount-a", "@clip-a"), self.join("mount-b", "@clip-b")]
+        docs = self.occurrence_docs(both)
+        after = copy.deepcopy(docs)
+        after["parts/TST-0102/part.yaml"]["finish"] = "TST bead blasted"
+        result = self.compare(docs, after)
+        self.assertNotIn(self.PRODUCT, result.stale_obligations)
+        self.assertEqual(result.changed["TST-0102"], ("finish",), "the edit is seen, just not by the order check")
+
+
 class EvidenceAndFlow(unittest.TestCase):
     def test_changed_evidence_is_stale_and_unchanged_evidence_is_only_a_carry_forward_candidate(self) -> None:
         docs = documents()
