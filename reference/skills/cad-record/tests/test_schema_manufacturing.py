@@ -448,7 +448,7 @@ class RecordDocuments(SchemaCase):
         })
         obligation = {"id": "process.fdm.support@TST-0001/print", "family": "process.fdm.support",
                       "subject": {"PN": "TST-0001", "operation": "print"}, "level": "process_planned", "stage": "detail", "basis": "fdm"}
-        result = {"schema_version": 1, "record_version": 2, "producer": "TST 1", "version": "v1", "scope": [{"PN": "TST-0001"}],
+        result = {"schema_version": 1, "record_version": 2, "producer": "TST 1", "scope": [{"PN": "TST-0001"}],
                   "expected": [obligation], "outcomes": [{"obligation": obligation["id"], "outcome": "unknown", "method": "none",
                                                           "coverage": "no calibrated profile"}],
                   "findings": [], "dependencies": {"part": "a" * 64}, "complete": True, "result": "unknown"}

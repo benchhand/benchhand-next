@@ -234,7 +234,7 @@ class GeometricAccessTests(unittest.TestCase):
         packet = json.loads((bundle / "result.json").read_text(encoding="utf-8"))
         self.assertEqual(list(validator("https://srobroek.com/cad/schemas/manufacturing-check-result.schema.json")
                               .iter_errors(packet)), [])
-        self.assertEqual((packet["result"], packet["complete"], packet["version"]), ("pass", True, "v1"))
+        self.assertEqual((packet["result"], packet["complete"]), ("pass", True))
         self.assertTrue((bundle / "evidence" / "access.json").is_file())
         again, rerun, _ = self.run_access(hw, "--version", "v1")
         self.assertEqual((again, rerun["reused"]), (0, True))

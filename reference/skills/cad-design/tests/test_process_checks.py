@@ -184,7 +184,7 @@ class Checks(unittest.TestCase):
     def assess(self, documents: dict[str, Any], geometry_: dict | None = None) -> Any:
         record = load(self, documents)
         result = pc.assess(record, geometry_ or {}, today=TODAY)
-        packet = result.packet("v1", {"version_manifest": "0" * 64})
+        packet = result.packet({"version_manifest": "0" * 64})
         self.assertEqual(packet_errors(packet), [])
         self.assertTrue(result.complete)
         self.assertEqual(len(result.outcomes), len(result.expected))

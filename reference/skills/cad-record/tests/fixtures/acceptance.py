@@ -156,7 +156,7 @@ def confirm_selection(hw: Path, decision: str = DECISION) -> str:
     return digest
 
 
-def producer_packet(record: Any, version: str, *, outcome: str = "pass", obligations: Any = None,
+def producer_packet(record: Any, *, outcome: str = "pass", obligations: Any = None,
                     findings: tuple[dict[str, Any], ...] = (), complete: bool = True) -> dict[str, Any]:
     """A synthetic producer check-result packet giving `outcome` to every obligation a software producer
     can show: not the record-derived ones (intent.*, assembly.joint), never a physical validation."""
@@ -167,7 +167,7 @@ def producer_packet(record: Any, version: str, *, outcome: str = "pass", obligat
     if not complete and outcomes:
         outcomes = outcomes[:-1]
     shown = "fail" if outcome == "fail" and outcomes else ("unknown" if outcome == "unknown" or not complete else "pass")
-    return {"schema_version": 1, "record_version": 2, "producer": "TST synthetic producer", "version": version,
+    return {"schema_version": 1, "record_version": 2, "producer": "TST synthetic producer",
             "scope": [{"product": True}], "expected": [o.as_dict() for o in chosen], "outcomes": outcomes,
             "findings": list(findings), "dependencies": {}, "complete": complete, "result": shown}
 

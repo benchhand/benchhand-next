@@ -122,7 +122,7 @@ class RecheckHookTests(unittest.TestCase):
         synthetic producer packet of a built v1."""
         staged = stamp_module.staged_record(self.root)
         producer = evidence.ProducerPacket("hw/checks/v1/tst", "0" * 64,
-                                           acceptance.producer_packet(staged.record, "v1", outcome=outcome))
+                                           acceptance.producer_packet(staged.record, outcome=outcome))
         packet = evidence.assess(staged.record, version="v1", manifest_sha256="0" * 64, packets=[producer],
                                  selection_sha256=staged.selection_sha256).packet(stage, staged.record_sha256)
         checks = self.root / ".checks.json"

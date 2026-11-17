@@ -4,12 +4,11 @@
   "title": "CAD manufacturing-intent check result (result.json of a bundle.checks bundle)",
   "description": "One producer's required-check packet for one version: the obligations it was asked to cover (manufacturing_intent.required_checks, enumerated before it ran), one outcome per obligation, its findings, the dependency fingerprints it read and whether it covered every expected obligation. A producer cannot shrink its scope by omission: an expected obligation without an outcome makes the packet incomplete, and unknown never counts as pass",
   "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "record_version", "producer", "version", "scope", "expected", "outcomes", "findings", "dependencies", "complete", "result"],
+  "required": ["schema_version", "record_version", "producer", "scope", "expected", "outcomes", "findings", "dependencies", "complete", "result"],
   "properties": {
     "schema_version": {"const": 1},
     "record_version": {"$ref": "manufacturing.schema.json#/$defs/record_version"},
     "producer": {"description": "the writing tool and its version", "$ref": "manufacturing.schema.json#/$defs/text"},
-    "version": {"$ref": "product.schema.json#/$defs/version"},
     "scope": {"type": "array", "minItems": 1, "items": {"$ref": "manufacturing.schema.json#/$defs/subject"}},
     "expected": {"type": "array", "items": {"$ref": "manufacturing.schema.json#/$defs/obligation"}},
     "outcomes": {"type": "array", "items": {"$ref": "manufacturing.schema.json#/$defs/obligation_outcome"}},

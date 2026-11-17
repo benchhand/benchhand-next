@@ -163,7 +163,7 @@ def frozen_lamp(hw: Path, *, before_build: Callable[[Path], None] | None = None,
         publish(hw, "renders", "iso", {"iso.png": f"{old} render\n"}, version=old)
     build_version(hw, omit, failed, attach, label)
     record = impact.read_record(hw)
-    acceptance.publish_packet(hw, label, acceptance.producer_packet(record, label))
+    acceptance.publish_packet(hw, label, acceptance.producer_packet(record))
     evidence = {"REQ-002": f"sweep hw/motion/{label}/elbow-sweep", "REQ-004": f"hw/analysis/{label}/arm-load/results.json"}
     edit_csv(hw / "verification.csv", lambda rows: [row.update(result="pass", evidence=evidence.get(
         row["requirement_id"], "hw/docs/inspection.md")) for row in rows])

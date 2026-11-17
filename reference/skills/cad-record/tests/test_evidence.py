@@ -69,9 +69,9 @@ def normalized(docs: dict[str, Any], entries: list[dict[str, Any]] = (), disposi
     return mi.normalize_record(docs)
 
 
-def packet(record: Any, *, outcome: str = "pass", version: str = "v1", **options: Any) -> Any:
+def packet(record: Any, *, outcome: str = "pass", **options: Any) -> Any:
     return evidence.ProducerPacket("hw/checks/v1/tst", "b" * 64,
-                                   acceptance.producer_packet(record, version, outcome=outcome, **options))
+                                   acceptance.producer_packet(record, outcome=outcome, **options))
 
 
 def assess(record: Any, *packets: Any, **options: Any) -> Any:
@@ -105,7 +105,7 @@ class UnknownNeverPasses(unittest.TestCase):
         self.assertEqual(result.facets["TST-0001"]["physically_validated"], "unknown")
         self.assertEqual(result.facets["TST-0001"]["cad_valid"], "pass")
 
-        claimed = acceptance.producer_packet(record, "v1")
+        claimed = acceptance.producer_packet(record)
         creep = next(o for o in mi.required_checks(record) if o.id == CREEP)
         claimed["expected"].append(creep.as_dict())
         claimed["outcomes"].append({"obligation": CREEP, "outcome": "pass", "method": "TST static FEA", "coverage": "all"})
@@ -115,7 +115,7 @@ class UnknownNeverPasses(unittest.TestCase):
 
     def test_an_outcome_at_another_level_does_not_count(self) -> None:
         record = normalized(documents())
-        data = acceptance.producer_packet(record, "v1")
+        data = acceptance.producer_packet(record)
         for outcome in data["outcomes"]:
             if outcome["obligation"] == STRENGTH:
                 outcome["level"] = "geometrically_manufacturable"
@@ -301,7 +301,7 @@ class CriticalFindings(unittest.TestCase):
         """The assessment with a producer packet that fails SUPPORT with the critical finding."""
         docs = docs or self.docs
         record = normalized(docs, dispositions=list(dispositions))
-        data = acceptance.producer_packet(self.base, "v1", findings=(self.finding,))
+        data = acceptance.producer_packet(self.base, findings=(self.finding,))
         for outcome in data["outcomes"]:
             if outcome["obligation"] == SUPPORT:
                 outcome["outcome"] = "fail"
@@ -309,7 +309,7 @@ class CriticalFindings(unittest.TestCase):
         return assess(record, evidence.ProducerPacket("hw/checks/v1/tst", "b" * 64, data))
 
     def test_a_finding_that_contradicts_its_outcome_voids_the_packet(self) -> None:
-        data = acceptance.producer_packet(self.base, "v1", findings=(self.finding,))
+        data = acceptance.producer_packet(self.base, findings=(self.finding,))
         result = assess(self.base, evidence.ProducerPacket("hw/checks/v1/tst", "b" * 64, data))
         self.assertIn("packet.invalid", codes(result.findings), "a passing outcome cannot mask a critical failure")
         self.assertEqual(result.statuses[SUPPORT].result, "unknown")
@@ -345,13 +345,19 @@ class ProducerPackets(unittest.TestCase):
     def setUp(self) -> None:
         self.record = normalized(documents())
 
-    def test_a_packet_of_another_version_or_contradicting_itself_is_refused(self) -> None:
-        wrong = packet(self.record, version="v2")
-        lying = acceptance.producer_packet(self.record, "v1", complete=False)
+    def test_a_packet_carries_no_version_of_its_own_its_path_binds_it(self) -> None:
+        data = acceptance.producer_packet(self.record)
+        self.assertNotIn("version", data)
+        result = assess(self.record, evidence.ProducerPacket("hw/checks/v1/tst", "b" * 64, data))
+        self.assertNotIn("packet.invalid", codes(result.findings))
+        self.assertEqual(result.statuses[READBACK].result, "pass")
+
+    def test_a_packet_contradicting_itself_is_refused(self) -> None:
+        lying = acceptance.producer_packet(self.record, complete=False)
         lying["complete"] = True
-        mismatched = acceptance.producer_packet(self.record, "v1")
+        mismatched = acceptance.producer_packet(self.record)
         mismatched["result"] = "unknown"
-        for data in (wrong, evidence.ProducerPacket("hw/checks/v1/x", "b" * 64, lying),
+        for data in (evidence.ProducerPacket("hw/checks/v1/x", "b" * 64, lying),
                      evidence.ProducerPacket("hw/checks/v1/y", "b" * 64, mismatched)):
             with self.subTest(data=data.bundle):
                 result = assess(self.record, data)
@@ -386,7 +392,7 @@ class PacketFiles(unittest.TestCase):
     def test_an_unreadable_unsealed_or_non_packet_result_is_packet_invalid(self) -> None:
         self.bundle("broken", "{not json")
         self.bundle("legacy", json.dumps({"status": "pass"}))
-        self.bundle("unsealed", json.dumps(acceptance.producer_packet(self.record, "v1")), manifest=False)
+        self.bundle("unsealed", json.dumps(acceptance.producer_packet(self.record)), manifest=False)
         packets, findings = evidence.collect_packets(self.hw, "v1", V1)
         self.assertEqual(packets, [])
         found = {f.path: f.message for f in findings if f.code == "packet.invalid"}
@@ -396,7 +402,7 @@ class PacketFiles(unittest.TestCase):
         self.assertIn("no manifest.json", found["hw/checks/v1/unsealed"])
 
     def test_emit_refuses_a_packet_that_breaks_its_schema_and_writes_nothing(self) -> None:
-        good = acceptance.producer_packet(self.record, "v1")
+        good = acceptance.producer_packet(self.record)
         check_packet.validate(good)
         bad = {**good, "result": "maybe"}
         with self.assertRaisesRegex(check_packet.PacketError, "manufacturing-check-result.schema.json: result"):
@@ -434,7 +440,7 @@ class ProgressiveGates(unittest.TestCase):
         record = normalized(documents("working_prototype"))
         joint = "assembly.joint@op:fit_bearing"
         claimed = evidence.ProducerPacket("hw/checks/v1/tst", "b" * 64, acceptance.producer_packet(
-            record, "v1", obligations=[o for o in mi.required_checks(record) if o.id != joint]))
+            record, obligations=[o for o in mi.required_checks(record) if o.id != joint]))
         claimed.data["expected"].append(next(o for o in mi.required_checks(record) if o.id == joint).as_dict())
         claimed.data["outcomes"].append({"obligation": joint, "outcome": "pass", "level": "process_planned",
                                          "method": "TST synthetic check", "coverage": "TST"})
