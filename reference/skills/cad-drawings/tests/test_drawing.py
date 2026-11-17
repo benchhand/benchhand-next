@@ -11,12 +11,14 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 import zlib
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Executor, Future, ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import patch
 
 from defusedxml import ElementTree as SafeET
@@ -178,6 +180,59 @@ class FreeCADDiscovery(unittest.TestCase):
         self.assertFalse(gone.exists())
         self.assertEqual(found, (str(gone), frozenset({"ASME/ANSIA_Landscape.svg"})))
 
+class ControlledExecutor(Executor):
+    """Runs the first `inline` submitted items at once. The rest stay pending (or running, for the listed indices)
+    until a caller cancels or completes them, so a test needs no clock to know what started."""
+
+    def __init__(self, inline: int = 0, running: tuple[int, ...] = ()) -> None:
+        self.inline, self.running, self.futures = inline, set(running), []
+
+    def submit(self, fn, /, *args, **kwargs):
+        future: Future = Future()
+        index = len(self.futures)
+        self.futures.append(future)
+        if index < self.inline:
+            try:
+                future.set_result(fn(*args, **kwargs))
+            except BaseException as exc:
+                future.set_exception(exc)
+        elif index in self.running:
+            future.set_running_or_notify_cancel()
+        return future
+
+
+class ProbeWatch:
+    """Counts the callers that wait on a font probe in flight, so its owner can answer after they all do."""
+
+    def __init__(self) -> None:
+        self.condition = threading.Condition()
+        self.waiting = 0
+
+    def arrive(self) -> None:
+        with self.condition:
+            self.waiting += 1
+            self.condition.notify_all()
+
+    def until(self, waiters: int, timeout: float = 20.0) -> bool:
+        with self.condition:
+            return self.condition.wait_for(lambda: self.waiting >= waiters, timeout)
+
+    def probe_class(self):
+        watch = self
+
+        class WatchedEvent(threading.Event):
+            def wait(self, timeout=None):
+                watch.arrive()
+                return super().wait(timeout)
+
+        class WatchedProbe(sheet_export._FontProbe):
+            def __init__(self, codepoints):
+                super().__init__(codepoints)
+                self.done = WatchedEvent()
+
+        return WatchedProbe
+
+
 class FreeCADConcurrency(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="cad-freecad-parallel-")
@@ -201,6 +256,146 @@ class FreeCADConcurrency(unittest.TestCase):
             result = freecad_runtime.map_jobs((0.06, 0.0, 0.03), 3,
                                               lambda delay: (time.sleep(delay), delay)[1], executor)
         self.assertEqual(result, [0.06, 0.0, 0.03])
+
+    def test_first_failure_cancels_items_that_have_not_started(self) -> None:
+        executor = ControlledExecutor(inline=1)   # item 0 runs at once. Items 1 and 2 stay pending
+        started: list[int] = []
+
+        def worker(item: int) -> int:
+            started.append(item)
+            raise RuntimeError("item 0 failed")
+
+        with self.assertRaisesRegex(RuntimeError, "item 0 failed"):
+            freecad_runtime.map_jobs((0, 1, 2), 1, worker, executor)
+        self.assertEqual(started, [0])
+        self.assertEqual([future.cancelled() for future in executor.futures], [False, True, True])
+
+    def test_an_interrupt_propagates_at_once_and_cancels_unstarted_items(self) -> None:
+        for interrupt in (KeyboardInterrupt(), freecad_runtime.JobInterrupted(signal.SIGTERM)):
+            with self.subTest(interrupt=type(interrupt).__name__):
+                executor = ControlledExecutor(inline=1)
+
+                def worker(item: int) -> int:
+                    raise interrupt
+
+                with self.assertRaises(type(interrupt)):
+                    freecad_runtime.map_jobs((0, 1, 2), 1, worker, executor)
+                self.assertEqual([future.cancelled() for future in executor.futures], [False, True, True])
+
+    def test_an_interrupt_is_not_masked_by_a_later_failure(self) -> None:
+        executor = ControlledExecutor(inline=3)   # all three ran. Item 0 raised an interrupt and item 2 failed
+
+        def worker(item: int) -> int:
+            if item == 0:
+                raise KeyboardInterrupt
+            if item == 2:
+                raise RuntimeError("a later failure")
+            return item
+
+        with self.assertRaises(KeyboardInterrupt):
+            freecad_runtime.map_jobs((0, 1, 2), 1, worker, executor)
+
+    def test_an_interrupt_does_not_wait_for_a_running_item(self) -> None:
+        executor = ControlledExecutor(inline=1, running=(1,))   # item 1 runs and never finishes on its own
+        outcome: list[BaseException] = []
+
+        def call() -> None:
+            try:
+                freecad_runtime.map_jobs((0, 1), 2, lambda item: (_ for _ in ()).throw(KeyboardInterrupt), executor)
+            except BaseException as exc:
+                outcome.append(exc)
+
+        thread = threading.Thread(target=call)
+        thread.start()
+        thread.join(10)
+        finished = not thread.is_alive()
+        executor.futures[1].set_result(1)   # release the thread if it did wait
+        thread.join(10)
+        self.assertTrue(finished, "map_jobs waited for a running item after an interrupt")
+        self.assertEqual([type(exc) for exc in outcome], [KeyboardInterrupt])
+
+    def test_the_launch_budget_caps_concurrent_freecad_processes_across_threads(self) -> None:
+        command = self.root / "fake-freecad"
+        command.write_text("#!/bin/sh\nexec python3 \"$1\"\n", encoding="utf-8")
+        command.chmod(0o755)
+        script = self.root / "job.py"
+        script.write_text(
+            "import glob, json, os, time\n"
+            "job = json.load(open(os.environ['CAD_DRAWING_JOB']))\n"
+            "mark = os.path.join(job['dir'], 'run-%d' % os.getpid())\n"
+            "open(mark, 'w').close()\n"
+            "peak = len(glob.glob(os.path.join(job['dir'], 'run-*')))\n"
+            "deadline = time.monotonic() + job['wait']\n"
+            "while len(glob.glob(os.path.join(job['dir'], 'run-*'))) < job['rendezvous'] and time.monotonic() < deadline:\n"
+            "    time.sleep(0.01)\n"
+            "peak = max(peak, len(glob.glob(os.path.join(job['dir'], 'run-*'))))\n"
+            "open(os.path.join(job['dir'], 'peak-%d' % os.getpid()), 'w').write(str(peak))\n"
+            "os.remove(mark)\n"
+            "json.dump({'status': 'pass'}, open(job['result'], 'w'))\n", encoding="utf-8")
+
+        def peaks(budget: int | None, rendezvous: int, wait: float = 3.0) -> list[int]:
+            directory = self.root / f"budget-{budget}"
+            directory.mkdir()
+            job = {"dir": str(directory), "wait": wait, "rendezvous": rendezvous}
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                if budget is None:
+                    futures = [pool.submit(freecad_runtime.run_job, command, script, job, self.root, 60) for _ in range(6)]
+                else:
+                    with freecad_runtime.launch_budget(budget):
+                        futures = [pool.submit(freecad_runtime.run_job, command, script, job, self.root, 60) for _ in range(6)]
+                        results = [future.result() for future in futures]
+                    self.assertTrue(all(result is not None for result, _ in results))
+                    return sorted(int(path.read_text()) for path in directory.glob("peak-*"))
+                [future.result() for future in futures]
+            return sorted(int(path.read_text()) for path in directory.glob("peak-*"))
+
+        self.assertEqual(max(peaks(2, rendezvous=2)), 2)     # two run together, never more than two
+        self.assertGreater(max(peaks(None, rendezvous=3)), 2)   # without a budget they all run at once
+        self.assertEqual(max(peaks(1, rendezvous=2, wait=0.2)), 1)   # one at a time: nobody joins the rendezvous
+
+    def test_a_cancelled_run_stops_waiting_for_a_launch_slot(self) -> None:
+        command = self.root / "fake-freecad"
+        command.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        command.chmod(0o755)
+        outcome: list[BaseException] = []
+        with freecad_runtime.launch_budget(1):
+            slot = freecad_runtime._LAUNCH_SLOTS
+            assert slot is not None
+            slot.acquire()   # the only slot is busy
+            self.addCleanup(slot.release)
+            waiting = threading.Event()
+            acquire = slot.acquire
+
+            def acquire_and_announce(*args: Any, **kwargs: Any) -> bool:
+                waiting.set()   # the worker arrives at the slot and blocks on it
+                return acquire(*args, **kwargs)
+
+            slot.acquire = acquire_and_announce   # type: ignore[method-assign]
+
+            def call() -> None:
+                try:
+                    freecad_runtime.run_job(command, self.root / "job.py", {}, self.root, 5)
+                except BaseException as exc:
+                    outcome.append(exc)
+
+            thread = threading.Thread(target=call)
+            thread.start()
+            self.assertTrue(waiting.wait(10), "the run never reached the launch slot")
+            freecad_runtime._CANCEL_JOBS.set()
+            try:
+                thread.join(10)
+            finally:
+                freecad_runtime._CANCEL_JOBS.clear()
+            self.assertFalse(thread.is_alive(), "a run waiting for a launch slot ignored the cancellation")
+        self.assertEqual([type(exc) for exc in outcome], [freecad_runtime.JobInterrupted])
+
+    def test_failure_still_returns_the_first_error_in_input_order(self) -> None:
+        def worker(item: int) -> int:
+            raise ValueError(f"item {item}")
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            with self.assertRaisesRegex(ValueError, "item 0"):
+                freecad_runtime.map_jobs((0, 1), 2, worker, executor)
 
     def test_freecad_job_environment_is_isolated_and_stdout_is_not_the_summary(self) -> None:
         command = self.root / "fake-freecad"
@@ -654,6 +849,115 @@ class SheetExportParts(unittest.TestCase):
             sheet_export.export_sheet(command, svg, root / "d.pdf", root / "d.png", ["Bb 0123"], 300)
             ids = [re.search(rb"/ID \[ <([0-9a-f]+)>", data).group(1) for data in (outputs[0], (root / "d.pdf").read_bytes())]
             self.assertNotEqual(ids[0], ids[1])
+
+    def test_font_probe_runs_once_per_freecad_and_font_and_output_is_unchanged(self) -> None:
+        sheet_export._FONT_SUPPORT.clear()
+        calls: list[str] = []
+
+        def fake_run_job(command, script, job, workdir, timeout):
+            calls.append("write" if "texts" in job else "probe")
+            supported = [c for c in job["codepoints"] if c != 0x2603]
+            if "texts" in job:
+                Path(job["pdf"]).write_bytes(self.qt_style_pdf())   # export_sheet pins the dates of the file the job wrote
+                return {"supported_codepoints": supported, "png": {"dark_pixels": 10_000}}, ""
+            return {"supported_codepoints": supported}, ""
+
+        content = sheet_export.PdfContent([(567.0, 425.0)], ["osifont"], "Aa")
+        with tempfile.TemporaryDirectory(prefix="cad-probe-") as tmp, \
+                patch.object(freecad_runtime, "run_job", fake_run_job), \
+                patch.object(sheet_export, "read_pdf", return_value=content):
+            svg = Path(tmp) / "s.svg"
+            svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="150mm">'
+                           '<text font-size="5">Aa</text></svg>', encoding="utf-8")
+            first = sheet_export.export_sheet(Path("fc-a"), svg, Path(tmp) / "a.pdf", Path(tmp) / "a.png", ["Aa"], 5)
+            second = sheet_export.export_sheet(Path("fc-a"), svg, Path(tmp) / "b.pdf", Path(tmp) / "b.png", ["Aa"], 5)
+            self.assertEqual(calls, ["probe", "write", "write"])
+            self.assertEqual(first, second)
+            sheet_export.export_sheet(Path("fc-b"), svg, Path(tmp) / "c.pdf", Path(tmp) / "c.png", ["Aa"], 5)
+            self.assertEqual(calls, ["probe", "write", "write", "probe", "write"])
+
+    def test_font_probe_covers_plain_lettering_at_once_and_then_only_unseen_codepoints(self) -> None:
+        sheet_export._FONT_SUPPORT.clear()
+        asked: list[list[int]] = []
+
+        def fake_run_job(command, script, job, workdir, timeout):
+            asked.append(list(job["codepoints"]))
+            return {"supported_codepoints": [c for c in job["codepoints"] if c != ord("Z")]}, ""
+
+        fc = Path("fc")
+        vector = 0x27C2
+        with patch.object(freecad_runtime, "run_job", fake_run_job):
+            first = sheet_export.supported_codepoints(fc, {"codepoints": [65, 90]}, Path("."), 5)
+            second = sheet_export.supported_codepoints(fc, {"codepoints": [65, 90, 66]}, Path("."), 5)
+            third = sheet_export.supported_codepoints(fc, {"codepoints": [66, vector]}, Path("."), 5)
+        self.assertEqual(asked, [sorted(sheet_export.OSIFONT_CODEPOINTS), [vector]])
+        probed = [codepoint for call in asked for codepoint in call]
+        self.assertEqual(len(probed), len(set(probed)))   # the probe asks about no codepoint twice
+        self.assertEqual((first, second, third), (frozenset({65}), frozenset({65, 66}), frozenset({66, vector})))
+
+    def probe_threads(self, jobs: list[tuple[str, list[int]]], fake_run_job, watch: ProbeWatch | None = None) -> list:
+        """Run supported_codepoints on one thread per (freecadcmd, codepoints). Return each outcome or error."""
+        outcomes: list = [None] * len(jobs)
+
+        def call(index: int, command: str, codepoints: list[int]) -> None:
+            try:
+                outcomes[index] = sheet_export.supported_codepoints(Path(command), {"codepoints": codepoints}, Path("."), 5)
+            except sheet_export.ExportError as exc:
+                outcomes[index] = exc
+
+        probe_class = watch.probe_class() if watch is not None else sheet_export._FontProbe
+        with patch.object(freecad_runtime, "run_job", fake_run_job), patch.object(sheet_export, "_FontProbe", probe_class):
+            threads = [threading.Thread(target=call, args=(i, c, cp)) for i, (c, cp) in enumerate(jobs)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(30)
+        self.assertFalse(any(thread.is_alive() for thread in threads), "a probe caller never returned")
+        return outcomes
+
+    def test_concurrent_sheets_share_one_font_probe(self) -> None:
+        sheet_export._FONT_SUPPORT.clear()
+        watch, launches, reached = ProbeWatch(), [], []
+
+        def run_job(command, script, job, workdir, timeout):
+            launches.append(1)
+            reached.append(watch.until(7))   # the probe answers only after the other seven sheets wait on it
+            return {"supported_codepoints": list(job["codepoints"])}, ""
+
+        # eight sheets, each with its own text
+        outcomes = self.probe_threads([("fc", [65 + i, 97 + i]) for i in range(8)], run_job, watch)
+        self.assertEqual((len(launches), reached), (1, [True]))
+        self.assertEqual(outcomes, [frozenset({65 + i, 97 + i}) for i in range(8)])
+
+    def test_a_failed_probe_gives_every_waiter_the_same_error_and_caches_nothing(self) -> None:
+        sheet_export._FONT_SUPPORT.clear()
+        watch, launches, reached = ProbeWatch(), [], []
+
+        def failing(command, script, job, workdir, timeout):
+            launches.append(1)
+            reached.append(watch.until(5))   # fail only once the other five callers wait on this probe
+            return None, "freecadcmd crashed"
+
+        outcomes = self.probe_threads([("fc", [65, 66 + i]) for i in range(6)], failing, watch)
+        self.assertEqual((len(launches), reached), (1, [True]))
+        self.assertTrue(all(isinstance(o, sheet_export.ExportError) for o in outcomes), outcomes)
+        self.assertEqual({(o.code, str(o)) for o in outcomes}, {("export_failed", "freecadcmd crashed")})
+        self.assertEqual(sheet_export._FONT_SUPPORT, {})
+        recovered = self.probe_threads([("fc", [65])], lambda *a, **k: (launches.append(1) or {"supported_codepoints": [65]}, ""))
+        self.assertEqual((recovered, len(launches)), ([frozenset({65})], 2))
+
+    def test_different_freecad_commands_probe_independently(self) -> None:
+        sheet_export._FONT_SUPPORT.clear()
+        commands: list[str] = []
+        both_running = threading.Barrier(2)
+
+        def run_job(command, script, job, workdir, timeout):
+            commands.append(str(command))
+            both_running.wait(10)   # each probe finishes only while the other runs, so the probes do not run in series
+            return {"supported_codepoints": list(job["codepoints"])}, ""
+
+        outcomes = self.probe_threads([("fc-a", [65]), ("fc-b", [65])], run_job)
+        self.assertEqual((sorted(commands), outcomes), (["fc-a", "fc-b"], [frozenset({65}), frozenset({65})]))
 
     def test_svg_unknown_glyph_is_rejected(self) -> None:
         root = SafeET.fromstring('<svg xmlns="http://www.w3.org/2000/svg"><text font-family="serif" font-size="10">☃</text></svg>')

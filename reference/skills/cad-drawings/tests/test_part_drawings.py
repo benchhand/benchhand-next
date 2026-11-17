@@ -306,6 +306,96 @@ class PinDrawingGate(unittest.TestCase):
         self.assertEqual((code, replaced["status"], replaced.get("cache")), (0, "pass", None), replaced.get("findings"))
         self.assertRegex((Path(replaced["output_dir"]) / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114231320(?:Z|\+00'00')\)")
 
+    RECORDER = """#!/usr/bin/env python3
+import os, subprocess, sys, time
+log = os.environ["FREECAD_LAUNCH_LOG"]
+script = os.path.basename(sys.argv[1])
+alive = os.path.join(os.environ["FREECAD_ALIVE_DIR"], str(os.getpid()))
+with open(log, "a") as stream:
+    stream.write(f"start {os.getpid()} {script} {time.time()!r}\\n")
+if script == "export_job.py":   # a bounded rendezvous: hold until enough exports are alive, or give up after a while
+    open(alive, "w").close()
+    deadline = time.time() + float(os.environ["FREECAD_RENDEZVOUS_WAIT"])
+    while time.time() < deadline and len(os.listdir(os.environ["FREECAD_ALIVE_DIR"])) < int(os.environ["FREECAD_RENDEZVOUS"]):
+        time.sleep(0.05)
+code = subprocess.call([os.environ["FREECAD_REAL"], *sys.argv[1:]])
+with open(log, "a") as stream:
+    stream.write(f"end {os.getpid()} {script} {time.time()!r}\\n")
+if os.path.exists(alive):
+    os.remove(alive)
+sys.exit(code)
+"""
+
+    def recorded_run(self, name: str, parts: list[str], jobs: int, rendezvous: int, wait: float) -> tuple[list[tuple[str, float, float]], dict]:
+        """Draw the parts with every part's second view on a second sheet, through a recording stand-in for freecadcmd
+        that holds each sheet export until `rendezvous` exports are alive (or `wait` seconds pass). Returns every
+        FreeCAD process as (script, start, end) and the parsed output."""
+        recorder = Path(self.tmp.name) / "recorder.py"
+        recorder.write_text(self.RECORDER, encoding="utf-8")
+        recorder.chmod(0o755)
+        hw = Path(self.tmp.name) / f"{name}" / "hw"
+        shutil.copytree(self.hw, hw)
+        shutil.rmtree(hw / "drawings", ignore_errors=True)   # bundles that earlier tests published would conflict
+        for pn, view in (("LMP-0005", "{id: head_end, kind: orthographic, along_axis: A, toward: head_top}"),
+                         ("LMP-0002", "{id: underside, kind: orthographic, opposite: plan}")):
+            part = hw / "parts" / pn / "part.yaml"
+            text = part.read_text(encoding="utf-8")
+            self.assertIn(view, text)
+            part.write_text(text.replace(view, view[:-1] + ", sheet: 2}"), encoding="utf-8")
+        alive = Path(self.tmp.name) / f"alive-{name}"
+        alive.mkdir()
+        log = Path(self.tmp.name) / f"launches-{name}.log"
+        env = {"FREECADCMD": str(recorder), "FREECAD_REAL": str(FREECADCMD), "FREECAD_LAUNCH_LOG": str(log),
+               "FREECAD_ALIVE_DIR": str(alive), "FREECAD_RENDEZVOUS": str(rendezvous), "FREECAD_RENDEZVOUS_WAIT": str(wait)}
+        command = [UV, "run", "--script", str(DRAWING), str(hw), "--version", "v1", "--jobs", str(jobs), "--timeout", "900"]
+        for pn in parts:
+            command += ["--part", pn]
+        proc = subprocess.run(command, capture_output=True, text=True, env={**ENV, **env}, timeout=1800, check=False)
+        output = json.loads(proc.stdout)
+        self.assertEqual(proc.returncode, 0, proc.stdout[-2000:])
+        self.assertEqual([(r["pn"], r["status"], r["sheets"]) for r in output["parts"]],
+                         [(pn, "pass", 2) for pn in parts], output)
+        starts: dict[str, tuple[str, float]] = {}
+        runs: list[tuple[str, float, float]] = []
+        for line in log.read_text(encoding="utf-8").splitlines():
+            kind, pid, script, stamp = line.split()
+            if kind == "start":
+                starts[pid] = (script, float(stamp))
+            else:
+                runs.append((starts[pid][0], starts[pid][1], float(stamp)))
+        return runs, output
+
+    @staticmethod
+    def overlap(runs: list[tuple[float, float]]) -> int:
+        """The most runs in progress at the same moment."""
+        events = sorted([(start, 1) for start, _ in runs] + [(end, -1) for _, end in runs], key=lambda e: (e[0], e[1]))
+        peak = running = 0
+        for _, step in events:
+            running += step
+            peak = max(peak, running)
+        return peak
+
+    def test_a_two_sheet_part_exports_its_sheets_together_within_the_job_budget(self) -> None:
+        """With --jobs 2 the two sheet exports of one part run together (each waits for the other, so slow scheduling
+        cannot hide the overlap). With --jobs 1 nothing overlaps, the sheet exports included."""
+        for jobs in (1, 2):
+            with self.subTest(jobs=jobs):
+                runs, _ = self.recorded_run(f"one-part-{jobs}", ["LMP-0005"], jobs, rendezvous=jobs, wait=30)
+                exports = [(start, end) for script, start, end in runs if script == "export_job.py"]
+                self.assertGreaterEqual(len(exports), 2)
+                self.assertLessEqual(self.overlap([(s, e) for _, s, e in runs]), jobs)
+                self.assertEqual(self.overlap(exports), jobs)
+
+    def test_several_two_sheet_parts_never_run_more_than_jobs_freecad_processes_together(self) -> None:
+        """The run-wide cap: two parts with two sheets each, --jobs 2. Each part's own sheet pool already holds two
+        exports, so without the shared launch budget up to four would run. Each export waits (bounded) for a third
+        to join, which only an over-budget run can supply."""
+        runs, _ = self.recorded_run("two-parts", ["LMP-0005", "LMP-0002"], 2, rendezvous=3, wait=3)
+        exports = [(start, end) for script, start, end in runs if script == "export_job.py"]
+        self.assertGreaterEqual(len(exports), 4)
+        self.assertLessEqual(self.overlap([(s, e) for _, s, e in runs]), 2)
+        self.assertEqual(self.overlap(exports), 2)
+
     def test_explicit_output_outside_cad_work_is_refused(self) -> None:
         outside = Path(self.tmp.name) / "outside"
         proc = run(UV, "run", "--script", str(DRAWING), str(self.hw), "--version", "v1", "--part", "LMP-0005",
