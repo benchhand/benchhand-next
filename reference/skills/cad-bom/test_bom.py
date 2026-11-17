@@ -17,6 +17,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 
 HERE = Path(__file__).parent
@@ -277,7 +279,7 @@ class StepRoundTripTests(unittest.TestCase):
             )
 
         self.assertEqual(validation.returncode, 0, validation.stdout + validation.stderr)
-        self.assertEqual(json.loads(validation.stdout), {"ok": True, "findings": []})
+        self.assertEqual(result_payload(validation.stdout), {"ok": True, "findings": []})
 
     def test_missing_step_exits_2(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

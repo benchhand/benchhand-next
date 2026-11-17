@@ -427,6 +427,13 @@ class Pruning(ReleaseCase):
         self.assertNotIn("pruning", report)
         self.assertEqual(tree(hw), before)
 
+    def test_store_gc_is_asked_for_json_whatever_the_caller_environment_says(self) -> None:
+        done = subprocess.CompletedProcess([], 0, stdout='{"schema": "tool-result/1", "status": "pass", "findings": [], "payload": {"objects": {}}}', stderr="")
+        with mock.patch.dict(os.environ, {"CAD_OUTPUT": "compact"}), \
+                mock.patch.object(prune.subprocess, "run", return_value=done) as run:
+            self.assertEqual(prune.store_gc(Path("hw")), {"objects": {}})
+        self.assertEqual(run.call_args.kwargs["env"]["CAD_OUTPUT"], "json")
+
     def test_gc_failure_is_prune_incomplete_and_a_rerun_finishes(self) -> None:
         hw = self.released()
         digest = prune.plan(hw, "A", "v3")["digest"]

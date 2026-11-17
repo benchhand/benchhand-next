@@ -49,6 +49,8 @@ def _module(name: str, path: Path) -> Any:
 
 sys.path.insert(0, str(SCRIPTS))
 import process_checks as pc  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 FX = _module("cad_record_mi_fixtures", SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py") if DEPS else None
 MI = pc.intent()
@@ -985,7 +987,7 @@ class LooseComponentCoverageTests(Checks):
         proc = subprocess.run(["uv", "run", "--quiet", "--script", str(FORM_CHECK), "--hw", str(cls.hw), "--version", "v1",
                                "--fidelity", "F2", "--on", TODAY.isoformat()], capture_output=True, text=True, check=False)
         try:
-            return proc.returncode, json.loads(proc.stdout)
+            return proc.returncode, result_payload(proc.stdout)
         except json.JSONDecodeError as error:
             raise AssertionError(f"form_check printed no JSON (exit {proc.returncode}): {proc.stderr[-3000:]}") from error
 

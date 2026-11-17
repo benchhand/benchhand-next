@@ -27,7 +27,7 @@ TEMPLATE = SKILL / "assets" / "project-template" / "hw"
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import load_module as load  # noqa: E402
+from modload import load_module as load, result_payload  # noqa: E402
 
 
 fx = load("cad_record_mi_fixtures", HERE / "fixtures" / "manufacturing_intent.py")
@@ -135,7 +135,7 @@ class LampExample(MigrationCase):
             self.assertIn(text, note)
         validated = subprocess.run([sys.executable, str(VALIDATOR), str(self.project)], capture_output=True, text=True,
                                    timeout=120, check=False)
-        self.assertEqual((validated.returncode, json.loads(validated.stdout)), (0, {"ok": True, "findings": []}))
+        self.assertEqual((validated.returncode, result_payload(validated.stdout)), (0, {"ok": True, "findings": []}))
 
     def test_a_second_run_changes_nothing(self) -> None:
         self.assertEqual(self.run_cli("--apply")[0], 0)

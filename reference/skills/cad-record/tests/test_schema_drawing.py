@@ -102,7 +102,7 @@ REQUIREMENTS = {"requirements": [{"id": "REQ-001", "text": "Pin fits", "rational
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import load_module as _load  # noqa: E402
+from modload import load_module as _load, result_payload  # noqa: E402
 
 
 fx = _load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures" / "manufacturing_intent.py")
@@ -163,7 +163,7 @@ class DrawingRecordAdditions(unittest.TestCase):
         self.write()
         result = subprocess.run([sys.executable, str(VALIDATOR), str(self.hw.parent)], capture_output=True, text=True,
                                 timeout=60, check=False)
-        report = json.loads(result.stdout)
+        report = result_payload(result.stdout)
         return result.returncode, [f"{item['path']}: {item['message']}" for item in report["findings"]]
 
     def assert_valid(self) -> None:

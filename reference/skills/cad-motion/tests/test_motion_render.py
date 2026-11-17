@@ -40,7 +40,7 @@ from cadmodel import scriptenv  # noqa: E402
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import load_fresh as load  # noqa: E402
+from modload import load_fresh as load, result_payload  # noqa: E402
 
 
 # freecad_assembly.py loads pose.py itself; motion.py then reuses that module, so one MotionError serves both.
@@ -70,7 +70,7 @@ def run(*argv: str) -> tuple[int, Any]:
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
         code = motion.main([str(a) for a in argv])
     try:
-        return code, json.loads(out.getvalue())
+        return code, result_payload(out.getvalue())
     except json.JSONDecodeError:
         return code, out.getvalue()
 
@@ -631,7 +631,7 @@ class RenderEndToEnd(Fixture):
                                                        "--size", "320x240"),
                               capture_output=True, text=True, timeout=1800)
         self.assertEqual(proc.returncode, 0, proc.stdout[-3000:] + proc.stderr[-3000:])
-        result = json.loads(proc.stdout)
+        result = result_payload(proc.stdout)
         bundle = Path(result["bundle"])
         self.assertEqual(pose.LAYOUT.verify(bundle), [])
         self.assertEqual(result["render"]["parity"]["status"], "pass")
@@ -682,6 +682,69 @@ class CrosscheckFreecad(unittest.TestCase):
         code, report = self.crosscheck("far-branch")
         self.assertEqual((code, report["status"]), (1, "fail"))
         self.assertGreater(report["max_deviation"]["mm"], 90)
+
+
+class CompactOutput(Fixture):
+    """motion.main under CAD_OUTPUT: the summary, the full-JSON file, and the child asked for json."""
+
+    def main_stdout(self, mode: str, *argv: Any) -> tuple[int, str]:
+        stdout = io.StringIO()
+        with mock.patch.dict(os.environ, {"CAD_OUTPUT": mode}), contextlib.redirect_stdout(stdout), \
+                contextlib.redirect_stderr(io.StringIO()):
+            code = motion.main([str(a) for a in argv])
+        return code, stdout.getvalue()
+
+    def test_compact_mode_prints_a_bounded_summary_naming_the_full_json_that_json_mode_prints(self) -> None:
+        argv = ("plan", "--hw", self.hw, "--version", "v1")
+        code, plain = self.main_stdout("json", *argv)
+        compact_code, compact = self.main_stdout("compact", *argv)
+        self.assertEqual((code, compact_code), (0, 0))
+        self.assertEqual(result_payload(plain)["version"], "v1")
+        self.assertLess(len(compact), 600)
+        self.assertLess(len(compact), len(plain))
+        self.assertIn("motion plan: pass (exit 0)", compact)
+        full = Path(compact.splitlines()[-1].removeprefix("full JSON: "))
+        self.assertEqual(full.read_text(encoding="utf-8"), plain)
+        self.assertEqual(full.parent, (self.tmp / "project" / ".cad-work" / "agent-output").resolve())
+
+    def test_an_error_is_the_same_envelope_in_both_modes_and_exits_2(self) -> None:
+        argv = ("plan", "--hw", self.hw, "--version", "v1", "--case", "bad")
+        results = [self.main_stdout(mode, *argv) for mode in ("json", "compact")]
+        self.assertEqual([code for code, _ in results], [2, 2])
+        self.assertEqual(results[0][1], results[1][1])
+        self.assertEqual(result_payload(results[0][1])["status"], "error")
+
+    def test_the_freecad_child_is_asked_for_json_and_its_envelope_is_read_as_its_payload(self) -> None:
+        seen: dict[str, Any] = {}
+
+        def freecad(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            job = Path(command[command.index("--job-dir") + 1])
+            job.mkdir(parents=True)
+            (job / "crosscheck.json").write_text(json.dumps({"mode": "full", "status": "pass"}), encoding="utf-8")
+            (job / "motion.FCStd").write_bytes(b"freecad")
+            seen.update(kwargs["env"])
+            stdout = json.dumps({"schema": "tool-result/1", "status": "pass", "findings": [], "payload": {"status": "pass"}})
+            return subprocess.CompletedProcess(command, 0, stdout=stdout, stderr="")
+
+        with mock.patch.object(motion.subprocess, "run", side_effect=freecad):
+            code, out = self.main_stdout("compact", "render", "--hw", self.hw, "--version", "v1", "--outputs", "glb",
+                                         "--crosscheck", "freecad")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(seen["CAD_OUTPUT"], "json")
+        self.assertIn("motion render: pass (exit 0)", out)
+
+    def test_the_freecad_childs_enveloped_error_is_reported_by_its_own_message(self) -> None:
+        def freecad(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            error = {"status": "error", "error": "FreeCAD could not open assembly 7f3a"}
+            stdout = json.dumps({"schema": "tool-result/1", "status": "error", "findings": [], "payload": error})
+            return subprocess.CompletedProcess(command, 2, stdout=stdout, stderr="")
+
+        with mock.patch.object(motion.subprocess, "run", side_effect=freecad):
+            code, out = self.main_stdout("json", "render", "--hw", self.hw, "--version", "v1", "--outputs", "glb",
+                                         "--crosscheck", "freecad")
+        self.assertEqual(code, 2)
+        self.assertEqual(result_payload(out)["error"],
+                         "the FreeCAD cross-check gave no result: FreeCAD could not open assembly 7f3a")
 
 
 if __name__ == "__main__":

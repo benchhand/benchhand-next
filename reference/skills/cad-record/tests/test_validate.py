@@ -13,6 +13,8 @@ import tempfile
 import unittest
 import yaml
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 SKILL = Path(__file__).resolve().parents[1]
 CONCEPT = SKILL.parent / "cad-concept"
@@ -77,7 +79,7 @@ class ValidateProject(unittest.TestCase):
             text=True,
             timeout=60,
         )
-        return result, json.loads(result.stdout)
+        return result, result_payload(result.stdout)
 
     def test_copied_template_with_one_placeholder_part_validates(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-record-template-")
@@ -95,7 +97,7 @@ class ValidateProject(unittest.TestCase):
         result = subprocess.run([sys.executable, str(VALIDATOR), str(project)], capture_output=True,
                                 text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"ok": True, "findings": []})
+        self.assertEqual(result_payload(result.stdout), {"ok": True, "findings": []})
 
     def test_empty_template_passes_at_ground_but_requires_parts_at_layout(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-record-empty-template-")
@@ -105,7 +107,7 @@ class ValidateProject(unittest.TestCase):
         result = subprocess.run([sys.executable, str(VALIDATOR), str(project)], capture_output=True,
                                 text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"ok": True, "findings": []})
+        self.assertEqual(result_payload(result.stdout), {"ok": True, "findings": []})
 
         product = project / "hw" / "product.yaml"
         product.write_text(product.read_text(encoding="utf-8").replace("stage: ground", "stage: layout"),
@@ -358,7 +360,7 @@ class ValidateProject(unittest.TestCase):
         shutil.copy2(VALIDATOR, validator_copy)
         for sibling in ("assembly_data.py", "assembly_operations.py", "design_rules.py", "layout.py",
                         "manufacturing_intent.py", "evidence.py", "impact.py", "selection.py",
-                        "schema_registry.py", "yaml_loader.py"):
+                        "schema_registry.py", "yaml_loader.py", "emit.py"):
             shutil.copy2(VALIDATOR.with_name(sibling), validator_copy.with_name(sibling))
         shutil.copytree(SKILL / "schemas", self.project / "skill" / "schemas")
         shutil.copy2(SKILL / "layout.json", self.project / "skill" / "layout.json")
@@ -627,7 +629,7 @@ class RecordVersion(unittest.TestCase):
     def validate(self) -> tuple[int, list[dict[str, object]]]:
         result = subprocess.run([sys.executable, str(VALIDATOR), str(self.project)], capture_output=True, text=True,
                                 timeout=120)
-        return result.returncode, json.loads(result.stdout)["findings"]
+        return result.returncode, result_payload(result.stdout)["findings"]
 
     def test_the_unmigrated_lamp_reads_whole_changes_nothing_and_names_the_migration(self) -> None:
         shutil.copytree(EXAMPLE, self.hw)
@@ -671,7 +673,7 @@ class LedgerEvidence(unittest.TestCase):
     def findings(self) -> list[dict[str, object]]:
         result = subprocess.run([sys.executable, str(VALIDATOR), str(self.project)], capture_output=True, text=True,
                                 timeout=120)
-        return json.loads(result.stdout)["findings"]
+        return result_payload(result.stdout)["findings"]
 
     def test_an_unapproved_waiver_is_an_error(self) -> None:
         subject = {"PN": "LMP-0001"}

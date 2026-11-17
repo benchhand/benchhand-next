@@ -616,6 +616,14 @@ class CheckFindings(Fixture):
         self.assertEqual(panel["totals"]["bbox_mm"]["size"], [10 * len(PNS), 5, 5])
         self.assertEqual(panel["check"]["blocking_failures"], ["interference"])
 
+    def test_a_check_file_in_the_tool_result_envelope_reads_as_its_payload(self) -> None:
+        wrapped = {"schema": "tool-result/1", "status": "fail", "findings": ["interference"], "payload": self.CHECK}
+        for name, document in (("wrapped.json", wrapped), ("bare.json", self.CHECK)):
+            with self.subTest(file=name):
+                path = self.hw.parent / name
+                path.write_text(json.dumps(document), encoding="utf-8")
+                self.assertEqual(record.read_check(path), self.CHECK)
+
 
 class Holes(Fixture):
     OVERLAY = json.loads((SKILL / "tests" / "fixtures" / "metrics-holes.json").read_text(encoding="utf-8"))

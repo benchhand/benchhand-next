@@ -12,6 +12,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 SKILL = Path(__file__).resolve().parents[1]
 VALIDATOR = SKILL / "scripts" / "validate.py"
@@ -54,7 +56,7 @@ class MigrationPlan(unittest.TestCase):
     def plan(self, *extra: str) -> tuple[int, Any]:
         result = subprocess.run([sys.executable, str(VALIDATOR), str(self.project), "--migration-plan", *extra],
                                 capture_output=True, text=True, timeout=120, check=False)
-        return result.returncode, (json.loads(result.stdout) if result.stdout.strip() else result.stderr)
+        return result.returncode, (result_payload(result.stdout) if result.stdout.strip() else result.stderr)
 
     def test_every_stray_gets_its_destination_and_nothing_changes(self) -> None:
         before = tree(self.project)
@@ -107,7 +109,7 @@ class MigrationPlan(unittest.TestCase):
         before = tree(self.hw)
         code, answer = self.plan("--report", str(self.project / ".cad-work" / "migration" / "plan.json"))
         self.assertEqual((code, answer), (0, {"report": ".cad-work/migration/plan.json"}))
-        written = json.loads((self.project / ".cad-work" / "migration" / "plan.json").read_text(encoding="utf-8"))
+        written = result_payload((self.project / ".cad-work" / "migration" / "plan.json").read_text(encoding="utf-8"))
         self.assertEqual(written["plan"], "migration")
         self.assertEqual(tree(self.hw), before)
         code, answer = self.plan("--report", str(self.hw / "docs" / "plan.json"))

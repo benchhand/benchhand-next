@@ -26,7 +26,7 @@ LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import load_module as load  # noqa: E402
+from modload import load_module as load, result_payload  # noqa: E402
 
 
 layout = load("cad_record_layout", SCRIPTS / "layout.py")
@@ -533,7 +533,7 @@ class ValidatorLayout(TempProject):
     def run_validator(self) -> tuple[int, dict[str, Any]]:
         result = subprocess.run([sys.executable, str(VALIDATOR), str(self.project)], capture_output=True, text=True,
                                 timeout=60, check=False)
-        return result.returncode, json.loads(result.stdout)
+        return result.returncode, result_payload(result.stdout)
 
     def layout_findings(self) -> tuple[int, dict[str, dict[str, Any]]]:
         code, report = self.run_validator()

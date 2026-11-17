@@ -25,6 +25,8 @@ HERE = Path(__file__).resolve().parent
 SCRATCH = HERE.parent / "scripts" / "scratch.py"
 sys.path.insert(0, str(HERE.parents[1] / "cad-drawings" / "scripts"))
 import freecad_runtime  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 FREECADCMD = freecad_runtime.find_freecadcmd()
 FREECAD_PRESENT = FREECADCMD is not None and FREECADCMD.is_file()
 
@@ -68,7 +70,7 @@ class ScratchCase(unittest.TestCase):
         result = subprocess.run([sys.executable, str(VALIDATOR), str(self.project)],
                                 capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(json.loads(result.stdout), {"ok": True, "findings": []})
+        self.assertEqual(result_payload(result.stdout), {"ok": True, "findings": []})
 
     def use_lamp_example(self) -> None:
         shutil.copytree(LAMP_EXAMPLE, self.hw)
@@ -393,6 +395,19 @@ class InitAndDeliver(ScratchCase):
         self.assertEqual((deliver_code, deliver_report["status"]), (0, "delivered"), deliver_report)
         self.assertIn(str(self.hw / "parts" / "PRT-0001" / "model.py"), deliver_report["delivered"])
         self.assertTrue((self.hw / "parts" / "PRT-0001" / "model.py").is_file())
+
+
+class JsonChildren(unittest.TestCase):
+    def test_run_tool_parses_a_child_that_is_asked_for_json(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        scratch_module = load_scratch()
+        done = subprocess.CompletedProcess([], 0, stdout='{"schema": "tool-result/1", "status": "pass", "findings": [], "payload": {"findings": []}}', stderr="")
+        with mock.patch.dict("os.environ", {"CAD_OUTPUT": "compact"}), \
+                mock.patch.object(scratch_module.subprocess, "run", return_value=done) as run:
+            result = scratch_module.run_tool([str(scratch_module.CAD_MODEL)], Path(tmp.name) / "log")
+        self.assertEqual(result, (0, {"findings": []}))
+        self.assertEqual(run.call_args.kwargs["env"]["CAD_OUTPUT"], "json")
 
 
 class LampExample(ScratchCase):

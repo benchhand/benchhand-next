@@ -30,6 +30,8 @@ KERNELS = ("cadquery", "build123d")
 TEMPLATE_PARTS = sorted(p.name for p in (EXAMPLE / "hw" / "parts").iterdir() if (p / "part.yaml").is_file())
 sys.path.insert(0, str(SKILL.parent / "cad-drawings" / "scripts"))
 import freecad_runtime  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 FREECADCMD = freecad_runtime.find_freecadcmd()
 FREECAD_PRESENT = FREECADCMD is not None and FREECADCMD.is_file() and os.access(FREECADCMD, os.X_OK)
@@ -42,17 +44,18 @@ _spec.loader.exec_module(FORM_CHECK)
 MADE_PARTS = ["LMP-0001", "LMP-0002", "LMP-0003", "LMP-0004"]
 
 
-def run_json(command: list[str]) -> tuple[int, dict]:
+def run_json(command: list[str], parse=json.loads) -> tuple[int, dict]:
+    """`command`'s exit code and its stdout parsed by `parse` (form_check's is enveloped: result_payload)."""
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
-        return result.returncode, json.loads(result.stdout)
+        return result.returncode, parse(result.stdout)
     except json.JSONDecodeError as error:
         raise AssertionError(f"{command[:4]} printed no JSON (exit {result.returncode}):\n{result.stderr[-3000:]}") from error
 
 
 def form_check(parts_dir: Path, fidelity: str, hw: Path = TEMPLATE_HW) -> tuple[int, dict]:
     return run_json(["uv", "run", "--script", str(SCRIPTS / "form_check.py"), "--hw", str(hw),
-                     "--parts-dir", str(parts_dir), "--fidelity", fidelity])
+                     "--parts-dir", str(parts_dir), "--fidelity", fidelity], parse=result_payload)
 
 
 FDM_MADE = "process: fdm\nmake_buy: make\n"

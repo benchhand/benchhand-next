@@ -45,6 +45,8 @@ FINDING_KEYS = {"pn", "check", "type", "message", "where"}
 
 sys.path.insert(0, str(SCRIPTS))
 from cadmodel import build, check, diff, fonts, manufacture, mesh, occ, orientation, runner  # noqa: E402 - stdlib-only imports; OCP loads on first use
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 AP242 = "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING"
 SCHEMA = re.compile(r"FILE_SCHEMA\s*\(\s*\(\s*'([^']+)'\s*\)\s*\)")
@@ -163,7 +165,7 @@ def cli(*args: str) -> tuple[subprocess.CompletedProcess[str], dict, float]:
                               capture_output=True, text=True, check=False)  # no timeout: cold OCP imports take minutes
     wall = time.perf_counter() - started
     print(f"[cad-model wall] {wall:7.1f} s  {' '.join(args[:3])}", file=sys.stderr)
-    return proc, (json.loads(proc.stdout) if proc.stdout.strip() else {}), wall
+    return proc, (result_payload(proc.stdout) if proc.stdout.strip() else {}), wall
 
 
 def kernel_sequence(root: Path, kernel: str) -> dict:
@@ -2572,7 +2574,7 @@ class RebuildTriggerTests(unittest.TestCase):
         def run(label: str, **env: str) -> tuple[int, dict, str]:
             proc = subprocess.run(scriptenv.script_command(copy, "run", str(hw), "--label", label),
                                   capture_output=True, text=True, check=False, env={**os.environ, **env})
-            return proc.returncode, (json.loads(proc.stdout) if proc.stdout.strip() else {}), proc.stderr
+            return proc.returncode, (result_payload(proc.stdout) if proc.stdout.strip() else {}), proc.stderr
 
         cls.runs = {"v1": run("v1")}
         occ_copy = skills / "cad-model" / "scripts" / "cadmodel" / "occ.py"
@@ -2639,7 +2641,7 @@ class CrossFilesystemTests(unittest.TestCase):
                 proc = subprocess.run(["uv", "run", "--quiet", "--script", str(CLI), "run", str(hw), "--label", label],
                                       capture_output=True, text=True, check=False, env={**os.environ, "TMPDIR": states})
                 self.assertEqual(proc.returncode, 0, proc.stdout[-2000:] + proc.stderr[-3000:])
-                results.append(json.loads(proc.stdout))
+                results.append(result_payload(proc.stdout))
             self.assertEqual(results[1]["cache"], {"parts": {"built": 0, "reused": 2},
                                                    "manufacturing": {"built": 1, "reused": 1}})
             for label in ("v1", "v2"):

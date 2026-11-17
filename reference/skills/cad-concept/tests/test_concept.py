@@ -55,7 +55,7 @@ def project_for_scene(temp: Path, scene_path: Path) -> Path:
     return project
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import load_fresh as load  # noqa: E402
+from modload import load_fresh as load, result_payload  # noqa: E402
 
 
 concept = load("cad_concept", CONCEPT_PY)
@@ -375,7 +375,7 @@ class ServerLive(unittest.TestCase):
         checked = subprocess.run([sys.executable, str(validator), str(self.project)],
                                  capture_output=True, text=True, timeout=60)
         self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
-        self.assertEqual(json.loads(checked.stdout), {"ok": True, "findings": []})
+        self.assertEqual(result_payload(checked.stdout), {"ok": True, "findings": []})
         self.assertEqual(self.post(body, origin="http://evil.example")[0], 403)
         self.assertEqual(self.post({**body, "png": "data:image/png;base64,aGVsbG8="})[0], 400)
         self.assertEqual(self.post({**body, "scene": "../x.scene.json"})[0], 400)
@@ -478,7 +478,7 @@ class ViewerSaveInBrowser(unittest.TestCase):
             validator = SKILL.parent / "cad-record" / "scripts" / "validate.py"
             checked = subprocess.run([sys.executable, str(validator), str(project)],
                                      capture_output=True, text=True, timeout=60)
-            self.assertEqual(json.loads(checked.stdout), {"ok": True, "findings": []}, checked.stderr)
+            self.assertEqual(result_payload(checked.stdout), {"ok": True, "findings": []}, checked.stderr)
 
 class ServerVendor(unittest.TestCase):
     def test_vendor_routes_serve_preseeded_pinned_module_without_network(self) -> None:

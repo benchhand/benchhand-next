@@ -25,6 +25,8 @@ CLI = SCRIPTS / "cad_model.py"
 
 sys.path.insert(0, str(SCRIPTS))
 from cadmodel import build, check, runner  # noqa: E402 - stdlib-only imports; OCP loads on first use
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 ASSEMBLY = """joints:
   - {id: J-001, type: revolute, parent: TST-0001, child: TST-0002, axis: [0, 0, 1], origin: [0, 0, 20],
@@ -213,7 +215,7 @@ def project(root: Path, name: str, base: tuple[str, str], arm_kernel: str) -> Pa
 def run(hw: Path, label: str) -> tuple[subprocess.CompletedProcess[str], dict]:
     proc = subprocess.run(["uv", "run", "--quiet", "--script", str(CLI), "run", str(hw), "--label", label],
                           capture_output=True, text=True, check=False)  # no timeout: cold OCP imports take minutes
-    return proc, (json.loads(proc.stdout) if proc.stdout.strip() else {})
+    return proc, (result_payload(proc.stdout) if proc.stdout.strip() else {})
 
 
 class DrawingFeatureCapture(unittest.TestCase):

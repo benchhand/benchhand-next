@@ -14,11 +14,14 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import sys
 import subprocess
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import result_payload  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 FIXTURES = HERE / "fixtures"
@@ -147,7 +150,7 @@ class HoleCaseTests(unittest.TestCase):
             with self.subTest(kernel=kernel):
                 proc = uv_script(FORM_CHECK, "--hw", str(hw), "--parts-dir", str(hw / "versions" / "v1" / "parts"),
                                  "--fidelity", "F2", "--cnc-tool-radius", "4")
-                findings = json.loads(proc.stdout)["findings"]
+                findings = result_payload(proc.stdout)["findings"]
                 self.assertEqual(proc.returncode, 1, proc.stderr[-2000:])
                 self.assertEqual({f["check"] for f in findings if f["blocking"]}, {"joint_bore_missing"})
                 corners = [f for f in findings if f["check"] == "cnc_internal_radius"]
