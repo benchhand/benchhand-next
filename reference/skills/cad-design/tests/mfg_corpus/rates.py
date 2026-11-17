@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run --script
 # /// script
-# requires-python = ">=3.11,<3.15"
+# requires-python = ">=3.12,<3.15"
 # dependencies = ["pyyaml>=6.0", "jsonschema>=4.0", "cadquery-ocp-novtk==8.0.1.1.0"]
 # ///
 """Print the per-family detection, abstention and false-positive rates of the mutation corpus.
