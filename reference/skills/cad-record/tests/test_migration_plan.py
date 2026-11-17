@@ -18,6 +18,7 @@ from modload import result_payload  # noqa: E402
 SKILL = Path(__file__).resolve().parents[1]
 VALIDATOR = SKILL / "scripts" / "validate.py"
 LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
+V1_MINIMAL = SKILL / "tests" / "fixtures" / "record_v1_minimal" / "hw"  # a minimal record version 1
 
 
 def sha(path: Path) -> str:
@@ -99,6 +100,20 @@ class MigrationPlan(unittest.TestCase):
         for item in plan["items"]:
             self.assertTrue(item["action"], item["path"])
         self.assertEqual(sum(plan["counts"].values()), len(plan["items"]))
+
+    def test_a_version_1_record_gets_a_migrate_row(self) -> None:
+        shutil.rmtree(self.hw)
+        shutil.copytree(V1_MINIMAL, self.hw)
+        self.assertNotIn("record_version", (self.hw / "product.yaml").read_text(encoding="utf-8"), "the input is version 1")
+        code, plan = self.plan()
+        self.assertEqual(code, 0, plan)
+        items = {item["path"]: item for item in plan["items"]}
+        item = items["hw/product.yaml"]
+        self.assertEqual((item["classification"], item["operation"], item["destination"], item["confidence"], item["rebuild"],
+                          item["collisions"]), ("record version", "migrate", None, "high", "cad-record/scripts/migrate.py", []))
+        self.assertEqual(item["code"], "record.migration_required")
+        self.assertIn("--dry-run", item["action"])
+        self.assertEqual(plan["counts"]["migrate"], 1)
 
     def test_the_report_goes_to_stdout_or_a_path_under_cad_work_only(self) -> None:
         before = tree(self.hw)

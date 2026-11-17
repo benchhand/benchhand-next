@@ -869,6 +869,16 @@ class DispatchContractTests(Checks):
                 self.assertEqual(set(pc.TABLE[kind]), wanted)
         self.assertEqual(set(pc.TABLE), set(MI.PROCESS_CHECKS))
 
+    def test_a_version_1_record_is_refused_with_its_migration(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-process-v1-")
+        self.addCleanup(temporary.cleanup)
+        hw = Path(temporary.name) / "hw"
+        shutil.copytree(FX.V1_MINIMAL, hw)
+        record = MI.load_record(hw)
+        self.assertEqual(record.version, 1)
+        with self.assertRaisesRegex(pc.NotAssessable, "migrat"):
+            pc.expected(record)
+
     def test_the_fixture_record_assesses_every_owned_obligation_without_geometry(self) -> None:
         result = self.assess(FX.tst_record())
         self.assertTrue(result.expected)

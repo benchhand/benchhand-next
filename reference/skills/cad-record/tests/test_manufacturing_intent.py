@@ -15,7 +15,6 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
-
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 
@@ -119,6 +118,29 @@ class Normalization(unittest.TestCase):
         self.assertEqual(record.materials["tst_metal_rod"].properties[0].value.basis, "allowable")
         self.assertTrue(record.capabilities["tst_printer"].parameters["nozzle_diameter"].known)
         self.assertEqual(len(record.assembly_operations), 1)
+
+    def test_a_legacy_record_reads_with_explicit_unknowns_and_one_migration_problem(self) -> None:
+        hw = temp_hw(self)
+        shutil.copytree(fx.V1_MINIMAL, hw)
+        # The fixture has no interface and no operations, so give the copy both to read, as version 1 stores them.
+        fx.add_v1_interface(hw)
+        fx.add_v1_operations(hw)
+        record = mi.load_record(hw)
+        self.assertEqual(record.version, 1)
+        self.assertEqual([p.code for p in record.problems], ["record.migration_required"])
+        self.assertEqual(len(record.parts), 1)  # the fixture's single part
+        for pn, part in record.parts.items():
+            with self.subTest(pn):
+                for name in ("functions", "material_profile", "service", "critical_surfaces", "route"):
+                    value = getattr(part.intent, name)
+                    self.assertTrue(value.unknown and value.reason == mi.LEGACY_REASON, (name, value))
+        self.assertEqual(record.parts["LMP-0001"].material, "PETG")
+        self.assertEqual(record.use_case.status, "unknown")
+        # The two operations added above: drawing.operations stays the operations of a version 1 record.
+        self.assertEqual([op["id"] for op in record.assembly_operations], fx.V1_OPERATION_IDS)
+        self.assertEqual(list(record.interfaces), ["IF-001"])
+        self.assertTrue(all(i.functional.critical.unknown for i in record.interfaces.values()))
+        self.assertEqual((dict(record.capabilities), dict(record.materials)), ({}, {}))
 
     def test_a_candidate_proposes_a_new_part_that_is_never_a_record(self) -> None:
         documents = fx.tst_record()

@@ -28,6 +28,7 @@ import yaml
 SKILL = Path(__file__).resolve().parents[2]
 SCRIPTS = SKILL / "scripts"
 LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
+V1_MINIMAL = SKILL / "tests" / "fixtures" / "record_v1_minimal" / "hw"  # a minimal record version 1: one part, no interfaces
 SYNTHETIC = "synthetic test fixture value, not material, machine or supplier data"
 
 
@@ -425,6 +426,43 @@ def tst_record() -> dict[str, Any]:
                      "direction": [0, 0, -1], "acceptance": {"kind": "seated", "features": ["bearing_face", "seat_floor"]}}],
         sources={"manufacturing/sources/tst-sheet.pdf": datasheet},
     )
+
+
+V1_OPERATIONS = """  operations:
+    - id: press_base_pin
+      kind: press_fit
+      part: LMP-0001
+      into: LMP-0001
+      interface: IF-001
+      direction: [0, 0, -1]
+      tools: ["Arbor press or pin punch"]
+      acceptance: {kind: standoff, features: [head_underside, hub_top_face]}
+    - id: ring_base
+      kind: retaining_ring
+      part: LMP-0001
+      into: LMP-0001
+      interface: IF-001
+      direction: [0, 0, 1]
+      tools: ["External circlip pliers"]
+      acceptance: {kind: engaged, features: [ring_groove]}
+"""
+V1_OPERATION_IDS = ["press_base_pin", "ring_base"]
+
+
+def add_v1_interface(hw: Path) -> None:
+    """Give a copy of the V1_MINIMAL record the interface it lacks, without a functional block, as in version 1."""
+    interface = {"id": "IF-001", "from": "base_sub", "to": "base_sub", "type": "motion", "description": "TST interface"}
+    (hw / "interfaces.yaml").write_text(yaml.safe_dump({"interfaces": [interface]}, sort_keys=False), encoding="utf-8")
+
+
+def add_v1_operations(hw: Path) -> None:
+    """Give a copy of the V1_MINIMAL record two installation operations under drawing.operations, as in version 1.
+    They name IF-001 (add_v1_interface) and the fixture's one part, and the text edit keeps the file's comments."""
+    path = hw / "assembly.yaml"
+    text = path.read_text(encoding="utf-8")
+    anchor = "  subassembly_sheets: [base_sub]\n"
+    assert text.count(anchor) == 1
+    path.write_text(text.replace(anchor, anchor + V1_OPERATIONS), encoding="utf-8")
 
 
 def migrated_copy(src_hw: Path, dst_hw: Path, today: date | None = None) -> Path:

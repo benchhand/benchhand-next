@@ -57,6 +57,10 @@ class BuildGuide(unittest.TestCase):
         shutil.copytree(LAMP_EXAMPLE / "hw", self.hw, dirs_exist_ok=True)
         return self.hw
 
+    def copy_v1_record(self) -> Path:
+        shutil.copytree(fx.V1_MINIMAL, self.hw, dirs_exist_ok=True)
+        return self.hw
+
     def make_version(self, hw: Path, version: str) -> None:
         version_dir = hw / "versions" / version
         version_dir.mkdir(parents=True)
@@ -406,6 +410,16 @@ class BuildGuide(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("version manifest is missing", result.stderr)
         self.assertFalse((self.out / "index.md").exists())
+
+    def test_a_version_1_record_is_refused_with_the_migration_finding_and_nothing_is_written(self) -> None:
+        hw = self.copy_v1_record()
+        self.assertNotIn("record_version", (hw / "product.yaml").read_text(encoding="utf-8"), "the input is version 1")
+        self.make_version(hw, "v1")
+        result = self.run_guide(hw)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn("record.migration_required", result.stderr)
+        self.assertIn("migrate.py", result.stderr)
+        self.assertFalse(self.out.exists())
 
     def test_an_unsupported_record_version_is_refused_with_the_version_finding(self) -> None:
         hw = self.copy_lamp_example()
