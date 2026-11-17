@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """layout_check.parse_transform: the SVG transform-list grammar, no FreeCAD needed.
 
-Run: uv run --no-project --with hypothesis==6.170.15 python -B scripts/ci_shards.py run rest skills/cad-drawings/tests/test_layout_transform.py
+Run: uv run --no-project --with-requirements harness/test-requirements.txt python -B -m unittest discover -s skills/cad-drawings/tests -p test_layout_transform.py
 """
 
 from __future__ import annotations

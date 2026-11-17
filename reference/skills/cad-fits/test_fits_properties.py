@@ -5,7 +5,7 @@ Each property names the rule of the standard it asserts. ISO 286-1:2010 is the s
 values below are its Table 1 (IT6 to IT11, up to 120 mm), typed apart from ../data/iso286.json so a typo
 in the data shows up.
 
-Run: uv run --no-project --with hypothesis==6.170.15 python -B scripts/ci_shards.py run rest skills/cad-fits/test_fits_properties.py
+Run: uv run --no-project --with-requirements harness/test-requirements.txt python -B -m unittest discover -s skills/cad-fits -p test_fits_properties.py
 """
 
 from __future__ import annotations
