@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -29,6 +30,7 @@ sys.path.insert(0, str(SCRIPT.parent))
 import fea_static
 from fea_static import CaseError, apply_required_safety_factor, error, load_case, result_exit_code, run_directory
 from ccx_failure import ccx_failure
+import ccx_failure as failure_checks
 from fea_part_selection import MultipleSolids, SceneObject, select_occurrence, select_part_solid, select_solid_index
 OCCURRENCE_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "build_occurrence_step.py"
 CONTAINER_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "build_container_steps.py"
@@ -762,6 +764,141 @@ if len(sys.argv) > 1:
             self.assertEqual(details["degrees_of_freedom"], 3 * details["node_count"])
             self.assertIn("inside the SPOOLES equation solver", result["error"]["message"])
 
+    def stand_in(self, root: Path, tool: str, body: str) -> Path:
+        """A $CCX or $GMSH stand-in at root/<tool>: it runs `body`, then hands its arguments on to the real tool.
+        It finds that tool when it runs, beside the executable of the FreeCAD process that started it (where the
+        macOS app and an extracted or mounted AppImage keep ccx and gmsh), else on PATH. A path probed earlier could
+        be inside an AppImage mount that ended with the probe."""
+        path = root / tool
+        script = root / f"{tool}.stand-in.py"
+        # A shell front: it sets FreeCAD's PYTHONHOME, PYTHONPATH and LD_LIBRARY_PATH (a mounted AppImage sets its
+        # own) aside, so they never steer this test's Python, and the real tool gets them back as FreeCAD set them.
+        names = ("PYTHONHOME", "PYTHONPATH", "LD_LIBRARY_PATH")
+        saved = "".join(f'CAD_HAD_{n}=${{{n}+1}} CAD_{n}=${{{n}-}}; export CAD_HAD_{n} CAD_{n}; unset {n}\n' for n in names)
+        path.write_text(f'''#!/bin/sh
+{saved}exec {shlex.quote(sys.executable)} {shlex.quote(str(script))} "$@"
+''', encoding="utf-8")
+        script.write_text(f'''import os, shutil, subprocess, sys
+def parent_and_executable(pid):
+    if os.path.exists("/proc/%d/exe" % pid):
+        with open("/proc/%d/stat" % pid, encoding="utf-8") as stat:
+            parent = int(stat.read().rsplit(")", 1)[1].split()[1])
+        return parent, os.path.realpath("/proc/%d/exe" % pid)
+    found = subprocess.run(["ps", "-o", "ppid=,comm=", "-p", str(pid)], capture_output=True, text=True).stdout.split(None, 1)
+    return (int(found[0]), os.path.realpath(found[1].strip())) if len(found) == 2 else (0, "")
+def real_tool(name):
+    pid = os.getppid()
+    while pid > 1:
+        parent, executable = parent_and_executable(pid)
+        beside = os.path.join(os.path.dirname(executable), name)
+        if os.path.basename(executable).lower().startswith("freecad") and os.access(beside, os.X_OK):
+            return beside
+        pid = parent
+    here = os.path.dirname(os.path.realpath(sys.argv[0]))
+    path = os.pathsep.join(p for p in os.environ.get("PATH", "").split(os.pathsep) if os.path.realpath(p) != here)
+    return shutil.which(name, path=path) or sys.exit("%s: no %s beside a FreeCAD process or on PATH" % (sys.argv[0], name))
+real = real_tool({tool!r})
+with open({str(root / (tool + "-calls.log"))!r}, "a", encoding="utf-8") as log:
+    log.write(" ".join([real, *sys.argv[1:]]) + "\\n")
+{body}
+for name in {names!r}:
+    if os.environ.pop("CAD_HAD_" + name, ""):
+        os.environ[name] = os.environ.get("CAD_" + name, "")
+    os.environ.pop("CAD_" + name, None)
+os.execv(real, [real, *sys.argv[1:]])
+''', encoding="utf-8")
+        path.chmod(0o755)
+        return path
+
+    @staticmethod
+    def solve_calls(root: Path) -> list[str]:
+        """The ccx stand-in's solve calls: FreeCAD passes `-i <name>` to solve and `-v` to read the version."""
+        calls = (root / "ccx-calls.log").read_text(encoding="utf-8").splitlines()
+        return [line for line in calls if any(arg.strip() == "-i" for arg in line.split(" "))]
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_load_that_reaches_no_mesh_node_is_an_error_not_a_pass(self) -> None:
+        """Issue #143: on a straight-sided second-order mesh, a load on a bore reaches no node of the ccx input.
+        A $GMSH stand-in meshes that way. The run must refuse before ccx runs, instead of passing at stress 0."""
+        with tempfile.TemporaryDirectory(prefix="cad-fea-unapplied-load-") as directory:
+            root = Path(directory)
+            step, bore = root / "block.step", root / "bore.json"
+            job = root / "make_block.py"
+            job.write_text(f'''import json, FreeCAD as App, Part, Import
+doc=App.newDocument("BoredBlock")
+block=doc.addObject("Part::Feature", "Block")
+block.Shape=Part.makeBox(100, 40, 14, App.Vector(-50, -20, 0)).fuse(Part.makeBox(50, 40, 36, App.Vector(-25, -20, 14))).cut(
+    Part.makeCylinder(12.5, 40, App.Vector(0, -20, 32), App.Vector(0, 1, 0))).removeSplitter()  # pillow_block, no bolt holes
+doc.recompute()
+Import.export([block], {str(step)!r})
+App.closeDocument(doc.Name)
+read=App.newDocument("Read"); Import.insert({str(step)!r}, read.Name)
+faces=[o for o in read.Objects if o.isDerivedFrom("Part::Feature") and o.Shape.Solids][0].Shape.Faces
+json.dump([i + 1 for i, f in enumerate(faces) if f.Surface.__class__.__name__ == "Cylinder"], open({str(bore)!r}, "w"))
+''', encoding="utf-8")
+            generated = subprocess.run([str(FREECADCMD), str(job)], cwd=root, capture_output=True, text=True, timeout=120)
+            self.assertTrue(bore.is_file(), generated.stdout + generated.stderr)
+            bore_faces = json.loads(bore.read_text(encoding="utf-8"))
+            self.assertTrue(bore_faces)
+            gmsh = self.stand_in(root, "gmsh", '''import re
+for arg in sys.argv[1:]:
+    if arg.endswith(".geo"):  # the bias campaign's straight-sided settings, set where the job's .geo sets them
+        text = open(arg, encoding="utf-8").read()
+        for key, value in (("SecondOrderLinear", 1), ("HighOrderOptimize", 0)):
+            text, found = re.subn(r"(?m)^Mesh[.]%s[ \\t]*=[^;]*;" % key, "Mesh.%s = %d;" % (key, value), text)
+            if not found:
+                text = text.replace("Mesh  3;", "Mesh.%s = %d;\\nMesh  3;" % (key, value), 1)
+        open(arg, "w", encoding="utf-8").write(text)''')
+            ccx = self.stand_in(root, "ccx", "")  # records each call, so the test sees whether the job asked ccx to solve
+            case_path = root / "case.yaml"
+            case_path.write_text(f"""step: {step}
+material: {{E: 210000, nu: 0.3, density: 7850, yield: 355}}
+fixed_faces: {{plane: {{axis: z, value: 0, tolerance: 0.000001}}}}
+loads: [{{selector: {{indices: {bore_faces}}}, force: [0, 0, 25000]}}]
+mesh_size: 10
+""", encoding="utf-8")
+            with patch.dict(os.environ, {"GMSH": str(gmsh), "CCX": str(ccx)}):
+                result, status = fea_static.run_job(case_path, load_case(case_path))
+            self.assertEqual(status, 2, result)
+            self.assertEqual(result["error"]["code"], "load_not_applied", result)
+            self.assertEqual(result["error"]["details"]["loads"], [{"constraint": "FaceForce0", "force_n": 25000.0, "nodes": 0}])
+            self.assertNotIn("max_von_mises_mpa", result)
+            self.assertTrue((root / "ccx-calls.log").is_file(), "the job never ran the ccx stand-in, not even its version probe")
+            self.assertEqual(self.solve_calls(root), [], "ccx was asked to solve an input whose load reaches no node")
+            meshed = [line for line in (root / "gmsh-calls.log").read_text(encoding="utf-8").splitlines() if line.endswith(".geo")]
+            self.assertEqual(len(meshed), 1, meshed)  # the stand-in meshed, so the empty load is the straight-sided one
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_zero_result_under_a_nonzero_load_is_an_error_not_a_pass(self) -> None:
+        """A load that reaches the input but not ccx: a $CCX stand-in drops the *CLOAD node lines, then runs the
+        real ccx. The cantilever then gives stress 0 and displacement 0, and the job must refuse that result."""
+        with tempfile.TemporaryDirectory(prefix="cad-fea-zero-result-") as directory:
+            root = Path(directory)
+            step = self.make_cantilever_step(root)
+            ccx = self.stand_in(root, "ccx", '''flag = next((i for i, arg in enumerate(sys.argv) if arg.strip() == "-i"), None)  # "-i " (ccxtools)
+if flag is not None:
+    path = sys.argv[flag + 1] + ".inp"
+    kept, loads = [], False
+    for line in open(path, encoding="utf-8").read().splitlines():
+        if line.upper().startswith("*CLOAD"):
+            loads = True
+        elif line.startswith("*") and not line.startswith("**"):
+            loads = False
+        elif loads and line[:1].isdigit():
+            continue
+        kept.append(line)
+    open(path, "w", encoding="utf-8").write("\\n".join(kept) + "\\n")''')
+            case_path = root / "case.yaml"
+            case_path.write_text(f"step: {step}\n{CANTILEVER_TAIL}", encoding="utf-8")
+            with patch.dict(os.environ, {"CCX": str(ccx)}):
+                result, status = fea_static.run_job(case_path, load_case(case_path))
+            self.assertEqual(status, 2, result)
+            self.assertEqual(result["error"]["code"], "zero_result", result)
+            self.assertEqual(result["error"]["details"]["applied_force_n"], 50.0)
+            self.assertEqual((result["error"]["details"]["max_von_mises_mpa"],
+                              result["error"]["details"]["max_displacement_mm"]), (0.0, 0.0))
+            self.assertEqual(len(self.solve_calls(root)), 1)  # ccx solved once: the refusal reads its result
+
     @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
     def test_gmsh_tools_mesh_with_the_gmsh_the_job_resolved(self) -> None:
         with tempfile.TemporaryDirectory(prefix="cad-fea-gmsh-override-") as directory:
@@ -975,6 +1112,73 @@ class CcxFailureDiagnosis(unittest.TestCase):
         self.assertEqual(failure["message"],
                          "CalculiX ccx stopped with exit status 201: *ERROR in calinput: no material was assigned "
                          "to element 7")
+
+
+# The load section FreeCAD 1.1.4 writes into the ccx input: each force constraint's name, then its *CLOAD node lines
+# (node, degree of freedom, load). FaceForce1 is the pillow_block bore load of issue #143: its header is there,
+# and no node line.
+CLOAD_SECTION = """*NODE, NSET=Nall
+1, 0, 0, 0
+*STEP, INC=2000
+*BOUNDARY
+FemConstraintFixed,1
+** constraints force node loads
+** FaceForce0
+*CLOAD
+** node loads on shape: SelectedPart:Face2
+4,1,1.25
+4,3,-2.5
+7,3,-2.5
+9,3,0
+** FaceForce1
+*CLOAD
+** node loads on shape: SelectedPart:Face11
+
+
+** FaceForce2
+*CLOAD
+** node loads on shape: SelectedPart:Face5
+3,2,0.5
+
+*NODE FILE
+U
+*END STEP
+"""
+
+
+class LoadApplication(unittest.TestCase):
+    """Loads that never reach the mesh, or a loaded run that never moves it (issue #143: a bore load that reached
+    no node gave stress 0 and displacement 0, and the run passed)."""
+
+    def test_each_force_constraint_counts_the_nodes_its_cload_lines_load(self) -> None:
+        # FaceForce0 loads node 4 (two components) and node 7. Node 9's line has a load of 0, so it loads nothing.
+        self.assertEqual(failure_checks.applied_loads(CLOAD_SECTION), {"FaceForce0": 2, "FaceForce1": 0, "FaceForce2": 1})
+
+    def test_a_nonzero_load_that_reaches_no_node_is_refused_before_the_solve(self) -> None:
+        failure = failure_checks.unapplied_load({"FaceForce0": 2, "FaceForce1": 0},
+                                                [("FaceForce0", 50.0), ("FaceForce1", 25_000.0)])
+        self.assertEqual(failure["code"], "load_not_applied")
+        self.assertEqual(failure["details"]["loads"], [{"constraint": "FaceForce1", "force_n": 25_000.0, "nodes": 0}])
+        self.assertIn("load 1 (25000 N) reaches no mesh node", failure["message"])
+
+    def test_loads_that_reach_nodes_or_carry_no_force_are_not_refused(self) -> None:
+        for applied, loads in (({"FaceForce0": 2}, [("FaceForce0", 50.0)]),
+                               ({}, [("FaceForce0", 0.0)]),
+                               ({"FaceForce0": 2, "FaceForce1": 1}, [("FaceForce0", 50.0), ("FaceForce1", 1e-3)])):
+            with self.subTest(applied=applied, loads=loads):
+                self.assertIsNone(failure_checks.unapplied_load(applied, loads))
+
+    def test_a_zero_stress_or_displacement_under_a_nonzero_load_is_refused(self) -> None:
+        for stress, displacement in ((0.0, 0.0), (0.0, 0.002), (41.0, 0.0)):
+            with self.subTest(stress=stress, displacement=displacement):
+                failure = failure_checks.zero_result(stress, displacement, [("FaceForce0", 25_000.0)])
+                self.assertEqual(failure["code"], "zero_result")
+                self.assertEqual(failure["details"], {"max_von_mises_mpa": stress, "max_displacement_mm": displacement,
+                                                      "applied_force_n": 25_000.0})
+
+    def test_a_moving_result_or_an_unloaded_case_is_not_refused(self) -> None:
+        self.assertIsNone(failure_checks.zero_result(41.0, 0.0065, [("FaceForce0", 25_000.0)]))
+        self.assertIsNone(failure_checks.zero_result(0.0, 0.0, [("FaceForce0", 0.0)]))
 
 
 class VersionedPublicationTests(unittest.TestCase):
