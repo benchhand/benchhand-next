@@ -1,0 +1,135 @@
+# TEST capability profile for the mutation corpus: synthetic calibrations, a fixture only.
+# The shipped templates in skills/cad-record/assets/manufacturing/capability-templates.yaml stay empty.
+# Load it with capability_profile.py. Material id: test_polymer. Printer id: test_printer (fdm).
+materials:
+- id: test_polymer
+  revision: 1
+  title: test_polymer (TST fixture)
+  level: grade
+  family: TST family
+  grade:
+    status: known
+    value: test_polymer grade
+    sources:
+    - kind: user
+      reference: TST fixture
+      origin: TST fixture user
+    basis: user_declared
+  form: printed
+  process_state:
+    process:
+      status: unknown
+      reason: not recorded in this fixture
+    conditioning: dry
+  typical_not_allowable: true
+  properties: []
+profiles:
+- id: test_printer
+  revision: 1
+  title: TEST FDM printer (corpus fixture, synthetic calibrations)
+  process: fdm
+  provider: local
+  parameters: {}
+  materials:
+    status: unknown
+    reason: not recorded in this fixture
+  calibrations:
+  - id: overhang_coupon
+    characteristic: overhang_angle
+    scope:
+      material: test_polymer
+    result:
+      limits:
+        lower: 45.0
+        upper: 50.0
+        units: deg
+      samples: 5
+    source:
+      kind: calibration
+      reference: TST calibration coupon
+      url: https://example.invalid/tst-fixture
+      accessed: '2026-01-01'
+    date: '2026-01-01'
+  - id: bridge_coupon
+    characteristic: bridge_span
+    scope:
+      material: test_polymer
+    result:
+      limits:
+        lower: 5.0
+        upper: 6.0
+        units: mm
+      samples: 5
+    source:
+      kind: calibration
+      reference: TST calibration coupon
+      url: https://example.invalid/tst-fixture
+      accessed: '2026-01-01'
+    date: '2026-01-01'
+  - id: wall_coupon
+    characteristic: min_wall
+    scope:
+      material: test_polymer
+    result:
+      limits:
+        lower: 1.2
+        upper: 1.6
+        units: mm
+      samples: 5
+    source:
+      kind: calibration
+      reference: TST calibration coupon
+      url: https://example.invalid/tst-fixture
+      accessed: '2026-01-01'
+    date: '2026-01-01'
+  - id: pin_coupon
+    characteristic: min_feature
+    scope:
+      material: test_polymer
+    result:
+      limits:
+        lower: 2.0
+        upper: 2.4
+        units: mm
+      samples: 5
+    source:
+      kind: calibration
+      reference: TST calibration coupon
+      url: https://example.invalid/tst-fixture
+      accessed: '2026-01-01'
+    date: '2026-01-01'
+  envelope:
+    x:
+      status: known
+      value:
+        value: 200
+        units: mm
+      sources:
+      - kind: calibration
+        reference: TEST envelope
+        url: https://example.invalid/tst-fixture
+        accessed: '2026-01-01'
+      basis: measured
+    y:
+      status: known
+      value:
+        value: 200
+        units: mm
+      sources:
+      - kind: calibration
+        reference: TEST envelope
+        url: https://example.invalid/tst-fixture
+        accessed: '2026-01-01'
+      basis: measured
+    z:
+      status: known
+      value:
+        value: 200
+        units: mm
+      sources:
+      - kind: calibration
+        reference: TEST envelope
+        url: https://example.invalid/tst-fixture
+        accessed: '2026-01-01'
+      basis: measured
+
