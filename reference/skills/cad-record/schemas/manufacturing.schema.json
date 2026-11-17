@@ -224,12 +224,15 @@
       "properties": {"feature": {"$ref": "#/$defs/semantic_id"}, "region": {"$ref": "#/$defs/semantic_id"}, "component": {"$ref": "#/$defs/semantic_id"}}
     },
     "load": {
-      "type": "object", "additionalProperties": false, "required": ["id", "kind", "magnitude"],
+      "type": "object", "additionalProperties": false, "required": ["id", "kind", "magnitude", "direction"],
       "properties": {
         "id": {"$ref": "#/$defs/semantic_id"},
         "kind": {"enum": ["static", "sustained", "cyclic", "impact", "vibration"]},
         "magnitude": {"description": "a force (N, kN) or torque (N_mm, N_m)", "$ref": "#/$defs/quantity_fact"},
-        "direction": {"$ref": "#/$defs/text_fact"},
+        "direction": {
+          "description": "The unit vector [x, y, z] along which the load acts (the force direction, or a torque's axis by the right-hand rule), in the model frame of the part that `application` names, or the assembly frame when `application` names the product, an interface or no part. Its norm must be 1 within 1e-6: manufacturing_intent.py reports load.direction_not_unit otherwise",
+          "type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3
+        },
         "application": {"$ref": "#/$defs/subject"},
         "duration": {"$ref": "#/$defs/quantity_fact"},
         "frequency": {"$ref": "#/$defs/quantity_fact"},

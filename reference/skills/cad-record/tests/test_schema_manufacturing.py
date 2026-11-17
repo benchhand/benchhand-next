@@ -116,6 +116,16 @@ class SharedDefinitions(SchemaCase):
                             "both": {"value": 1, "lower": 0, "upper": 2, "units": "mm"}, "half interval": {"lower": 0, "units": "mm"},
                             "boolean value": {"value": True, "units": "mm"}, "string value": {"value": "1", "units": "mm"}})
 
+    def test_a_load_states_its_direction_as_three_numbers(self) -> None:
+        load = {"id": "head_load", "kind": "static", "magnitude": fx.known(fx.quantity(50, "N")), "direction": [0, 0, -1]}
+        self.assert_shared("load", {"unit vector": load, "decimals": {**load, "direction": [0.6, 0.0, -0.8]}},
+                           {"missing direction": {k: v for k, v in load.items() if k != "direction"},
+                            "text direction": {**load, "direction": fx.known("down")},
+                            "string direction": {**load, "direction": "down"},
+                            "two elements": {**load, "direction": [0, -1]},
+                            "four elements": {**load, "direction": [0, 0, -1, 0]},
+                            "text element": {**load, "direction": [0, 0, "-1"]}})
+
     def test_a_source_states_where_it_comes_from(self) -> None:
         self.assert_shared("source", {
             "datasheet url": fx.source("datasheet", url="https://example.invalid/d.pdf", accessed="2026-02-03", conditions="ISO 527, 23 deg_C"),
@@ -211,8 +221,9 @@ class RecordDocuments(SchemaCase):
             "confirmed with its decision": (lambda d: d["use_case"].update(status="confirmed", decision="DR-001"), True),
             "known service class": (lambda d: d["use_case"].update(service_class=fx.known("functional_demo")), True),
             "invented service class": (lambda d: d["use_case"].update(service_class=fx.known("toy")), False),
-            "loads listed": (lambda d: d["use_case"].update(loads=[{"id": "load", "kind": "cyclic", "magnitude": fx.known(fx.quantity(5, "N"))}]), True),
-            "a load of an unknown kind": (lambda d: d["use_case"].update(loads=[{"id": "load", "kind": "big", "magnitude": fx.unknown()}]), False),
+            "loads listed": (lambda d: d["use_case"].update(loads=[{"id": "load", "kind": "cyclic", "magnitude": fx.known(fx.quantity(5, "N")),
+                                                                                  "direction": [1, 0, 0]}]), True),
+            "a load of an unknown kind": (lambda d: d["use_case"].update(loads=[{"id": "load", "kind": "big", "magnitude": fx.unknown(), "direction": [1, 0, 0]}]), False),
             "empty loads list": (lambda d: d["use_case"].update(loads=[]), False),
             "evidence policy with its decision": (lambda d: d["use_case"].update(evidence_policy={
                 "obligations": [{"requirement": "REQ-001", "level": "physically_validated"}], "decision": "DR-001"}), True),

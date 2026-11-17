@@ -173,6 +173,9 @@ class Normalization(unittest.TestCase):
             d["assembly.yaml"]["drawing"] = {"number": "TST", "rev": "X1", "title": "TST", "views": [], "items": [],
                                              "operations": copy.deepcopy(d["assembly.yaml"]["operations"])}
 
+        def set_direction(d: dict[str, Any], direction: list[float]) -> None:
+            d["product.yaml"]["use_case"]["loads"][0]["direction"] = direction
+
         def propose(d: dict[str, Any], pn: str = "TST-0901") -> None:
             d["manufacturing/selection.yaml"] = proposing_selection(pn)
 
@@ -195,6 +198,9 @@ class Normalization(unittest.TestCase):
             "force given in mm": (lambda d: d["product.yaml"]["use_case"]["loads"][0].update(magnitude=fx.known(fx.quantity(11, "mm"))), "intent.units"),
             "temperature given in MPa": (lambda d: d["product.yaml"]["use_case"]["environment"].update(
                 temperature=fx.known(fx.quantity(40, "MPa"))), "intent.units"),
+            "direction of norm 1 + 2e-6": (lambda d: set_direction(d, [1 + 2e-6, 0, 0]), "load.direction_not_unit"),
+            "zero direction": (lambda d: set_direction(d, [0, 0, 0]), "load.direction_not_unit"),
+            "direction of norm 2": (lambda d: set_direction(d, [0, 0, -2]), "load.direction_not_unit"),
             "not a number": (lambda d: d["product.yaml"]["use_case"]["loads"][0].update(magnitude=fx.known(fx.quantity(float("nan"), "N"))),
                              "intent.number"),
             "reversed interval": (lambda d: d["product.yaml"]["use_case"]["environment"].update(
@@ -258,6 +264,54 @@ class Normalization(unittest.TestCase):
                 self.assertIn(code, codes, [p.message for p in record.problems])
                 severity = {p.code: p.severity for p in record.problems}[code]
                 self.assertEqual(severity, "warning" if code in ("intent.coverage", "record.legacy_freeze") else "error")
+
+    def test_a_load_direction_within_the_unit_tolerance_is_accepted(self) -> None:
+        for direction in ([0, 0, -1], [0.6, 0.0, -0.8], [1 + 5e-7, 0, 0]):
+            with self.subTest(direction):
+                documents = fx.tst_record()
+                documents["product.yaml"]["use_case"]["loads"][0]["direction"] = direction
+                record = mi.load_record(fx.write_record(temp_hw(self), documents))
+                self.assertEqual([p.finding() for p in record.problems], [])
+
+    def test_a_non_unit_load_direction_names_its_load(self) -> None:
+        documents = fx.tst_record()
+        documents["product.yaml"]["use_case"]["loads"][0]["direction"] = [0, 0, 0]
+        record = mi.load_record(fx.write_record(temp_hw(self), documents))
+        [problem] = [p for p in record.problems if p.code == "load.direction_not_unit"]
+        self.assertIn("head_load", problem.message)
+        self.assertEqual(problem.pointer, "use_case/loads/0/direction")
+
+    def test_a_load_direction_beyond_float_range_is_reported_not_raised(self) -> None:
+        documents = fx.tst_record()
+        documents["product.yaml"]["use_case"]["loads"][0]["direction"] = [10 ** 400, 0, 0]
+        record = mi.normalize_record(documents)
+        self.assertIn("load.direction_not_unit", [p.code for p in record.problems])
+        self.assertIsNone(record.use_case.loads[0].direction)
+
+    def test_a_non_finite_load_direction_is_reported_and_carried_as_none(self) -> None:
+        for direction in ([float("nan"), 0, 0], [float("inf"), 0, 0], [10 ** 400, float("nan"), 0], [10 ** 400, float("inf"), 0]):
+            with self.subTest(direction):
+                documents = fx.tst_record()
+                documents["product.yaml"]["use_case"]["loads"][0]["direction"] = direction
+                record = mi.normalize_record(documents)
+                codes = [p.code for p in record.problems]
+                self.assertEqual(codes.count("intent.number"), 1, codes)
+                self.assertNotIn("load.direction_not_unit", codes)
+                self.assertIsNone(record.use_case.loads[0].direction)
+
+    def test_a_parsed_load_carries_its_direction_as_floats(self) -> None:
+        documents = fx.tst_record()
+        documents["product.yaml"]["use_case"]["loads"][0]["direction"] = [0, 0.6, -0.8]
+        record = mi.normalize_record(documents)
+        self.assertEqual(record.use_case.loads[0].direction, (0.0, 0.6, -0.8))
+
+    def test_a_malformed_load_direction_is_a_schema_problem_only(self) -> None:
+        documents = fx.tst_record()
+        documents["product.yaml"]["use_case"]["loads"][0]["direction"] = [0, -1]
+        record, problems = mi.check_record(fx.write_record(temp_hw(self), documents))
+        codes = [p.code for p in problems]
+        self.assertIn("intent.schema", codes)
+        self.assertNotIn("load.direction_not_unit", codes)
 
     def test_normalization_needs_no_files(self) -> None:
         documents = fx.tst_record()

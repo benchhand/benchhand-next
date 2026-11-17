@@ -351,6 +351,7 @@ def tst_record() -> dict[str, Any]:
     sheet_source = source("datasheet", "TST sheet datasheet", artifact="manufacturing/sources/tst-sheet.pdf",
                           sha256=sha256(datasheet), conditions="TST-STD-1, 23 deg_C, dry")
     loads = [{"id": "head_load", "kind": "sustained", "magnitude": known(quantity(11, "N"), "user_declared"),
+              "direction": [0, 0, -1],
               "requirements": ["REQ-001"]}]
     use = use_case("draft", loads=loads)
     bracket = part("TST-0001", "Printed bracket", process="fdm", material="TST polymer", part_intent=intent(

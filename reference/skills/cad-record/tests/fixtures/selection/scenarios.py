@@ -64,7 +64,8 @@ def ready_use_case(service_class: str, *, temperature: tuple[float, float] = (10
         else:
             block[group] = value
     block["loads"] = loads if loads is not None else [
-        {"id": "service_load", "kind": "static", "magnitude": fx.known(fx.quantity(20, "N"))}]
+        {"id": "service_load", "kind": "static", "magnitude": fx.known(fx.quantity(20, "N")),
+         "direction": [0, 0, -1]}]
     block["capability"]["equipment"] = equipment if equipment is not None else fx.not_applicable("no equipment list in this fixture")
     block["evidence_policy"] = {"obligations": [{"requirement": "REQ-001", "level": "process_planned"}], "decision": "DR-001"}
     return block
@@ -270,7 +271,8 @@ def wear_shaft_options() -> dict[str, Any]:
     """Row 4: a pivot shaft running in a printed hub under a cyclic radial load. A printed shaft fails the
     sourced strength criterion and the wear coupon; machined, purchased and hybrid (purchased pin pressed
     into the hub) alternatives meet both."""
-    load = {"id": "radial_load", "kind": "cyclic", "magnitude": fx.known(fx.quantity(50, "N")), "requirements": ["REQ-001"]}
+    load = {"id": "radial_load", "kind": "cyclic", "magnitude": fx.known(fx.quantity(50, "N")),
+            "direction": [1, 0, 0], "requirements": ["REQ-001"]}
     wear = ("wear_depth", "<=", 0.1, "mm")
     return build(
         use=ready_use_case("working_prototype", loads=[load], equipment=["tst_printer"]),
