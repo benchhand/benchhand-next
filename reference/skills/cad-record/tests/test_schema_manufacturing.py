@@ -72,6 +72,21 @@ class SharedDefinitions(SchemaCase):
                 registry.check_schema(registry.schema(SCHEMAS, path.name))
                 list(validator(path.name).iter_errors({}))
 
+    def test_a_family_segment_after_the_first_may_start_with_a_digit_in_all_three_family_grammars(self) -> None:
+        """check_family, finding_code and the family prefix of obligation_id share one grammar. The first segment
+        starts with a letter and later ones may start with a digit (export.3mf). The subject after `@` is unchanged."""
+        self.assert_shared("check_family", {"export.3mf": "export.3mf", "single": "export", "deep": "process.fdm.support"},
+                           {"digit first": "3mf.export", "leading dot": ".3mf", "trailing dot": "export.", "capital": "Export.3mf",
+                            "empty segment": "export..3mf"})
+        self.assert_shared("finding_code", {"export.3mf.fail": "export.3mf.fail", "export.3mf": "export.3mf",
+                                            "process.fdm.overhang": "process.fdm.overhang"},
+                           {"no dot": "export", "digit first": "3mf.export", "leading dot": ".3mf"})
+        self.assert_shared("obligation_id", {"export.3mf@TST-0001": "export.3mf@TST-0001",
+                                             "with component": "cad.readback@TST-0001.left",
+                                             "product": "export.3mf@product", "interface": "interface.fit@IF-001#bore"},
+                           {"digit first": "3mf.export@TST-0001", "leading dot": ".3mf@TST-0001",
+                            "subject digit first": "export.3mf@TST-0001.3mf", "no anchor": "export.3mf"})
+
     def test_a_fact_is_known_with_sources_unknown_with_a_reason_or_not_applicable(self) -> None:
         self.assert_shared("fact", {
             "known": fx.known("TST"),

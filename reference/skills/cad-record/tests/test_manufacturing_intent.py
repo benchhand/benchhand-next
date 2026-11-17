@@ -495,6 +495,12 @@ class RequiredChecks(unittest.TestCase):
                          ("physically_validated", "release"))
         self.assertEqual(found["engineering.creep@TST-0001"].level, "physically_validated", "static analysis cannot pass creep")
 
+    def test_an_fdm_part_is_owed_one_export_3mf_obligation_and_other_processes_none(self) -> None:
+        found = self.obligations(fx.tst_record())
+        owed = found["export.3mf@TST-0001"]
+        self.assertEqual((owed.family, dict(owed.subject), owed.level), ("export.3mf", {"PN": "TST-0001"}, "cad_valid"))
+        self.assertEqual(sorted(i for i in found if i.startswith("export.3mf")), ["export.3mf@TST-0001"])
+
     def test_purchased_items_get_purchase_checks_only(self) -> None:
         found = self.obligations(fx.tst_record())
         bearing = sorted(i for i in found if "TST-0003" in i)

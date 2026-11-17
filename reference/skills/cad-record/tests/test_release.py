@@ -245,7 +245,9 @@ class Release(ReleaseCase):
         self.assertEqual(manifest["manufacturing"]["LMP-0001"],
                          {"process": "fdm", "quantity": 1, "route": ["fdm"],
                           "files": ["manufacturing/LMP-0001/part.step", "manufacturing/LMP-0001/part.stl",
-                                    "manufacturing/LMP-0001/manufacturing.json"]})
+                                    "manufacturing/LMP-0001/part.3mf", "manufacturing/LMP-0001/manufacturing.json"]})
+        self.assertEqual(manifest["files"]["manufacturing/LMP-0001/part.3mf"]["original"],
+                         "hw/versions/v1/manufacturing/LMP-0001/part.3mf")
         accepted = manifest["acceptance"]
         self.assertEqual(accepted["evidence_sha256"], manifest["frozen"]["evidence_sha256"])
         self.assertEqual(accepted["scope"]["service_class"], "appearance_concept")
@@ -587,7 +589,13 @@ class Refusal(ReleaseCase):
 
     def test_a_missing_fdm_stl_refuses(self) -> None:
         hw = self.project(omit=(("LMP-0001", "part.stl"),))
-        self.refused(hw, "hw/versions/v1/manufacturing/LMP-0001/part.stl", "missing", "a fdm part needs part.step, part.stl")
+        self.refused(hw, "hw/versions/v1/manufacturing/LMP-0001/part.stl", "missing",
+                     "a fdm part needs part.step, part.stl, part.3mf")
+
+    def test_a_missing_fdm_3mf_refuses(self) -> None:
+        hw = self.project(omit=(("LMP-0001", "part.3mf"),))
+        self.refused(hw, "hw/versions/v1/manufacturing/LMP-0001/part.3mf", "missing",
+                     "a fdm part needs part.step, part.stl, part.3mf")
         self.assertFalse((hw / "releases").exists())
 
     def test_a_failed_manufacturing_check_refuses(self) -> None:

@@ -76,8 +76,9 @@ class BuildGuide(unittest.TestCase):
                     (target / "part.step").write_text("fixture STEP", encoding="utf-8")
                     names = ["part.step"]
                     if part.get("process") == "fdm":
-                        (target / "part.stl").write_bytes(b"fixture STL")
-                        names.append("part.stl")
+                        for name in ("part.stl", "part.3mf"):
+                            (target / name).write_bytes(b"fixture " + name.encode())
+                            names.append(name)
                     (target / "manufacturing.json").write_text("{}\n", encoding="utf-8")
                     made[pn] = {"path": f"manufacturing/{pn}", "outputs": names + ["manufacturing.json"]}
                     if part.get("procurement", {}).get("mode") == "made_to_drawing":
@@ -149,6 +150,7 @@ class BuildGuide(unittest.TestCase):
             self.assertIn(f"## {heading}", guide)
         self.assertIn("[part.step](../../hw/versions/v1/manufacturing/LMP-0001/part.step)", guide)
         self.assertIn("[part.stl](../../hw/versions/v1/manufacturing/LMP-0001/part.stl)", guide)
+        self.assertIn("[part.3mf](../../hw/versions/v1/manufacturing/LMP-0001/part.3mf)", guide)
         self.assertIn("[drawing sheet PDF](../../hw/drawings/v1/LMP-0005/sheet-1.pdf)", guide)
         self.assertIn("| 11 | LMP-0011 |", guide)
         self.assertIn("OPEN — manufacturer_part_number:", guide)

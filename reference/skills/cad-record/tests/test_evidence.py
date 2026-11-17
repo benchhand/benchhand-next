@@ -495,6 +495,20 @@ class ReleasePolicy(unittest.TestCase):
         self.assertEqual(policy.blocking, ())
         self.assertEqual(policy.scope["service_class"], "appearance_concept")
 
+    def test_a_release_of_every_service_class_blocks_on_an_unresolved_or_failing_3mf_export(self) -> None:
+        """export.3mf is a make-stage check: the lower service classes list its family in the release policy,
+        so a forgotten, stale or failing export check blocks them like cad.readback does."""
+        owed = {"id": "export.3mf@TST-0001", "family": "export.3mf", "subject": {"PN": "TST-0001"},
+                "level": "cad_valid", "stage": "layout", "basis": "TST-0001: part.3mf"}
+        for service_class in ("appearance_concept", "fit_assembly", "functional_demo", "working_prototype",
+                              "production", "safety_critical"):
+            for result, code in (("unknown", "gate.unresolved"), ("stale", "gate.stale"), ("fail", "gate.fail"),
+                                 ("pass", None)):
+                with self.subTest(service_class=service_class, result=result):
+                    found = evidence.obligation_gate([owed], {owed["id"]: result}, "release", service_class)
+                    self.assertEqual([(f.code, f.severity, f.obligation) for f in found],
+                                     [(code, "error", owed["id"])] if code else [])
+
     def test_a_fit_prototype_needs_its_trial_tested_or_waived_as_a_trial(self) -> None:
         self.assertIn(TRIAL, {f.obligation for f in self.released("fit_assembly").blocking})
         policy = self.released("fit_assembly", self.trial_waiver)

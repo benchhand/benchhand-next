@@ -149,6 +149,8 @@ class LayoutData(TempProject):
                            ("hw/versions/v3/record/manufacturing/sources/sheet.pdf", "version.record"),
                            ("hw/versions/v3/manufacturing-features.json", "version.core"),
                            ("hw/versions/v3/manufacturing/LMP-0001/components/left/part.stl", "version.manufacturing"),
+                           ("hw/versions/v3/manufacturing/LMP-0001/part.3mf", "version.manufacturing"),
+                           ("hw/versions/v3/manufacturing/LMP-0001/components/left/part.3mf", "version.manufacturing"),
                            ("hw/checks/v3/LMP-0001/evidence/coupon.csv", "bundle.checks"),
                            ("hw/releases/A/acceptance/evidence.yaml", "release.package")):
             with self.subTest(rel=rel):
@@ -187,7 +189,7 @@ class LayoutData(TempProject):
         self.assertEqual([layout.custom_made(p) for p in (printed, pin, catalogue)], [True, True, False])
         same = layout.manufacture_policy(printed)
         self.assertEqual((same.relationship, same.outputs, same.linear_deflection_mm, same.angular_deflection_rad),
-                         ("same", ("part.step", "part.stl", "manufacturing.json"), 0.05, 0.1))
+                         ("same", ("part.step", "part.stl", "part.3mf", "manufacturing.json"), 0.05, 0.1))
         self.assertAlmostEqual(same.volume_tolerance_mm3(1000.0), 1e-6)
         self.assertEqual(layout.manufacture_policy(pin).outputs, ("part.step", "manufacturing.json"))
         flat = layout.manufacture_policy({**printed, "manufacture": {
@@ -202,7 +204,7 @@ class LayoutData(TempProject):
         with self.assertRaisesRegex(layout.LayoutError, "without a volume tolerance"):
             layout.manufacture_policy({**printed, "manufacture": {"relationship": "different"}})
         self.assertEqual(layout.manufacture_policy({**printed, "process": "resin"}).outputs,
-                         ("part.step", "part.stl", "manufacturing.json"), "an additive process gets its STL")
+                         ("part.step", "part.stl", "manufacturing.json"), "a resin part gets its STL, not a 3MF")
         self.assertEqual(layout.manufacture_policy({**printed, "process": "laser"}).outputs, ("part.step", "manufacturing.json"))
         with self.assertRaisesRegex(layout.UnsupportedProcess, "no manufacturing output contract"):
             layout.manufacture_policy({**printed, "process": "other"})
@@ -560,6 +562,14 @@ class ValidatorLayout(TempProject):
                 self.assertEqual(code, 1)
                 self.assertEqual(found[str(stray)]["severity"], "error")
                 self.assertTrue(found[str(stray)]["canonical_location"].endswith("/manufacturing/LMP-0004/part.step"))
+
+    def test_a_stray_3mf_names_part_3mf_as_its_canonical_file(self) -> None:
+        stray = write(self.hw / "print" / "LMP-0004_flat.3mf")
+        code, found = self.layout_findings()
+        self.assertEqual(code, 0)
+        item = found[str(stray)]
+        self.assertEqual((item["code"], item["severity"], item["canonical_location"]),
+                         ("layout.stray", "warning", "hw/versions/v1/manufacturing/LMP-0004/part.3mf"))
 
     def test_symlink_escape_is_an_error_at_every_stage(self) -> None:
         outside = write(self.root / "outside.md")
