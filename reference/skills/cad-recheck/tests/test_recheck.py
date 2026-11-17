@@ -454,6 +454,42 @@ class RecheckHookTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("stamp is stale", result.stderr)
 
+    def run_report(self, packet: Path | None, status: str = "pass") -> Path:
+        """An `evidence.py run` report around the evidence packet in `packet` (null when the run stopped)."""
+        report = {"kind": "cad-evidence-run", "schema_version": 1, "status": status, "scope": "commit", "stage": "detail",
+                  "version": "v1", "version_manifest_sha256": None, "record_sha256": None, "steps": [],
+                  "stopped_at": None if packet else "form",
+                  "packet": json.loads(packet.read_text(encoding="utf-8")) if packet else None}
+        path = self.root / ".run.json"
+        path.write_text(json.dumps(report), encoding="utf-8")
+        return path
+
+    def test_the_packet_of_an_evidence_run_stamps_like_the_packet_check_prints(self) -> None:
+        self.stage_product("detail")
+        checks = self.evidence_packet("detail")
+        stamp = self.stamp_with(self.run_report(checks))
+        self.assertEqual(stamp["checks"], json.loads(checks.read_text(encoding="utf-8")))
+        self.git("add", "hw/.cad/recheck.json")
+        self.assertEqual(self.commit().returncode, 0)
+
+    def test_an_evidence_run_that_stopped_has_no_packet_and_cannot_stamp(self) -> None:
+        self.stage_product("detail")
+        self.stamp_refused(self.run_report(None, status="fail"), "the evidence run stopped at form")
+
+    def test_verify_passes_a_commit_that_stages_no_hw_change_and_checks_one_that_does(self) -> None:
+        self.stage_product("release")
+        self.git("commit", "-qm", "release stage", "--no-verify")
+        (self.root / "notes.md").write_text("notes\n", encoding="utf-8")
+        self.git("add", "notes.md")
+        verified = self.run_python(STAMP, "--verify", cwd=self.root)
+        self.assertEqual(verified.returncode, 0, verified.stderr)
+        self.assertEqual(json.loads(verified.stdout), {"passed": True, "required": False, "reason": "no staged hw/ change"})
+        self.add_part(title="Staged edit")
+        self.git("add", "hw/parts/PRT-0001/part.yaml")
+        refused = self.run_python(STAMP, "--verify", cwd=self.root)
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("no staged hw/.cad/recheck.json", refused.stderr)
+
     def test_passed_false_is_refused(self) -> None:
         self.stage_product("detail")
         stamp = self.stamp(passed=False, stage="detail")

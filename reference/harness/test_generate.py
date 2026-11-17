@@ -423,7 +423,7 @@ class ProcessRuleTests(unittest.TestCase):
         for path in (self.FLOW / "SKILL.md", self.FLOW / "references/flow.md", *(CAD / "agents").glob("*.md")):
             text = self.strip_todo_markers(self.read(path))
             with self.subTest(path=path.name):
-                self.assertNotRegex(text, r"\b(flow\.py|work\.py|evidence\.py run)\b")
+                self.assertNotRegex(text, r"\b(flow\.py|work\.py)\b|evidence\.py run [^`]*--scope (?!commit\b|full\b)")
 
 
 if __name__ == "__main__":

@@ -12,13 +12,22 @@ boundary cases.
 from __future__ import annotations
 
 import copy
+import io
 import json
+import shutil
+import socket
+import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import date
 from pathlib import Path
 from typing import Any
+from unittest import mock
+
+import yaml
+from jsonschema import Draft202012Validator
 
 HERE = Path(__file__).resolve().parent
 
@@ -30,6 +39,7 @@ from modload import load_module as load  # noqa: E402
 acceptance = load("cad_record_acceptance_fixtures", HERE / "fixtures" / "acceptance.py")
 fx, mi, evidence, impact = acceptance.fx, acceptance.mi, acceptance.evidence, acceptance.impact
 check_packet = load("cad_record_check_packet", HERE.parent / "scripts" / "check_packet.py")
+fail_fast = load("cad_record_fail_fast", HERE.parent / "scripts" / "fail_fast.py")
 TODAY = date(2026, 6, 1)
 V1 = "a" * 64
 APPROVED = frozenset({"DR-001", "DR-002", "DR-003"})
@@ -716,6 +726,360 @@ class SelectionGate(unittest.TestCase):
             self.assertIn("TST-0302 is a made part no selection candidate covers", found[0].message)
         blocking = evidence.packet_blocking({}, record=selected(docs), stage="design_freeze", selection_sha256=digest)
         self.assertTrue(any("TST-0302 is a made part no selection candidate covers" in item for item in blocking), blocking)
+
+
+class Producer:
+    """A fake producer step that passed and reported a JSON result."""
+
+    def ended(self) -> bool:
+        return True
+
+    def stop(self) -> int:
+        return 0
+
+    def result(self) -> dict[str, Any]:
+        return {"status": "pass", "reported": True}
+
+
+def launcher(path: Path, body: str) -> Path:
+    """A stand-in for cad-flow run.py: `body` runs with sys.argv[1] the producer script that the caller names."""
+    path.write_text("import json, sys\n" + body, encoding="utf-8")
+    return path
+
+
+PRODUCER = """# /// script
+# requires-python = ">=3.12"
+# dependencies = []
+# ///
+import importlib.util
+import sys
+from pathlib import Path
+
+SKILLS = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location("emit", SKILLS / "cad-record" / "scripts" / "emit.py")
+emit = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(emit)
+hw = Path(sys.argv[sys.argv.index("--hw") + 1] if "--hw" in sys.argv else sys.argv[1])  # render.py takes hw first
+result = %(result)s
+result.setdefault("notes", ["a long note that makes the result longer than its compact summary"] * 30)
+emit.emit(result, tool="fake", name="fake", code=%(code)d, scratch=emit.work_dir(hw))
+sys.exit(%(code)d)
+"""
+
+
+def real_skills(root: Path, producers: dict[str, tuple[str, dict[str, Any], int]]) -> Path:
+    """A skills tree with the real cad-flow run.py, its scriptenv and the real emit.py, and fake producers
+    that print through emit.py as the real ones do: `producers` maps a script path to (label, result, exit)."""
+    skills = HERE.parents[1]
+    tree = root / "skills"
+    for source in (skills / "cad-flow" / "scripts" / "run.py", skills / "cad-record" / "scripts" / "emit.py",
+                   skills / "cad-model" / "scripts" / "cadmodel" / "__init__.py",
+                   skills / "cad-model" / "scripts" / "cadmodel" / "scriptenv.py"):
+        target = tree / source.relative_to(skills)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    passing = {"status": "pass"}
+    for script in ("cad-design/scripts/form_check.py", "cad-model/scripts/cad_model.py", "cad-render/scripts/render.py",
+                   "cad-motion/scripts/sweep.py", "cad-motion/scripts/motion.py"):
+        _, result, code = producers.get(script, ("", passing, 0))
+        target = tree / script
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(PRODUCER % {"result": repr(result), "code": code}, encoding="utf-8")
+    return tree / "cad-flow" / "scripts" / "run.py"
+
+
+PASSING = "print(json.dumps({'status': 'pass'}))\n"
+
+
+class BuiltRecord(unittest.TestCase):
+    """The TST record built as v1, with no independent movable joint."""
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-evidence-run-test-")
+        self.addCleanup(temporary.cleanup)
+        self.hw = fx.write_record(Path(temporary.name) / "hw", fx.tst_record())
+        for pn in ("TST-0001", "TST-0002", "TST-0004"):
+            (self.hw / "parts" / pn / "model.py").write_text(f"# {pn}\n", encoding="utf-8")
+        folder = self.hw / "versions" / "v1"
+        pns = sorted(p.parent.name for p in (self.hw / "parts").glob("*/part.yaml"))
+        for name in acceptance.layout.snapshot_names(self.hw, pns):
+            target = folder / "record" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((self.hw / name).read_bytes())
+        files = {p.relative_to(folder).as_posix(): acceptance.sha(p.read_bytes()) for p in sorted(folder.rglob("*")) if p.is_file()}
+        parts = {p.parent.name: {"source_sha256": acceptance.sha(p.read_bytes())} for p in sorted(self.hw.glob("parts/*/model.py"))}
+        (folder / "manifest.json").write_text(json.dumps({"label": "v1", "parts": parts, "joints": [], "files": files}),
+                                              encoding="utf-8")
+        self.spawned: list[str] = []
+
+    def spawn(self, step: Any) -> Producer:
+        self.spawned.append(step.id)
+        return Producer()
+
+    def run_scope(self, scope: str, stage: str) -> tuple[int, dict[str, Any]]:
+        return evidence.run(self.hw, "v1", scope, stage=stage, spawn=self.spawn, strays=list)
+
+    def pass_every_producer_obligation(self) -> None:
+        acceptance.publish_packet(self.hw, "v1", acceptance.producer_packet(impact.read_record(self.hw)))
+
+
+class EvidenceRun(BuiltRecord):
+    """`evidence.py run` with its producers faked."""
+
+    def test_every_matrix_row_is_a_step_some_scope_runs(self) -> None:
+        self.assertEqual(set(evidence.MATRIX), set(fail_fast.STEP_ORDER))
+        for ident, row in evidence.MATRIX.items():
+            with self.subTest(ident):
+                self.assertTrue({"R", "C"} & set(row.cells), f"{ident} runs in no scope")
+
+    def test_the_packet_of_a_run_is_the_packet_check_prints_for_the_same_inputs(self) -> None:
+        self.pass_every_producer_obligation()
+        code, report = self.run_scope("commit", "parts")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            evidence.main(["check", "--hw", str(self.hw), "--version", "v1", "--stage", "parts"])
+        self.assertEqual((code, report["status"], report["stopped_at"]), (0, "pass", None))
+        self.assertEqual(report["packet"], json.loads(out.getvalue()))
+        schema = json.loads((HERE.parent / "schemas" / "evidence-run.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual([e.message for e in Draft202012Validator(schema).iter_errors(report)], [])
+
+    def test_a_c_step_runs_only_while_an_obligation_it_covers_is_stale_or_open_and_due(self) -> None:
+        def material_changed() -> None:
+            self.pass_every_producer_obligation()
+            materials = self.hw / "manufacturing" / "materials.yaml"
+            data = yaml.safe_load(materials.read_text(encoding="utf-8"))
+            data["profiles"][0]["revision"] = 2
+            materials.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+        cases = {  # the TST record's form-check obligations are due from parts
+            "not yet due": ("layout", lambda: None, ["static.changed", "render"]),
+            "due and unknown": ("parts", lambda: None, ["form", "static.changed", "render"]),
+            "due and passed": ("parts", self.pass_every_producer_obligation, ["static.changed", "render"]),
+            "passed, then a material changed": ("parts", material_changed, ["form", "static.changed", "render"]),
+        }
+        for label, (stage, change, spawned) in cases.items():
+            with self.subTest(label):
+                shutil.rmtree(self.hw / "checks", ignore_errors=True)
+                change()
+                self.spawned = []
+                code, report = self.run_scope("commit", stage)
+                self.assertEqual((code, self.spawned), (0, spawned))
+                self.assertEqual({s["id"]: s["status"] for s in report["steps"] if s["id"].startswith(("sweep", "motion"))},
+                                 {"sweep.smoke": "skipped", "motion.default": "skipped"})
+
+    def test_a_flow_edit_stales_no_producer_packet(self) -> None:
+        self.pass_every_producer_obligation()
+        _, before = self.run_scope("commit", "parts")
+        product = self.hw / "product.yaml"
+        data = yaml.safe_load(product.read_text(encoding="utf-8"))
+        data["flow"].update(stage="detail", recheck_from="detail")
+        product.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        self.spawned = []
+        _, after = self.run_scope("commit", "parts")
+        self.assertNotEqual(before["record_sha256"], after["record_sha256"], "flow is a record input")
+        self.assertEqual(after["packet"]["statuses"], before["packet"]["statuses"])
+        self.assertNotIn("form", self.spawned, "the form check is not due again")
+
+    def test_a_version_that_is_not_built_or_fails_its_manifest_is_refused_as_stale_and_runs_nothing(self) -> None:
+        code, report = evidence.run(self.hw, "v2", "commit", stage="parts", spawn=self.spawn, strays=list)
+        self.assertEqual((code, report["status"], report["steps"], report["packet"], self.spawned), (1, "refused", [], None, []))
+        self.assertEqual([f["code"] for f in report["findings"]], ["run.not_built"])
+        (self.hw / "versions" / "v1" / "record" / "product.yaml").write_text("edited\n", encoding="utf-8")
+        code, report = self.run_scope("commit", "parts")
+        self.assertEqual((code, report["status"], self.spawned), (1, "refused", []))
+        self.assertIn("stale: build the version again", report["findings"][0]["message"])
+
+    def test_a_version_1_record_is_refused_and_runs_nothing(self) -> None:
+        product = self.hw / "product.yaml"
+        data = yaml.safe_load(product.read_text(encoding="utf-8"))
+        del data["record_version"]
+        product.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        code, report = self.run_scope("commit", "parts")
+        self.assertEqual((code, report["status"], report["steps"], report["packet"], self.spawned), (1, "refused", [], None, []))
+        self.assertEqual([f["code"] for f in report["findings"]], ["record.migration_required"])
+
+    def test_a_full_run_whose_steps_pass_fails_when_the_packet_gate_blocks(self) -> None:
+        code, report = self.run_scope("full", "parts")  # nothing shows the obligations due at parts
+        self.assertEqual((code, report["status"], report["stopped_at"]), (1, "fail", None))
+        self.assertEqual({step["status"] for step in report["steps"]} - {"skipped"}, {"pass"})
+        self.assertFalse(report["packet"]["gate"]["passed"])
+
+    def test_the_smoke_and_the_full_sweep_publish_to_different_bundles(self) -> None:
+        manifest_path = self.hw / "versions" / "v1" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["joints"] = [{"id": "elbow", "type": "revolute", "min": 0, "max": 90, "nominal": 0}]
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        def case(argv: list[str]) -> str:
+            return argv[argv.index("--case") + 1] if "--case" in argv else "sweep"  # sweep.py's default case
+
+        cases = {}
+        for scope, ident in (("commit", "sweep.smoke"), ("full", "sweep.full")):
+            _, report = self.run_scope(scope, "layout")
+            cases[ident] = case(next(step["argv"] for step in report["steps"] if step["id"] == ident))
+        self.assertNotEqual(cases["sweep.smoke"], cases["sweep.full"])
+
+    def test_a_commit_run_without_stage_uses_the_flow_stage(self) -> None:
+        product = self.hw / "product.yaml"
+        product.write_text(product.read_text(encoding="utf-8").replace("stage: parts", "stage: layout"), encoding="utf-8")
+        code, report = evidence.run(self.hw, "v1", "commit", spawn=self.spawn, strays=list)
+        form = next(step for step in report["steps"] if step["id"] == "form")
+        self.assertEqual((report["stage"], form["argv"][form["argv"].index("--fidelity") + 1], report["packet"]["stage"]),
+                         ("layout", "F1", "layout"))
+
+    def test_the_full_scope_refuses_to_default_to_an_advanced_flow_stage(self) -> None:
+        self.assertEqual(impact.plain(impact.read_record(self.hw).product)["flow"]["stage"], "parts")  # past the layout gate
+        with self.assertRaisesRegex(ValueError, "--stage"):
+            evidence.run(self.hw, "v1", "full", spawn=self.spawn, strays=list)
+        self.assertEqual(self.spawned, [])
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = evidence.main(["run", "--hw", str(self.hw), "--version", "v1", "--scope", "full"])
+        self.assertEqual((code, json.loads(out.getvalue())["status"]), (2, "error"))
+
+    def test_a_full_run_after_provisional_advancement_evaluates_the_stage_of_its_gate(self) -> None:
+        code, report = self.run_scope("full", "layout")  # flow.stage is already parts
+        form = next(step for step in report["steps"] if step["id"] == "form")
+        self.assertEqual((report["stage"], form["argv"][form["argv"].index("--fidelity") + 1]), ("layout", "F1"))
+        self.assertEqual(report["packet"]["stage"], "layout")
+
+    def test_both_sweeps_forward_the_attachments_of_the_built_manifest(self) -> None:
+        manifest_path = self.hw / "versions" / "v1" / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["joints"] = [{"id": "elbow", "type": "revolute", "min": 0, "max": 90, "nominal": 0}]
+        manifest["attach"] = ["TST-0002=TST-0001", "TST-0004=TST-0001"]
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        for scope, ident in (("commit", "sweep.smoke"), ("full", "sweep.full")):
+            with self.subTest(ident):
+                _, report = self.run_scope(scope, "layout")
+                argv = next(step["argv"] for step in report["steps"] if step["id"] == ident)
+                forwarded = [argv[i + 1] for i, word in enumerate(argv) if word == "--attach"]
+                self.assertEqual(forwarded, ["TST-0002=TST-0001", "TST-0004=TST-0001"])
+
+
+class EvidenceRunProducers(BuiltRecord):
+    """`evidence.py run` starting real processes through a stand-in for cad-flow run.py."""
+
+    def run_with(self, body: str, scope: str, stage: str) -> tuple[int, dict[str, Any]]:
+        with mock.patch.object(evidence, "RUN_PY", launcher(self.hw.parent / "run.py", body)):
+            return evidence.run(self.hw, "v1", scope, stage=stage, strays=list)
+
+    def test_each_producer_runs_through_run_py_with_its_output_in_scratch(self) -> None:
+        code, report = self.run_with("print(json.dumps({'status': 'fail', 'argv': sys.argv[1:]}))\nsys.exit(1)\n",
+                                     "commit", "layout")
+        self.assertEqual((code, report["status"], report["stopped_at"], report["packet"]), (1, "fail", "static.changed", None))
+        step = next(item for item in report["steps"] if item["id"] == "static.changed")
+        self.assertEqual((step["exit"], step["argv"][1:3]), (1, [str(self.hw.parent / "run.py"), "cad-model/scripts/cad_model.py"]))
+        self.assertEqual(step["result"]["status"], "fail")
+        output = self.hw.parent / step["result"]["stdout"]
+        self.assertEqual(output.parent.parent, self.hw.parent / ".cad-work" / "evidence-run")
+        self.assertEqual(json.loads(output.read_text(encoding="utf-8"))["argv"][0], "cad-model/scripts/cad_model.py")
+
+    def test_a_producer_that_exits_0_without_a_json_report_gives_no_result(self) -> None:
+        for label, body in (("empty", ""), ("not json", "print('done')\n"), ("not an object", "print('[1]')\n")):
+            with self.subTest(label):
+                code, report = self.run_with(body, "commit", "layout")
+                step = next(item for item in report["steps"] if item["id"] == "static.changed")
+                self.assertEqual((step["exit"], step["status"], code, report["status"]), (0, "no_result", 2, "no_result"))
+
+    def test_a_form_check_open_only_on_obligations_not_yet_due_does_not_block(self) -> None:
+        parts = next(o.id for o in mi.required_checks(impact.read_record(self.hw))
+                     if o.family.startswith("process.") and o.stage == "parts")
+        body = ("if sys.argv[1] != 'cad-design/scripts/form_check.py':\n    print(json.dumps({'status': 'pass'})); sys.exit(0)\n"
+                f"print(json.dumps({{'status': 'pass', 'manufacturing': {{'status': 'unknown', "
+                f"'open': [{{'obligation': {parts!r}, 'outcome': 'unknown'}}]}}}}))\nsys.exit(1)\n")  # form_check.py exits 1
+        for stage, status, stopped in (("layout", "pass", None), ("parts", "fail", "form")):
+            with self.subTest(stage):
+                _, report = self.run_with(body, "full", stage)
+                form = next(item for item in report["steps"] if item["id"] == "form")
+                self.assertEqual((form["exit"], form["status"], report["stopped_at"]), (1, status, stopped))
+
+    def run_real(self, producers: dict[str, tuple[str, dict[str, Any], int]], scope: str, stage: str) -> tuple[int, dict[str, Any]]:
+        """`evidence.run` with the real run.py (default output mode) and producers that print through emit.py."""
+        run_py = real_skills(self.hw.parent / "tree", producers)
+        with mock.patch.object(evidence, "RUN_PY", run_py):
+            return evidence.run(self.hw, "v1", scope, stage=stage, strays=list)
+
+    def test_a_passing_static_check_through_the_real_launcher_gives_pass(self) -> None:
+        code, report = self.run_real({}, "commit", "layout")
+        statuses = {item["id"]: item["status"] for item in report["steps"]}
+        self.assertEqual((code, report["status"], statuses["static.changed"]), (0, "pass", "pass"))
+        self.assertEqual(report["steps"][0]["status"], "pass")
+
+    def test_a_form_report_open_only_on_obligations_not_yet_due_does_not_block_through_the_real_launcher(self) -> None:
+        parts = next(o.id for o in mi.required_checks(impact.read_record(self.hw))
+                     if o.family.startswith("process.") and o.stage == "parts")
+        form = {"status": "pass", "manufacturing": {"status": "unknown", "open": [{"obligation": parts, "outcome": "unknown"}]}}
+        producers = {"cad-design/scripts/form_check.py": ("form", form, 1)}  # form_check.py exits 1
+        for stage, status, stopped in (("layout", "pass", None), ("parts", "fail", "form")):
+            with self.subTest(stage):
+                _, report = self.run_real(producers, "full", stage)
+                step = next(item for item in report["steps"] if item["id"] == "form")
+                self.assertEqual((step["exit"], step["status"], report["stopped_at"]), (1, status, stopped))
+
+    def form_blocks(self, report: dict[str, Any], stage: str) -> None:
+        """A form_check.py exit 1 with `report` stops the run at the form step at `stage`, with no packet."""
+        producers = {"cad-design/scripts/form_check.py": ("form", report, 1)}
+        code, run_report = self.run_real(producers, "full", stage)
+        form = next(item for item in run_report["steps"] if item["id"] == "form")
+        self.assertEqual((code, form["exit"], form["status"], run_report["stopped_at"], run_report["packet"]),
+                         (1, 1, "fail", "form", None))
+
+    def test_a_fidelity_failing_form_report_blocks_even_when_its_open_obligations_are_not_yet_due(self) -> None:
+        parts = next(o.id for o in mi.required_checks(impact.read_record(self.hw))
+                     if o.family.startswith("process.") and o.stage == "parts")
+        self.form_blocks({"status": "fail", "manufacturing": {"status": "unknown",
+                                                              "open": [{"obligation": parts, "outcome": "unknown"}]}}, "layout")
+
+    def test_a_failed_outcome_blocks_even_when_its_obligation_is_not_yet_due(self) -> None:
+        parts = next(o.id for o in mi.required_checks(impact.read_record(self.hw))
+                     if o.family.startswith("process.") and o.stage == "parts")
+        self.form_blocks({"status": "pass", "manufacturing": {"status": "fail",
+                                                              "open": [{"obligation": parts, "outcome": "fail"}]}}, "layout")
+
+
+class EvidenceRunCli(BuiltRecord):
+    """`evidence.py run` through its command line."""
+
+    def main(self, *args: str) -> tuple[int, Any]:
+        out = io.StringIO()
+        with redirect_stdout(out), mock.patch.object(evidence, "RUN_PY", launcher(self.hw.parent / "run.py", PASSING)):
+            code = evidence.main(["run", "--hw", str(self.hw), "--version", "v1", *args])
+        return code, json.loads(out.getvalue())
+
+    def test_run_prints_its_report_writes_it_under_cad_work_and_exits_with_its_status(self) -> None:
+        target = self.hw.parent / ".cad-work" / "runs" / "commit.json"
+        code, report = self.main("--scope", "commit", "--stage", "layout", "--out", str(target))
+        self.assertEqual((code, report["kind"], report["status"], report["scope"]), (0, "cad-evidence-run", "pass", "commit"))
+        self.assertEqual(json.loads(target.read_text(encoding="utf-8")), report)
+
+    def test_an_out_path_outside_cad_work_is_a_usage_error_before_any_producer_starts(self) -> None:
+        code, report = self.main("--scope", "commit", "--stage", "layout", "--out", str(self.hw / "run.json"))
+        self.assertEqual((code, report["status"]), (2, "error"))
+        self.assertIn("--out must be under", report["message"])
+        self.assertFalse((self.hw.parent / ".cad-work" / "evidence-run").exists())
+
+    def test_an_unknown_scope_is_a_usage_error(self) -> None:
+        for scope in ("inner", "provisional"):
+            with self.subTest(scope), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                evidence.main(["run", "--hw", str(self.hw), "--version", "v1", "--scope", scope])
+            self.assertEqual(raised.exception.code, 2)
+
+    def test_a_stray_run_ends_the_run_with_no_result_and_its_stop_command(self) -> None:
+        sleeper = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True)
+        self.addCleanup(lambda: (sleeper.kill(), sleeper.wait()))
+        ended = subprocess.run([sys.executable, "-c", "import os; print(os.getpid())"], capture_output=True, text=True, check=True)
+        lifecycle = evidence._lifecycle()
+        record = lifecycle.runs_dir(self.hw) / "orphan.json"
+        record.parent.mkdir(parents=True)
+        record.write_text(json.dumps({"schema": 1, "kind": "sweep", "run_id": "orphan", "host": socket.gethostname(),
+                                      "pid": int(ended.stdout), "identity": "ended", "pgid": None, "argv": [], "started": "",
+                                      "groups": [{"pgid": sleeper.pid, "identity": lifecycle.identity(sleeper.pid)}]}),
+                          encoding="utf-8")
+        code, report = self.main("--scope", "commit", "--stage", "layout")
+        self.assertEqual((code, report["status"], report["stop_commands"]), (2, "no_result", [f"kill -TERM -- -{sleeper.pid}"]))
+        self.assertEqual({s["status"] for s in report["steps"] if s["argv"] is not None} - {"skipped"}, {"stopped"})
+        self.assertIsNone(sleeper.poll(), "the run signals no stray")
 
 
 if __name__ == "__main__":
