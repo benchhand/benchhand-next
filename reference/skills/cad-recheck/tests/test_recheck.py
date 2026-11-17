@@ -234,6 +234,69 @@ class RecheckHookTests(unittest.TestCase):
         self.assertEqual(self.git("config", "--get", "core.hooksPath").stdout.strip(), ".githooks")
 
 
+    def gate_packet(self, stage: str, *, outcome: str = "pass") -> Path:
+        """The evidence packet at `stage` of a producer that shows only the checks due at or before `stage`:
+        later-stage checks stay unknown, as in a project that has just frozen that stage."""
+        order = stamp_module.validate.stages()
+        staged = stamp_module.staged_record(self.root)
+        due = [o for o in evidence.mi.required_checks(staged.record) if order.index(o.stage) <= order.index(stage)]
+        producer = evidence.ProducerPacket("hw/checks/v1/tst", "0" * 64,
+                                           acceptance.producer_packet(staged.record, outcome=outcome, obligations=due))
+        packet = evidence.assess(staged.record, version="v1", manifest_sha256="0" * 64, packets=[producer],
+                                 selection_sha256=staged.selection_sha256).packet(stage, staged.record_sha256)
+        checks = self.root / ".checks.json"
+        checks.write_text(json.dumps(packet), encoding="utf-8")
+        return checks
+
+    def provisional_gate(self, flow_stage: str, recheck_from: str = "ground") -> None:
+        """The state after a provisional gate: a PROVISIONAL decision and flow.stage advanced to `flow_stage`."""
+        self.stage_product(flow_stage, recheck_from)
+        decision = self.root / "hw" / "decisions" / "DR-001.md"
+        decision.parent.mkdir(parents=True, exist_ok=True)
+        decision.write_text("Status: PROVISIONAL\n\nTemporary until the full check: v1 passed fast checks 1-4.\n", encoding="utf-8")
+        self.git("add", "hw")
+
+    def stamp_gate(self, stage: str, *, outcome: str = "pass", passed: bool = True) -> subprocess.CompletedProcess[str]:
+        args = ["--stage", stage, "--checks", str(self.gate_packet(stage, outcome=outcome))]
+        result = self.run_python(STAMP, *(args + (["--passed"] if passed else [])), cwd=self.root)
+        if result.returncode == 0:
+            self.git("add", "hw/.cad/recheck.json")
+        return result
+
+    def test_a_stamp_at_the_gate_just_passed_is_accepted_after_the_stage_advanced(self) -> None:
+        self.provisional_gate("parts")
+        result = self.stamp_gate("layout")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.run_python(STAMP, "--verify", cwd=self.root).returncode, 0)
+        self.assertEqual(self.commit().returncode, 0)
+
+    def test_a_stamp_two_stages_behind_flow_stage_is_refused(self) -> None:
+        self.provisional_gate("detail")
+        self.assertEqual(self.stamp_gate("layout").returncode, 0)
+        result = self.run_python(STAMP, "--verify", cwd=self.root)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("does not match staged hw/product.yaml flow.stage", result.stderr)
+
+    def test_a_stamp_below_recheck_from_is_refused(self) -> None:
+        self.write_product("specify", "parts")
+        self.git("add", "hw")
+        self.git("commit", "-qn", "-m", "raise the threshold before the stage is due")
+        self.provisional_gate("parts", "parts")
+        self.assertEqual(self.stamp_gate("layout").returncode, 0)
+        result = self.run_python(STAMP, "--verify", cwd=self.root)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("is below flow.recheck_from parts", result.stderr)
+
+    def test_a_failing_layout_check_blocks_the_stamp_and_the_commit(self) -> None:
+        self.provisional_gate("parts")
+        refused = self.stamp_gate("layout", outcome="fail")
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("--passed contradicts the evidence packet", refused.stderr)
+        self.assertEqual(self.stamp_gate("layout", outcome="fail", passed=False).returncode, 0)
+        result = self.run_python(STAMP, "--verify", cwd=self.root)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("the recheck stamp does not say passed: true", result.stderr)
+
     def test_at_or_after_threshold_refuses_missing_stamp(self) -> None:
         self.stage_product("layout")
         self.git("add", "hw/product.yaml")
