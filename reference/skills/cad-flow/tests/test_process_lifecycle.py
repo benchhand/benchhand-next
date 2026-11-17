@@ -41,6 +41,24 @@ FAMILY = textwrap.dedent("""
     os.replace(sys.argv[1] + ".tmp", sys.argv[1])
     time.sleep(600)
 """)
+# A child that dies on SIGTERM and a grandchild that ignores it. The child writes both pids once the
+# grandchild reports that it ignores SIGTERM.
+LINGERER = textwrap.dedent("""
+    import os, signal, subprocess, sys, time
+    ready = sys.argv[1] + ".ready"
+    grandchild = subprocess.Popen([sys.executable, "-c", "import signal, sys, time; "
+                                   "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+                                   "open(sys.argv[1], 'w').close(); time.sleep(600)", ready])
+    deadline = time.monotonic() + 60
+    while not os.path.exists(ready):
+        if time.monotonic() > deadline:
+            sys.exit("the grandchild never reported that it ignores SIGTERM")
+        time.sleep(0.01)
+    with open(sys.argv[1] + ".tmp", "w") as out:
+        out.write(f"{os.getpid()} {grandchild.pid}")
+    os.replace(sys.argv[1] + ".tmp", sys.argv[1])
+    time.sleep(600)
+""")
 # A command that leaves a grandchild behind and ends at once.
 LEAVER = textwrap.dedent("""
     import subprocess, sys
@@ -117,6 +135,14 @@ class SupervisedGroupTests(Case):
         self.assert_gone(child, grandchild)
         self.assertEqual(lifecycle.terminate_group(process), code)  # idempotent
 
+    def test_a_group_that_outlives_its_supervisor_is_killed(self) -> None:
+        pids = self.root / "pids"
+        process = lifecycle.spawn([sys.executable, "-c", LINGERER, str(pids)])
+        child, grandchild = self.family_pids(pids)
+        code = lifecycle.terminate_group(process, grace_seconds=5)
+        self.assertEqual(code, -signal.SIGTERM)  # the command's own status: its child died of SIGTERM
+        self.assert_gone(child, grandchild)
+
     def test_the_group_dies_when_its_parent_is_killed_outright(self) -> None:
         pids = self.root / "pids"
         parent_code = LOAD + textwrap.dedent(f"""
@@ -170,6 +196,17 @@ class SupervisedGroupTests(Case):
         script.write_text("not a program")
         with self.assertRaises(PermissionError):
             lifecycle.spawn([str(script)])
+
+
+class WithoutWaitidSupervisedGroupTests(SupervisedGroupTests):
+    """The same groups where os has no waitid: macOS before Python 3.13 and FreeCAD's Python 3.11."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        if hasattr(os, "waitid"):
+            waitid = os.waitid
+            del os.waitid
+            self.addCleanup(setattr, os, "waitid", waitid)
 
 
 class RunRecordTests(Case):
