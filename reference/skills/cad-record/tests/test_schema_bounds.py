@@ -200,6 +200,8 @@ CASES: tuple[Case, ...] = (
     quantity(44, "calibration.bridge_span", "bridge_span", "[0, 256]", {"max": 50}, "mm"),
     quantity(44, "calibration.overhang_angle", "overhang_angle", "[0, 90]", {"min": 20, "max": 70}, "deg"),
     quantity(44, "calibration.min_wall", "min_wall", "[0.1, 25]", {"min": 0.4, "max": 3}, "mm"),
+    quantity(44, "calibration.min_feature", "min_feature", "[0.2, 20]", {"min": 0.4, "max": 5}, "mm"),
+    quantity(44, "calibration.min_hole", "min_hole", "[0.1, 25]", {"min": 0.5, "max": 10}, "mm"),
     quantity(44, "calibration.deviation", "deviation", "[-2, 2]", {"min": -0.5, "max": 0.5}, "mm"),
     quantity(0, "calibration.min_bed_contact_area", "min_bed_contact_area", "(0,)", None, "mm2"),
     fact(45, "nozzle_diameter", "(0, 3]", {"min": 0.2, "max": 1.2}, "mm"),
@@ -263,7 +265,8 @@ FACTS = {
     "profile_tolerance_mm", "zone_mm", "limit_um", "edge_limits", "deviation_mm", "heat_set.hole_d", "heat_set.depth_min",
     "limits.linear_mm", "limits.angular_deg", "min_wall_mm.cnc", "volume_rel_tolerance", "volume_abs_tolerance_mm3",
     "material.E", "material.density", "material.yield", "material.nu", "calibration.samples", "calibration.bridge_span",
-    "calibration.overhang_angle", "calibration.min_wall", "calibration.deviation", "calibration.min_bed_contact_area", "nozzle_diameter", "layer_height",
+    "calibration.overhang_angle", "calibration.min_wall", "calibration.min_feature", "calibration.min_hole", "calibration.deviation",
+    "calibration.min_bed_contact_area", "nozzle_diameter", "layer_height",
     "hotend_max_temperature", "bed_max_temperature", "max_speed", "travel_x", "travel_y", "travel_z", "spindle_max_speed",
     "power", "pump_pressure", "press_brake_force", "modulus", "density", "temperature", "poisson_ratio", "min_clearance_mm",
     "tol", "tol_plus", "tol_minus", "confidence", "weight", "crank_radius_mm", "rod_length_mm",
@@ -581,7 +584,7 @@ MATERIALS = "manufacturing-materials.schema.json"
 # The calibration characteristics and material property names that dispatch to a bounded definition
 CALIBRATION_NAMES = {
     "calibration.bridge_span": ["bridge_span"], "calibration.overhang_angle": ["overhang_angle"],
-    "calibration.min_wall": ["min_wall"],
+    "calibration.min_wall": ["min_wall"], "calibration.min_feature": ["min_feature"], "calibration.min_hole": ["min_hole"],
     "calibration.deviation": ["hole_diameter_deviation", "dimensional_deviation", "profile_deviation"],
     "calibration.min_bed_contact_area": ["min_bed_contact_area"],
 }
@@ -637,7 +640,7 @@ class Documents(unittest.TestCase):
 
     def test_every_calibration_limit_is_bounded_by_its_characteristic(self) -> None:
         cases = [c for c in CASES if c.name in CALIBRATION_NAMES]
-        self.assertEqual(len(cases), 5)
+        self.assertEqual(len(cases), 7)
         for case in cases:
             for name in CALIBRATION_NAMES[case.name]:
                 def edit(document: Any, limits: Any, name: str = name) -> None:
@@ -712,6 +715,63 @@ def bound_errors(root: str, data: Any, path: tuple[Any, ...]) -> list[Any]:
     for top in registry.document_validator(registry.SCHEMAS, root).iter_errors(data):
         found += [e for e in leaves(top) if tuple(e.absolute_path)[:len(path)] == path and e.validator in BOUND_KEYWORDS]
     return found
+
+
+class MinHoleBand(unittest.TestCase):
+    """The min_hole band is a heuristic without a source table, so it may only warn. The public validator turns each
+    schema error into a finding, so a record outside the band and inside the hard bound yields none."""
+
+    def findings(self, limit: float) -> list[dict[str, str]]:
+        sys.path.insert(0, str(SKILL.parents[1] / "scripts"))
+        from modload import load_module  # noqa: PLC0415 - path set just above
+        fixtures = load_module("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures" / "manufacturing_intent.py")
+        validate = load("cad_record_validate", SKILL / "scripts" / "validate.py")
+        document = copy.deepcopy(fixtures.tst_record()["manufacturing/capabilities.yaml"])
+        calibration = document["profiles"][0]["calibrations"][0]
+        calibration["characteristic"] = "min_hole"
+        calibration["result"]["limits"] = {"value": limit, "units": "mm"}
+        found: list[dict[str, str]] = []
+        validate.validate_document(document, CAPABILITIES, "capabilities.yaml", found)
+        return found
+
+    def test_a_value_outside_the_band_and_inside_the_hard_bound_is_no_error(self) -> None:
+        band = BY_NAME["calibration.min_hole"].band
+        assert band is not None
+        for limit in (0.1, 0.3, 15, 25):
+            with self.subTest(limit=limit):
+                self.assertTrue(limit < band["min"] or limit > band["max"], "the value misses the band, which only warns")
+                self.assertEqual(self.findings(limit), [])
+
+    def test_a_value_outside_the_hard_bound_is_still_an_error(self) -> None:
+        for limit in (0.05, 26):
+            with self.subTest(limit=limit):
+                self.assertNotEqual(self.findings(limit), [])
+
+    def test_the_description_says_the_band_is_a_heuristic_and_names_the_sourced_value(self) -> None:
+        description = node(CAPABILITIES, "/$defs/qty_min_hole")["description"]
+        self.assertIn("heuristic", description)
+        self.assertIn("no source table", description)
+        self.assertIn("2.0 mm", description)
+        self.assertIn("Protolabs", description)
+
+
+class Units(unittest.TestCase):
+    """A quantity in a unit of another dimension is refused by the schema, whatever its value. The vocabulary is
+    the closed set of manufacturing.schema.json and the own units of each quantity are those CONVERT lists."""
+
+    def quantities(self) -> list[Case]:
+        return [c for c in CASES if c.schema == CAPABILITIES and c.shape in ("quantity", "fact")]
+
+    def test_every_qty_definition_has_a_case(self) -> None:
+        defined = {name for name in document(CAPABILITIES)["$defs"] if name.startswith("qty_")}
+        self.assertEqual(defined, {(c.band_pointer or c.pointer).rsplit("/", 1)[1] for c in self.quantities()})
+
+    def test_a_quantity_refuses_every_unit_of_another_dimension(self) -> None:
+        vocabulary = document("manufacturing.schema.json")["$defs"]["units"]["enum"]
+        for case in self.quantities():
+            for unit in (u for u in vocabulary if u not in CONVERT[case.canon]):
+                with self.subTest(case.name, unit=unit):
+                    self.assertTrue(rejected(case, 1, unit), f"{unit} is not a unit of {case.canon}")
 
 
 class Reached(unittest.TestCase):
