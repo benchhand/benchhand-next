@@ -155,6 +155,10 @@ def safe_project(root: Path, kernel: str) -> Path:
     return hw
 
 
+# One ISO 286 table value changed: IT6 up to 3 mm, 6 um -> 7 um (cad-fits/data/iso286.json).
+ISO286_IT6_EDIT = (b'"6": [6, ', b'"6": [7, ')
+
+
 def cli(*args: str) -> tuple[subprocess.CompletedProcess[str], dict, float]:
     """cad_model.py with `args`; a check gets a pair cache of its own unless `args` name one."""
     started = time.perf_counter()
@@ -2439,6 +2443,48 @@ class ManufacturingInputCacheTests(unittest.TestCase):
         row = checked["checks"]["build_volume"]["parts"]["TST-0001"]
         self.assertEqual((row["status"], row["approved"], row["envelope_source"]),
                          ("pass", True, "capability tst_printer envelope"))
+
+    def test_a_change_to_the_check_code_or_its_data_republishes_the_readback_packet(self) -> None:
+        """The readback bundle's recipe names the check code and VERDICT_DATA (#128). Unchanged, a publication
+        reuses the sealed bundle. After an edit to check.py, manufacture.py or one ISO 286 value it replaces
+        it. The CLI reports the code fingerprint (evaluation.code_sha256), which an edit changes. Each run
+        uses a copy of the skills tree with one file edited (fixtures/check_recipe_key.py)."""
+        proc, checked, _ = self.checks["v1"]
+        self.assertEqual(proc.returncode, 0, proc.stdout[-3000:] + proc.stderr[-2000:])
+        with tempfile.TemporaryDirectory() as folder:
+            tree = Path(shutil.copytree(HERE.parents[1], Path(folder) / "skills", ignore=shutil.ignore_patterns("__pycache__")))
+            checks = Path(folder) / "checks.json"
+            checks.write_text(json.dumps(checked["checks"]), encoding="utf-8")
+
+            def probe(*args: str) -> dict:
+                done = subprocess.run([sys.executable, "-B", str(HERE / "fixtures" / "check_recipe_key.py"), str(tree), *args],
+                                      capture_output=True, text=True, check=False, timeout=300)
+                self.assertEqual(done.returncode, 0, done.stderr[-2000:])
+                return json.loads(done.stdout)
+
+            def publish() -> dict:
+                return probe("publish", str(self.hw), "v1", str(checks))
+
+            sealed = publish()
+            self.assertTrue(sealed["reused"], "the CLI check's own publication with this code is reused")
+            self.assertEqual(checked["evaluation"]["code_sha256"], probe()["code_sha256"])
+            try:
+                for relative, change in (("cad-model/scripts/cadmodel/check.py", None),
+                                         ("cad-model/scripts/cadmodel/manufacture.py", None),
+                                         ("cad-fits/data/iso286.json", ISO286_IT6_EDIT)):
+                    path = tree / relative
+                    original = path.read_bytes()
+                    path.write_bytes(original + b"\n# edited\n" if change is None else original.replace(*change))
+                    try:
+                        with self.subTest(edited=relative):
+                            published = publish()
+                            self.assertEqual((published["reused"], published["recipe_sha256"] != sealed["recipe_sha256"]),
+                                             (False, True))
+                            self.assertNotEqual(probe()["code_sha256"], checked["evaluation"]["code_sha256"])
+                    finally:
+                        path.write_bytes(original)
+            finally:
+                self.assertEqual(publish()["recipe_sha256"], sealed["recipe_sha256"], "unedited, the recipe is the sealed one again")
 
     def test_the_check_publishes_the_readback_packet_evidence_reads(self) -> None:
         """check is the cad.readback producer: the passing version's sealed packet passes its expected
