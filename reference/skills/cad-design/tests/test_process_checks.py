@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-design process_checks: process-dispatched manufacturability checks per made component and route
 operation (plan section 11 rows 6, 7, 9, 10, 11, 12, 17 and 18, every disconnected component, the optical
 route of decision 2, and the resin, casting, sheet-forming, waterjet and laser-flatness handlers).

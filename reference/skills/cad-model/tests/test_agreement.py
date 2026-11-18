@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cadmodel.agreement: whether a GLB mesh depicts the STEP shape it is placed for, from the probe in
 fixtures/agreement_probe.py (it builds the shapes and the GLB with OCP; this file judges the verdicts).
 

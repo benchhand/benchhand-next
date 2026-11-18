@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Record version 2 schema contracts: shared facts, sources, quantities and subjects, the use case,
 classified statements, part intent, interface functions, assembly operations, capability, material,
 selection, finding, evidence and check-result documents, release manifest v3, and the shipped template

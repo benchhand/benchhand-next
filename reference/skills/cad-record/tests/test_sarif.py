@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """emit.py --sarif: the tool-result envelope's findings exported as SARIF 2.1.0.
 
 Run: python3 -m unittest discover -s skills/cad-record/tests -p test_sarif.py -v

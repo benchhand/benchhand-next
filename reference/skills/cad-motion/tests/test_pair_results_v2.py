@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion pair results v2 (pair_measure.py, pose.py identity): cache keys and their guard,
 geometry and rule invalidation, warm reruns, suspects, task chunks and resume.
 

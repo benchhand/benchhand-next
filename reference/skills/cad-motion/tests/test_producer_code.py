@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A producer's reuse key covers its own script, the modules it loads and the data it reads (#128).
 
 Each motion producer that publishes, or reports what decided a result, takes the sha256 of its code

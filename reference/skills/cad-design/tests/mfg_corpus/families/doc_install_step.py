@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: an assembly operation with no installation step.
 
 Measured on the access fixture's five parts, as `assembly_operations_order` is, because the release obligations of the

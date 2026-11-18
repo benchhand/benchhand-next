@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0009 Bushing SPIROL CMPL 4 X 6 EK CL8100: cad-design reference model, CadQuery 2.8, fidelity F2.
 
 Catalogue headed knurled brass sleeve (a SPIROL compression limiter used as a plain

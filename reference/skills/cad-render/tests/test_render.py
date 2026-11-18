@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Regression tests for cad-render heuristics, cache, reuse, visibility, renderer assets and policy.
 
 Run: python3 -m unittest discover -s cad/skills/cad-render/tests

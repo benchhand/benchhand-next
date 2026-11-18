@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """selection.py: the use case gates a final recommendation; hard constraints (mandatory requirements, capability
 and material approvals, the optical route) eliminate before preferences rank; the comparison, the proposal and
 its findings; and the read-only CLI. Plan section 11 rows 1-5 and the transparency case, on synthetic TST

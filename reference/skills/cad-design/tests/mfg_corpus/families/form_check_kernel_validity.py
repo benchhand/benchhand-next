@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Kernel validity on cad-design's deliberate defect models (reused in place, parameter-edited for the twin), as a release
 sees it: the cad.readback obligation of the packet cad-model check publishes for the built version.
 

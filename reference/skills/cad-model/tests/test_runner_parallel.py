@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Parallel part builds in the kernel runner: CAD_MODEL_BUILD_JOBS, request order, per-part isolation.
 
 Run: python3 -B -m unittest discover -s skills/cad-model/tests -p test_runner_parallel.py

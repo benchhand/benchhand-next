@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """stdout size of the switched producers in compact mode, on the lamp-arm example.
 
 Run: python3 -m unittest discover -s skills/cad-model/tests -p test_output_budget.py -v

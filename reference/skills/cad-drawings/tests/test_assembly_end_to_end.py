@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """assembly_drawing.py end to end: a fixture assembly STEP through FreeCAD to a published, re-checkable package.
 
 The fixture is a 80 x 40 x 6 mm plate with one pin definition placed twice (``@pin-a``, ``@pin-b``),

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Regression tests for the cad-concept scene checker, handoff export, and live server.
 
 Stdlib only, so CI runs them with plain python3. The JSON Schema checks need the

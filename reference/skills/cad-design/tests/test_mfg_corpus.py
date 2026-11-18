@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Tests for the mutation-corpus harness itself (mfg_corpus/): rate arithmetic, registry, the rates command.
 
 Run: python3 -m unittest discover -s skills/cad-design/tests -p test_mfg_corpus.py

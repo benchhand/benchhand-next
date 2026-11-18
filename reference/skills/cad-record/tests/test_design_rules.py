@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Design rules: the clearance margin, retention and visibility bindings, through the record validator on
 a copy of the lamp example migrated to record version 2, and through design_rules.py's public functions."""
 

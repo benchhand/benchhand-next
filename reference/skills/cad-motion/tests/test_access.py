@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Assembly order and access (plan section 11 row 15).
 
 Pure order and closure checks run always (cad-record assembly_operations). The geometric part and tool

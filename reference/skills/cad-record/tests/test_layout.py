@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The hw/ layout contract: layout.json, the resolver, bundle publication, the tree audit and its
 enforcement in validate.py."""
 

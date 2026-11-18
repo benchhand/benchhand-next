@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Rigid statics of a hard stop: the design reaction is the applied moment over the smallest arm of the contact."""
 
 from __future__ import annotations

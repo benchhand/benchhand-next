@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Assembly operation order and closure over the access fixture's five parts, as a release sees it: the assembly.order
 and intent.assembly_operations obligations of the packet access.py publishes, assessed by cad-record evidence.
 

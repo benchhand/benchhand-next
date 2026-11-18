@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: a heat-set insert with no install method or tool.
 
 The lamp's three heat-set operations carry no tool and no consumable, and the guide's tool table lists none for them.

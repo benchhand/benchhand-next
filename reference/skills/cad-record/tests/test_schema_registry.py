@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The shared schema validators: a schema edited or deleted in the running process is read again, and
 each schema directory (another checkout's cad-record) keeps its own registry and validators."""
 

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Hole recognition on fixture parts built by `cad_model.py run` in both kernels.
 
 Each case in CASES is one part built from tests/fixtures/<kernel>/hole_case.py. Its `holes` in

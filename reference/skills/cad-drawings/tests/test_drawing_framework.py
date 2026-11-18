@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Shared drawing contracts: drawing_contract.load_context, drawing_document sheets/pages/packages, freecad_views.
 
 The FreeCAD cases run tests/freecad_views_job.py through the real freecadcmd (FREECADCMD, PATH or the

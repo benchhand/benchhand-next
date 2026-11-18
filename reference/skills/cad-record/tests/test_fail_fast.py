@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """fail_fast.py: the scope plan, the fail-fast read order, stopping the producers still running at
 the first blocking result, the exit-status mapping and strays. Producers are fakes on a fake clock."""
 

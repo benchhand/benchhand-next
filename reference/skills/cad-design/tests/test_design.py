@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-design tests: reference lamp-arm models in both kernels, the block-like detector, and the wall scan.
 
 Run: python3 -m unittest discover -s cad/skills/cad-design/tests -v

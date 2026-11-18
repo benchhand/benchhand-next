@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """assembly.access: a fitted partner is exempt over its declared engagement length only.
 
 A pin presses into a sleeve that sits in a housing. The pin and sleeve are a declared fit.

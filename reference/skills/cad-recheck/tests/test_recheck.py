@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Integration tests for the staged CAD recheck stamp and git hook.
 
 The project is a small record version 2 record: a confirmed use case and one CNC part. A stamp needs the

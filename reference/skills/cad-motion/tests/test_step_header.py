@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The STEP FILE_NAME time is a constant: STEP bytes depend on the shape alone, never on the clock or the environment."""
 
 from __future__ import annotations

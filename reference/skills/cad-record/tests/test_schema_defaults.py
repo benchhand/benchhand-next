@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Every `default` and every `examples` entry of every bundled schema validates against the subschema that
 carries it, resolved through the shared registry so `$ref`s work."""
 

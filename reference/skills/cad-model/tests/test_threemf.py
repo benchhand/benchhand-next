@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The 3MF writer and reader (cadmodel.threemf): package layout, deterministic bytes, structure checks and
 the mesh measures. The tests that need trimesh, lxml, lib3mf or OCP run in uv scripts (fixtures/threemf_probe.py,
 fixtures/threemf_occ_probe.py).

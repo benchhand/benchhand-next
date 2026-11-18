@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """STEP output carries AP242 geometric validation properties: volume, area and centroid per product."""
 
 from __future__ import annotations

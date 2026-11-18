@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The lamp-arm example's Bambu Lab H2D capability profile (`h2d`) and the two FDM print operations that name it.
 
 Run: python3 -m unittest discover -s skills/cad-design/tests -p test_lamp_arm_h2d.py

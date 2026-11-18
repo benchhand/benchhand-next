@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """assembly_operations: one normalizer of operations, its drawing.operations refusal, declared
 insertion paths, and the pure joint-evidence checks with their `assembly.joint` outcomes. Kernel-free; the
 order checks of plan section 11 row 15 are in skills/cad-motion/tests/test_access.py beside the geometric ones."""

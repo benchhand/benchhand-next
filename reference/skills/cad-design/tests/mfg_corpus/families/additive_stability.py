@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """additive.orientation (first-layer contact and stability) on probed B-rep, TEST profile, no supports or brim.
 
 Judged on the fdm orientation obligation. Millimetres, bed frame, +Z up.

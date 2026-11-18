@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Feature recognition on real B-rep fixtures, and the gate findings that name an undimensioned feature.
 
 The fixtures are built and recognised in freecadcmd (tests/fixtures/recognition_fixtures_job.py);

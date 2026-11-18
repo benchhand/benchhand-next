@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Stop reaction (engineering.stop_reaction): the reaction of a latch lever's stops derived from the modelled
 contact, on the stop_fixture.py geometry. The latched stop is touched across arms 7..13 mm, the open stop across
 arms 0..7 mm, under a 30 N handle load at the lever's farthest point (80 mm along it, 3 mm off its axis line).

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """impact.py: dependency-domain fingerprints, what a change makes stale, the decisions it reopens, the
 earliest stage it reopens without raising the recheck threshold, explicit carry-forward candidates, and
 the selection compared by selection.py's own input digest.

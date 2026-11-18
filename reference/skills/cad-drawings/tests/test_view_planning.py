@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """View planning and size statements without FreeCAD: sheets, sections through a reference's centre,
 grids of holes stated once, width callouts over inclined ribs, their callout text, and sheet planning.
 

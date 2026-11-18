@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion motion plans and motion renders: plan validation and coverage, the animated GLB, the
 FreeCAD cross-check's spec and comparison, the MP4 timing check, and the render path end to end.
 

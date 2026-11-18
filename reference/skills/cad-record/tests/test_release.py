@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """release.py: a frozen record releases one complete package; any gap refuses and writes nothing in hw/."""
 
 from __future__ import annotations

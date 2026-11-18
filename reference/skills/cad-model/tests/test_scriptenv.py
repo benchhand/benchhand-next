@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cadmodel.scriptenv: PEP 723 header reading and the shared-environment launch command.
 
 Run: python3 -m unittest discover -s cad/skills/cad-model/tests -p test_scriptenv.py -v

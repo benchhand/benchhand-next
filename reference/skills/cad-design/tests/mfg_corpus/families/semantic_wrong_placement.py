@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A part of the right shape at the wrong place or turn in the assembly mesh."""
 
 import sys

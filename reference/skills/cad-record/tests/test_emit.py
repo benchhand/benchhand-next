@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-record emit.py: output modes, the compact summary and the full-JSON file.
 
 Run: python3 -m unittest discover -s skills/cad-record/tests -p test_emit.py -v

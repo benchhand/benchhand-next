@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
 
 #!/usr/bin/env python3
 """Focused FEA selection, input, missing-FreeCAD, and solver integration checks."""

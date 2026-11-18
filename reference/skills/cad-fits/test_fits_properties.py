@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Property tests of the ISO 286 limits in fits.py over every covered size, grade and deviation letter.
 
 Each property names the rule of the standard it asserts. ISO 286-1:2010 is the source; the tolerance

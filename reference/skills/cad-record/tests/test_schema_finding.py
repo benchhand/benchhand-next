@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The shared finding schema: what a finding may carry, the honest mistakes it rejects, and which of today's
 producers already emit it. Every validation goes through the schema registry."""
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0002 Lower link: cad-design reference model, CadQuery 2.8, fidelity F2.
 
 CNC 6061-T6 link that turns in the base bushing on the pin pressed into its hub (J-001,

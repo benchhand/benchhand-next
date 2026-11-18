@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-viewer tests without a browser or OCP: the session lifecycle (stop, a SIGTERM while the
 viewers start, a start that times out, against stand-in ocp_viewer processes), the host API's
 request checks and its capture guard (stand-in ocp_viewer module and presenter), version and

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion tests: pure kinematics and frame checks, then STEP runs through OCP and FreeCAD.
 
 Run: python3 -m unittest discover -s cad/skills/cad-motion/tests -v

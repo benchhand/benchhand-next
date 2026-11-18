@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """form_check overhang and bridge detection, judged by the fdm support obligation (additive.support) on the TEST profile.
 
 The calibrated limits are overhang 45 deg and bridge 5 mm. Every case plans no supports, so a face that needs them fails.

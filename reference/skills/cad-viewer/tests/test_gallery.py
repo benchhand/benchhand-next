@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-viewer preview gallery tests without a browser or OCP: what the index lists per version
 (render captions, captures, drawings with their PDFs, concept screenshots), the file route's
 path checks, and the host's gallery routes on a real loopback server.

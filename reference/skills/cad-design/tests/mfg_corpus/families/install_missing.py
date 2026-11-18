@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """install_missing: an assembly occurrence that no operation installs, other than its one base.
 
 The verdict is what a release concludes about the assembly.order obligations of the packet access.py publishes, taken

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: fasteners and the holes for them in the bill of materials.
 
 The lamp's base mounts with two M6 screws through slotted counterbored holes (IF-004, requirement REQ-005) and its

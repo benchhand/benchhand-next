@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Stack-up tests against an independent hand calculation, and the intent (version 2) stack rules."""
 
 from __future__ import annotations

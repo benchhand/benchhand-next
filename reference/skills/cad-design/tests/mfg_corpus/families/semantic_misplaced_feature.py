@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A feature in the wrong place on a part: the same hole, the same volume, 6 to 8 mm away."""
 
 import sys

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0001 Base plate and pivot boss: cad-design reference model, CadQuery 2.8, fidelity F3.
 
 FDM PETG puck printed boss-up. One revolved profile carries the axisymmetric form: the

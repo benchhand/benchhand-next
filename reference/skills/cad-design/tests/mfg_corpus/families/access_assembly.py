@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion access.py: the geometric part-path and tool-reach check on the access fixture's built geometry.
 
 Judged on the assembly.access obligations only (order is the assembly_operations_order family). Mutants and twins

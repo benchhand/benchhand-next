@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Shared helpers for corpus families: module loading, verdicts taken at the packet, cases for assembly operations.
 
 Heavy imports (yaml, OCP, the check modules) happen inside the functions, so importing this is free.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Template for a new family (the leading underscore keeps it out of the registry): copy to
 families/<family_id>.py, rename, and replace `run`. See ../README.md."""
 

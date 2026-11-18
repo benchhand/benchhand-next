@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Hard bounds, plausibility bands, defaults and CLI/env annotations of every tunable parameter in the bundled
 schemas (docs/config-audit.md, bounds table). A hard bound is a schema minimum/maximum or enum: a violation is an
 error. A plausibility band is an `x-plausible` annotation: a miss is a warning `plausibility.<field>` that the

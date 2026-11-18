@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The cad_model.py command line: how it refuses bad arguments and where its options reach the output.
 
 Run: python3 -m unittest discover -s skills/cad-model/tests -p test_cli_surface.py -v

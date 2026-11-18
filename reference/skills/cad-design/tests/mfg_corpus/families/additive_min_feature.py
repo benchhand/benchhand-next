@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """additive.geometry: calibrated minimum wall and smallest pin on probed B-rep, TEST profile (min_wall 1.6, min_feature 2.4 mm).
 
 Judged on the fdm geometry obligation. Millimetres, bed frame, +Z up.

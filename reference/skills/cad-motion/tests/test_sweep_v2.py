@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion sweep v2 tests: subsystem ownership and periods, kernel-free.
 
 Run: python3 -m unittest discover -s cad/skills/cad-motion/tests -p test_sweep_v2.py -v

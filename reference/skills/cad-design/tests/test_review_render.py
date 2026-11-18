@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """review_render.render's readiness waits, against stand-ins for ocp_viewer, Playwright and the viewer
 process: no FreeCAD, kernel or browser runs. The page logs the viewer's connection after a delay, the
 canvas changes before it settles, and a canvas that never settles times out."""

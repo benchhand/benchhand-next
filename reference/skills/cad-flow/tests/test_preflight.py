@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Focused tests for CAD preflight: result semantics, runtime probes, warm-up plan and record, FreeCAD failures."""
 
 from __future__ import annotations

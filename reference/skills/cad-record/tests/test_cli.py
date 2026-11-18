@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-record cli.py: Click options from a JSON Schema config, and the loader's source reporting.
 
 Run: uv run --no-project --with click==8.5.1 python -B -m unittest discover -s skills/cad-record/tests -p test_cli.py -v

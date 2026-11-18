@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Mechanism play (motion.play): declared play and loads become extreme-pose scenario cases run through the
 sweep pair evaluator. Play extremes turn a nominal pass into a collision, play within the clearance passes,
 and undeclared relevant play is unknown, never zero.

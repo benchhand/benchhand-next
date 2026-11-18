@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion coupling tests: the laws, their DAG and its rejections, and coupled chains; needs no OCP.
 
 Expected values are worked out by hand or from the mechanism's geometry (the rod's crank end must land on

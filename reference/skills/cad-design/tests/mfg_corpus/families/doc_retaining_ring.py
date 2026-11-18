@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: a retaining ring (DIN 471) with no pliers step, and a ring with no groove.
 
 A worker fits the lamp's three rings with external circlip pliers, named on each operation and listed in the guide's tool

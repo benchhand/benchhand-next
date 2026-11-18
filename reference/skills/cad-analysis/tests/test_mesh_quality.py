@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """C3D10 element validity and quality, and the high-order fallback decision, without FreeCAD."""
 
 from __future__ import annotations

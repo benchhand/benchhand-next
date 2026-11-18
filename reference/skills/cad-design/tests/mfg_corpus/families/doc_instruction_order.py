@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: an instruction order that contradicts the assembly order.
 
 The guide numbers its steps in the order of the operations, so an operations list that fastens the cover screw before the

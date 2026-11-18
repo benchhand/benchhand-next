@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """drawing_merge: a reviewed draft's drawing block into part.yaml, or a refusal that leaves part.yaml as it was.
 
 Kernel-free: the project and its version folder are written by test_drawing_framework.write_project,

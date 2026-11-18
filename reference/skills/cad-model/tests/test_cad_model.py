@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-model tests: a two-part project built, checked, and diffed in both kernels, plus check rules.
 
 Run: python3 -m unittest discover -s cad/skills/cad-model/tests -v

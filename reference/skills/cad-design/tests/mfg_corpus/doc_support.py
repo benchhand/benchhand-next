@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Shared helpers for the documentation-completeness families (doc_*): small records, edits and release verdicts.
 
 The record is the lamp-arm example (realistic bushings, DIN 471 rings, a heat-set insert) or cad-record's

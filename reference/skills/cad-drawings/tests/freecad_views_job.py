@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """FreeCAD-side fixture job for test_drawing_framework.py; freecadcmd runs this file headless.
 
 The job JSON names the scripts directory, a page template SVG and the result path. The job builds a

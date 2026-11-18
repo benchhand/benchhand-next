@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """FEA material sourcing and evidence: properties come only from the analysed part's material profile under the
 case's stated conditions, refusals happen before any solve, and a result is simulation-supported evidence at
 most. The FreeCAD job is replaced by a stand-in that records the material card it was given."""

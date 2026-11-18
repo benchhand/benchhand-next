@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """ccx and Gmsh resolution order (kernel-free) and the in-FreeCAD probe (FreeCAD-gated)."""
 
 from __future__ import annotations

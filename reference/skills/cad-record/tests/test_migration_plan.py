@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """validate.py --migration-plan: every stray, legacy or damaged path with its destination; nothing changes."""
 
 from __future__ import annotations

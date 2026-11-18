@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """evidence_paths.py and its acceptance points: evidence in the record cites files the record holds.
 
 An accepted ledger entry whose structured paths or free text name scratch (`.cad-work/`, `hw/.cad/`), a

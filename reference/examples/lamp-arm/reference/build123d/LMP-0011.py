@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0011 Retaining ring DIN 471 - 5x0.6: cad-design reference model, build123d 0.13, fidelity F2.
 
 Catalogue spring-steel external ring for a 5 mm shaft (DR-004), modelled installed as

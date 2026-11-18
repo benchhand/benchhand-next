@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Mutation corpus core: pairs, families, the registry and the rate arithmetic.
 
 A Pair is one defect with its clean twin. `run(mutant)` builds the case, runs one manufacturability or

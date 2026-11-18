@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """EBOM roll-up tests: pure tree logic, plus an AP242 round trip through OCP XDE."""
 
 from __future__ import annotations

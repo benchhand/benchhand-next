@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The static check's cad.readback bundle is matched by a recipe that covers the check's code and data (#128).
 
 publish_readback reuses a sealed bundle whose recipe equals the new one. The recipe names the check

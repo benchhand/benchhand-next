@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: a made part with no manufacturing instructions.
 
 The route of a made part is what a guide would print as manufacturing instructions: for FDM the approved orientation,

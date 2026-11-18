@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """drawing_features hook capture, feature-specific fit endpoints, heat-set inserts and locating fits in check.
 
 Run: python3 -m unittest discover -s cad/skills/cad-model/tests -p 'test_drawing_features.py' -v

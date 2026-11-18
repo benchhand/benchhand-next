@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """evidence.py: independent evidence facets, unknown never pass, stale and carried evidence, waivers,
 critical findings, progressive stage gates, the selection gate on selection.py's report, the release
 service policy and the acceptance digest.

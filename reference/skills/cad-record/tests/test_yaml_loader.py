@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """yaml_loader.safe_load against yaml.safe_load: the same value for every document yaml.safe_load reads,
 and the same error, message included, for every document it refuses."""
 

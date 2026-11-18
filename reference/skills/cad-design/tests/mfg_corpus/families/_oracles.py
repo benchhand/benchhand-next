@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Runner shared by the semantic-output-oracle families. `_oracle_driver.py` builds and checks one case under
 `uv run --script`. Its own environment holds cad-model's runtime, so the corpus process needs nothing beyond
 what rates.py declares.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A mesh fault on a part that the version changed, caught by a `--changed-only` check against the version before."""
 
 import sys

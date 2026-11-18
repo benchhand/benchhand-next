@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The fitted-partner engagement classifier (scripts/engagement.py): which sampled positions of a path an
 interference-type fit may exempt, and which are collisions. Pure arithmetic on shared-volume samples, no geometry.
 

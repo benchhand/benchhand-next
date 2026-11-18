@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0004 Lamp head housing: cad-design reference model, build123d 0.13, fidelity F3.
 
 FDM PETG head that tilts on J-003 (axis Y). A 7 mm knuckle (1.5 mm edge fillets) turns

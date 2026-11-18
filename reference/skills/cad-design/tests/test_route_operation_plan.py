@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """route.operation_plan: an absent plan field FAILs and names the field. A field recorded as open (an unknown
 fact with its reason) stays UNKNOWN. A complete plan PASSes.
 

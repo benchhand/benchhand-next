@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-motion continuous.py tests: the between-sample check's motion rates, interval proofs and
 report, on pose.py transforms, with closed-form distances standing in for the kernel; no OCP.
 

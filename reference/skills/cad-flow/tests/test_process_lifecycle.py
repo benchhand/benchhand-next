@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Lifecycle tests for process_lifecycle.py with real processes: a supervised family of a child and a
 grandchild that both ignore SIGTERM (a native solver stuck in a call), parents killed outright,
 timeouts, run records with live, orphaned, reused and legacy entries, and concurrent claims."""

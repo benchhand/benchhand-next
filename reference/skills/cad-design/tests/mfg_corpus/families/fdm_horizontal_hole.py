@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """FDM treatment of horizontal holes (axis parallel to the bed), judged by the fdm support obligation on the TEST profile.
 
 The TEST profile has no self-supporting-hole calibration, so no round roof counts as support-free here. Each pair changes

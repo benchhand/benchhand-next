@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The TEST capability profile of the corpus: `fixtures/test_capabilities.yaml`, loaded as plain documents.
 
 `materials()` and `capabilities()` are the lists a record's manufacturing/materials.yaml and

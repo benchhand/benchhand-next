@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0007 M5 x 20 shoulder pin: cad-design reference model, CadQuery 2.8, fidelity F3.
 
 Stainless pin made to drawing (DR-003, DR-004) for the head tilt (J-003, axis Y): a low

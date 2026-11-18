@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Realistic part fixtures for the static FEA: seven parts, each with a material profile, supports, a service load
 and a direction vector, built with the kernel cad-model uses and solved by fea_static.
 

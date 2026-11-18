@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build documentation: a purchased part with no designation, or no manufacturer part number.
 
 A buyer orders a standard part (DIN, ISO, EN, ASME) by the designation of its standard, with its size. A buyer orders a

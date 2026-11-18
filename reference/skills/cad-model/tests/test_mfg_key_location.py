@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Manufacturing outputs are keyed by what decides them, not by where the skills tree sits (#139).
 
 `cad_model.py run` keys each part's manufacturing outputs in the project's store. Two copies of the same

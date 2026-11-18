@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0010 Heat-set insert M10x1 x 12.7 OD 12.6: cad-design reference model, CadQuery 2.8, fidelity F2.
 
 Brass heat-set insert for the lampholder's M10x1 nipple (DR-004), heat-staked into the head's

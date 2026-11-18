@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Tests for incremental.py: which pairs a changed-only check selects between two versions, and which
 smoke samples a chain gets. Kernel-free: chains come from the V6-like record and a planar arm, and
 the sealed versions are small kernel-free folders whose part STEP files hold one DATA entity each."""

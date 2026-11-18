@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """manufacturing_intent.py: record versions, units, the normalized record and its problems, and the
 policy every skill reads it through (use-case readiness, part routes, condition-qualified material
 properties, calibrated capability limits and required checks)."""

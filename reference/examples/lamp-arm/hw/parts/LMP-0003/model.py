@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """LMP-0003 Upper link: cad-design reference model, CadQuery 2.8, fidelity F2.
 
 CNC 6061-T6 link between the elbow (J-002) and the head tilt (J-003), both axis Y.

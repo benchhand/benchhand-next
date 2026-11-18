@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """ISO 286 fit tests against published worked examples.
 
 Sources for the expected values (fetched 2026-10-26):

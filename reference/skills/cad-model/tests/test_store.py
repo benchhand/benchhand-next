@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The part store and the build-cache keys of `cad_model.py run`, without a kernel.
 
 Run: python3 -m unittest discover -s cad/skills/cad-model/tests -p test_store.py -v

@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Section fills: one lining per part in a view, spaced in proportion to the part, solid when thin; the gate.
 
 The pure cases build cut faces by hand; the FreeCAD cases cut real solids through techdraw_job.py: a

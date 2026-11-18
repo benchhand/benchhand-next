@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """cad-flow scratch workspace tests: a worker's copy, build, and delivery never touch the lead's records.
 
 Run: python3 -m unittest discover -s cad/skills/cad-flow/tests -v

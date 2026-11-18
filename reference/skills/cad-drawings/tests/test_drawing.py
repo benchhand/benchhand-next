@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Focused layout, FreeCAD discovery and export-reading tests; part drawings are in test_part_drawings.py."""
 
 from __future__ import annotations

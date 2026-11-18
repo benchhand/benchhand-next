@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The FDM overhang verdict at its limit, and on the corpus twins that must not fail it.
 
 Run: python3 -m unittest discover -s skills/cad-design/tests -p test_overhang_boundary.py

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A shape swapped for another of the same volume, so no volume read-back can tell them apart."""
 
 import sys
