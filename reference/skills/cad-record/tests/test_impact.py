@@ -19,7 +19,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any
-
+from unittest import mock
 import yaml
 
 HERE = Path(__file__).resolve().parent
@@ -119,6 +119,62 @@ class Variants(unittest.TestCase):
         self.assertStale(result, ("cad.readback@TST-0001", "interface.fit@IF-001"), ("cad.readback@TST-0002",))
         self.assertEqual(result.earliest_stage, "layout")
 
+    def test_a_colour_change_stales_only_a_check_family_that_declares_appearance(self) -> None:
+        """Of the obligations the record owes, only the FDM part's `export.3mf` declares the appearance domain."""
+        def colour(docs: dict[str, Any]) -> None:
+            docs["parts/TST-0001/part.yaml"]["intent"]["color"] = "#FF8000"
+        entry = acceptance.entry(self.before, "EV-001", {"PN": "TST-0001"}, "simulation_supported",
+                                 obligation="engineering.strength@TST-0001", version="v1", manifest_sha256="a" * 64,
+                                 geometry=GEOMETRY)
+        self.assertIn("appearance", entry["fingerprints"], "the ledger records every domain, appearance included")
+        self.docs["manufacturing/evidence.yaml"] = {"entries": [entry]}
+        self.before = normalized(self.docs)
+        result = self.compare(colour)
+        self.assertEqual(dict(result.changed), {"TST-0001": ("appearance",)})
+        self.assertEqual(result.stale_obligations, {"export.3mf@TST-0001": ("appearance",)})
+        self.assertEqual(result.stale_evidence, {})
+
+    def test_a_color_change_stales_export_3mf_evidence_and_no_other_accepted_evidence(self) -> None:
+        def colour(docs: dict[str, Any]) -> None:
+            docs["parts/TST-0001/part.yaml"]["intent"]["color"] = "#FF8000"
+        entries = [acceptance.entry(self.before, "EV-001", {"PN": "TST-0001"}, "simulation_supported",
+                                    obligation="engineering.strength@TST-0001", version="v1", manifest_sha256="a" * 64,
+                                    geometry=GEOMETRY),
+                   acceptance.entry(self.before, "EV-002", {"PN": "TST-0001"}, "cad_valid",
+                                    obligation="export.3mf@TST-0001", version="v1", manifest_sha256="a" * 64,
+                                    geometry=GEOMETRY)]
+        self.docs["manufacturing/evidence.yaml"] = {"entries": entries}
+        self.before = normalized(self.docs)
+        self.assertEqual(self.compare(colour).stale_evidence, {"EV-002": ("appearance",)})
+
+    def test_a_colour_change_leaves_every_catch_all_family_current_but_a_geometry_change_stales_it(self) -> None:
+        """policy.*, requirement.* and an unlisted family depend on every domain except appearance."""
+        cases = {
+            "part-scoped policy": ("policy.simulation_supported", {"PN": "TST-0001"}, "TST-0001"),
+            "requirement": ("requirement.cad_valid", {"product": True, "requirements": ("REQ-001",)}, "REQ-001"),
+            "unlisted family": ("tst_unlisted.check", {"PN": "TST-0001"}, "TST-0001"),
+        }
+        for label, (family, subject, key) in cases.items():
+            with self.subTest(label):
+                obligation = mi.Obligation(f"{family}@{key}", family, subject, "cad_valid", "layout", "test")
+                self.assertEqual(impact.stale_obligations([obligation], {key: ("appearance",)}), {})
+                self.assertEqual(impact.stale_obligations([obligation], {key: ("appearance", "geometry")}),
+                                 {obligation.id: ("geometry",)})
+
+    def test_a_material_change_stales_the_3mf_family_of_that_part_only(self) -> None:
+        three_mf = [mi.Obligation(f"export.3mf@{pn}", "export.3mf", {"PN": pn}, "cad_valid", "layout", "test")
+                    for pn in ("TST-0001", "TST-0002")]
+        changes = {
+            "declared material": lambda docs: docs["parts/TST-0001/part.yaml"].update(material="TST other material"),
+            "material profile": lambda docs: docs["parts/TST-0001/part.yaml"]["intent"].update(material_profile="tst_metal_rod"),
+        }
+        for label, change in changes.items():
+            with self.subTest(label):
+                result = self.compare(change)
+                self.assertEqual(result.changed["TST-0001"], ("material",))
+                self.assertEqual(impact.stale_obligations(three_mf, result.changed),
+                                 {"export.3mf@TST-0001": ("material",)})
+
     def test_record_derived_obligations_are_recomputed_never_stale(self) -> None:
         def use_case(docs: dict[str, Any]) -> None:
             docs["product.yaml"]["use_case"]["purpose"] = fx.known("TST another purpose")
@@ -202,6 +258,46 @@ class ProductOrderStaleness(unittest.TestCase):
         self.assertEqual(result.changed["TST-0102"], ("finish",), "the edit is seen, just not by the order check")
 
 
+class OptInDomain(unittest.TestCase):
+    """A domain `_EVERYTHING` leaves out is opt-in: it counts for evidence only when the entry's family declares it
+    and the subject has it. The synthetic domain below stands in for any later one."""
+
+    NEW = "tst_opt_in"
+    DECLARING = "tst_declares.check@TST-0001"
+    OTHER = "engineering.strength@TST-0001"
+
+    def setUp(self) -> None:
+        domains = (*impact.DOMAINS, self.NEW)
+        family = ("tst_declares.", frozenset({"geometry", self.NEW}))
+        patch = mock.patch.multiple(impact, DOMAINS=domains, FAMILY_DOMAINS=(family, *impact.FAMILY_DOMAINS))
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.current = {"geometry": "g", "load": "l", self.NEW: "n2"}
+
+    def entry(self, obligation: str, **recorded: str) -> dict[str, Any]:
+        return {"obligation": obligation, "fingerprints": {"geometry": "g", "load": "l", **recorded}}
+
+    def test_a_family_that_declares_it_goes_stale_when_only_that_domain_changes(self) -> None:
+        entry = self.entry(self.DECLARING, **{self.NEW: "n1"})
+        self.assertEqual(impact.evidence_staleness(entry, self.current), (self.NEW,))
+        self.assertEqual(impact.unrecorded_domains(entry, self.current), ())
+
+    def test_a_family_that_declares_it_must_record_it(self) -> None:
+        entry = self.entry(self.DECLARING)
+        self.assertEqual(impact.unrecorded_domains(entry, self.current), (self.NEW,))
+        self.assertEqual(impact.evidence_staleness(entry, self.current), (self.NEW,))
+
+    def test_a_family_that_does_not_declare_it_ignores_a_change_in_it(self) -> None:
+        entry = self.entry(self.OTHER, **{self.NEW: "n1"})
+        self.assertEqual(impact.evidence_staleness(entry, self.current), ())
+        self.assertEqual(impact.evidence_staleness(self.entry(self.OTHER), self.current), ())
+
+    def test_a_declared_domain_the_subject_lacks_is_not_counted(self) -> None:
+        current = {"geometry": "g", "load": "l"}
+        self.assertEqual(impact.evidence_staleness(self.entry(self.DECLARING, **{self.NEW: "n1"}), current), ())
+        self.assertEqual(impact.unrecorded_domains(self.entry(self.DECLARING), current), ())
+
+
 class EvidenceAndFlow(unittest.TestCase):
     def test_changed_evidence_is_stale_and_unchanged_evidence_is_only_a_carry_forward_candidate(self) -> None:
         docs = documents()
@@ -256,6 +352,33 @@ class Selection(unittest.TestCase):
                          (True, True, self.digest))
         self.assertIn("the selection inputs changed (selection.input_digest)", result.reopened_decisions["DR-001"])
         self.assertTrue(result.any)
+
+    def part(self, docs: dict[str, Any]) -> dict[str, Any]:
+        rel = sorted(rel for rel in docs if rel.startswith("parts/") and rel.endswith("/part.yaml"))[0]
+        return docs[rel]
+
+    def test_a_colour_change_keeps_a_confirmed_selection_current(self) -> None:
+        after = copy.deepcopy(self.docs)
+        self.part(after)["intent"]["color"] = "#FF8000"
+        self.assertEqual(acceptance.evidence.selection.input_digest(after), self.digest)
+        result = self.compare(after)
+        self.assertEqual((result.selection["changed"], result.selection["stale"]), (False, False))
+        self.assertEqual(result.reopened_decisions, {})
+
+    def test_a_material_profile_change_still_reopens_a_confirmed_selection(self) -> None:
+        after = copy.deepcopy(self.docs)
+        self.part(after)["intent"]["material_profile"] = "tst_other_profile"
+        self.assertNotEqual(acceptance.evidence.selection.input_digest(after), self.digest)
+        result = self.compare(after)
+        self.assertEqual((result.selection["changed"], result.selection["stale"]), (True, True))
+        self.assertIn("DR-001", result.reopened_decisions)
+
+    def test_records_without_a_colour_keep_their_recorded_selection_digest(self) -> None:
+        """Digests recorded in selection.yaml (assessment.input_sha256) stay valid. The pins come from the
+        digest before color left the scope."""
+        digest = acceptance.evidence.selection.input_digest
+        self.assertEqual(digest(documents()), "14eefb6b8e5cb822baae30ec3612eefefac8d22e55482ef23227234fa73ea01d")
+        self.assertEqual(self.digest, "d22bad8dfe54d21aea9dc9248ae15c665d0be4741a70b097e292379955387645")
 
     def test_confirming_the_choice_is_no_selection_input(self) -> None:
         before, _ = acceptance.recorded_selection(acceptance.selection_scenarios().qualified_polymer_cover())

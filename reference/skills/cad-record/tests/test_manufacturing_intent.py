@@ -412,6 +412,38 @@ class Routes(unittest.TestCase):
             mi.part_route(mi.normalize_record(documents), "TST-0001")
 
 
+class PartColor(unittest.TestCase):
+    def test_intent_carries_the_declared_color_or_none(self) -> None:
+        documents = fx.tst_record()
+        documents["parts/TST-0001/part.yaml"]["intent"]["color"] = "#FF8000"
+        record = mi.normalize_record(documents)
+        self.assertEqual(record.parts["TST-0001"].intent.color, "#FF8000")
+        self.assertIsNone(record.parts["TST-0002"].intent.color)
+
+    def test_an_invalid_color_is_a_named_problem_and_reads_as_none(self) -> None:
+        for label, bad in (("three digits", "#abc"), ("integer", 16744448), ("trailing newline", "#FF8000\n"),
+                           ("colour name", "orange"), ("lists", ["#FF8000"]), ("null", None)):
+            with self.subTest(label):
+                documents = fx.tst_record()
+                documents["parts/TST-0001/part.yaml"]["intent"]["color"] = bad
+                record = mi.normalize_record(documents)
+                found = [p for p in record.problems if p.code == "intent.color_invalid"]
+                self.assertEqual([(p.path, p.pointer, p.severity) for p in found],
+                                 [("hw/parts/TST-0001/part.yaml", "intent/color", "error")])
+                self.assertIn(repr(bad), found[0].message)
+                self.assertIn("quote", found[0].message, "the message names the unquoted # YAML comment as the likely cause")
+                self.assertIsNone(record.parts["TST-0001"].intent.color)
+
+    def test_a_valid_color_raises_no_problem_in_either_case(self) -> None:
+        for good in ("#FF8000", "#ff8000"):
+            with self.subTest(good):
+                documents = fx.tst_record()
+                documents["parts/TST-0001/part.yaml"]["intent"]["color"] = good
+                record = mi.normalize_record(documents)
+                self.assertEqual([p for p in record.problems if p.code == "intent.color_invalid"], [])
+                self.assertEqual(record.parts["TST-0001"].intent.color, good)
+
+
 class MaterialProperties(unittest.TestCase):
     def setUp(self) -> None:
         self.materials = mi.normalize_record(fx.tst_record()).materials

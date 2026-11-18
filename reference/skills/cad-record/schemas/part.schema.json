@@ -72,6 +72,7 @@
                                 {"$ref": "manufacturing.schema.json#/$defs/fact_unknown"}]},
         "material_profile": {"description": "a profile id in manufacturing/materials.yaml",
                              "oneOf": [{"$ref": "manufacturing.schema.json#/$defs/profile_id"}, {"$ref": "manufacturing.schema.json#/$defs/fact_open"}]},
+        "color": {"description": "The part's print colour as an sRGB hex string #RRGGBB (for example #FF8000 for orange). 3MF export uses it as the part's display colour", "type": "string", "maxLength": 7, "pattern": "^#[0-9A-Fa-f]{6}$"},
         "selection": {"description": "the selection.yaml candidate this intent implements", "$ref": "manufacturing.schema.json#/$defs/semantic_id"},
         "service": {"oneOf": [
           {"type": "object", "additionalProperties": false, "minProperties": 1,

@@ -291,6 +291,21 @@ class RecordDocuments(SchemaCase):
             "scalar process invented": (lambda d: d.update(process="sls"), False),
         })
 
+    def test_part_intent_color_is_an_optional_srgb_hex(self) -> None:
+        base = fx.tst_record()["parts/TST-0001/part.yaml"]
+        self.assert_cases("part.schema.json", base, {
+            "color absent": (lambda d: d["intent"].pop("color", None), True),
+            "uppercase hex": (lambda d: d["intent"].update(color="#FF8000"), True),
+            "lowercase hex": (lambda d: d["intent"].update(color="#ff8000"), True),
+            "no hash": (lambda d: d["intent"].update(color="FF8000"), False),
+            "three digits": (lambda d: d["intent"].update(color="#F80"), False),
+            "non-hex digit": (lambda d: d["intent"].update(color="#GG8000"), False),
+            "integer": (lambda d: d["intent"].update(color=16744448), False),
+            "colour name": (lambda d: d["intent"].update(color="orange"), False),
+            "trailing newline": (lambda d: d["intent"].update(color="#FF8000\n"), False),
+            "null, as an unquoted # parses": (lambda d: d["intent"].update(color=None), False),
+        })
+
     def test_interface_functional_block(self) -> None:
         base = fx.tst_record()["interfaces.yaml"]
         functional = lambda d: d["interfaces"][0]["functional"]  # noqa: E731
@@ -458,6 +473,7 @@ class RecordDocuments(SchemaCase):
                                                      d["entries"][0].pop("physical")), True),
             "waived needs its waiver": (lambda d: d["entries"][0].update(result="waived"), False),
             "fingerprint domain invented": (lambda d: d["entries"][0].update(fingerprints={"vibes": "c" * 64}), False),
+            "appearance fingerprint": (lambda d: d["entries"][0].update(fingerprints={"appearance": "c" * 64}), True),
             "neither requirement nor obligation": (lambda d: d["entries"][0].pop("requirement"), False),
             "level as a badge": (lambda d: d["entries"][0].update(level="certified"), False),
         })

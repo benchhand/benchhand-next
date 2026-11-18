@@ -20,6 +20,7 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 SHARED = HERE.parents[2] / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py"
 PN = "TST-0001"
+UNSET: Any = object()  # `color` left out of the record, as against `color: null`
 BODY_WITNESS = [20.0, 10.0, 5.0]  # inside the 40 x 20 x 10 body
 TAB_WITNESS = [65.0, 2.5, 1.0]  # inside the first tab, at x 60..70
 ENVELOPE_MM = (100.0, 100.0, 50.0)
@@ -70,7 +71,7 @@ def components(tab_multiplicity: int = 1, tab_witness: list[float] | None = None
 
 def documents(*, process: str = "fdm", orientation: Any = None, parts_of: list[dict[str, Any]] | None = None,
               print_components: list[str] | None = None, density: float = DENSITY_G_CM3,
-              with_density: bool = True, material: str = "TST polymer") -> dict[str, Any]:
+              with_density: bool = True, material: str = "TST polymer", color: Any = UNSET) -> dict[str, Any]:
     """The record of the loose project. `parts_of` is intent.components (None: a sole solid); the print
     operation shapes `print_components` (None: every component). Process `laser` is MULTIPROCESS_ROUTE:
     sheet stock laser cut, then reamed, coated and inspected in that order, none of it additive."""
@@ -89,7 +90,9 @@ def documents(*, process: str = "fdm", orientation: Any = None, parts_of: list[d
         route = [fx.operation("print", process, "tst_printer",
                               orientation=copy.deepcopy(orientation or IDENTITY_ORIENTATION), **extra)]
         capabilities = [printer()]
-    intent_extra = {"components": parts_of} if parts_of is not None else {}
+    intent_extra: dict[str, Any] = {"components": parts_of} if parts_of is not None else {}
+    if color is not UNSET:
+        intent_extra["color"] = color
     part = fx.part(PN, "Loose kit", process=process, material=material, part_intent=fx.intent(
         functions=[{"function": "cosmetic"}], material_profile="tst_polymer", route=route, **intent_extra))
     form = "sheet" if process == "laser" else "printed"
