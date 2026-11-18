@@ -3,7 +3,7 @@
 # dependencies = ["cadquery-ocp-novtk==8.0.1.1.0", "trimesh==4.*", "numpy==2.5.5", "pyyaml>=6.0"]
 # ///
 """Write a drilled plate and a ball to STEP, tessellate their read-back into part.3mf and part.stl, and judge
-the 3MF with manufacture._threemf, also after four deliberate faults.
+the 3MF with manufacture.inspect (its threemf row), also after deliberate faults.
 
 TST-0001: 40 x 30 x 8 plate with a through hole of diameter 5 (the cut gives the hole reversed faces).
 TST-0002: a ball of radius 5 (BRepMesh emits a collapsed triangle at each pole).
@@ -12,6 +12,7 @@ Stdout: {PN: {"step_volume_mm3", "threemf_volume_mm3", "stl_volume_mm3", "good":
 """
 
 import json
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -26,6 +27,7 @@ from cadmodel.motion import load_pose  # noqa: E402
 
 MESH = {"linear_deflection_mm": 0.05, "angular_deflection_rad": 0.1}
 MATERIAL = "PETG"
+MODEL_PLACEMENT = {"transform": [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]], "frame": "model"}
 
 plate = BRepAlgoAPI_Cut(BRepPrimAPI_MakeBox(gp_Pnt(0, 0, 0), 40.0, 30.0, 8.0).Shape(),
                         BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(20, 15, -1), gp_Dir(0, 0, 1)), 2.5, 10.0).Shape()).Shape()
@@ -46,10 +48,24 @@ for pn, title, shape in (("TST-0001", "Drilled plate", plate), ("TST-0002", "Bal
     stl = folder / f"{pn}.stl"
     mesh.write_stl(written.shape, stl, MESH["linear_deflection_mm"], MESH["angular_deflection_rad"])
 
+    def judged(package: Path, declared: dict) -> dict:
+        """The threemf row of manufacture.inspect for `package` laid out as the part's part.3mf beside its STEP."""
+        part_folder = folder / f"{package.stem}-folder"
+        part_folder.mkdir()
+        shutil.copy(step, part_folder / "part.step")
+        shutil.copy(package, part_folder / "part.3mf")
+        record = {"PN": pn, "rev": "X1", "material": declared["material"], "process": "fdm", "finish": "none"}
+        facts = {"kernel_volume_mm3": 1.0, "kernel_valid": True, "kernel_solids": 1}
+        files = ["part.step", "part.3mf"]
+        full = {**record, **declared, "native": facts, "installed": facts, "tolerance": {"allowed_mm3": 1.0},
+                "outputs": files, "placement": MODEL_PLACEMENT}
+        row, _ = manufacture.inspect(part_folder, full, record, files)
+        return row["checks"]["threemf"]["files"]["part.3mf"]
+
     def variant(name: str, verts, tris, material=MATERIAL, color=None, expected=None) -> dict:
         path = folder / f"{pn}-{name}.3mf"
         threemf.write(path, verts, tris, name=entry["product"], material=material, color=color)
-        return manufacture._threemf(path, {**entry, "color": expected}, written.shape)
+        return judged(path, {**entry, "color": expected})
 
     def edited(name: str, old: str, new: str) -> dict:
         """The good package with `old` replaced by `new` in its model part, judged."""
@@ -59,7 +75,7 @@ for pn, title, shape in (("TST-0001", "Drilled plate", plate), ("TST-0002", "Bal
             for info in source.infolist():
                 data = source.read(info.filename)
                 out.writestr(info, data.decode().replace(old, new, 1).encode() if info.filename == model else data)
-        return manufacture._threemf(path, entry, written.shape)
+        return judged(path, entry)
 
     item = '<item objectid="1"/>'
     faults = {
@@ -78,7 +94,7 @@ for pn, title, shape in (("TST-0001", "Drilled plate", plate), ("TST-0002", "Bal
     report[pn] = {"step_volume_mm3": occ.volume(written.shape),
                   "threemf_volume_mm3": threemf.measure(vertices, triangles)["volume_mm3"],
                   "stl_volume_mm3": mesh.stl_report(stl)["volume_mm3"],
-                  "good": manufacture._threemf(target, entry, written.shape),
+                  "good": judged(target, entry),
                   "good_colour": variant("c4", vertices, triangles, color="#336699", expected="#336699"),
                   "faults": faults}
 print(json.dumps(report))

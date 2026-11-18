@@ -757,6 +757,18 @@ class ManufacturingStateTests(unittest.TestCase):
         self.assertAlmostEqual(identity["difference_mm3"], STRAP_V * 0.1, places=6)
         self.assertAlmostEqual(identity["allowed_mm3"], STRAP_V * 1e-6, places=10)
 
+    def test_check_measures_each_read_back_shape_once(self) -> None:
+        """The box and the volume of a read-back part are OCCT passes over the whole B-rep: the step,
+        mesh and placement checks share one measurement of each shape instead of repeating it."""
+        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(FIXTURES / "measure_once_probe.py"),
+                               str(self.hw), "v1"], capture_output=True, text=True, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
+        report = json.loads(proc.stdout)
+        self.assertEqual(report["blocking_failures"], [])
+        for name in ("bbox", "volume"):
+            self.assertGreater(report[name]["passes"], 0, name)
+            self.assertEqual(report[name]["repeated"], 0, f"{name} measured the same shape twice")
+
     def test_a_manufacturing_only_change_shows_in_diff(self) -> None:
         self.assertEqual(self.runs["v2"][0].returncode, 0, self.runs["v2"][0].stderr[-3000:])
         proc, result, _ = self.runs["diff"]
@@ -2231,6 +2243,64 @@ class HoleMetricsTests(unittest.TestCase):
              "depth_mm": 8.0, "through": True},
         ], places=6)
         self.assertEqual(report["TST-0002"], [])
+
+
+@unittest.skipUnless(shutil.which("uv"), "uv is required for the OCP environment")
+class InspectMeasurementTests(unittest.TestCase):
+    """manufacture.inspect on one part whose components hold different shapes (fixtures/inspect_probe.py):
+    each shape read back in the call reports its own volume and box."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = subprocess.run(["uv", "run", "--quiet", "--script", str(FIXTURES / "inspect_probe.py"), tmp],
+                                  capture_output=True, text=True, check=False)
+        assert proc.returncode == 0, proc.stderr[-2000:]
+        cls.report = json.loads(proc.stdout)
+
+    def test_each_component_shape_reports_its_own_volume_and_box(self) -> None:
+        want = {"A": (1.0, [0.0, 0.0, 0.0], [1.0, 1.0, 1.0]), "B": (24.0, [0.0, 0.0, 0.0], [2.0, 3.0, 4.0]),
+                "C": (1.0, [5.0, 0.0, 0.0], [6.0, 1.0, 1.0])}
+        self.assertEqual(sorted(self.report["components"]), sorted(want))
+        for ident, (volume, low, high) in want.items():
+            row = self.report["components"][ident]
+            with self.subTest(component=ident):
+                self.assertAlmostEqual(row["step"]["volume_mm3"], volume, places=9)
+                for check in (row["step"], row["placement"]):
+                    assert_vectors(self, check["bbox_mm"]["min"], low, 9)
+                    assert_vectors(self, check["bbox_mm"]["max"], high, 9)
+
+    def test_the_whole_part_keeps_its_own_measurement_beside_its_components(self) -> None:
+        step = self.report["part"]["step"]
+        self.assertAlmostEqual(step["volume_mm3"], 1.0, places=9)
+        assert_vectors(self, step["bbox_mm"]["max"], [1.0, 1.0, 1.0], 9)
+        assert_vectors(self, self.report["part"]["placement"]["bbox_mm"]["max"], [1.0, 1.0, 1.0], 9)
+
+
+@unittest.skipUnless(shutil.which("uv"), "uv is required for the OCP environment")
+class InspectReadTests(unittest.TestCase):
+    """manufacture.inspect on a part with component STEP and 3MF outputs (fixtures/read_once_probe.py): when the
+    step check and the 3MF check both need a part STEP, one call reads it once, and a second call reads afresh."""
+
+    PATHS = {"part.step", "components/A/part.step", "components/B/part.step"}
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = subprocess.run(["uv", "run", "--quiet", "--script", str(FIXTURES / "read_once_probe.py"), tmp],
+                                  capture_output=True, text=True, check=False)
+        assert proc.returncode == 0, proc.stderr[-2000:]
+        cls.report = json.loads(proc.stdout)
+
+    def test_every_3mf_of_the_part_and_its_components_is_judged_against_its_step(self) -> None:
+        self.assertEqual(self.report["threemf"], {"part.3mf": True, "components/A/part.3mf": True,
+                                                  "components/B/part.3mf": True})
+
+    def test_each_step_is_read_once_within_one_call(self) -> None:
+        self.assertEqual(self.report["first"], {path: 1 for path in self.PATHS})
+
+    def test_a_second_call_reads_each_step_afresh(self) -> None:
+        self.assertEqual(self.report["second"], {path: 1 for path in self.PATHS})
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the OCP environment")
