@@ -133,7 +133,7 @@ open_questions:
     safety_relevant: true
     status: open
   - id: Q-012
-    question: 'LMP-0001 (Base plate and pivot boss): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material PETG and process fdm; they stay declarations, not evidence.'
+    question: 'LMP-0001 (Base plate and pivot boss): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material PETG and process fdm; they stay declarations, not evidence. The material profile is answered by DR-005 (petg); the rest stays open.'
     subjects:
       - {PN: LMP-0001}
     owner: lead
@@ -157,7 +157,7 @@ open_questions:
     safety_relevant: true
     status: open
   - id: Q-015
-    question: 'LMP-0004 (Lamp head housing): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material PETG and process fdm; they stay declarations, not evidence.'
+    question: 'LMP-0004 (Lamp head housing): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material PETG and process fdm; they stay declarations, not evidence. The material profile is answered by DR-005 (petg); the rest stays open.'
     subjects:
       - {PN: LMP-0004}
     owner: lead

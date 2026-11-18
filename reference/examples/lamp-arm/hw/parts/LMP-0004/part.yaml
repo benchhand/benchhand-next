@@ -76,14 +76,14 @@ drawing:
   sheet: {sizes: [A3, A2], scale: auto}
 intent:
   functions: {status: unknown, reason: not recorded before record version 2, question: Q-015}
-  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material PETG is a declaration, not a sourced grade', question: Q-015}
+  material_profile: petg  # PETG family, decided by the user on 2026-11-18 (DR-005)
   service: {status: unknown, reason: not recorded before record version 2, question: Q-015}
   critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-015}
   route:
     - id: print
       kind: fdm
       title: Print the lamp head housing in PETG, shade down
-      capability: {status: unknown, reason: "no capability profile of the print bureau is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      capability: h2d
       output_state: printed
       orientation: {status: proposed, rotation: {quaternion: [1, 0, 0, 0]}, note: "Drawing note: printed shade-down. The shade axis is Z and opens downward in the model frame, which equals the manufacture frame, so the pose is the identity. Not yet approved by a decision."}
       supports: {status: unknown, reason: "no support strategy is recorded; the drawing names none", question: Q-015}
