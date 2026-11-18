@@ -9,7 +9,7 @@
   },
   "$defs": {
     "fingerprint_domain": {"enum": ["material", "lot", "condition", "process", "route", "orientation", "setup", "capability", "finish",
-                                    "load", "environment", "interface", "criterion", "source", "geometry", "use_case", "appearance"]},
+                                    "load", "environment", "interface", "occurrences", "criterion", "source", "geometry", "use_case", "appearance"]},
     "entry": {
       "type": "object", "additionalProperties": false, "required": ["id", "subject", "level", "result", "method"],
       "properties": {

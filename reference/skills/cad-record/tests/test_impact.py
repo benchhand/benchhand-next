@@ -50,7 +50,8 @@ class Fingerprints(unittest.TestCase):
     def test_each_record_domain_is_fingerprinted_and_stable(self) -> None:
         record = normalized(documents())
         prints = impact.fingerprints(record, {"PN": "TST-0001"}, GEOMETRY)
-        self.assertEqual(set(prints), set(impact.DOMAINS) - {"lot"}, "the lot belongs to physical evidence, not the record")
+        self.assertEqual(set(prints), set(impact.DOMAINS) - {"lot", "occurrences"},
+                         "the lot belongs to physical evidence, and occurrences only to a bought part placed as occurrences")
         self.assertEqual(prints, impact.fingerprints(normalized(documents()), {"PN": "TST-0001"}, GEOMETRY))
         self.assertEqual(impact.fingerprints(record, {"PN": "TST-0001", "operation": "print", "feature": "pivot_bore"},
                                              GEOMETRY), prints, "operations and features share their part's fingerprints")
@@ -315,10 +316,354 @@ class OptInDomain(unittest.TestCase):
         self.assertEqual(impact.evidence_staleness(entry, self.current), ())
         self.assertEqual(impact.evidence_staleness(self.entry(self.OTHER), self.current), ())
 
-    def test_a_declared_domain_the_subject_lacks_is_not_counted(self) -> None:
+    def test_a_declared_domain_the_subject_lacks_counts_only_when_the_entry_recorded_it(self) -> None:
         current = {"geometry": "g", "load": "l"}
-        self.assertEqual(impact.evidence_staleness(self.entry(self.DECLARING, **{self.NEW: "n1"}), current), ())
+        self.assertEqual(impact.evidence_staleness(self.entry(self.DECLARING, **{self.NEW: "n1"}), current), (self.NEW,))
+        self.assertEqual(impact.evidence_staleness(self.entry(self.DECLARING), current), ())
         self.assertEqual(impact.unrecorded_domains(self.entry(self.DECLARING), current), ())
+
+    def test_export_3mf_evidence_that_recorded_appearance_goes_stale_when_the_subject_has_none(self) -> None:
+        """The same transition for the family that declares `appearance`: the rule is not specific to purchase.*."""
+        current = {"geometry": "g", "material": "m"}
+        recorded = {"obligation": "export.3mf@TST-0001", "fingerprints": {"geometry": "g", "material": "m", "appearance": "a"}}
+        unrecorded = {"obligation": "export.3mf@TST-0001", "fingerprints": {"geometry": "g", "material": "m"}}
+        self.assertEqual(impact.evidence_staleness(recorded, current), ("appearance",))
+        self.assertEqual(impact.evidence_staleness(unrecorded, current), ())
+
+LEGACY_INTERFACE_DIGEST = "919639c091011df20121336be1bb29f1a123a5a422d75fbffcd3eff8b602ed40"  # impact.py on origin/main bc8d3f94
+# The interface digest of TST-0103 in PurchaseMountingStaleness.documents(), computed with origin/main's impact.py.
+OCCURRENCE_INTERFACE_DIGEST = "25016f8a4c143f1b7f00ff2ac329d64b72375dcf55b3c64f4412bea46e8b866c"
+# The fingerprint domains on origin/main bc8d3f94, sorted.
+MAIN_DOMAINS = ("capability", "condition", "criterion", "environment", "finish", "geometry", "interface", "load", "lot",
+                "material", "orientation", "process", "route", "setup", "source", "use_case")
+# Per case and family prefix, the digest of the fingerprints of every subject in the family's origin/main domains,
+# computed with impact.py of origin/main a69bbb46 (cad-record unchanged since 4a8916f8).
+MAIN_FAMILY_DIGESTS: dict[str, dict[str, str]] = {
+    "occurrence-placed": {
+        "cad.": "573156ddba3e6bd069d5e9b862fb776a3ff83d095b155568d72a16d723ca5b56",
+        "route.": "49248d3142a21391c8eae67178fbdc43dab9bc4c276cdebe72cf308bcf5c325c",
+        "process.": "9c67614853d423da5712d35a4784611f8b0558886efbc5881a0277811fa4f570",
+        "optical.": "ea9f72b837e030fd22c329918f3e5f7a03287ecadea8b277f337b90f92a3955c",
+        "engineering.": "7e777a8020773a3e550e4d90606496bcbec18b9557f103b05f04866a5cb1f1ba",
+        "feature.": "7302d9165857612dc7a10b888fea1b837dd86e8c8f23ff02724531429b79efa2",
+        "interface.": "b2a95ced884053db6226d05aba17af7aaf55f3ea3ba58cafa723171aa238301f",
+        "contact.": "6dc6bdafa3baa71b397dcb831f6715e48b4a054151ac34eceef36410e400f5a2",
+        "motion.": "767a132e7d21821407b618f88e29af54bf42f998f3f5fa874e17dd58d148892b",
+        "assembly.": "790afb7ac9ed872d78a1e355c7719e2f43c4530f102328ab5498dfb771eb64cb",
+        "export.3mf": "57b05be936547f3302bcb984594b44edeaa9412dd9a8c0f0bcb1957781ba6677",
+        "function.": "7575681d57fb9d88388d93c384af9436c452ce3cfd236687df30d7c05f2425f8",
+        "requirement.": "e60c578893c6a9d0740164788d1d70d7eeec85278977e42ca05f665807f726ec",
+        "policy.": "e60c578893c6a9d0740164788d1d70d7eeec85278977e42ca05f665807f726ec",
+    },
+    "broken inventory": {
+        "cad.": "573156ddba3e6bd069d5e9b862fb776a3ff83d095b155568d72a16d723ca5b56",
+        "route.": "49248d3142a21391c8eae67178fbdc43dab9bc4c276cdebe72cf308bcf5c325c",
+        "process.": "9c67614853d423da5712d35a4784611f8b0558886efbc5881a0277811fa4f570",
+        "optical.": "ea9f72b837e030fd22c329918f3e5f7a03287ecadea8b277f337b90f92a3955c",
+        "engineering.": "7e777a8020773a3e550e4d90606496bcbec18b9557f103b05f04866a5cb1f1ba",
+        "feature.": "7302d9165857612dc7a10b888fea1b837dd86e8c8f23ff02724531429b79efa2",
+        "interface.": "b2a95ced884053db6226d05aba17af7aaf55f3ea3ba58cafa723171aa238301f",
+        "contact.": "6dc6bdafa3baa71b397dcb831f6715e48b4a054151ac34eceef36410e400f5a2",
+        "motion.": "767a132e7d21821407b618f88e29af54bf42f998f3f5fa874e17dd58d148892b",
+        "assembly.": "790afb7ac9ed872d78a1e355c7719e2f43c4530f102328ab5498dfb771eb64cb",
+        "export.3mf": "57b05be936547f3302bcb984594b44edeaa9412dd9a8c0f0bcb1957781ba6677",
+        "function.": "7575681d57fb9d88388d93c384af9436c452ce3cfd236687df30d7c05f2425f8",
+        "requirement.": "e60c578893c6a9d0740164788d1d70d7eeec85278977e42ca05f665807f726ec",
+        "policy.": "e60c578893c6a9d0740164788d1d70d7eeec85278977e42ca05f665807f726ec",
+    },
+}
+
+
+def family_digest(prints: dict[str, dict[str, str]], domains: tuple[str, ...]) -> str:
+    """One digest over every subject's fingerprints restricted to `domains`."""
+    return impact.digest({subject: {d: values[d] for d in sorted(domains) if d in values}
+                          for subject, values in sorted(prints.items())})
+
+
+class PurchaseMountingStaleness(unittest.TestCase):
+    """purchase.mounting depends on the assembly inventory, the operations resolved through occurrences and each part's
+    model_frame, and no other family takes those inputs."""
+
+    OBLIGATION = "purchase.mounting@TST-0103/buy"
+    # The domain set of every family prefix on origin/main 88be42e, worked out from FAMILY_DOMAINS there.
+    MAIN_FAMILIES: dict[str, tuple[str, ...]] = {
+        "cad.": ("geometry",),
+        "route.": ("capability", "condition", "criterion", "finish", "material", "orientation", "process", "route", "setup",
+                   "source"),
+        "process.": ("capability", "condition", "criterion", "finish", "geometry", "material", "orientation", "process",
+                     "route", "setup", "source"),
+        "optical.": ("criterion", "finish", "material", "process", "route", "source"),
+        "engineering.": ("condition", "criterion", "environment", "finish", "geometry", "load", "material", "orientation",
+                         "process", "route", "source", "use_case"),
+        "feature.": ("capability", "condition", "criterion", "finish", "geometry", "interface", "material", "orientation",
+                     "process", "route", "setup", "source"),
+        "interface.": ("capability", "condition", "criterion", "environment", "finish", "geometry", "interface", "load",
+                       "material", "process", "route", "source"),
+        "contact.": ("condition", "criterion", "environment", "finish", "geometry", "interface", "load", "material",
+                     "source"),
+        "motion.": ("criterion", "finish", "geometry", "interface", "load", "material", "process", "source"),
+        "assembly.": ("criterion", "geometry", "interface", "source"),
+        "export.3mf": ("appearance", "geometry", "material"),
+        "function.": ("condition", "criterion", "environment", "finish", "geometry", "interface", "load", "material",
+                      "process", "source"),
+        "requirement.": MAIN_DOMAINS,
+        "policy.": MAIN_DOMAINS,
+    }
+
+    def documents(self, rings: tuple[str, ...] = ("ring-a", "ring-b"), operations: list[dict[str, Any]] | None = None,
+                  frame: str | None = "part_local", placements: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+        ring = fx.part("TST-0103", "Ring", process="purchased", make_buy="buy", **({"model_frame": frame} if frame else {}),
+                       part_intent=fx.intent(route=[fx.operation("buy", "purchased")],
+                                             material_profile=fx.not_applicable("catalogue item")))
+        housing = fx.part("TST-0104", "Housing", process="cnc", model_frame="part_local")
+        plate = fx.part("TST-0105", "Plate", process="cnc")
+        if operations is None:
+            operations = [self.install(f"mount-{name.split('-')[1]}", f"@{name}") for name in rings]
+        docs = fx.record(parts=[ring, housing, plate], operations=operations)
+        docs["assembly.yaml"]["subassemblies"] = [{"id": "main", "title": "Main", "occurrences": [
+            "@housing", *(f"@{name}" for name in rings), "@plate"]}]
+        docs["assembly.yaml"]["occurrences"] = [
+            {"id": "housing", "PN": "TST-0104"}, {"id": "plate", "PN": "TST-0105"},
+            *({"id": name, **({"placement": placements[name]} if placements and name in placements else {}), "PN": "TST-0103"}
+              for name in rings)]
+        return {rel: data for rel, data in docs.items() if not rel.startswith("_")}
+
+    @staticmethod
+    def install(ident: str, part: str, into: str = "@housing") -> dict[str, Any]:
+        return {"id": ident, "kind": "join", "part": part, "into": into, "direction": [0, 0, -1],
+                "acceptance": {"kind": "standoff", "features": ["foot", "top"]}}
+
+    def compare(self, before: dict[str, Any], after: dict[str, Any]) -> Any:
+        return impact.compare(normalized(before), normalized(after), before_geometry={}, after_geometry={},
+                              since="v1", version="v2")
+
+    def test_an_added_occurrence_with_its_operation_stales_the_mounting_check(self) -> None:
+        after = self.documents(rings=("ring-a", "ring-b", "ring-c"))
+        self.assertIn(self.OBLIGATION, self.compare(self.documents(), after).stale_obligations)
+
+    def test_an_added_occurrence_no_operation_installs_stales_the_mounting_check(self) -> None:
+        after = self.documents(rings=("ring-a", "ring-b", "ring-c"),
+                               operations=[self.install("mount-a", "@ring-a"), self.install("mount-b", "@ring-b")])
+        self.assertIn(self.OBLIGATION, self.compare(self.documents(), after).stale_obligations)
+
+    def test_a_moved_occurrence_stales_the_mounting_check(self) -> None:
+        moved = {"ring-a": {"translation_mm": [5, 0, 0]}}
+        result = self.compare(self.documents(), self.documents(placements=moved))
+        self.assertIn(self.OBLIGATION, result.stale_obligations)
+
+    def test_a_moved_occurrence_leaves_an_unrelated_part_alone(self) -> None:
+        moved = {"ring-a": {"translation_mm": [5, 0, 0]}}
+        result = self.compare(self.documents(), self.documents(placements=moved))
+        self.assertNotIn("TST-0105", result.changed)
+        self.assertEqual([i for i in result.stale_obligations if "TST-0105" in i], [])
+
+    def test_a_part_with_no_explicit_occurrence_keeps_its_fingerprint(self) -> None:
+        ring = fx.part("TST-0103", "Ring", process="purchased", make_buy="buy",
+                       part_intent=fx.intent(route=[fx.operation("buy", "purchased")],
+                                             material_profile=fx.not_applicable("catalogue item")))
+        legacy = [{"id": "mount", "kind": "join", "part": "TST-0103", "into": "TST-0104", "direction": [0, 0, -1],
+                   "acceptance": {"kind": "standoff", "features": ["foot", "top"]}}]
+        docs = fx.record(parts=[ring, fx.part("TST-0104", "Housing", process="cnc")], operations=legacy)
+        docs = {rel: data for rel, data in docs.items() if not rel.startswith("_")}
+        prints = impact.fingerprints(normalized(docs), {"PN": "TST-0103"})
+        self.assertEqual(prints["interface"], LEGACY_INTERFACE_DIGEST)
+        self.assertNotIn("occurrences", prints)
+
+    def test_an_occurrence_placed_part_keeps_its_interface_fingerprint(self) -> None:
+        moved = {"ring-a": {"translation_mm": [5, 0, 0]}}
+        for name, docs in (("placed", self.documents()), ("one moved", self.documents(placements=moved))):
+            with self.subTest(case=name):
+                prints = impact.fingerprints(normalized(docs), {"PN": "TST-0103"})
+                self.assertEqual(prints["interface"], OCCURRENCE_INTERFACE_DIGEST)
+                self.assertIn("occurrences", prints)
+
+    def test_no_subject_but_an_occurrence_placed_bought_part_carries_the_occurrences_domain(self) -> None:
+        prints = impact.subject_fingerprints(normalized(self.documents()))
+        self.assertEqual(sorted(key for key, domains in prints.items() if "occurrences" in domains), ["TST-0103"])
+
+    def test_a_non_part_subject_carries_no_opt_in_domain_whatever_its_name(self) -> None:
+        """The synthetic domain stands for any later opt-in domain: only a part carries one."""
+        record = normalized(self.documents())
+        with mock.patch.object(impact, "DOMAINS", (*impact.DOMAINS, "tst_opt_in")):
+            prints = impact.subject_fingerprints(record)
+        for key in ("product", "op:mount-a"):
+            with self.subTest(subject=key):
+                self.assertNotIn("tst_opt_in", prints[key])
+
+    def accepted_result(self, docs: dict[str, Any], current: dict[str, Any]) -> Any:
+        """The assessment of `current` with an accepted purchase.mounting entry (level process_planned) recorded against
+        `docs` at every fingerprint domain the part has now, `occurrences` included."""
+        from datetime import date  # noqa: PLC0415 - used by these tests alone
+
+        entry = acceptance.entry(normalized(docs), "EV-010", {"PN": "TST-0103", "operation": "buy"}, "process_planned",
+                                 obligation=self.OBLIGATION, version="v1", manifest_sha256="a" * 64)
+        after = copy.deepcopy(current)
+        after["manufacturing/evidence.yaml"] = {"entries": [entry]}
+        return acceptance.evidence.assess(normalized(after), version="v1", manifest_sha256="a" * 64, packets=(),
+                                          approved=lambda decision: True, today=date(2026, 11, 18))
+
+    def test_an_accepted_entry_is_current_while_nothing_changed(self) -> None:
+        result = self.accepted_result(self.documents(), self.documents())
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "pass", result.statuses[self.OBLIGATION])
+
+    def test_an_accepted_entry_goes_stale_when_only_an_occurrence_moves(self) -> None:
+        moved = self.documents(placements={"ring-a": {"translation_mm": [5, 0, 0]}})
+        result = self.accepted_result(self.documents(), moved)
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "stale", result.statuses[self.OBLIGATION])
+        self.assertIn("occurrences", " ".join(result.statuses[self.OBLIGATION].reasons))
+
+    def test_an_accepted_entry_goes_stale_when_only_an_uninstalled_occurrence_is_added(self) -> None:
+        added = self.documents(rings=("ring-a", "ring-b", "ring-c"),
+                               operations=[self.install("mount-a", "@ring-a"), self.install("mount-b", "@ring-b")])
+        result = self.accepted_result(self.documents(), added)
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "stale", result.statuses[self.OBLIGATION])
+        self.assertIn("occurrences", " ".join(result.statuses[self.OBLIGATION].reasons))
+
+    def legacy_documents(self) -> dict[str, Any]:
+        """A bought part and its housing in one subassembly of plain part numbers: no explicit occurrence, so no
+        membership error can compete with a shape error."""
+        ring = fx.part("TST-0103", "Ring", process="purchased", make_buy="buy",
+                       part_intent=fx.intent(route=[fx.operation("buy", "purchased")],
+                                             material_profile=fx.not_applicable("catalogue item")))
+        mount = [{"id": "mount", "kind": "join", "part": "TST-0103", "into": "TST-0104", "direction": [0, 0, -1],
+                  "acceptance": {"kind": "standoff", "features": ["foot", "top"]}}]
+        docs = fx.record(parts=[ring, fx.part("TST-0104", "Housing", process="cnc")], operations=mount)
+        return {rel: data for rel, data in docs.items() if not rel.startswith("_")}
+
+    def plain_documents(self) -> dict[str, Any]:
+        """The bought part and its housing with no explicit occurrence and no operation."""
+        docs = self.legacy_documents()
+        docs["assembly.yaml"]["operations"] = []
+        return docs
+
+    def test_an_accepted_entry_goes_stale_when_the_part_loses_its_last_explicit_occurrence(self) -> None:
+        before, after = self.documents(rings=("ring-a",)), self.plain_documents()
+        interface = [impact.fingerprints(normalized(docs), {"PN": "TST-0103"})["interface"] for docs in (before, after)]
+        self.assertEqual(interface[0], interface[1], "only the occurrences domain can tell these two records apart")
+        result = self.accepted_result(before, after)
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "stale", result.statuses[self.OBLIGATION])
+        self.assertIn("occurrences", " ".join(result.statuses[self.OBLIGATION].reasons))
+
+    def test_an_accepted_entry_that_never_recorded_occurrences_stays_current_while_the_part_has_none(self) -> None:
+        result = self.accepted_result(self.plain_documents(), self.plain_documents())
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "pass", result.statuses[self.OBLIGATION])
+
+    def wrong_shapes(self) -> list[tuple[str, str, Any, str]]:
+        """(name, fixture, edit of assembly.yaml, exact problem). The "legacy" fixtures have no explicit occurrence,
+        so the shape is the only problem. The one "placed" mapping case cannot be that clean: `_list_of`
+        (assembly_data.py:216) reads a mapping as an empty list, so the explicit occurrences stay ungrouped and the
+        membership loop (assembly_data.py:295-297) always reports them next to the shape message. That case keeps
+        the references as mapping keys, which is the shape that would read as valid without the check."""
+        def subassembly(key: str, value: Any) -> Any:
+            return lambda assembly: assembly["subassemblies"][0].__setitem__(key, value)
+
+        def top(key: str, value: Any) -> Any:
+            return lambda assembly: assembly.__setitem__(key, value)
+
+        every_reference = {f"@{o['id']}": 1 for o in self.documents()["assembly.yaml"]["occurrences"]}
+        return [
+            ("subassembly occurrences is a mapping", "placed", subassembly("occurrences", every_reference),
+             "subassembly main: occurrences must be a list"),
+            ("subassembly occurrences is a mapping and nothing else is wrong", "legacy",
+             subassembly("occurrences", {"@ring-a": 1}), "subassembly main: occurrences must be a list"),
+            ("subassembly occurrences is an integer", "legacy", subassembly("occurrences", 1),
+             "subassembly main: occurrences must be a list"),
+            ("subassembly parts is an integer", "legacy", subassembly("parts", 1),
+             "subassembly main: parts must be a list"),
+            ("subassemblies is an integer", "legacy", top("subassemblies", 1), "subassemblies must be a list"),
+            ("a subassembly is a string", "legacy", top("subassemblies", ["main"]),
+             "subassemblies/0 must be a mapping"),
+            ("occurrences is an integer", "placed", top("occurrences", 1), "occurrences must be a list"),
+            ("an occurrence is a string", "legacy", top("occurrences", ["ring-a"]), "occurrences/0 must be a mapping"),
+            ("an occurrence is an integer", "legacy", top("occurrences", [1]), "occurrences/0 must be a mapping"),
+            ("a placement is a string", "placed", lambda assembly: assembly["occurrences"][2].__setitem__(
+                "placement", "left"), "occurrences/2.placement must be a mapping of translation_mm and rotation")]
+
+    def test_a_wrong_container_shape_is_a_named_inventory_problem(self) -> None:
+        valid = impact.fingerprints(normalized(self.documents()), {"PN": "TST-0103"})["occurrences"]
+        for name, fixture, edit, message in self.wrong_shapes():
+            with self.subTest(shape=name):
+                docs = self.documents() if fixture == "placed" else self.legacy_documents()
+                edit(docs["assembly.yaml"])
+                record = normalized(docs)
+                found = impact.part_occurrences(record, "TST-0103")
+                self.assertIsInstance(found, impact.InventoryProblem)
+                problems = found.message.split("; ")
+                self.assertEqual(found.field, "assembly_inventory")
+                self.assertIn(message, problems)
+                if fixture == "legacy":
+                    self.assertEqual(problems, [message], "the shape is the only thing wrong with this inventory")
+                self.assertNotEqual(impact.fingerprints(record, {"PN": "TST-0103"})["occurrences"], valid)
+
+    def old_entry_result(self, docs: dict[str, Any], current: dict[str, Any]) -> Any:
+        """The assessment of `current` with a purchase.mounting entry recorded against `docs` before the
+        occurrences domain existed: it holds every domain fingerprint but that one, the appearance and the lot."""
+        from datetime import date  # noqa: PLC0415 - used by these tests alone
+
+        before = normalized(docs)
+        old = tuple(d for d in impact.DOMAINS if d not in ("occurrences", "appearance", "lot"))
+        entry = acceptance.entry(before, "EV-009", {"PN": "TST-0103", "operation": "buy"}, "cad_valid",
+                                 obligation=self.OBLIGATION, version="v1", manifest_sha256="a" * 64, domains=old)
+        after = copy.deepcopy(current)
+        after["manufacturing/evidence.yaml"] = {"entries": [entry]}
+        return acceptance.evidence.assess(normalized(after), version="v1", manifest_sha256="a" * 64, packets=(),
+                                          approved=lambda decision: True, today=date(2026, 11, 18))
+
+    def test_an_old_entry_is_unqualified_once_a_bought_part_is_placed_as_occurrences(self) -> None:
+        unmounted = [self.install("mount-a", "@ring-a"), self.install("mount-b", "@ring-b")]
+        result = self.old_entry_result(self.documents(), self.documents(rings=("ring-a", "ring-b", "ring-c"),
+                                                                         operations=unmounted))
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "unknown")
+        self.assertIn("evidence.unqualified", {finding.code for finding in result.findings})
+
+    def test_an_old_entry_of_a_bought_part_without_occurrences_stays_current(self) -> None:
+        ring = fx.part("TST-0103", "Ring", process="purchased", make_buy="buy",
+                       part_intent=fx.intent(route=[fx.operation("buy", "purchased")],
+                                             material_profile=fx.not_applicable("catalogue item")))
+        legacy = [{"id": "mount", "kind": "join", "part": "TST-0103", "into": "TST-0104", "direction": [0, 0, -1],
+                   "acceptance": {"kind": "standoff", "features": ["foot", "top"]}}]
+        docs = fx.record(parts=[ring, fx.part("TST-0104", "Housing", process="cnc")], operations=legacy)
+        docs = {rel: data for rel, data in docs.items() if not rel.startswith("_")}
+        result = self.old_entry_result(docs, docs)
+        self.assertEqual(result.statuses[self.OBLIGATION].result, "pass")
+        self.assertNotIn("evidence.unqualified", {finding.code for finding in result.findings})
+
+    def test_every_family_but_purchase_fingerprints_byte_identically_to_main(self) -> None:
+        cases = (("occurrence-placed", self.documents()), ("broken inventory", self.documents(frame=None)))
+        for case, docs in cases:
+            prints = impact.subject_fingerprints(normalized(docs))
+            for prefix, domains in self.MAIN_FAMILIES.items():
+                with self.subTest(case=case, family=prefix):
+                    self.assertEqual(family_digest(prints, domains), MAIN_FAMILY_DIGESTS[case][prefix])
+
+    def test_every_other_family_keeps_its_domains_and_purchase_depends_on_occurrences(self) -> None:
+        for prefix, domains in self.MAIN_FAMILIES.items():
+            with self.subTest(family=prefix):
+                self.assertEqual(tuple(sorted(impact.family_domains(prefix))), domains)
+        main_purchase = {"criterion", "source", "process", "route", "load", "environment", "geometry"}
+        self.assertEqual(impact.family_domains("purchase."), main_purchase | {"occurrences"})
+
+    def test_a_part_without_a_valid_inventory_reports_the_problem_and_never_an_empty_result(self) -> None:
+        broken = normalized(self.documents(frame=None))
+        found = impact.part_occurrences(broken, "TST-0103")
+        self.assertIsInstance(found, impact.InventoryProblem)
+        self.assertEqual(found.field, "assembly_inventory")
+        self.assertIn("TST-0103 is placed 2 times", found.message)
+
+    def test_an_occurrence_view_lists_occurrences_by_id_with_placement_and_operations(self) -> None:
+        operations = [self.install("mount-b", "@ring-b"), self.install("seat-a", "@housing", into="@ring-a")]
+        moved = {"ring-b": {"translation_mm": [5, 0, 0]}}
+        found = impact.part_occurrences(normalized(self.documents(operations=operations, placements=moved)), "TST-0103")
+        self.assertIsInstance(found, impact.PartOccurrences)
+        self.assertEqual([(o.id, o.operations) for o in found.occurrences],
+                         [("ring-a", ("seat-a",)), ("ring-b", ("mount-b",))])
+        self.assertEqual(found.occurrences[1].placement["translation_mm"], [5.0, 0.0, 0.0])
+        self.assertEqual(found.model_frame, "part_local")
+
+    def test_a_broken_inventory_never_fingerprints_like_a_valid_one(self) -> None:
+        valid = impact.fingerprints(normalized(self.documents()), {"PN": "TST-0103"})["occurrences"]
+        broken = impact.fingerprints(normalized(self.documents(frame=None)), {"PN": "TST-0103"})["occurrences"]
+        self.assertNotEqual(valid, broken)
 
 
 class EvidenceAndFlow(unittest.TestCase):

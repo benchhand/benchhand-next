@@ -745,5 +745,22 @@ class LedgerEvidence(unittest.TestCase):
 
 
 
+class AssemblyInventory(unittest.TestCase):
+    """validate.assembly_inventory called directly: through the CLI the schema refuses a wrong shape first."""
+
+    def inventory_findings(self, assembly: dict[str, object]) -> tuple[object, list[dict[str, str]]]:
+        from modload import load_module  # noqa: PLC0415 - used by this class alone
+
+        validate = load_module("cad_record_validate", SKILL / "scripts" / "validate.py")
+        findings: list[dict[str, str]] = []
+        return validate.assembly_inventory(assembly, "hw/assembly.yaml", {}, findings), findings
+
+    def test_a_non_mapping_subassembly_is_a_named_inventory_finding(self) -> None:
+        inventory, findings = self.inventory_findings({"subassemblies": ["main"]})
+        self.assertIsNone(inventory)
+        self.assertEqual([(item["path"], item["severity"], item["message"]) for item in findings],
+                         [("hw/assembly.yaml", "error", "subassemblies/0 must be a mapping")])
+
+
 if __name__ == "__main__":
     unittest.main()

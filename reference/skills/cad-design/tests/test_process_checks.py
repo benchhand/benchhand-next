@@ -732,6 +732,77 @@ class DispatchByProcessTests(Checks):
         self.assertEqual(self.outcome(result, "process.cnc.access@TST-0602/mill"), "pass")
 
 
+@unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
+class PurchasedMountingOccurrenceTests(Checks):
+    """A bought part placed three times appears by occurrence (`@id`) in assembly operations. Its mounting check
+    needs an operation that names each occurrence as part or into."""
+
+    OBLIGATION = "purchase.mounting@TST-0603/buy"
+
+    def documents(self, operations: list[dict[str, Any]], rings: tuple[str, ...] = ("ring-a", "ring-b", "ring-c"),
+                  interfaces: tuple[dict[str, Any], ...] = ()) -> dict[str, Any]:
+        ring = part("TST-0603", [FX.operation("buy", "purchased", purchase={
+            "identity": known("TST-RING 15"), "specification": known("TST ISO 15", "standard", [FX.source("standard", "TST ISO 15")]),
+            "ratings": known("TST 1 kN", "supplier_typical", [datasheet("TST ring")]),
+            "availability": known("TST stock item")})], process="purchased", material=None, make_buy="buy",
+            procurement={"mode": "catalog"}, model_frame="part_local")
+        ring["intent"]["material_profile"] = FX.not_applicable("catalogue item")
+        housing = part("TST-0604", [FX.operation("print", "fdm", "tst_printer", orientation=copy.deepcopy(APPROVED),
+                                                 supports={"strategy": "none"})], process="fdm", model_frame="part_local")
+        documents = FX.record(parts=[ring, housing], operations=operations, interfaces=list(interfaces),
+                              capabilities=[FX.capability_profile("tst_printer", "fdm", envelope=ENVELOPE)],
+                              materials=materials())
+        documents["assembly.yaml"]["subassemblies"] = [{"id": "main", "title": "Main", "occurrences": [
+            "@housing", *(f"@{ident}" for ident in rings)]}]
+        documents["assembly.yaml"]["occurrences"] = [{"id": "housing", "PN": "TST-0604"}] + [
+            {"id": ident, "PN": "TST-0603"} for ident in rings]
+        return documents
+
+    @staticmethod
+    def install(ident: str, part_ref: str, into: str = "@housing") -> dict[str, Any]:
+        return {"id": ident, "kind": "join", "part": part_ref, "into": into, "direction": [0, 0, -1],
+                "acceptance": {"kind": "standoff", "features": ["foot", "top"]}}
+
+    def rings(self, *names: str) -> list[dict[str, Any]]:
+        return [self.install(f"mount-{name}", f"@ring-{name}") for name in names]
+
+    def test_every_occurrence_with_an_installing_operation_is_mounted(self) -> None:
+        result = self.assess(self.documents(self.rings("a", "b", "c")))
+        self.assertEqual(self.outcome(result, self.OBLIGATION), "pass")
+
+    def test_an_occurrence_without_an_operation_fails_and_is_named(self) -> None:
+        result = self.assess(self.documents(self.rings("a", "b")))
+        self.assertEqual(self.outcome(result, self.OBLIGATION), "fail")
+        finding = self.finding(result, "purchase.mounting_unmounted")
+        self.assertIn("@ring-c", finding["measured"]["text"])
+        self.assertNotIn("@ring-a", finding["measured"]["text"])
+
+    def test_an_occurrence_named_only_as_into_counts_as_mounted(self) -> None:
+        operations = [*self.rings("a", "b"), self.install("seat-c", "@housing", into="@ring-c")]
+        result = self.assess(self.documents(operations))
+        self.assertEqual(self.outcome(result, self.OBLIGATION), "pass")
+
+    def test_a_part_placed_once_and_named_by_id_is_mounted(self) -> None:
+        result = self.assess(self.documents(self.rings("a"), rings=("ring-a",)))
+        self.assertEqual(self.outcome(result, self.OBLIGATION), "pass")
+
+    def test_an_interface_does_not_stand_in_for_an_unmounted_occurrence(self) -> None:
+        """purchased.py:98-108: a part placed twice or more fails for any occurrence no operation names, even if
+        an interface names the part number."""
+        interface = FX.interface("IF-001", "TST-0603", "TST-0604")
+        result = self.assess(self.documents(self.rings("a", "b"), interfaces=(interface,)))
+        self.assertEqual(self.outcome(result, self.OBLIGATION), "fail")
+        self.assertIn("@ring-c", self.finding(result, "purchase.mounting_unmounted")["measured"]["text"])
+
+    def test_an_operation_naming_a_part_the_inventory_lacks_mounts_nothing(self) -> None:
+        """The part is in no subassembly, so `TST-0603` resolves to no occurrence and the operation mounts nothing.
+        The old code compared the unresolved reference as written, and it equalled the part number."""
+        operations = [self.install("mount-x", "TST-0603")]
+        result = self.assess(self.documents(operations, rings=()))
+        self.assertEqual(self.outcome(result, self.OBLIGATION), "unknown")
+        self.assertIn("purchase.mounting_unknown", self.codes(result, self.OBLIGATION))
+
+
 # --- row 18: unsupported process ------------------------------------------------------------------------------------
 
 @unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
