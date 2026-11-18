@@ -2937,8 +2937,14 @@ class RebuildTriggerTests(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         root = Path(cls.tmp.name)
         skills = root / "plugin" / "skills"
-        for name in ("cad-model", "cad-motion", "cad-record", "cad-flow", "cad-drawings"):
-            shutil.copytree(HERE.parents[1] / name, skills / name, ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        spec = importlib.util.spec_from_file_location("cad_agent_install", HERE.parents[2] / "harness" / "install.py")
+        assert spec is not None and spec.loader is not None
+        install = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(install)
+        for source in install.skill_files():  # the files harness/install.py installs, so the copy cannot drift from it
+            target = skills / source.relative_to(install.SKILLS)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
         copy = skills / "cad-model" / "scripts" / "cad_model.py"
         hw = two_part_project(root, "cadquery")
         set_arm(hw, "cadquery")
