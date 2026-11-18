@@ -145,6 +145,111 @@ class ReadFrdTests(unittest.TestCase):
         self.assertEqual(fs.plane_node_ids(result, "x", 4.0), frozenset({3}))
 
 
+class MalformedRecordTests(unittest.TestCase):
+    """Every malformed record of a block `read_frd` parses raises FrdError, never IndexError or ValueError."""
+
+    BLOCKS = (("node", "    2C"), ("DISP", " -4  DISP"), ("STRESS", " -4  STRESS"))
+    FIELD = 12  # width of one value; a record is ` -1`, a 10-character node id, then values
+
+    @staticmethod
+    def corrupt(text, header, change):
+        """`text` with the first record of the block opened by `header` replaced by `change(record)`."""
+        lines = text.splitlines()
+        start = next(i for i, line in enumerate(lines) if line.startswith(header))
+        record = next(i for i in range(start, len(lines)) if lines[i].startswith(" -1"))
+        lines[record] = change(lines[record])
+        return "\n".join(lines) + "\n"
+
+    def good(self):
+        return frd_text({1: (0.0, 0.0, 0.0), 2: (1.0, 2.0, 3.0)},
+                        {1: (1.0, 2.0, 2.0), 2: (0.0, 0.0, 0.0)},
+                        {1: (5.0, 0.0, 0.0, 0.0, 0.0, 0.0), 2: (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)})
+
+    def assert_refused(self, block, header, change, label):
+        with self.subTest(block=block, malformed=label):
+            with self.assertRaisesRegex(fs.FrdError, block):
+                fs.read_frd(self.corrupt(self.good(), header, change))
+
+    def test_the_unchanged_text_parses(self) -> None:
+        result = fs.read_frd(self.good())
+        self.assertEqual(result.coordinates[2], (1.0, 2.0, 3.0))
+        self.assertAlmostEqual(result.displacement[1], 3.0)
+        self.assertAlmostEqual(result.von_mises[1], 5.0)
+
+    def test_a_record_with_too_few_values_is_refused(self) -> None:
+        f = self.FIELD
+        for block, header in self.BLOCKS:
+            wanted = 6 if block == "STRESS" else 3
+            for have in (0, 1, wanted - 1):
+                self.assert_refused(block, header, lambda r, have=have: r[:13 + have * f], f"{have} values")
+
+    def test_a_value_that_is_not_a_number_is_refused(self) -> None:
+        f = self.FIELD
+        for block, header in self.BLOCKS:
+            for position in (0, 2):
+                self.assert_refused(block, header,
+                                    lambda r, position=position: r[:13 + position * f] + "xxxxxxxxxxxx" + r[13 + (position + 1) * f:],
+                                    f"value {position + 1}")
+
+    def test_a_node_id_that_is_not_a_number_or_is_blank_is_refused(self) -> None:
+        for block, header in self.BLOCKS:
+            self.assert_refused(block, header, lambda r: r[:3] + "abcdefghij" + r[13:], "text id")
+            self.assert_refused(block, header, lambda r: r[:3] + " " * 10 + r[13:], "blank id")
+
+    def test_a_record_cut_off_inside_a_field_is_refused(self) -> None:
+        for block, header in self.BLOCKS:
+            self.assert_refused(block, header, lambda r: r[:-5], "cut inside the last field")
+
+    def test_a_value_too_large_to_square_is_refused_with_its_block_and_node(self) -> None:
+        # 1.0E+200 squared overflows a float: Python raises OverflowError for `**`, which must not escape.
+        f = self.FIELD
+        for block, header, position in (("DISP", " -4  DISP", 0), ("DISP", " -4  DISP", 2),
+                                        ("STRESS", " -4  STRESS", 0), ("STRESS", " -4  STRESS", 3)):
+            with self.subTest(block=block, position=position):
+                text = self.corrupt(self.good(), header, lambda r: r[:13 + position * f] + "1.00000E+200" + r[13 + (position + 1) * f:])
+                with self.assertRaisesRegex(fs.FrdError, rf"{block} record of node 1 "):
+                    fs.read_frd(text)
+
+    def test_a_node_id_of_ten_digits_is_accepted_and_a_longer_or_infinite_one_is_not(self) -> None:
+        widest = self.corrupt(self.good(), "    2C", lambda r: r[:3] + "9999999999" + r[13:])
+        self.assertIn(9_999_999_999, fs.read_frd(widest).coordinates)
+        for label, field in (("inf", "       inf"), ("nan", "       nan"), ("exponent", "     1.0e10")):
+            with self.subTest(label):
+                with self.assertRaisesRegex(fs.FrdError, "node record has no node id"):
+                    fs.read_frd(self.corrupt(self.good(), "    2C", lambda r, field=field: r[:3] + field[:10] + r[13:]))
+
+    def test_inf_and_nan_values_are_accepted_for_the_finiteness_screen_to_judge(self) -> None:
+        f = self.FIELD
+        def put(text, header, position, word):
+            return self.corrupt(text, header, lambda r: r[:13 + position * f] + word.rjust(f) + r[13 + (position + 1) * f:])
+        text = put(put(put(self.good(), "    2C", 0, "inf"), " -4  DISP", 1, "nan"), " -4  STRESS", 0, "inf")
+        result = fs.read_frd(text)
+        self.assertTrue(math.isinf(result.coordinates[1][0]))
+        self.assertTrue(math.isnan(result.displacement[1]))
+        self.assertFalse(math.isfinite(result.von_mises[1]))
+
+    def test_inf_and_nan_text_in_a_result_gives_unknown_not_a_number(self) -> None:
+        f = self.FIELD
+        def inject(lvl, header, word):
+            lines = level_as_frd(lvl).splitlines()
+            start = max(i for i, line in enumerate(lines) if line.startswith(header))
+            row = next(i for i in range(start, len(lines)) if lines[i].startswith(f" -1{99_999:10d}"))
+            lines[row] = lines[row][:13] + word.rjust(f) + lines[row][13 + f:]
+            return dataclasses.replace(lvl, result=fs.read_frd("\n".join(lines) + "\n"))
+        coarse, fine = level(H_COARSE, kept=200), level(H_FINE, kept=2000)
+        for word in ("inf", "nan"):
+            for header, reason in ((" -4  STRESS", "non_finite_stress"), (" -4  DISP", "non_finite_stress"),
+                                   ("    2C", "non_finite_coordinates")):
+                with self.subTest(word=word, header=header):
+                    result = fs.compare_levels(inject(coarse, header, word), fine)
+                    self.assertEqual((result.status, result.reasons), (fs.UNKNOWN, (reason,)))
+                    self.assertIsNone(result.sigma_mpa)
+
+    def test_a_record_marker_without_an_id_is_refused(self) -> None:
+        for block, header in self.BLOCKS:
+            self.assert_refused(block, header, lambda r: r[:3], "marker only")
+
+
 class SettleTests(unittest.TestCase):
     def test_an_interior_peak_that_converges_is_strength_eligible_and_reports_the_larger_peak(self) -> None:
         result = study({"peak": 99.0}, {"peak": 100.0})
