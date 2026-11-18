@@ -7,6 +7,7 @@ Run: python3 -B -m unittest discover -s skills/cad-model/tests -p test_runner_pa
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
@@ -18,6 +19,7 @@ import time
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 HERE = Path(__file__).resolve().parent
@@ -84,14 +86,16 @@ def build(params):
                    "server_pgrp": os.getpgid(server), "runner_pgrp": os.getpgid(runner)}, out)
     return cq.Solid.makeBox(3, 4, 5)
 """
-HOLD = """import json, multiprocessing, os, time
+HOLD = """import multiprocessing, os, time
+from pathlib import Path
 import cadquery as cq
+from cadmodel.build import write_json
 KERNEL = "cadquery"
 PARAMS = {}
 def build(params):
     server, runner = os.getppid(), multiprocessing.parent_process().pid
-    with open(os.environ["WHERE_LOG"] + "/" + str(os.getpid()), "w") as out:
-        json.dump({"pid": os.getpid(), "server": server, "runner": runner}, out)
+    write_json(Path(os.environ["WHERE_LOG"]) / str(os.getpid()),
+               {"pid": os.getpid(), "server": server, "runner": runner})
     time.sleep(120)
     return cq.Solid.makeBox(3, 4, 5)
 """
@@ -146,6 +150,96 @@ def step_bytes(path: Path) -> bytes:
 
 def step_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+class _WriteSpy:
+    """A file object that records which sidecar names are visible each time bytes reach it."""
+
+    def __init__(self, file: Any, seen: Any) -> None:
+        self._file = file
+        self._seen = seen
+
+    def write(self, data: Any) -> Any:
+        self._seen()
+        return self._file.write(data)
+
+    def __enter__(self) -> "_WriteSpy":
+        self._file.__enter__()
+        return self
+
+    def __exit__(self, *exc: Any) -> Any:
+        return self._file.__exit__(*exc)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._file, name)
+
+
+def names_visible_at_each_write(folder: Path, action: Any) -> list[list[str]]:
+    """Run `action`. At every file write, record the sidecar names a reader could see."""
+    visible: list[list[str]] = []
+    real_open = io.open
+
+    def spying_open(*args: Any, **kwargs: Any) -> Any:
+        file = real_open(*args, **kwargs)
+        if "w" not in (args[1] if len(args) > 1 else kwargs.get("mode", "r")):
+            return file
+        return _WriteSpy(file, lambda: visible.append([p.name for p in folder.glob("[0-9]*")]))
+
+    with mock.patch("io.open", spying_open), mock.patch("builtins.open", spying_open):
+        action()
+    return visible
+
+
+def write_in_place(folder: Path) -> None:
+    """The original fixture's way: it creates the final name before it writes the content."""
+    with open(folder / "1", "w") as out:
+        json.dump({"pid": 1}, out)
+
+
+def serialise_then_write_in_place(folder: Path) -> None:
+    """It serializes first, but still creates the final name and writes into it."""
+    (folder / "1").write_text(json.dumps({"pid": 1}), encoding="utf-8")
+
+
+class HoldSidecar(unittest.TestCase):
+    def setUp(self) -> None:
+        self.sidecars = Path(self.enterContext(tempfile.TemporaryDirectory()))
+
+    def test_a_reader_could_see_the_name_during_a_non_atomic_write(self) -> None:
+        # negative controls: the spy must flag writers that expose the final name before the content is whole
+        for writer in (write_in_place, serialise_then_write_in_place):
+            with self.subTest(writer=writer.__name__):
+                folder = Path(self.enterContext(tempfile.TemporaryDirectory()))
+                visible = names_visible_at_each_write(folder, lambda: writer(folder))
+                self.assertTrue(visible, "no write was observed")
+                self.assertIn(["1"], visible)
+
+    def test_hold_sidecar_is_never_visible_half_written(self) -> None:
+        # the readiness check counts sidecars by name, so a name must only appear once its JSON is complete
+        class Held(Exception):
+            pass
+
+        def stop_at_sleep(_seconds: float) -> None:
+            raise Held
+
+        def run_fixture() -> None:
+            with (
+                mock.patch.dict(sys.modules, {"cadquery": mock.Mock()}),
+                mock.patch.dict(os.environ, {"WHERE_LOG": str(self.sidecars)}),
+                mock.patch("multiprocessing.parent_process", return_value=mock.Mock(pid=1)),
+                mock.patch("time.sleep", stop_at_sleep),
+            ):
+                namespace: dict[str, Any] = {}
+                exec(HOLD, namespace)
+                with self.assertRaises(Held):
+                    namespace["build"]({})
+
+        visible = names_visible_at_each_write(self.sidecars, run_fixture)
+        self.assertTrue(visible, "no write was observed")
+        self.assertTrue(all(names == [] for names in visible), visible)
+        written = json.loads((self.sidecars / str(os.getpid())).read_text())
+        self.assertEqual(written["pid"], os.getpid())
+        self.assertEqual(list(self.sidecars.iterdir()), [self.sidecars / str(os.getpid())])
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required to start the runners")
