@@ -378,6 +378,79 @@ class IncompleteInputTests(unittest.TestCase):
                 self.assertIn("coarse mesh", result.message)
 
 
+class ExtremeInputTests(unittest.TestCase):
+    """`compare_levels` returns UNKNOWN, never raises, for mesh sizes and coordinates the grid cannot index."""
+
+    NAN, INF = math.nan, math.inf
+
+    def compare(self, coarse_h, fine_h, *, coarse_move=None, fine_move=None):
+        coarse, fine = level(coarse_h, kept=200), level(fine_h, kept=2000)
+        if coarse_move is not None:
+            coarse = with_coordinates(coarse, 100_000, coarse_move)
+        if fine_move is not None:
+            fine = with_coordinates(fine, 100_000, fine_move)
+        return fs.compare_levels(coarse, fine)
+
+    def test_a_mesh_size_that_is_not_finite_and_positive_gives_unknown(self) -> None:
+        cases = (("coarse zero", 0.0, 0.5), ("coarse negative", -1.0, 0.5), ("coarse nan", self.NAN, 0.5),
+                 ("coarse inf", self.INF, 0.5), ("fine zero", 1.0, 0.0), ("fine negative", 1.0, -0.5),
+                 ("fine nan", 1.0, self.NAN), ("fine inf", 1.0, self.INF), ("both zero", 0.0, 0.0))
+        for name, coarse_h, fine_h in cases:
+            with self.subTest(name):
+                result = self.compare(coarse_h, fine_h)
+                self.assertEqual((result.status, result.reasons), (fs.UNKNOWN, ("invalid_mesh_size",)))
+                self.assertIsNone(result.sigma_mpa)
+                self.assertIsNone(result.sigma_info_mpa)
+                self.assertIn(f"h_coarse={coarse_h:g} mm h_fine={fine_h:g} mm", result.message)
+
+    def test_a_valid_mesh_size_that_is_not_coarser_is_still_refused_as_a_caller_error(self) -> None:
+        with self.assertRaises(ValueError):
+            self.compare(0.5, 1.0)
+        with self.assertRaises(ValueError):
+            self.compare(1.0, 1.0)
+
+    def test_a_coordinate_far_larger_than_the_mesh_size_gives_unknown_not_an_error(self) -> None:
+        # 1e305 / (4 x 2e-9) overflows to infinity inside the grid hash.
+        result = self.compare(2e-9, 1e-9, coarse_move=(1e305, 0.0, 0.0))
+        self.assertEqual((result.status, result.reasons), (fs.UNKNOWN, ("grid_out_of_range",)))
+        self.assertIsNone(result.sigma_mpa)
+        self.assertIn("coarse mesh", result.message)
+        self.assertIn("h_coarse=2e-09 mm h_fine=1e-09 mm", result.message)
+
+    def test_a_cell_index_beyond_float_precision_gives_unknown_even_when_it_is_finite(self) -> None:
+        # 100 / (4 x 1e-15) = 2.5e16 cells, above 2**53: the quotient is finite but no longer exact.
+        result = self.compare(1e-15, 5e-16)
+        self.assertEqual((result.status, result.reasons), (fs.UNKNOWN, ("grid_out_of_range",)))
+
+    def test_the_largest_cell_index_is_accepted_and_one_binade_more_is_not(self) -> None:
+        # With h_coarse = 1 the cell edge is 4, so the limit is 4 x 2**53 = 2**55.
+        at_limit = self.compare(1.0, 0.5, coarse_move=(2.0 ** 55, 0.0, 0.0))
+        self.assertNotIn("grid_out_of_range", at_limit.reasons)
+        beyond = self.compare(1.0, 0.5, coarse_move=(2.0 ** 56, 0.0, 0.0))
+        self.assertEqual((beyond.status, beyond.reasons), (fs.UNKNOWN, ("grid_out_of_range",)))
+        negative = self.compare(1.0, 0.5, coarse_move=(0.0, -(2.0 ** 56), 0.0))
+        self.assertEqual(negative.reasons, ("grid_out_of_range",))
+
+    def test_a_coordinate_beyond_the_grid_on_the_fine_mesh_names_the_fine_mesh(self) -> None:
+        result = self.compare(1.0, 0.5, fine_move=(2.0 ** 56, 0.0, 0.0))
+        self.assertEqual((result.status, result.reasons), (fs.UNKNOWN, ("grid_out_of_range",)))
+        self.assertIn("(fine mesh)", result.message)
+        self.assertNotIn("(coarse mesh)", result.message)
+
+    def test_a_cell_edge_that_overflows_gives_unknown(self) -> None:
+        # 4 x 1e308 is not a float, so the grid has no finite cell edge.
+        result = self.compare(1e308, 1.0)
+        self.assertEqual((result.status, result.reasons), (fs.UNKNOWN, ("grid_out_of_range",)))
+
+    def test_a_zero_stress_peak_on_the_fine_mesh_does_not_divide_by_zero(self) -> None:
+        both_zero = fs.compare_levels(level(H_COARSE, peak=0.0), level(H_FINE, kept=2000, peak=0.0))
+        self.assertEqual(both_zero.status, fs.SETTLED)
+        self.assertEqual(both_zero.sigma_mpa, 0.0)
+        coarse_only = fs.compare_levels(level(H_COARSE, peak=5.0), level(H_FINE, kept=2000, peak=0.0))
+        self.assertEqual(coarse_only.status, fs.UNKNOWN)
+        self.assertIn("stress_not_settled", coarse_only.reasons)
+
+
 class BoundaryTests(unittest.TestCase):
     """Peaks near a face, near the exclusion cutoff (3 mm), and beyond it."""
 
