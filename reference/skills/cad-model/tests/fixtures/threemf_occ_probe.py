@@ -37,7 +37,7 @@ folder = Path(sys.argv[1])
 pose = load_pose()
 report = {}
 for pn, title, shape in (("TST-0001", "Drilled plate", plate), ("TST-0002", "Ball", ball)):
-    entry = {"PN": pn, "product": f"{pn} {title}", "material": MATERIAL, "color": None, "mesh": MESH}
+    entry = {"PN": pn, "product": f"{pn} {title}", "material": MATERIAL, "mesh": MESH}
     step = folder / f"{pn}.step"
     pose.write_part_step(step, pose.Part(pn, entry["product"], shape))
     written, problem = manufacture.read_part(step, pn)
@@ -48,13 +48,15 @@ for pn, title, shape in (("TST-0001", "Drilled plate", plate), ("TST-0002", "Bal
     stl = folder / f"{pn}.stl"
     mesh.write_stl(written.shape, stl, MESH["linear_deflection_mm"], MESH["angular_deflection_rad"])
 
-    def judged(package: Path, declared: dict) -> dict:
-        """The threemf row of manufacture.inspect for `package` laid out as the part's part.3mf beside its STEP."""
+    def judged(package: Path, declared: dict, color: str | None = None) -> dict:
+        """The threemf row of manufacture.inspect for `package` laid out as the part's part.3mf beside its STEP,
+        for a part whose record declares intent.color `color`."""
         part_folder = folder / f"{package.stem}-folder"
         part_folder.mkdir()
         shutil.copy(step, part_folder / "part.step")
         shutil.copy(package, part_folder / "part.3mf")
-        record = {"PN": pn, "rev": "X1", "material": declared["material"], "process": "fdm", "finish": "none"}
+        record = {"PN": pn, "rev": "X1", "material": declared["material"], "process": "fdm", "finish": "none",
+                  "intent": {"color": color} if color else {}}
         facts = {"kernel_volume_mm3": 1.0, "kernel_valid": True, "kernel_solids": 1}
         files = ["part.step", "part.3mf"]
         full = {**record, **declared, "native": facts, "installed": facts, "tolerance": {"allowed_mm3": 1.0},
@@ -65,7 +67,7 @@ for pn, title, shape in (("TST-0001", "Drilled plate", plate), ("TST-0002", "Bal
     def variant(name: str, verts, tris, material=MATERIAL, color=None, expected=None) -> dict:
         path = folder / f"{pn}-{name}.3mf"
         threemf.write(path, verts, tris, name=entry["product"], material=material, color=color)
-        return judged(path, {**entry, "color": expected})
+        return judged(path, entry, expected)
 
     def edited(name: str, old: str, new: str) -> dict:
         """The good package with `old` replaced by `new` in its model part, judged."""

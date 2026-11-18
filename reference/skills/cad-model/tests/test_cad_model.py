@@ -2661,6 +2661,119 @@ class ManufacturingColorTests(unittest.TestCase):
         self.assertEqual(self.model("v3"), self.model("v2"))
 
 
+PROBE = """
+import os, runpy, sys
+sys.path.insert(0, {scripts!r})
+from cadmodel import manufacture
+manufacture._color = lambda plan: None  # the color is lost where the manifest entry is built
+if os.environ.get("PROBE_WHOLE_PART_KEEPS_COLOR"):  # but the whole part's own 3MF is still written with it
+    write = manufacture._write
+    manufacture._write = lambda folder, entry, *rest: write(
+        folder, entry if folder.parent.name == manufacture.COMPONENT_DIR
+        else {{**entry, "color": os.environ["PROBE_WHOLE_PART_KEEPS_COLOR"]}}, *rest)
+    judge = manufacture._threemf  # and the run's own gate expects no color of a component's 3MF
+    manufacture._threemf = lambda path, entry, color, *rest: judge(
+        path, entry, None if path.parent.parent.name == manufacture.COMPONENT_DIR else color, *rest)
+if os.environ.get("PROBE_BLIND_GATE"):  # and the run's own gate judges the record without the declared color
+    inspect = manufacture.inspect
+    manufacture.inspect = lambda target, entry, record, *rest, **kw: inspect(
+        target, entry, {{**record, "intent": {{k: v for k, v in record["intent"].items() if k != "color"}}}}, *rest, **kw)
+sys.argv[0] = {cli!r}
+runpy.run_path({cli!r}, run_name="__main__")
+"""
+
+
+@unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
+class ManufacturingColorLostBeforeExportTests(unittest.TestCase):
+    """A part declares intent.color #FF8000 and a bug drops it in the manufacturing entry builder, so the
+    manifest and part.3mf both leave it out. The declared intent, not the manifest, is what part.3mf must show."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        mp = projects()
+        cls.tmp = tempfile.TemporaryDirectory()
+        root = Path(cls.tmp.name)
+        header = re.search(r"^# /// script\n(?:#.*\n)*?# ///\n", CLI.read_text(encoding="utf-8"), re.M).group()  # PEP 723
+        cls.probe = root / "probe.py"
+        cls.probe.write_text(header + PROBE.format(scripts=str(SCRIPTS), cli=str(CLI)),
+                             encoding="utf-8")
+        cls.hw = {}
+        for name in ("refused", "lost", "declared"):
+            cls.hw[name] = mp.loose_project(root / name, "cadquery", [], color="#FF8000")
+        cls.hw["split"] = mp.loose_project(root / "split", "cadquery", [[60.0, 10.0, 5.0, 2.0]],
+                                                parts_of=mp.components(), print_components=["body"], color="#FF8000")
+        assert cli("run", str(cls.hw["declared"]), "--label", "v1")[0].returncode == 0
+        cls.declared = cls.part_yaml(cls.hw["declared"]).read_bytes()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    @staticmethod
+    def part_yaml(hw: Path) -> Path:
+        return hw / "versions" / "v1" / "record" / "parts" / "TST-0001" / "part.yaml"
+
+    def probed(self, *args: str, blind: bool = False, whole_part_color: str | None = None
+               ) -> subprocess.CompletedProcess[str]:
+        env = {**os.environ, **({"PROBE_BLIND_GATE": "1"} if blind else {}),
+               **({"PROBE_WHOLE_PART_KEEPS_COLOR": whole_part_color} if whole_part_color else {})}
+        return subprocess.run(["uv", "run", "--quiet", "--script", str(self.probe), *args], capture_output=True,
+                              text=True, check=False, env=env)
+
+    def outcomes(self, hw: Path) -> dict[str, dict]:
+        packet = json.loads((hw / "checks" / "v1" / "cad" / "result.json").read_text(encoding="utf-8"))
+        return {o["obligation"]: o for o in packet["outcomes"]}
+
+    def test_a_declared_color_lost_before_export_refuses_the_run_naming_the_color(self) -> None:
+        proc = self.probed("run", str(self.hw["refused"]), "--label", "v1")
+        self.assertEqual(proc.returncode, 1, proc.stdout[-2000:] + proc.stderr[-2000:])
+        self.assertIn("color_matches", proc.stdout)
+        self.assertIn("#FF8000", proc.stdout)
+
+    def test_a_declared_color_lost_before_export_fails_the_export_3mf_obligation(self) -> None:
+        hw = self.hw["lost"]
+        proc = self.probed("run", str(hw), "--label", "v1", blind=True)  # a version sealed without the gate
+        self.assertEqual(proc.returncode, 0, proc.stdout[-2000:] + proc.stderr[-2000:])
+        checked, _, _ = cli("check", "v1", "--hw", str(hw))
+        self.assertEqual(checked.returncode, 1, checked.stdout[-2000:] + checked.stderr[-2000:])
+        self.assertEqual(self.outcomes(hw)["export.3mf@TST-0001"]["outcome"], "fail")
+        self.assertIn("color_matches", checked.stdout)
+        self.assertIn("#FF8000", checked.stdout)
+
+    def test_a_component_3mf_that_lost_the_declared_color_fails_export_3mf_while_the_whole_part_shows_it(self) -> None:
+        hw = self.hw["split"]
+        proc = self.probed("run", str(hw), "--label", "v1", whole_part_color="#FF8000")  # sealed without the gate
+        self.assertEqual(proc.returncode, 0, proc.stdout[-2000:] + proc.stderr[-2000:])
+        checked, _, _ = cli("check", "v1", "--hw", str(hw))
+        self.assertEqual(checked.returncode, 1, checked.stdout[-2000:] + checked.stderr[-2000:])
+        self.assertEqual(self.outcomes(hw)["export.3mf@TST-0001"]["outcome"], "fail")
+        self.assertIn("components/body/part.3mf", checked.stdout)
+        self.assertIn("color_matches", checked.stdout)
+
+    def checked_with_intent(self, intent: object) -> subprocess.CompletedProcess[str]:
+        """`check` of v1 after its sealed part.yaml snapshot is rewritten with `intent(declared intent)`."""
+        import yaml
+
+        hw = self.hw["declared"]
+        data = yaml.safe_load(self.declared)
+        data["intent"] = intent(data["intent"])  # type: ignore[operator]
+        self.part_yaml(hw).write_text(yaml.safe_dump(data), encoding="utf-8")
+        return cli("check", "v1", "--hw", str(hw))[0]
+
+    def test_an_integer_declared_color_fails_export_3mf_by_name_not_by_traceback(self) -> None:
+        checked = self.checked_with_intent(lambda intent: {**intent, "color": 16744448})
+        self.assertNotIn("Traceback", checked.stdout + checked.stderr)
+        self.assertEqual(self.outcomes(self.hw["declared"])["export.3mf@TST-0001"]["outcome"], "fail")
+        self.assertIn("intent.color_invalid", checked.stdout)
+        self.assertIn("16744448", checked.stdout)
+
+    def test_a_declared_intent_that_is_not_a_mapping_fails_export_3mf_by_name_not_by_traceback(self) -> None:
+        checked = self.checked_with_intent(lambda intent: "see the product record")
+        self.assertNotIn("Traceback", checked.stdout + checked.stderr)
+        self.assertEqual(self.outcomes(self.hw["declared"])["export.3mf@TST-0001"]["outcome"], "fail")
+        self.assertIn("intent is not a mapping", checked.stdout)
+
+
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
 class ManufacturingStaleRecordTests(unittest.TestCase):
     """A manufacturing record the code cannot use is a cache miss: the outputs are made again, the run exits 0 and
