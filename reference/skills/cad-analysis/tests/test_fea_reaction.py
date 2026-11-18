@@ -106,7 +106,7 @@ class RefusedReactions(unittest.TestCase):
         bundle = scenario.publish({INTERFACE: entry(ends={"min": end("bounded", 40.0)})})
         (bundle / "evidence" / EVIDENCE).write_text('{"interfaces": {}}', encoding="utf-8")
         report = scenario.refused("reaction_stale")
-        self.assertIn("seal", report["error"]["message"])
+        self.assertIn(f"stale: evidence/{EVIDENCE} changed after it was sealed", report["error"]["message"])
 
     def test_an_unbounded_stop_is_refused_even_when_the_other_stop_is_bounded(self) -> None:
         scenario = Scenario(self)

@@ -17,6 +17,7 @@ boundary cases.
 from __future__ import annotations
 
 import copy
+import hashlib
 import io
 import json
 import shutil
@@ -287,10 +288,12 @@ class StaleEvidence(unittest.TestCase):
         approved_entry = {**carried, "decisions": ["DR-003"]}
         self.assertEqual(assess(normalized(self.docs, [approved_entry])).statuses[SIMULATION].result, "pass")
 
-    def test_altered_cited_bytes_void_the_evidence(self) -> None:
+    def test_cited_bytes_that_changed_make_the_evidence_stale_never_pass(self) -> None:
         result = assess(normalized(self.docs, [self.simulation()]), artifact_sha=lambda rel: "f" * 64)
-        self.assertEqual(result.statuses[SIMULATION].result, "unknown")
-        self.assertIn("evidence.altered", codes(result.findings))
+        status = result.statuses[SIMULATION]
+        self.assertEqual(status.result, "stale")
+        self.assertTrue(all(reason.startswith("stale: ") for reason in status.reasons), status.reasons)
+        self.assertNotIn("evidence.altered", codes(result.findings))
 
     def test_physical_evidence_covers_its_own_subject_only(self) -> None:
         coupon = acceptance.entry(self.base, "EV-002", {"PN": "TST-0001", "feature": "pivot_bore"}, "physically_validated",
@@ -474,6 +477,38 @@ class PacketFiles(unittest.TestCase):
         self.assertIn("cannot read result.json", found["hw/checks/v1/broken"])
         self.assertIn("no expected and outcomes", found["hw/checks/v1/legacy"])
         self.assertIn("no manifest.json", found["hw/checks/v1/unsealed"])
+
+    def test_a_sealed_packet_with_a_changed_or_missing_member_is_stale_and_never_collected(self) -> None:
+        for change, reason in (("changed", "stale: note.txt changed after it was sealed"),
+                               ("missing", "stale: note.txt is listed but missing")):
+            with self.subTest(change):
+                self.bundle(change, json.dumps(acceptance.producer_packet(self.record)), manifest=False)
+                folder = self.hw / "checks" / "v1" / change
+                (folder / "note.txt").write_text("sealed\n", encoding="utf-8")
+                files = {name: hashlib.sha256((folder / name).read_bytes()).hexdigest()
+                         for name in ("result.json", "note.txt")}
+                (folder / "manifest.json").write_text(json.dumps({"files": files, "version_manifest_sha256": V1}),
+                                                      encoding="utf-8")
+                if change == "changed":
+                    (folder / "note.txt").write_text("edited\n", encoding="utf-8")
+                else:
+                    (folder / "note.txt").unlink()
+                packets, findings = evidence.collect_packets(self.hw, "v1", V1)
+                self.assertEqual(packets, [])
+                self.assertEqual([(f.code, f.path) for f in findings], [("packet.invalid", f"hw/checks/v1/{change}")])
+                self.assertIn(reason, findings[0].message)
+                shutil.rmtree(folder)
+
+    def test_a_sealed_packet_bound_to_another_build_is_stale_and_never_collected(self) -> None:
+        self.bundle("other", json.dumps(acceptance.producer_packet(self.record)), manifest=False)
+        folder = self.hw / "checks" / "v1" / "other"
+        inventory = {"result.json": hashlib.sha256((folder / "result.json").read_bytes()).hexdigest()}
+        (folder / "manifest.json").write_text(json.dumps({"files": inventory, "version_manifest_sha256": "f" * 64}),
+                                              encoding="utf-8")
+        packets, findings = evidence.collect_packets(self.hw, "v1", V1)
+        self.assertEqual(packets, [])
+        self.assertEqual([(f.code, f.path, f.message) for f in findings],
+                         [("packet.invalid", "hw/checks/v1/other", "hw/checks/v1/other: stale: it is bound to another build of v1")])
 
     def test_emit_refuses_a_packet_that_breaks_its_schema_and_writes_nothing(self) -> None:
         good = acceptance.producer_packet(self.record)

@@ -324,5 +324,20 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual(runtime["distributions"], sorted(runtime["distributions"]))
 
 
+class ReconcileLatest(unittest.TestCase):
+    def test_a_stale_version_is_refused_with_its_reason_and_the_pointer_is_unchanged(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-reconcile-test-")
+        self.addCleanup(temporary.cleanup)
+        hw = Path(temporary.name) / "hw"
+        folder = hw / "versions" / "v1"
+        folder.mkdir(parents=True)
+        (folder / "part.step").write_bytes(b"built")
+        (folder / "manifest.json").write_text(json.dumps({"files": {"part.step": sha(b"built")}}), encoding="utf-8")
+        (folder / "part.step").write_bytes(b"edited")
+        with self.assertRaisesRegex(build.UsageError, "stale: part.step changed after it was sealed"):
+            build.reconcile_latest(hw, "v1")
+        self.assertFalse((hw / "versions" / "latest.json").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

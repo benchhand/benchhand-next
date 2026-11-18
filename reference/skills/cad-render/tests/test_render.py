@@ -1089,7 +1089,7 @@ class Reuse(unittest.TestCase):
         with self.subTest(change="renderer"), mock.patch.object(render, "renderer_sha256", return_value="other"):
             self.assertEqual(self.reused("v5"), {})
 
-    def test_a_failed_or_tampered_prior_image_is_not_reused(self) -> None:
+    def test_a_failed_or_stale_prior_image_is_not_reused(self) -> None:
         self.publish("v1", status="fail")
         box_version.write(self.hw, "v2", BOXES, box_parts())
         self.assertEqual(self.reused("v2"), {}, "failed")
@@ -1098,7 +1098,7 @@ class Reuse(unittest.TestCase):
         png.chmod(0o644)
         png.write_bytes(b"edited")
         box_version.write(self.hw, "v3", BOXES, box_parts())
-        self.assertEqual(self.reused("v3"), {}, "tampered")
+        self.assertEqual(self.reused("v3"), {}, "stale")
 
     def test_a_reused_image_keeps_the_version_it_was_rendered_in(self) -> None:
         self.publish("v1")

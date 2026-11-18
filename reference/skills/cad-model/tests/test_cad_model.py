@@ -700,7 +700,7 @@ def tree_hashes(folder: Path) -> dict[str, str]:
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
 class ManufacturingStateTests(unittest.TestCase):
     """The flat-strap project (CadQuery only): refused manufacturing declarations and states never seal a
-    version, a manufacturing-only change shows in diff, a tampered STL fails check, and a sealed version
+    version, a manufacturing-only change shows in diff, a cracked STL fails check, and a sealed version
     whose latest pointer could not be written is kept and pointed at without a rebuild."""
 
     @classmethod
@@ -742,13 +742,13 @@ class ManufacturingStateTests(unittest.TestCase):
         cls.runs["v2"] = cli("run", str(hw), "--label", "v2")
         cls.runs["diff"] = cli("diff", "v1", "v2", "--hw", str(hw))
         # One triangle cut from a sealed STL: a crack, and bytes the manifest no longer matches.
-        tampered = root / "tampered" / "hw"
-        shutil.copytree(hw, tampered)
-        stl = tampered / "versions" / "v2" / "manufacturing" / STRAP / "part.stl"
+        cracked = root / "cracked" / "hw"
+        shutil.copytree(hw, cracked)
+        stl = cracked / "versions" / "v2" / "manufacturing" / STRAP / "part.stl"
         data = stl.read_bytes()
         stl.chmod(0o644)  # sealed outputs are read-only (0444): tampering takes a deliberate chmod
         stl.write_bytes(data[:80] + struct.pack("<I", struct.unpack_from("<I", data, 80)[0] - 1) + data[84:-50])
-        cls.runs["tampered"] = cli("check", "v2", "--hw", str(tampered))
+        cls.runs["cracked"] = cli("check", "v2", "--hw", str(cracked))
         # The pointer write fails after v3 is sealed: latest.json is a directory.
         (hw / "versions" / "latest.json").unlink()
         (hw / "versions" / "latest.json").mkdir()
@@ -883,7 +883,7 @@ class ManufacturingStateTests(unittest.TestCase):
         self.assertEqual(build.record.load_layout().verify(self.rebuilds / "versions" / "v7"), [])
 
     def test_a_cracked_stl_fails_check(self) -> None:
-        proc, result, _ = self.runs["tampered"]
+        proc, result, _ = self.runs["cracked"]
         self.assertEqual(proc.returncode, 1, proc.stderr[-2000:])
         self.assertIn("manufacturing", result["blocking_failures"])
         self.assertIn("artifact_integrity", result["blocking_failures"])

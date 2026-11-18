@@ -635,10 +635,64 @@ class Refusal(ReleaseCase):
         hw = self.project(failed={"LMP-0004": "bed_contact"})
         self.refused(hw, "hw/versions/v1/manufacturing/LMP-0004/manufacturing.json", "failed", "bed_contact failed")
 
-    def test_a_tampered_bundle_refuses(self) -> None:
+    def test_a_bundle_with_a_changed_member_is_stale_and_refuses(self) -> None:
         hw = self.project()
         write(hw / "drawings" / "v1" / "LMP-0002" / "sheet-1.svg", "edited\n")
-        self.refused(hw, "hw/drawings/v1/LMP-0002", "tampered", "sheet-1.svg changed after it was sealed")
+        self.refused(hw, "hw/drawings/v1/LMP-0002", "stale", "stale: sheet-1.svg changed after it was sealed")
+
+    def test_a_bundle_with_a_missing_member_is_stale_and_refuses(self) -> None:
+        hw = self.project()
+        (hw / "drawings" / "v1" / "LMP-0002" / "sheet-1.svg").unlink()
+        self.refused(hw, "hw/drawings/v1/LMP-0002", "stale", "stale: sheet-1.svg is listed but missing")
+
+    def test_a_bundle_whose_manifest_names_another_layout_or_path_is_stale_and_refuses(self) -> None:
+        for field, value in (("layout", "bundle.renders"), ("path", "hw/drawings/v1/LMP-0003")):
+            with self.subTest(field):
+                hw = self.project()
+                path = hw / "drawings" / "v1" / "LMP-0002" / "manifest.json"
+                manifest = json.loads(path.read_text(encoding="utf-8"))
+                manifest[field] = value
+                path.write_text(json.dumps(manifest), encoding="utf-8")
+                named = {"layout": (value, manifest["path"]), "path": (manifest["layout"], value)}[field]
+                self.refused(hw, "hw/drawings/v1/LMP-0002", "stale", f"stale: manifest.json names {named[0]} at {named[1]}")
+                self.assertFalse((hw / "releases").exists())
+
+    def test_a_source_that_changes_while_it_is_copied_is_stale_and_refuses(self) -> None:
+        hw = self.project()
+        real, drifted = release.shutil.copyfile, []
+
+        def drift_then_copy(source: Any, target: Any, **options: Any) -> Any:
+            if not drifted:  # the first source changes after it was checked and before it is copied
+                drifted.append(Path(source))
+                Path(source).chmod(0o644)
+                Path(source).write_text("drifted\n", encoding="utf-8")
+            return real(source, target, **options)
+
+        with mock.patch.object(release.shutil, "copyfile", drift_then_copy):
+            result, report = self.release(hw)
+        original = drifted[0].relative_to(hw.resolve().parent).as_posix()
+        self.assertEqual((result, report["status"]), (1, "refused"))
+        self.assertTrue(any(item["path"] == original and item.get("code") == "release.stale"
+                            and item["message"] == f"stale: {original} changed since it was checked"
+                            for item in report["findings"]), json.dumps(report["findings"], indent=1))
+        self.assertFalse((hw / "releases").exists())
+
+    def test_a_staged_package_that_fails_its_seal_is_stale_and_refuses(self) -> None:
+        hw = self.project()
+        real = release.validate.validate_document
+
+        def validate_then_add_a_stray_file(*arguments: Any, **options: Any) -> Any:
+            found = real(*arguments, **options)
+            for staged in (hw.parent / ".cad-work" / "release-A").glob("stage-*"):
+                write(staged / "stray.txt")
+            return found
+
+        with mock.patch.object(release.validate, "validate_document", validate_then_add_a_stray_file):
+            result, report = self.release(hw)
+        self.assertEqual((result, report["status"]), (1, "refused"))
+        self.assertTrue(any(item.get("code") == "release.stale" and item["message"] == "stale: stray.txt is not in the manifest"
+                            for item in report["findings"]), json.dumps(report["findings"], indent=1))
+        self.assertFalse((hw / "releases").exists())
 
     def test_a_missing_drawing_refuses(self) -> None:
         hw = self.project(skip_bundles=("LMP-0006",))
@@ -820,6 +874,17 @@ class Acceptance(ReleaseCase):
         code, report = release.sealed(hw, "A", "v1", "DR-005")
         self.assertEqual(code, 1)
         self.assertIn("its manifest version 2 is not one this release.py reads", report["findings"][0]["message"])
+
+    def test_a_sealed_package_with_a_changed_member_is_stale_not_sealed(self) -> None:
+        hw = self.project()
+        self.assertEqual(self.release(hw)[0], 0)
+        member = next(p for p in sorted((hw / "releases" / "A").rglob("*")) if p.is_file() and p.name != "manifest.json")
+        member.write_text("edited\n", encoding="utf-8")
+        code, report = release.sealed(hw, "A", "v1", "DR-005")
+        finding = report["findings"][0]
+        self.assertEqual((code, report["status"], finding["code"]), (1, "refused", "release.stale"))
+        self.assertTrue(finding["message"].startswith("stale: "), finding["message"])
+        self.assertIn(f"{member.relative_to(hw / 'releases' / 'A').as_posix()} changed after it was sealed", finding["message"])
 
     def test_an_open_or_stale_selection_refuses_the_release(self) -> None:
         hw = self.project(before_build=open_selection)

@@ -9,6 +9,7 @@ enforcement in validate.py."""
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -16,9 +17,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import yaml
 
@@ -286,12 +289,99 @@ class Publication(TempProject):
         staged = list((self.project / ".cad-work" / "publication").iterdir())
         self.assertEqual([sorted(p.name for p in s.iterdir()) for s in staged], [["iso.png"]])
 
-    def test_a_tampered_bundle_is_not_reused(self) -> None:
-        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"})
+    def test_a_bundle_with_a_changed_member_is_stale_and_its_producer_reruns(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
         write(self.target / "iso.png", "edited\n")
-        self.assertEqual(layout.verify(self.target), ["iso.png changed after it was sealed"])
-        with self.assertRaises(layout.PublishConflict):
-            publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"})
+        self.assertEqual(layout.stale(self.target), "stale: iso.png changed after it was sealed")
+        self.assertIsNone(layout.reusable(self.hw, "bundle.renders", self.params, {"size": 800}), "the producer runs")
+        rerun = publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        self.assertFalse(rerun.reused)
+        self.assertEqual((self.target / "iso.png").read_text(encoding="utf-8"), "png\n")
+        self.assertIsNone(layout.stale(self.target))
+
+    def test_a_bundle_with_a_missing_member_is_stale(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        (self.target / "iso.png").unlink()
+        self.assertEqual(layout.stale(self.target), "stale: iso.png is listed but missing")
+        self.assertIsNone(layout.reusable(self.hw, "bundle.renders", self.params, {"size": 800}))
+
+    def test_stale_names_the_first_reason_and_counts_the_rest(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(self.target / "iso.png", "edited\n")
+        write(self.target / "extra.png")
+        self.assertEqual(layout.stale(self.target), "stale: iso.png changed after it was sealed (+1 more)")
+
+    def test_a_populated_bundle_without_a_readable_manifest_is_stale_and_reruns(self) -> None:
+        for damage in ("missing", "directory"):
+            with self.subTest(damage):
+                publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+                (self.target / "manifest.json").unlink()
+                if damage == "directory":
+                    write(self.target / "manifest.json" / "inner.txt")
+                self.assertTrue(layout.stale(self.target).startswith("stale: cannot read"), damage)
+                self.assertIsNone(layout.reusable(self.hw, "bundle.renders", self.params, {"size": 800}))
+                rerun = publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+                self.assertFalse(rerun.reused)
+                self.assertEqual(layout.verify(self.target), [])
+                shutil.rmtree(self.target)
+
+    def test_a_writer_that_repaired_a_stale_bundle_is_not_moved_aside_by_a_slower_writer(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(self.target / "iso.png", "edited\n")
+        a_paused, b_trying, release_a = threading.Event(), threading.Event(), threading.Event()
+        guard = 30  # seconds: only a hang guard, never part of the logic
+        outcome: dict[str, Any] = {}
+        real, hooked = layout._stale_bundle, []
+
+        def stale_then_pause(target: Path) -> bool:
+            found = real(target)
+            if found and not hooked:  # writer A has seen the stale bundle and waits here
+                hooked.append(True)
+                a_paused.set()
+                release_a.wait(guard)
+            return found
+
+        def writer_a() -> None:
+            with mock.patch.object(layout, "_stale_bundle", stale_then_pause):
+                outcome["a"] = publish(self.hw, "bundle.renders", self.params, {"iso.png": "a\n"}, recipe={"size": 800})
+
+        def writer_b() -> None:
+            b_trying.set()
+            try:
+                outcome["b"] = publish(self.hw, "bundle.renders", self.params, {"iso.png": "b\n"}, recipe={"size": 1600})
+            except layout.PublishConflict as error:
+                outcome["b"] = error
+
+        a, b = threading.Thread(target=writer_a, daemon=True), threading.Thread(target=writer_b, daemon=True)
+        a.start()
+        try:
+            self.assertTrue(a_paused.wait(guard), "writer A never reached its pause")
+            lock = layout._lock_path(self.hw, "hw/renders/v1/assembly")
+            with lock.parent.joinpath(lock.name).open("a") as probe:
+                with self.assertRaises(BlockingIOError, msg="writer A holds no lock on the bundle while it is paused"):
+                    fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            b.start()
+            self.assertTrue(b_trying.wait(guard))
+        finally:
+            release_a.set()
+            a.join(guard)
+            if b.ident is not None:
+                b.join(guard)
+        self.assertFalse(a.is_alive() or b.is_alive(), "a writer hung")
+        self.assertIsInstance(outcome["b"], layout.PublishConflict, "B finds A's sound bundle and another recipe")
+        self.assertEqual(layout.verify(self.target), [])
+        moved = [p for p in (self.project / ".cad-work" / "replaced").rglob("manifest.json")]
+        self.assertTrue(all(layout.verify(p.parent) for p in moved), "no sound bundle was moved aside")
+
+    def test_a_long_subject_still_publishes_and_repairs_a_stale_bundle(self) -> None:
+        subject = "s" * 240  # a valid folder name whose flattened lock name would pass 255 characters
+        params = {"V": "v1", "S": subject}
+        target = self.hw / "renders" / "v1" / subject
+        publish(self.hw, "bundle.renders", params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(target / "iso.png", "edited\n")
+        rerun = publish(self.hw, "bundle.renders", params, {"iso.png": "png\n"}, recipe={"size": 800})
+        self.assertFalse(rerun.reused)
+        self.assertEqual(layout.verify(target), [])
 
     def test_a_sealed_v2_release_verifies_and_a_tampered_copy_is_reported(self) -> None:
         release = self.hw / "releases" / "A"
@@ -357,9 +447,6 @@ class Publication(TempProject):
         with self.assertRaisesRegex(layout.PublishConflict, "--replace"):
             layout.reusable(self.hw, "bundle.renders", params, {"size": 1600})
         self.assertIsNone(layout.reusable(self.hw, "bundle.renders", params, {"size": 1600}, replace=True))
-        write(self.target / "iso.png", "edited\n")
-        with self.assertRaises(layout.PublishConflict):
-            layout.reusable(self.hw, "bundle.renders", params, {"size": 800})
 
     def test_built_version_needs_a_verified_manifest_and_a_record_snapshot(self) -> None:
         write(self.hw / "versions" / "v2" / "record" / "product.yaml")
@@ -372,7 +459,7 @@ class Publication(TempProject):
         with self.assertRaisesRegex(layout.LayoutError, "v3 is not a built version"):
             layout.built_version(self.hw, "v3")
         write(self.hw / "versions" / "v2" / "record" / "product.yaml", "edited\n")
-        with self.assertRaisesRegex(layout.LayoutError, "fails its manifest"):
+        with self.assertRaisesRegex(layout.LayoutError, "v2: stale: record/product.yaml changed"):
             layout.built_version(self.hw, "v2")
 
     def test_scratch_path_accepts_only_cad_work(self) -> None:

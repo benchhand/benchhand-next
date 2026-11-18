@@ -13,6 +13,7 @@ Run: python3 -m unittest discover -s cad/skills/cad-viewer/tests -p 'test_galler
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -182,6 +183,30 @@ class Index(Fixture):
         self.assertEqual(v2["captures"], [{"subject": "iso", "files": ["captures/v2/iso/iso.png"],
                                            "views": ["iso"]}])
 
+    def test_a_stale_bundle_is_left_out_of_its_section_with_a_stale_note(self) -> None:
+        for kind, subject, member in (("renders", "assembly", "iso.png"), ("captures", "iso", "iso.png"),
+                                      ("drawings", "LMP-0001", "sheet-1.svg")):
+            with self.subTest(kind):
+                folder = self.hw / kind / "v2" / subject
+                (folder / member).chmod(0o644)
+                (folder / member).write_bytes(b"edited")
+                section = self.section(gallery.index(self.hw, "v2"), kind)
+                self.assertEqual(section["tiles"], [])
+                self.assertEqual(section["notes"], [f"{folder}: stale: {member} changed after it was sealed"])
+
+    def test_the_picker_reports_a_stale_version_and_lists_no_stale_bundle(self) -> None:
+        folder = self.hw / "versions" / "v3"
+        write(folder / "part.step", "built\n")
+        write(folder / "manifest.json", {"label": "v3", "files": {"part.step": hashlib.sha256(b"built\n").hexdigest()}})
+        write(folder / "part.step", "edited\n")
+        entry = next(e for e in gallery.record.version_list(self.hw) if e["label"] == "v3")
+        self.assertEqual(entry["error"], "v3: stale: part.step changed after it was sealed")
+        stale_render = self.hw / "renders" / "v2" / "assembly" / "iso.png"
+        stale_render.chmod(0o644)
+        stale_render.write_bytes(b"edited")
+        previews = next(e for e in gallery.record.version_list(self.hw) if e["label"] == "v2")["previews"]
+        self.assertEqual(previews["renders"], [])
+
     def test_concept_screenshots_take_scene_and_variant(self) -> None:
         self.assertEqual(self.titles(gallery.index(self.hw), "concept"), ["lamp B"])
 
@@ -204,7 +229,7 @@ class Index(Fixture):
         broken = api.bundle_dir(self.hw, "drawings", "v2", "LMP-0001")
         shutil.rmtree(broken)
         api.publish(self.hw, "bundle.drawings", {"V": "v2", "S": "LMP-0001"}, stage,
-                    recipe={"part": "LMP-0001", "tampered": True}, producer="test_gallery", status="fail")
+                    recipe={"part": "LMP-0001", "variant": "failed"}, producer="test_gallery", status="fail")
         drawings = self.section(gallery.index(self.hw, "v2"), "drawings")
         self.assertNotIn(str(outside), [t["path"] for t in drawings["tiles"]])
 
