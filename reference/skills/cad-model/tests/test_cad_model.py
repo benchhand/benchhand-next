@@ -1409,6 +1409,94 @@ class CheckRuleTests(unittest.TestCase):
         self.assertEqual(artifacts, [{"path": "hw/versions/v1/manufacturing/TST-0001/part.3mf",
                                       "sha256": hashlib.sha256(b"three-mf").hexdigest()}])
 
+    @staticmethod
+    def heat_set(hole_d: float = 7.77, hole_tol: object = None, host: str = "@host") -> dict:
+        return {"pair": [host, "@insert"], "host": host, "insert": "M4 x 8", "hole_d": hole_d, "hole_tol": hole_tol,
+                "interface": "IF-001", "source": "interfaces.yaml#/interfaces/0/limits/heat_set/0"}
+
+    @staticmethod
+    def bores(*diameters: float) -> dict:
+        return {"TST-0001": {"holes": [{"id": f"H{n}", "diameter_mm": d} for n, d in enumerate(diameters, start=1)]}}
+
+    def dimensions(self, heat_set: dict, metrics: dict) -> dict:
+        return check.declared_dimensions([heat_set], {"@host": "TST-0001"}, metrics)
+
+    def test_a_heat_set_hole_is_judged_against_the_bores_of_its_host_within_the_declared_tolerance(self) -> None:
+        clean = self.dimensions(self.heat_set(hole_tol=[-0.04, 0.04]), self.bores(30.0, 7.81))
+        self.assertEqual((clean["status"], clean["blocking"]), ("pass", True), clean)
+        wide = self.dimensions(self.heat_set(hole_tol=[-0.04, 0.04]), self.bores(30.0, 7.82))
+        self.assertEqual(wide["status"], "fail")
+        self.assertIn("7.82", wide["heat_sets"][0]["reason"])
+        self.assertEqual(self.dimensions(self.heat_set(hole_tol=[-0.04, 0.0]), self.bores(7.81))["status"], "fail")
+
+    def test_a_heat_set_hole_with_no_declared_tolerance_must_match_to_a_hundredth_of_a_millimetre(self) -> None:
+        self.assertEqual(self.dimensions(self.heat_set(), self.bores(7.775))["status"], "pass")
+        self.assertEqual(self.dimensions(self.heat_set(), self.bores(7.79))["status"], "fail")
+
+    def test_a_malformed_tolerance_is_unknown_even_when_it_is_falsey(self) -> None:
+        """An empty list or tuple, 0, an empty mapping or string, and False all lack the [low, high] form. None of
+        them falls back to the default tolerance: a 7.775 mm bore would pass that, and the declaration would be wrong."""
+        for bad in ([], (), {}, 0, 0.0, "", False):
+            with self.subTest(hole_tol=bad):
+                row = self.dimensions(self.heat_set(hole_tol=bad), self.bores(7.775))
+                self.assertEqual(row["status"], "unknown")
+                self.assertIn("is not [low, high]", row["heat_sets"][0]["reason"])
+
+    def test_a_host_with_no_bore_fails_and_a_host_with_no_measurement_is_unknown(self) -> None:
+        self.assertEqual(self.dimensions(self.heat_set(), self.bores())["status"], "fail")
+        self.assertEqual(self.dimensions(self.heat_set(), {})["status"], "unknown")
+        self.assertEqual(self.dimensions(self.heat_set(), {"TST-0001": {}})["status"], "unknown")
+        absent = check.declared_dimensions([self.heat_set(host="@gone")], {"@host": "TST-0001"}, self.bores(7.77))
+        self.assertEqual(absent["status"], "unknown")
+
+    def test_a_failing_heat_set_outweighs_an_unknown_one(self) -> None:
+        both = check.declared_dimensions([self.heat_set(), self.heat_set(host="@gone")], {"@host": "TST-0001"},
+                                         self.bores(9.0))
+        self.assertEqual(both["status"], "fail")
+
+    def test_no_declared_dimension_leaves_nothing_to_judge(self) -> None:
+        self.assertEqual(check.declared_dimensions([], {}, {})["status"], "pass")
+
+    def test_agreement_covers_every_occurrence_unless_a_changed_only_check_names_what_changed(self) -> None:
+        built = {"a1": mock.Mock(pn="A"), "a2": mock.Mock(pn="A"), "b": mock.Mock(pn="B"), "c": mock.Mock(pn="C")}
+
+        def examined(changes: object | None) -> list[str]:
+            return sorted(check.agreement_scope(built, changes))
+
+        def changes(**kept: tuple[str, ...]) -> mock.Mock:
+            baseline = mock.Mock(occurrences={oid: o.pn for oid, o in built.items()})  # the same PNs as the current build
+            return mock.Mock(baseline=baseline, **{"geometry": (), "added": (), "moved": (), **kept})
+
+        self.assertEqual(examined(None), ["a1", "a2", "b", "c"])
+        self.assertEqual(examined(mock.Mock(baseline=None, geometry=(), added=(), moved=())), ["a1", "a2", "b", "c"])
+        self.assertEqual(examined(changes(geometry=("A",))), ["a1", "a2"])  # a changed definition: all its occurrences
+        self.assertEqual(examined(changes(moved=("b",), added=("c",))), ["b", "c"])
+        self.assertEqual(examined(changes()), [])  # nothing changed: nothing to re-judge
+        self.assertEqual(examined(changes(geometry=("GONE",), added=("never-built",))), [])
+
+    def test_an_occurrence_reassigned_to_another_unchanged_pn_is_in_the_changed_only_agreement_scope(self) -> None:
+        """"b" keeps its id and placement and no definition changes, so geometry, added and moved name nothing. Its
+        PN went from B to C, which changes the shape it depicts, so the check must judge its GLB mesh again."""
+        built = {"a1": mock.Mock(pn="A"), "b": mock.Mock(pn="C"), "c": mock.Mock(pn="C")}
+        baseline = mock.Mock(occurrences={"a1": "A", "b": "B", "c": "C"})
+        changes = mock.Mock(baseline=baseline, geometry=(), added=(), moved=())
+        self.assertEqual(sorted(check.agreement_scope(built, changes)), ["b"])
+
+    def test_without_numpy_the_agreement_abstains_for_every_occurrence_it_was_to_examine(self) -> None:
+        with mock.patch.object(check.agreement, "AVAILABLE", False):
+            result = check.glb_step_agreement(Path("none"), {}, {}, mock.Mock(), ["a1", "a2"], ["b"])
+        self.assertEqual((result["status"], result["skipped"], sorted(result["occurrences"])),
+                         ("unknown", ["b"], ["a1", "a2"]))
+        self.assertIn("numpy", result["occurrences"]["a1"]["reason"])
+
+    def test_a_check_that_examined_no_occurrence_passes_with_those_it_skipped_listed(self) -> None:
+        self.assertEqual(check.agreement_result({}, ["a1"], 0.2)["status"], "pass")
+        rows = {"a1": {"status": "unknown", "reason": "x"}}
+        result = check.agreement_result(rows, ["b"], 0.2)
+        self.assertEqual((result["status"], result["skipped"]), ("unknown", ["b"]))
+        self.assertEqual(check.agreement_result({"a1": {"status": "fail"}, "a2": {"status": "unknown"}}, [], 0.2)["status"],
+                         "fail")
+
     def test_build_volume_accepts_axis_permutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             hw = fdm_record(tmp, "build_volume: {x_mm: 35, y_mm: 10, z_mm: 5, margin_mm: 0}\n")
@@ -2738,6 +2826,42 @@ class LegacyOutputTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout[-3000:] + proc.stderr[-2000:])
         self.assertEqual((checked["checks"]["manufacturing"]["status"], checked["checks"]["manufacturing"]["complete"]),
                          ("pass", True))
+
+
+@unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
+class AbstentionAggregationTests(unittest.TestCase):
+    """`check` lists the oracles that could not judge under the report's top-level `abstentions`. When a version
+    manifest records no GLB deflection, such as one built before the exporter recorded it, the agreement abstains
+    for every occurrence. The report reads `pass`: an abstention blocks nothing."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.hw = two_part_project(Path(cls.tmp.name), "cadquery")
+        set_arm(cls.hw, "cadquery")
+        cls.built = cli("run", str(cls.hw), "--label", "v1")
+        path = cls.hw / "versions" / "v1" / "manifest.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["glb"].pop("linear_deflection_mm")
+        path.chmod(0o644)
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def test_an_abstaining_oracle_is_listed_in_the_reports_abstentions_and_blocks_nothing(self) -> None:
+        self.assertEqual(self.built[0].returncode, 0, self.built[0].stderr[-3000:])
+        proc, result, _ = cli("check", "v1", "--hw", str(self.hw), "--no-cache")
+        self.assertEqual(proc.returncode, 0, proc.stdout[-3000:] + proc.stderr[-2000:])
+        agreement = result["checks"]["glb_step_agreement"]
+        self.assertEqual(agreement["status"], "unknown")
+        self.assertIn("no GLB deflection", next(iter(agreement["occurrences"].values()))["reason"])
+        self.assertIn("glb_step_agreement", result["abstentions"])
+        self.assertEqual(result["abstentions"],
+                         sorted(name for name, c in result["checks"].items() if c["status"] == "unknown"))
+        self.assertNotIn("glb_step_agreement", result["blocking_failures"])
+        self.assertEqual(result["status"], "pass")
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the OCP environment")

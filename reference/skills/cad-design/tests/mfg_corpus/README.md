@@ -84,6 +84,20 @@ and the reason is in the report (`rejected`).
 The pair counts in `ran` and as a miss whatever the mutant returned, its twin's false positive still counts, and the
 rate command prints `known gap: <family>/<pair>: <why>`. Remove the field when the check is fixed.
 
+## Families not at the packet
+
+Five families judge the `cad_model check` report instead of the packet, because the `cad.readback` packet has no
+obligation for `glb_step_agreement` or `declared_dimensions` yet: `semantic_changed_only_scope`,
+`semantic_equal_volume_substitution`, `semantic_misplaced_feature`, `semantic_step_glb_disagreement` and
+`semantic_wrong_placement`. They run through `families/_oracles.py`. The rates command marks them `not at the packet (#174)`
+and leaves them out of its packet-level total. Their rates measure whether the oracle tells the mutant from its twin,
+not whether a release blocks the mutant. Quote them apart from the packet-level rates.
+
+`ORACLES_EXEMPTION_174` in `corpus.py` names them. The guard in `../test_mfg_corpus.py` lets exactly these families import
+`_oracles`, and it fails when any other family imports it, directly or through a helper module. It also pins that
+`_oracles` runs one command, the check driver, and that the driver calls only `check.check`. Issue #174 moves the
+families to the packet and deletes `ORACLES_EXEMPTION_174` with its guard lines.
+
 ## Baseline and ratchet
 
 `baseline/<family_id>.json` holds the rates recorded when a family was seeded (`detection_rate`, `abstention_rate`,

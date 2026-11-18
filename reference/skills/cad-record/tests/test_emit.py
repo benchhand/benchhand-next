@@ -96,6 +96,15 @@ class EmitterTests(unittest.TestCase):
             "tool: fail (exit 1)", "label: v3", "blocking (8):",
             *(f"  - rule-{n}" + "-" * 60 for n in range(5)), "  +3 more", f"full JSON: {full.resolve()}"]) + "\n")
 
+    def test_the_summary_lists_the_checks_that_abstained(self) -> None:
+        """An abstained check reads as neither pass nor fail, so the compact summary names it."""
+        self.result = {**self.result, "abstentions": ["declared_dimensions", "glb_step_agreement"]}
+        self.assertIn("abstentions (2): declared_dimensions, glb_step_agreement\n", self.agent(scratch=self.root))
+
+    def test_a_result_without_abstentions_has_no_abstention_line(self) -> None:
+        self.result = {**self.result, "abstentions": []}
+        self.assertNotIn("abstentions", self.agent(scratch=self.root))
+
     def test_a_result_no_longer_than_its_summary_is_printed_in_full(self) -> None:
         self.result = {"status": "pass", "label": "v1"}
         far = self.root / ("d" * 200)  # a long path makes the summary the longer text

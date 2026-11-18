@@ -137,7 +137,7 @@ class FitEndpointsAndHeatSets(unittest.TestCase):
             declared = check.declared_heat_sets(hw)
             self.assertEqual(check.declared_press_fits(hw), [])
         self.assertEqual(declared, [{"pair": ["TST-0001", "TST-0002"], "host": "TST-0002", "insert": "M3 x 5.7 brass insert",
-                                     "hole_d": 4.0, "interface": "IF-001",
+                                     "hole_d": 4.0, "hole_tol": [0.0, 0.1], "interface": "IF-001",
                                      "source": "interfaces.yaml#/interfaces/0/limits/heat_set/0"}])
 
     def test_malformed_heat_set_is_a_usage_error(self) -> None:

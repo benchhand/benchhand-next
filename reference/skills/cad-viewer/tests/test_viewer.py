@@ -606,6 +606,34 @@ class CheckFindings(Fixture):
         self.assertEqual(found["LMP-0003"][-1]["severity"], "warn")
         self.assertNotIn("connection", [f["check"] for f in found.get("LMP-0002", [])])
 
+    def test_the_agreement_and_declared_dimension_rows_become_findings_on_their_occurrence(self) -> None:
+        """`glb_step_agreement` keys its rows by occurrence id under `occurrences`, `declared_dimensions` lists
+        `heat_sets` with the `host` occurrence. A failed row is a finding, an abstained one a warning that says so."""
+        check = {**self.CHECK, "checks": {**self.CHECK["checks"],
+            "glb_step_agreement": {"status": "fail", "blocking": True, "occurrences": {
+                "LMP-0005": {"status": "fail", "reason": "the GLB mesh differs from the STEP shape"},
+                "LMP-0006": {"status": "unknown", "reason": "numpy is not installed"},
+                "LMP-0007": {"status": "pass", "tolerance_mm": 0.155}}},
+            "declared_dimensions": {"status": "fail", "blocking": True, "heat_sets": [
+                {"host": "LMP-0004", "status": "fail", "reason": "LMP-0004 has no bore of 4 mm"},
+                {"host": "LMP-0003", "status": "pass"}]}}}
+        found = record.part_findings(check)
+        self.assertEqual(found["LMP-0005"], [{"check": "glb_step_agreement", "severity": "fail",
+                                              "message": "the GLB mesh differs from the STEP shape"}])
+        self.assertEqual(found["LMP-0006"], [{"check": "glb_step_agreement", "severity": "warn",
+                                              "message": "abstained: numpy is not installed"}])
+        self.assertNotIn("LMP-0007", found)
+        self.assertIn({"check": "declared_dimensions", "severity": "fail", "message": "LMP-0004 has no bore of 4 mm"},
+                      found["LMP-0004"])
+        self.assertNotIn("declared_dimensions", [f["check"] for f in found.get("LMP-0003", [])])
+
+    def test_the_panel_carries_the_checks_that_abstained(self) -> None:
+        make_version(self.hw, "v1")
+        version = record.load_version(self.hw)
+        panel = record.panel_model(version, {**self.CHECK, "abstentions": ["glb_step_agreement"]})
+        self.assertEqual(panel["check"]["abstentions"], ["glb_step_agreement"])
+        self.assertEqual(record.panel_model(version, self.CHECK)["check"]["abstentions"], [])
+
     def test_panel_rejects_a_check_for_another_version(self) -> None:
         make_version(self.hw, "v2")
         version = record.load_version(self.hw)
