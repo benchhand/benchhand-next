@@ -123,6 +123,7 @@ class SharedCacheEnvironmentTests(unittest.TestCase):
         "cad-model/scripts/run_cadquery.py", "cad-model/scripts/run_build123d.py",
         "cad-model/tests/fixtures/run_cadquery_breaking_submit.py",
         "cad-model/tests/fixtures/run_cadquery_reusing_workers.py",
+        "cad-model/tests/fixtures/safe_edit_cadquery_probe.py", "cad-model/tests/fixtures/safe_edit_build123d_probe.py",
     })
     NUMPY = "numpy==2.5.5"
 
