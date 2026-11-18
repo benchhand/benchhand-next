@@ -1,0 +1,167 @@
+record_version: 2
+id: verify-fixture
+rigor: pro
+units: mm
+regime: iso
+general_tolerance: ISO 2768-m
+flow:
+  stage: layout
+  recheck_from: layout
+use_case:
+  status: confirmed
+  decision: DR-001
+  service_class:
+    status: known
+    value: appearance_concept
+    sources:
+    - kind: user
+      reference: TST fixture
+      origin: TST fixture user
+    basis: user_declared
+  purpose:
+    status: known
+    value: Verify-fixture block for the CAD recheck stamp tests
+    sources:
+    - kind: user
+      reference: TST fixture
+      origin: TST fixture user
+    basis: user_declared
+  users:
+    status: not_applicable
+    reason: not applicable to this synthetic test fixture
+  environment:
+    temperature:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    heat_sources:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    moisture:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    chemicals:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    uv:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    corrosion:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+  loads:
+    status: not_applicable
+    reason: not applicable to this synthetic test fixture
+  motion:
+    speed:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    range:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    duty_cycle:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    friction:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    wear:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    service_life:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+  accuracy:
+    tolerance:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    repeatability:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    surface_finish:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    dimensional_stability:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+  consequences:
+    failure:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    severity:
+      status: known
+      value: negligible
+      sources:
+      - kind: user
+        reference: TST fixture
+        origin: TST fixture user
+      basis: user_declared
+    forbidden_outcomes:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    standards:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    supervision:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    approval_authority:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+  logistics:
+    quantity:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    budget:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    lead_time:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    maintenance:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    repair:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+  capability:
+    equipment:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    operator:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+    outsourcing:
+      status: not_applicable
+      reason: not applicable to this synthetic test fixture
+  release_scope:
+    purpose:
+      status: known
+      value: Verify-fixture block for the CAD recheck stamp tests
+      sources:
+      - kind: user
+        reference: TST fixture
+        origin: TST fixture user
+      basis: user_declared
+    operating_limits:
+      status: known
+      value:
+      - TST bench handling only
+      sources:
+      - kind: user
+        reference: TST fixture
+        origin: TST fixture user
+      basis: user_declared
+    exclusions:
+      status: known
+      value:
+      - 'TST: no load-bearing or end use'
+      sources:
+      - kind: user
+        reference: TST fixture
+        origin: TST fixture user
+      basis: user_declared
+  evidence_policy:
+    obligations:
+    - requirement: REQ-001
+      level: cad_valid
+    decision: DR-001

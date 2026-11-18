@@ -117,10 +117,10 @@ class RecheckHookTests(unittest.TestCase):
     def commit(self) -> subprocess.CompletedProcess[str]:
         return self.git("commit", "-m", "design batch", check=False)
 
-    def evidence_packet(self, stage: str, *, outcome: str = "pass") -> Path:
+    def evidence_packet(self, stage: str, *, outcome: str = "pass", project: Path | None = None) -> Path:
         """The evidence packet of the staged record at `stage`: every software check `outcome` in a
-        synthetic producer packet of a built v1."""
-        staged = stamp_module.staged_record(self.root)
+        synthetic producer packet of a built v1. `project` is the directory holding hw/ (default: the repository)."""
+        staged = stamp_module.staged_record(project or self.root)
         producer = evidence.ProducerPacket("hw/checks/v1/tst", "0" * 64,
                                            acceptance.producer_packet(staged.record, outcome=outcome))
         packet = evidence.assess(staged.record, version="v1", manifest_sha256="0" * 64, packets=[producer],
@@ -286,6 +286,28 @@ class RecheckHookTests(unittest.TestCase):
         result = self.run_python(STAMP, "--verify", cwd=self.root)
         self.assertEqual(result.returncode, 2)
         self.assertIn("is below flow.recheck_from parts", result.stderr)
+
+    def test_a_fresh_committed_stamp_below_recheck_from_is_refused_in_committed_mode(self) -> None:
+        self.write_product("specify", "parts")
+        self.git("add", "hw")
+        self.git("commit", "-qn", "-m", "raise the threshold before the stage is due")
+        self.provisional_gate("parts", "parts")
+        self.assertEqual(self.stamp_gate("layout").returncode, 0)  # the writer does not enforce the threshold
+        self.git("commit", "-qn", "-m", "stage, stamp and threshold together")  # tree and record hashes now match
+        result = self.run_python(STAMP, "--verify", "--committed", cwd=self.root)
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("is below flow.recheck_from parts", result.stderr)
+
+    def test_a_raised_threshold_of_a_project_below_the_repository_root_is_refused(self) -> None:
+        project = self.move_project("examples/proj")
+        product = project / "hw" / "product.yaml"
+        data = json.loads(product.read_text(encoding="utf-8"))
+        data["flow"] = {"stage": "specify", "recheck_from": "parts"}  # still below the raised threshold
+        product.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
+        self.git("add", "examples/proj")
+        result = self.run_python(STAMP, "--verify", "--hw", "examples/proj/hw", cwd=self.root)
+        self.assertEqual(result.returncode, 2, result.stdout)
+        self.assertIn("later than HEAD's layout", result.stderr)
 
     def test_a_failing_layout_check_blocks_the_stamp_and_the_commit(self) -> None:
         self.provisional_gate("parts")
@@ -499,6 +521,58 @@ class RecheckHookTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not say passed: true", result.stderr)
 
+    def move_project(self, subdirectory: str) -> Path:
+        """Commit the project one level below the repository root, as an example project sits in examples/."""
+        project = self.root / subdirectory
+        project.mkdir(parents=True)
+        self.git("mv", "hw", f"{subdirectory}/hw")
+        self.git("commit", "-qm", "move the project", "--no-verify")
+        return project
+
+    def stage_subdirectory_stamp(self, subdirectory: str) -> Path:
+        """Stage a detail-stage product in the moved project and stamp it with --hw. Return the project."""
+        project = self.move_project(subdirectory)
+        (project / "hw" / "product.yaml").write_text(
+            json.dumps({"record_version": 2, "id": "test-project", "flow": {"stage": "detail", "recheck_from": "layout"},
+                        "use_case": acceptance.confirmed_use_case("appearance_concept")}, indent=1) + "\n", encoding="utf-8")
+        self.git("add", subdirectory)
+        checks = self.evidence_packet("detail", project=project)
+        result = self.run_python(STAMP, "--hw", f"{subdirectory}/hw", "--stage", "detail", "--checks", str(checks), "--passed",
+                                 cwd=self.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.git("add", f"{subdirectory}/hw/.cad/recheck.json")
+        return project
+
+    def test_a_project_below_the_repository_root_stamps_and_verifies_with_hw(self) -> None:
+        project = self.stage_subdirectory_stamp("examples/proj")
+        self.assertTrue((project / "hw" / ".cad" / "recheck.json").is_file())
+        self.assertFalse((self.root / "hw").exists())
+        result = self.run_python(STAMP, "--verify", "--hw", "examples/proj/hw", cwd=self.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)["passed"])
+
+    def test_a_stale_stamp_of_a_project_below_the_repository_root_is_refused(self) -> None:
+        project = self.stage_subdirectory_stamp("examples/proj")
+        part = project / "hw" / "parts" / "PRT-0001" / "part.yaml"
+        part.write_text(part.read_text(encoding="utf-8").replace("Fixture", "Edited"), encoding="utf-8")
+        self.git("add", "examples/proj")
+        result = self.run_python(STAMP, "--verify", "--hw", "examples/proj/hw", cwd=self.root)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("stamp is stale", result.stderr)
+
+    def test_hw_must_name_the_hw_directory_not_the_project(self) -> None:
+        self.stage_subdirectory_stamp("examples/proj")
+        result = self.run_python(STAMP, "--verify", "--hw", "examples/proj", cwd=self.root)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--hw must name an hw directory", result.stderr)
+
+    def test_verify_without_hw_reads_the_repository_root_from_a_nested_directory(self) -> None:
+        self.stage_product("detail")
+        self.stamp(passed=True, stage="detail")
+        result = self.run_python(STAMP, "--verify", cwd=self.root / "hw" / "parts")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)["passed"])
+
     def staged_hash(self) -> str:
         entries = subprocess.run(
             ["git", "ls-files", "-s", "--", "hw/"],
@@ -512,6 +586,109 @@ class RecheckHookTests(unittest.TestCase):
             if separator and not path.startswith(b"hw/.cad/"):
                 digest.update(entry)
         return digest.hexdigest()
+
+
+class CommittedFixtureTests(unittest.TestCase):
+    """The committed verify project (tests/fixtures/verify-project) holds a record whose layout gate passes. Real
+    build and evidence output stamped it. These tests run `stamp.py --verify --hw` on a scratch copy of it with
+    every file staged. Staging matters: verify skips a project that has no staged hw/ change."""
+
+    FIXTURE = Path(__file__).resolve().parent / "fixtures" / "verify-project"
+    HW = "verify-project/hw"
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        # Copy what a checkout holds: the tracked files, not the build outputs a local run left beside them.
+        listed = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=self.FIXTURE,
+                                capture_output=True, check=True).stdout.decode().split("\0")
+        for name in filter(None, listed):
+            target = self.root / "verify-project" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.FIXTURE / name, target)
+        self.git("init", "-q")
+        self.git("add", "-A")
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def git(self, *args: str) -> None:
+        env = {**os.environ, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull}
+        subprocess.run(["git", *args], cwd=self.root, check=True, capture_output=True, env=env)
+
+    def verify(self, *options: str) -> subprocess.CompletedProcess[str]:
+        env = {**os.environ, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull}
+        return subprocess.run([sys.executable, str(STAMP), "--verify", *options, "--hw", self.HW], cwd=self.root, text=True,
+                              capture_output=True, check=False, env=env)
+
+    def commit(self) -> None:
+        self.git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm", "fixture")
+
+    def edit_part(self) -> None:
+        part = self.root / self.HW / "parts" / "FXT-0001" / "part.yaml"
+        part.write_text(part.read_text(encoding="utf-8").replace("title: Test block", "title: Test block (edited)", 1),
+                        encoding="utf-8")
+        self.git("add", "-A")
+
+    def test_the_committed_stamp_verifies(self) -> None:
+        result = self.verify()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["passed"], True)
+        self.assertNotIn("required", json.loads(result.stdout))  # a skipped verify would say required: false
+
+    def test_a_staged_edit_of_a_record_input_makes_the_committed_stamp_stale(self) -> None:
+        self.edit_part()
+        result = self.verify()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("stamp is stale", result.stderr)
+
+    def test_verify_committed_checks_a_fresh_stamp_with_nothing_staged(self) -> None:
+        self.commit()
+        result = self.verify("--committed")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["passed"], True)
+        self.assertNotIn("required", json.loads(result.stdout))
+
+    def test_verify_committed_refuses_a_stale_edit_that_was_committed(self) -> None:
+        self.commit()
+        self.edit_part()
+        self.commit()
+        result = self.verify("--committed")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("stamp is stale", result.stderr)
+
+    def test_verify_committed_checks_head_not_the_index(self) -> None:
+        self.commit()
+        self.edit_part()  # staged, not committed: the index differs from HEAD
+        result = self.verify("--committed")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["passed"], True)
+
+    def test_verify_committed_refuses_a_stamp_below_the_committed_threshold(self) -> None:
+        self.commit()
+        product = self.root / self.HW / "product.yaml"
+        product.write_text(product.read_text(encoding="utf-8").replace("stage: layout\n  recheck_from: layout",
+                                                                      "stage: parts\n  recheck_from: parts", 1), encoding="utf-8")
+        self.git("add", "-A")
+        self.commit()
+        result = self.verify("--committed")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("is below flow.recheck_from parts", result.stderr)
+
+    def test_verify_without_committed_still_skips_when_nothing_is_staged(self) -> None:
+        self.commit()
+        self.edit_part()
+        self.commit()
+        result = self.verify()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["required"], False)
+
+    def test_committed_needs_verify(self) -> None:
+        env = {**os.environ, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull}
+        result = subprocess.run([sys.executable, str(STAMP), "--committed", "--hw", self.HW, "--stage", "layout",
+                                 "--checks", "x.json"], cwd=self.root, text=True, capture_output=True, check=False, env=env)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--committed needs --verify", result.stderr)
 
 
 if __name__ == "__main__":

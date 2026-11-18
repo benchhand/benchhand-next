@@ -1,0 +1,352 @@
+{
+  "tree_hash": "9dc4ded9506bad43e934664482b7a3ce6fc72fd5ef82fc5106f578f92337fef7",
+  "stage": "layout",
+  "record_sha256": "16f94d01da9e5169b71cab8a1a84f7880eba4f99b7f2defb809a98e273684f3c",
+  "expected_sha256": "ee60cc5872f48ae4dea826a4b6a7eeba00daf131f51b502ada4fa4af35b5aa5f",
+  "version": "v1",
+  "checks": {
+    "kind": "cad-evidence-packet",
+    "schema_version": 1,
+    "record_version": 2,
+    "version": "v1",
+    "version_manifest_sha256": "229646f6bf882360de35a7b8ac8cfe1620c98a7d47e44bf8a4f34b4ddda6ff82",
+    "record_sha256": "16f94d01da9e5169b71cab8a1a84f7880eba4f99b7f2defb809a98e273684f3c",
+    "expected_sha256": "ee60cc5872f48ae4dea826a4b6a7eeba00daf131f51b502ada4fa4af35b5aa5f",
+    "stage": "layout",
+    "expected": [
+      {
+        "id": "assembly.order@product",
+        "family": "assembly.order",
+        "subject": {
+          "product": true
+        },
+        "level": "process_planned",
+        "stage": "detail",
+        "basis": "every assembly occurrence is installed by an operation, apart from the assembly's one base"
+      },
+      {
+        "id": "cad.readback@FXT-0001",
+        "family": "cad.readback",
+        "subject": {
+          "PN": "FXT-0001"
+        },
+        "level": "cad_valid",
+        "stage": "layout",
+        "basis": "FXT-0001: B-rep validity, readback, manufacturing state and component identity"
+      },
+      {
+        "id": "intent.material@FXT-0001",
+        "family": "intent.material",
+        "subject": {
+          "PN": "FXT-0001"
+        },
+        "level": "process_planned",
+        "stage": "parts",
+        "basis": "FXT-0001 material profile is unknown"
+      },
+      {
+        "id": "intent.use_case@product",
+        "family": "intent.use_case",
+        "subject": {
+          "product": true
+        },
+        "level": "process_planned",
+        "stage": "intent",
+        "basis": "a final material and process recommendation needs a confirmed use case"
+      },
+      {
+        "id": "policy.cad_valid@REQ-001",
+        "family": "policy.cad_valid",
+        "subject": {
+          "product": true,
+          "requirements": [
+            "REQ-001"
+          ]
+        },
+        "level": "cad_valid",
+        "stage": "layout",
+        "basis": "the approved evidence policy",
+        "requirement": "REQ-001"
+      },
+      {
+        "id": "process.cnc.access@FXT-0001/mill",
+        "family": "process.cnc.access",
+        "subject": {
+          "PN": "FXT-0001",
+          "operation": "mill"
+        },
+        "level": "geometrically_manufacturable",
+        "stage": "detail",
+        "basis": "FXT-0001 mill: cnc operation"
+      },
+      {
+        "id": "process.cnc.features@FXT-0001/mill",
+        "family": "process.cnc.features",
+        "subject": {
+          "PN": "FXT-0001",
+          "operation": "mill"
+        },
+        "level": "geometrically_manufacturable",
+        "stage": "parts",
+        "basis": "FXT-0001 mill: cnc operation"
+      },
+      {
+        "id": "process.cnc.precision@FXT-0001/mill",
+        "family": "process.cnc.precision",
+        "subject": {
+          "PN": "FXT-0001",
+          "operation": "mill"
+        },
+        "level": "process_planned",
+        "stage": "detail",
+        "basis": "FXT-0001 mill: cnc operation"
+      },
+      {
+        "id": "process.cnc.setup@FXT-0001/mill",
+        "family": "process.cnc.setup",
+        "subject": {
+          "PN": "FXT-0001",
+          "operation": "mill"
+        },
+        "level": "process_planned",
+        "stage": "detail",
+        "basis": "FXT-0001 mill: cnc operation"
+      },
+      {
+        "id": "process.cnc.stock@FXT-0001/mill",
+        "family": "process.cnc.stock",
+        "subject": {
+          "PN": "FXT-0001",
+          "operation": "mill"
+        },
+        "level": "process_planned",
+        "stage": "parts",
+        "basis": "FXT-0001 mill: cnc operation"
+      },
+      {
+        "id": "route.consistency@FXT-0001",
+        "family": "route.consistency",
+        "subject": {
+          "PN": "FXT-0001"
+        },
+        "level": "process_planned",
+        "stage": "parts",
+        "basis": "FXT-0001: route, profile, material and capability consistency"
+      },
+      {
+        "id": "route.operation_plan@FXT-0001/mill",
+        "family": "route.operation_plan",
+        "subject": {
+          "PN": "FXT-0001",
+          "operation": "mill"
+        },
+        "level": "process_planned",
+        "stage": "detail",
+        "basis": "FXT-0001 mill: setup, orientation, supports, allowances and inspection"
+      }
+    ],
+    "statuses": {
+      "assembly.order@product": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "detail",
+        "sources": [],
+        "reasons": []
+      },
+      "cad.readback@FXT-0001": {
+        "result": "pass",
+        "level": "cad_valid",
+        "stage": "layout",
+        "sources": [
+          "hw/checks/v1/cad"
+        ],
+        "reasons": [
+          "cad-model check of the sealed version: kernel and STEP read-back B-rep validity, the STEP read-back's names, volumes and solids, the version's file inventory, the manufacturing state's native, identity and STEP checks and each component's binding on the sealed outputs"
+        ]
+      },
+      "intent.material@FXT-0001": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "parts",
+        "sources": [
+          "record"
+        ],
+        "reasons": [
+          "FXT-0001 material profile is unknown"
+        ]
+      },
+      "intent.use_case@product": {
+        "result": "pass",
+        "level": "process_planned",
+        "stage": "intent",
+        "sources": [
+          "record"
+        ],
+        "reasons": [
+          "the use case is confirmed and supports a final choice"
+        ]
+      },
+      "policy.cad_valid@REQ-001": {
+        "result": "pass",
+        "level": "cad_valid",
+        "stage": "layout",
+        "sources": [
+          "EV-001"
+        ],
+        "reasons": [
+          "EV-001 cad_valid pass"
+        ]
+      },
+      "process.cnc.access@FXT-0001/mill": {
+        "result": "unknown",
+        "level": "geometrically_manufacturable",
+        "stage": "detail",
+        "sources": [],
+        "reasons": []
+      },
+      "process.cnc.features@FXT-0001/mill": {
+        "result": "unknown",
+        "level": "geometrically_manufacturable",
+        "stage": "parts",
+        "sources": [],
+        "reasons": []
+      },
+      "process.cnc.precision@FXT-0001/mill": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "detail",
+        "sources": [],
+        "reasons": []
+      },
+      "process.cnc.setup@FXT-0001/mill": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "detail",
+        "sources": [],
+        "reasons": []
+      },
+      "process.cnc.stock@FXT-0001/mill": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "parts",
+        "sources": [],
+        "reasons": []
+      },
+      "route.consistency@FXT-0001": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "parts",
+        "sources": [],
+        "reasons": []
+      },
+      "route.operation_plan@FXT-0001/mill": {
+        "result": "unknown",
+        "level": "process_planned",
+        "stage": "detail",
+        "sources": [],
+        "reasons": []
+      }
+    },
+    "facets": {
+      "FXT-0001": {
+        "cad_valid": "pass",
+        "geometrically_manufacturable": "unknown",
+        "process_planned": "unknown",
+        "simulation_supported": "not_required",
+        "physically_validated": "not_required"
+      },
+      "REQ-001": {
+        "cad_valid": "pass",
+        "geometrically_manufacturable": "not_required",
+        "process_planned": "not_required",
+        "simulation_supported": "not_required",
+        "physically_validated": "not_required"
+      },
+      "product": {
+        "cad_valid": "not_required",
+        "geometrically_manufacturable": "not_required",
+        "process_planned": "unknown",
+        "simulation_supported": "not_required",
+        "physically_validated": "not_required"
+      }
+    },
+    "verification": [
+      {
+        "requirement": "REQ-001",
+        "method": "I",
+        "criterion": "Inspect the modelled block bounding box against 20 x 20 x 10 mm.",
+        "acceptance": [],
+        "stated": "planned",
+        "result": "pass",
+        "levels": {
+          "cad_valid": "pass"
+        },
+        "evidence": [
+          {
+            "id": "EV-001",
+            "level": "cad_valid",
+            "stated": "pass",
+            "result": "pass",
+            "method": "Read the bounding box of the built block from the v1 metrics and compare it with the 20 x 20 x 10 mm envelope",
+            "version": "v1",
+            "part_rev": null,
+            "tied_to": [
+              "capability",
+              "condition",
+              "criterion",
+              "environment",
+              "finish",
+              "geometry",
+              "interface",
+              "load",
+              "material",
+              "orientation",
+              "process",
+              "route",
+              "setup",
+              "source",
+              "use_case"
+            ]
+          }
+        ]
+      }
+    ],
+    "findings": [],
+    "critical": [],
+    "complete": true,
+    "selection": {
+      "status": "not_assessed",
+      "input_sha256": "9f756befebd83e5eaccd238017adacd4c6bf418182a3da9c3635ae8fccab5ea4",
+      "recorded": {
+        "status": "not_assessed",
+        "current": null,
+        "approved": null
+      },
+      "decisions": [],
+      "findings": [
+        "selection.not_assessed"
+      ]
+    },
+    "gate": {
+      "stage": "layout",
+      "passed": true,
+      "findings": [
+        {
+          "path": "hw/manufacturing/selection.yaml",
+          "message": "no material, process and architecture selection is recorded (selection.yaml holds no candidates); exploration may continue, but no final choice is made",
+          "severity": "warning",
+          "code": "gate.selection",
+          "canonical_location": null,
+          "action": null
+        }
+      ]
+    }
+  },
+  "passed": true,
+  "timestamp": "2026-11-18T00:55:16Z",
+  "tool_versions": {
+    "python": "3.13.18",
+    "git": "git version 2.56.1",
+    "uv": "uv 0.13.7 (316c827e0 2026-11-03 aarch64-apple-darwin)"
+  }
+}
