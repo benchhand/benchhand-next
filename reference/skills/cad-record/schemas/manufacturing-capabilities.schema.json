@@ -263,6 +263,26 @@
         {"if": {"required": ["units"], "properties": {"units": {"const": "um"}}}, "then": {"properties": {"value": {"minimum": -2000, "maximum": 2000}, "lower": {"minimum": -2000, "maximum": 2000}, "upper": {"minimum": -2000, "maximum": 2000}}}}
       ]
     },
+    "qty_clearance_per_side": {
+      "description": "Sliding clearance per side between mating parts: above 0 to 5 mm. A fact of the machine and material, so it has no default. The 0.1 to 0.5 mm plausibility band is a heuristic with no source table and only warns; the sourced value is 0.3 mm per side (S4 in the FDM survey). A press fit is not a negative clearance: use qty_interference_per_side",
+      "x-plausible": {"min": 0.1, "max": 0.5, "units": "mm"},
+      "properties": {"units": {"enum": ["mm", "m", "um"]}},
+      "allOf": [
+        {"if": {"required": ["units"], "properties": {"units": {"const": "mm"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 5}, "lower": {"exclusiveMinimum": 0, "maximum": 5}, "upper": {"exclusiveMinimum": 0, "maximum": 5}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "m"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 0.005}, "lower": {"exclusiveMinimum": 0, "maximum": 0.005}, "upper": {"exclusiveMinimum": 0, "maximum": 0.005}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "um"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 5000}, "lower": {"exclusiveMinimum": 0, "maximum": 5000}, "upper": {"exclusiveMinimum": 0, "maximum": 5000}}}}
+      ]
+    },
+    "qty_interference_per_side": {
+      "description": "Press-fit interference per side, shaft larger than hole: above 0 to 1 mm, never negative. A fact of the machine and material, so it has no default. The 0.05 to 0.3 mm plausibility band is a heuristic with no source table and only warns; the intended press-fit range is 0.10 to 0.15 mm per side",
+      "x-plausible": {"min": 0.05, "max": 0.3, "units": "mm"},
+      "properties": {"units": {"enum": ["mm", "m", "um"]}},
+      "allOf": [
+        {"if": {"required": ["units"], "properties": {"units": {"const": "mm"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1}, "lower": {"exclusiveMinimum": 0, "maximum": 1}, "upper": {"exclusiveMinimum": 0, "maximum": 1}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "m"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 0.001}, "lower": {"exclusiveMinimum": 0, "maximum": 0.001}, "upper": {"exclusiveMinimum": 0, "maximum": 0.001}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "um"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1000}, "lower": {"exclusiveMinimum": 0, "maximum": 1000}, "upper": {"exclusiveMinimum": 0, "maximum": 1000}}}}
+      ]
+    },
     "qty_min_bed_contact_area": {
       "description": "Calibrated smallest reliable first-layer contact area: above 0 mm2. A fact of the machine and material, so it has no default. The plausibility band waits for more calibrations (#141)",
       "properties": {"units": {"enum": ["mm2"]}},

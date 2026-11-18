@@ -204,6 +204,8 @@ CASES: tuple[Case, ...] = (
     quantity(44, "calibration.min_hole", "min_hole", "[0.1, 25]", {"min": 0.5, "max": 10}, "mm"),
     quantity(44, "calibration.deviation", "deviation", "[-2, 2]", {"min": -0.5, "max": 0.5}, "mm"),
     quantity(0, "calibration.min_bed_contact_area", "min_bed_contact_area", "(0,)", None, "mm2"),
+    quantity(0, "clearance_per_side", "clearance_per_side", "(0, 5]", {"min": 0.1, "max": 0.5}, "mm"),
+    quantity(0, "interference_per_side", "interference_per_side", "(0, 1]", {"min": 0.05, "max": 0.3}, "mm"),
     fact(45, "nozzle_diameter", "(0, 3]", {"min": 0.2, "max": 1.2}, "mm"),
     fact(45, "layer_height", "(0, 3]", {"relative_to": "nozzle_diameter", "max": 0.8}, "mm"),
     fact(45, "hotend_max_temperature", "[0, 500]", {"max": 300}, "deg_C"),
@@ -266,7 +268,7 @@ FACTS = {
     "limits.linear_mm", "limits.angular_deg", "min_wall_mm.cnc", "volume_rel_tolerance", "volume_abs_tolerance_mm3",
     "material.E", "material.density", "material.yield", "material.nu", "calibration.samples", "calibration.bridge_span",
     "calibration.overhang_angle", "calibration.min_wall", "calibration.min_feature", "calibration.min_hole", "calibration.deviation",
-    "calibration.min_bed_contact_area", "nozzle_diameter", "layer_height",
+    "calibration.min_bed_contact_area", "clearance_per_side", "interference_per_side", "nozzle_diameter", "layer_height",
     "hotend_max_temperature", "bed_max_temperature", "max_speed", "travel_x", "travel_y", "travel_z", "spindle_max_speed",
     "power", "pump_pressure", "press_brake_force", "modulus", "density", "temperature", "poisson_ratio", "min_clearance_mm",
     "tol", "tol_plus", "tol_minus", "confidence", "weight", "crank_radius_mm", "rod_length_mm",
@@ -753,6 +755,53 @@ class MinHoleBand(unittest.TestCase):
         self.assertIn("no source table", description)
         self.assertIn("2.0 mm", description)
         self.assertIn("Protolabs", description)
+
+
+class FitQuantities(unittest.TestCase):
+    """Sliding clearance and press-fit interference are separate unsigned quantities, so a sign slip cannot turn one
+    into the other. Each is checked through the registry's validator for its definition. The bands are heuristics
+    and only warn, so a value that misses one is no schema error."""
+
+    # (case name, values that fit, values that miss the band inside the hard bound, values outside the hard bound)
+    FITS = (
+        ("clearance_per_side", (0.3,), (0.02, 1.5, 5), (0, -0.1, 5.5)),
+        ("interference_per_side", (0.10, 0.15), (0.01, 0.6, 1), (0, -0.12, 1.5)),
+    )
+
+    def test_both_fits_are_accepted_by_their_quantity(self) -> None:
+        for name, good, _, _ in self.FITS:
+            for value in good:
+                with self.subTest(name, value=value):
+                    self.assertTrue(accepted(BY_NAME[name], value))
+
+    def test_a_value_outside_the_band_and_inside_the_hard_bound_is_no_error(self) -> None:
+        for name, _, misses, _ in self.FITS:
+            band = BY_NAME[name].band
+            assert band is not None
+            for value in misses:
+                with self.subTest(name, value=value):
+                    self.assertTrue(value < band["min"] or value > band["max"], "the value misses the band, which only warns")
+                    self.assertTrue(accepted(BY_NAME[name], value))
+
+    def test_a_value_outside_the_hard_bound_is_an_error_including_zero_and_a_negative(self) -> None:
+        for name, _, _, bad in self.FITS:
+            for value in bad:
+                with self.subTest(name, value=value):
+                    self.assertTrue(rejected(BY_NAME[name], value))
+
+    def test_a_foreign_unit_is_an_error(self) -> None:
+        for name, *_ in self.FITS:
+            for unit in ("deg", "mm2", "MPa"):
+                with self.subTest(name, unit=unit):
+                    self.assertTrue(rejected(BY_NAME[name], 0.3, unit))
+
+    def test_a_fit_has_no_default_and_a_description_naming_its_band(self) -> None:
+        for name, *_ in self.FITS:
+            with self.subTest(name):
+                item = node(CAPABILITIES, f"/$defs/qty_{name}")
+                self.assertNotIn("default", item)
+                self.assertIn("heuristic", item["description"])
+        self.assertIn("S4", node(CAPABILITIES, "/$defs/qty_clearance_per_side")["description"])
 
 
 class Units(unittest.TestCase):
