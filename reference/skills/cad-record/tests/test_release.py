@@ -48,6 +48,7 @@ layout = load("cad_record_layout", SCRIPTS / "layout.py")
 validate = load("cad_record_validate", SCRIPTS / "validate.py")
 release = load("cad_record_release", RELEASE)
 prune = load("cad_record_prune", SCRIPTS / "prune.py")
+scriptenv = load("cadmodel_scriptenv", SKILL.parent / "cad-model" / "scripts" / "cadmodel" / "scriptenv.py")
 acceptance = load("cad_record_acceptance_fixtures", SKILL / "tests" / "fixtures" / "acceptance.py")
 fx, impact = acceptance.fx, acceptance.impact
 
@@ -442,6 +443,19 @@ class Pruning(ReleaseCase):
                 mock.patch.object(prune.subprocess, "run", return_value=done) as run:
             self.assertEqual(prune.store_gc(Path("hw")), {"objects": {}})
         self.assertEqual(run.call_args.kwargs["env"]["CAD_OUTPUT"], "json")
+
+    @unittest.skipUnless(shutil.which("uv"), "uv is required to build release.py's declared environment")
+    def test_store_gc_runs_under_the_dependencies_release_py_declares(self) -> None:
+        # --prune runs cad_model.py store gc in release.py's interpreter, so release.py's header must cover it
+        hw = self.released()
+        # independent of gc's layout rules: each manifest.json seals its folder, bar copies inside a release package
+        found = [path.relative_to(hw).parts for path in hw.rglob("manifest.json")]
+        seals = sum(1 for parts in found if parts[0] != "releases" or len(parts) == 3)
+        result = subprocess.run(scriptenv.python_command(RELEASE, "-B", str(prune.CAD_MODEL), "store", "gc", str(hw)),
+                                capture_output=True, text=True, timeout=600, check=False, env=prune.emit.json_env())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        collected = prune.emit.unwrap(json.loads(result.stdout))
+        self.assertEqual((collected["status"], collected["manifests"]), ("pass", seals))
 
     def test_gc_failure_is_prune_incomplete_and_a_rerun_finishes(self) -> None:
         hw = self.released()
