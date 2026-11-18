@@ -384,6 +384,9 @@ class PrecisionSupportTests(Checks):
         found = self.finding(result, "process.fdm.support_on_critical")
         self.assertEqual((found["severity"], found["subject"].get("feature")), ("major", "bearing_seat"))
         self.assertIn("finishing", found["criterion"]["note"])
+        self.assertEqual(found["criterion"]["source"]["origin"], "benchhand plugin")
+        self.assertEqual(found["criterion"]["source"]["reference"],
+                         "benchhand manufacturing-intent dispatch policy (cad-design process_checks)")
 
     def test_soluble_supports_alone_do_not_establish_precision(self) -> None:
         supports = {"strategy": "reachable_noncritical", "contact_regions": [{"feature": "bearing_seat"}],
@@ -587,6 +590,7 @@ class LaserMaterialSafetyTests(Checks):
         self.assertEqual(self.outcome(result, self.obligation), "fail")
         found = self.finding(result, "process.laser.material_unsafe")
         self.assertEqual((found["severity"], found["criterion"]["source"]["kind"]), ("critical", "policy"))
+        self.assertEqual(found["criterion"]["source"]["origin"], "benchhand plugin")
 
     def test_unidentified_plastics_and_unapproved_stock_are_blocked_pending_identification(self) -> None:
         plastic = FX.material_profile("tst_clear_plastic", level="family", form="sheet", family="clear plastic")

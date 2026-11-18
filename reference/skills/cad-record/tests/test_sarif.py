@@ -195,6 +195,9 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(run["tool"]["driver"]["name"], "form_check")
         self.assertEqual(run["properties"]["status"], "fail")
 
+    def test_the_driver_is_named_benchhand_unless_a_tool_is_given(self) -> None:
+        self.assertEqual(sarif.document([FULL])["runs"][0]["tool"]["driver"]["name"], "benchhand")
+
 
 class HonestMistakeTests(unittest.TestCase):
     def test_a_finding_without_a_code_takes_check_id_or_rule_else_a_fixed_placeholder(self) -> None:
@@ -396,6 +399,10 @@ class EmitTests(unittest.TestCase):
             self.printed(sarif=True, out=out)
             self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["schema"], "tool-result/1")
 
+    def test_sarif_text_names_the_driver_benchhand_unless_a_tool_is_given(self) -> None:
+        shown = json.loads(emit.sarif_text(self.RESULT))
+        self.assertEqual(shown["runs"][0]["tool"]["driver"]["name"], "benchhand")
+
     def test_a_blocking_failures_report_exports_those_failures(self) -> None:
         shown = json.loads(emit.sarif_text({"status": "fail", "blocking_failures": ["rule-1: too steep"]}))
         self.assertEqual(shown["runs"][0]["results"][0]["message"]["text"], "rule-1: too steep")
@@ -413,6 +420,7 @@ class EmitTests(unittest.TestCase):
                 code = emit.main(["--sarif", str(stored)])
             self.assertEqual(code, 0)
             self.assertEqual(schema_errors(json.loads(stream.getvalue())), [])
+            self.assertEqual(json.loads(stream.getvalue())["runs"][0]["tool"]["driver"]["name"], "benchhand")
 
     def test_the_command_line_needs_the_sarif_flag_and_a_readable_envelope(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -485,7 +493,7 @@ class CommandLineProcessTests(unittest.TestCase):
 
     def test_without_hw_no_part_anchor_is_found_and_the_default_tool_name_is_used(self) -> None:
         shown = json.loads(self.run_emit(str(self.envelope), "--sarif").stdout)
-        self.assertEqual(shown["runs"][0]["tool"]["driver"]["name"], "cad-agent")
+        self.assertEqual(shown["runs"][0]["tool"]["driver"]["name"], "benchhand")
         self.assertEqual(len(shown["runs"][0]["results"]), len(self.cases))
         self.assertTrue(all("physicalLocation" not in r.get("locations", [{}])[0] for r in shown["runs"][0]["results"]))
 

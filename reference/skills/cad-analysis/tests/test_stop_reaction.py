@@ -176,6 +176,7 @@ class StopGeometryTests(unittest.TestCase):
         self.assertEqual((understated["severity"], understated["outcome"]), ("major", "fail"))
         self.assertEqual(understated["measured"], {"value": 240.0, "units": "N"})
         self.assertAlmostEqual(understated["criterion"]["value"], 343.098, places=2)
+        self.assertEqual(understated["criterion"]["source"]["origin"], "benchhand")
 
     def test_a_recorded_figure_that_covers_the_latched_stop_leaves_only_the_open_stop_unbounded(self) -> None:
         code, result = self.run_stop("covered", contact_load=400.0)

@@ -79,7 +79,7 @@ class PlanTests(unittest.TestCase):
         with patch.object(setup, "CAD_ROOT", self.root), patch.object(setup, "_harness_needed", return_value=True):
             planned = setup.plan(report(), self.root, self.home, self.env, "codex")
         unavailable_harness = next(item for item in planned if item.id == "harness-unavailable")
-        self.assertIn("cad-agent checkout", unavailable_harness.command)
+        self.assertIn("benchhand checkout", unavailable_harness.command)
         with patch.object(setup, "CAD_ROOT", self.root):
             with self.assertRaisesRegex(RuntimeError, "not bundled with installed skills"):
                 setup._install_harness("codex", self.root)

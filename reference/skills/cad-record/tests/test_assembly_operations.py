@@ -269,6 +269,7 @@ class NeverInstalledTests(unittest.TestCase):
         self.assertEqual((finding["code"], finding["subject"], finding["severity"]),
                          ("assembly.never_installed", {"PN": "TST-0103"}, "critical"))
         self.assertIn("TST-0103", finding["measured"]["text"])
+        self.assertEqual(finding["criterion"]["source"]["origin"], "benchhand")
         row = report.outcome("assembly.order@product")
         self.assertEqual((row["outcome"], row["findings"]), ("fail", [finding["id"]]))
         self.assertEqual(report.outcome("assembly.order@op:seat-bearing")["outcome"], "pass")

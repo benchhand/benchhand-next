@@ -171,6 +171,7 @@ class PlayGeometryTests(unittest.TestCase):
         [collision] = [f for f in result["findings"] if f["code"] == "motion.play_collision"]
         self.assertEqual((collision["obligation"], collision["severity"]), ("motion.play@IF-001", "critical"))
         self.assertIn("TST-0203", collision["consequence"])
+        self.assertEqual(collision["criterion"]["source"]["origin"], "benchhand")
         self.assertIn("play extreme axial+", collision["consequence"])
 
     def test_declared_play_within_the_clearance_passes(self) -> None:

@@ -101,6 +101,7 @@ class ColourTests(unittest.TestCase):
         self.assertIn('<object id="2" name="TST-0001" type="model" pid="1" pindex="0">', model)
         self.assertIn('<item objectid="2"/>', model)
         self.assertIn('<metadata name="cadagent:material">PETG</metadata>', model)
+        self.assertIn('xmlns:cadagent="https://github.com/benchhand/benchhand/ns/3mf/2026"', model)
 
     def test_the_colour_is_read_back_as_rrggbbaa_and_a_colourless_part_reads_none(self) -> None:
         (coloured,) = threemf.read(cube("PETG", "#1a2B3c")).objects

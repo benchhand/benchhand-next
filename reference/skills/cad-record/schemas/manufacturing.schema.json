@@ -166,7 +166,7 @@
     },
     "dimension_state": {"description": "Which state a dimension or criterion applies to", "enum": ["as_manufactured", "after_finish", "assembled"]},
     "primary_process": {
-      "description": "The scalar label of a part's primary process, used by BOM, drawings, outputs and release. The part's intent.route is the authority for its operations; other names a primary process cad-agent has no output or check contract for, which makes manufacturing coverage unknown",
+      "description": "The scalar label of a part's primary process, used by BOM, drawings, outputs and release. The part's intent.route is the authority for its operations; other names a primary process Benchhand has no output or check contract for, which makes manufacturing coverage unknown",
       "enum": ["fdm", "resin", "cnc", "laser", "waterjet", "plasma", "sheet_forming", "casting", "moulding", "extrusion", "purchased", "other"]
     },
     "route_kind": {

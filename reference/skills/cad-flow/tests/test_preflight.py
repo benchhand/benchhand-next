@@ -36,7 +36,7 @@ class HarnessInstallTests(unittest.TestCase):
             skill.write_text("skill", encoding="utf-8")
             agent.write_text("agent", encoding="utf-8")
             sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
-            (project / ".cad-agent-install.json").write_text(json.dumps({"format": 1, "files": {
+            (project / ".benchhand-install.json").write_text(json.dumps({"format": 1, "files": {
                 ".agents/skills/cad-flow/SKILL.md": sha(skill),
                 ".codex/agents/cad-analyst.toml": sha(agent)}}), encoding="utf-8")
             check = preflight._harness_check("codex", project, Path(temporary) / "home", {"HOME": temporary})
@@ -54,7 +54,7 @@ class HarnessInstallTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("installed", encoding="utf-8")
             sha = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
-            (project / ".cad-agent-install.json").write_text(json.dumps({"format": 1, "files": {
+            (project / ".benchhand-install.json").write_text(json.dumps({"format": 1, "files": {
                 ".opencode/skills/cad-flow/SKILL.md": sha(skill),
                 ".opencode/agents/cad-analyst.md": sha(agent)}}), encoding="utf-8")
             check = preflight._harness_check("opencode", project, Path(temporary) / "home", {})

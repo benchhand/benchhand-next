@@ -225,6 +225,7 @@ class GeometricAccessTests(unittest.TestCase):
         [blocked] = [f for f in result["findings"] if f["obligation"] == "assembly.access@op:fasten-cover"]
         self.assertEqual(blocked["code"], "assembly.tool_blocked")
         self.assertIn("TST-0105", blocked["consequence"])
+        self.assertEqual(blocked["criterion"]["source"]["origin"], "benchhand")
         screw, socket = result["detail"]["paths"]["fasten-cover"]
         self.assertEqual((screw["status"], socket["status"]), ("clear", "collision"))
         self.assertEqual((screw["label"], screw["route"], socket["route"]), ("fasten-cover/part", "straight_default", "approach"),

@@ -253,6 +253,8 @@ class PolymerAcceptedWithEvidence(unittest.TestCase):
         self.assertFalse(report["recorded"]["assessment"]["current"])
         (finding,) = findings(report, "selection.assessment_stale")
         self.assertEqual(finding["severity"], "major")
+        self.assertEqual(finding["criterion"]["source"]["origin"],
+                         "benchhand manufacturing-intent policy (the user's specification)")
 
 
 class JustifiedAlternatives(unittest.TestCase):
