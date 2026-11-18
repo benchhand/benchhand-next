@@ -15,7 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -42,8 +42,8 @@ class Skip(Exception):
 
 
 class Rejected(Exception):
-    """Raised by `run` when the packet check or the evidence assessment refuses the case's packet. Neither a detection
-    nor an abstention. The pair counts as a miss and the run records the reason."""
+    """Raised by `run` when the packet check or the evidence assessment refuses the case's packet. The refusal is an
+    error of the case, reported with its reason."""
 
 
 @dataclass(frozen=True)
@@ -71,7 +71,6 @@ class PairResult:
     twin: str | None = None
     skipped: str | None = None
     error: str | None = None
-    rejected: str | None = None
     known_gap: str | None = None
 
 
@@ -112,11 +111,7 @@ def run_pair(pair: Pair) -> PairResult:
         result.mutant = result.twin = None
         result.skipped = str(skip) or "skipped"
         return result
-    except Rejected as refusal:
-        result.mutant = result.twin = None
-        result.rejected = str(refusal) or "rejected"
-        return result
-    except Exception as exc:  # record the crash, never hide it as a pass
+    except Exception as exc:  # record the crash, never hide it as a miss or an abstention
         return _errored(result, f"{type(exc).__name__}: {exc}")
     for variant in (result.mutant, result.twin):
         if variant not in OUTCOMES:
@@ -125,10 +120,15 @@ def run_pair(pair: Pair) -> PairResult:
 
 
 def _errored(result: PairResult, message: str) -> PairResult:
-    """A failure on either side voids both verdicts, so the pair is a miss and never a detection."""
+    """A failure on either side voids both verdicts: the pair is an error, in no rate."""
     result.mutant = result.twin = None
     result.error = message
     return result
+
+
+def command_failed(step: str, argv: Sequence[str], returncode: int, output: str, tail: int = 1500) -> RuntimeError:
+    """The error of a case whose command failed: the step, its exit code, the command and the tail of its output."""
+    return RuntimeError(f"{step} exited {returncode} (`{' '.join(argv)}`): {output[-tail:]}")
 
 
 def rate(count: int, total: int) -> float | None:
@@ -136,20 +136,20 @@ def rate(count: int, total: int) -> float | None:
 
 
 def summarise(family: Family, results: list[PairResult]) -> dict[str, Any]:
-    """Rates over the pairs that ran: detection = FAIL on mutant, abstention = UNKNOWN on mutant,
-    false positive = FAIL on twin. A pair that errored, or whose packet evidence rejected on either side, has no verdicts
-    and counts as a miss. A pair with a known gap counts as a miss whatever its mutant returned. Its twin still counts."""
-    ran = [r for r in results if not r.skipped]
+    """Rates over the pairs that ran cleanly: detection = FAIL on mutant, abstention = UNKNOWN on mutant,
+    false positive = FAIL on twin. A pair that errored on either side has no verdicts and is in no count but `errors`.
+    A pair with a known gap counts as a miss whatever its mutant returned. Its twin still counts."""
+    ran = [r for r in results if not r.skipped and not r.error]
     n = len(ran)
     trusted = [r for r in ran if not r.known_gap]
     detected = sum(r.mutant == "fail" for r in trusted)
     abstained = sum(r.mutant == "unknown" for r in trusted)
-    missed = n - detected - abstained  # a pass on the mutant, or a pair that errored or got rejected
+    missed = n - detected - abstained  # a pass on the mutant
     false_pos = sum(r.twin == "fail" for r in ran)
     return {
         "family": family.id, "check": family.check, "owner": family.owner,
-        "pairs": len(results), "ran": n, "skipped": len(results) - n, "errors": sum(bool(r.error) for r in ran),
-        "rejected": sum(bool(r.rejected) for r in ran), "known_gaps": sum(bool(r.known_gap) for r in ran),
+        "pairs": len(results), "ran": n, "skipped": sum(bool(r.skipped) for r in results),
+        "errors": sum(bool(r.error) for r in results), "known_gaps": sum(bool(r.known_gap) for r in ran),
         "detected": detected, "abstained": abstained, "missed": missed, "false_positives": false_pos,
         "detection_rate": rate(detected, n), "abstention_rate": rate(abstained, n),
         "false_positive_rate": rate(false_pos, n),
@@ -159,6 +159,11 @@ def summarise(family: Family, results: list[PairResult]) -> dict[str, Any]:
 
 def evaluate(families: Iterable[Family]) -> list[dict[str, Any]]:
     return [summarise(f, [run_pair(p) for p in f.pairs]) for f in families]
+
+
+def errors(rows: list[dict[str, Any]]) -> list[str]:
+    """One line per errored case: its family, id and the error, whatever the baseline tolerates."""
+    return [f"{row['family']}/{item['id']}: {item['error']}" for row in rows for item in row["results"] if item["error"]]
 
 
 def table(rows: list[dict[str, Any]]) -> str:

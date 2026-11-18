@@ -12,7 +12,8 @@
 
 Run:  uv run --script skills/cad-design/tests/mfg_corpus/rates.py [--family ID ...] [--out PATH]
 Writes the JSON report (default: <tempdir>/mfg-corpus-rates.json) and prints its path after the table.
-Exit 0 when the corpus ran, whatever the rates. With --check-baseline it exits 1 and lists the problems when a
+Exit 1 and list each errored case (family/case, the command and its stderr tail) when any case errored, whatever
+the baseline tolerates: an error is in no rate. Otherwise exit 0 whatever the rates. With --check-baseline it also exits 1 and lists the problems when a
 family has no baseline file (or a baseline has no family), runs fewer pairs than recorded, detects less, or raises
 false positives; a skipped pair then fails the check instead of passing quietly.
 """
@@ -59,12 +60,13 @@ def main(argv: list[str] | None = None) -> int:
             if item["known_gap"]:
                 print(f"known gap: {row['family']}/{item['id']}: {item['known_gap']}")
     print(f"report: {args.out}")
-    if args.check_baseline:
-        problems = corpus.check_baseline(rows, args.baseline_dir, whole_registry=not args.family)
-        for problem in problems:
-            print(f"baseline: {problem}")
-        return 1 if problems else 0
-    return 0
+    failures = corpus.errors(rows)
+    for failure in failures:
+        print(f"error: {failure}")
+    problems = corpus.check_baseline(rows, args.baseline_dir, whole_registry=not args.family) if args.check_baseline else []
+    for problem in problems:
+        print(f"baseline: {problem}")
+    return 1 if failures or problems else 0
 
 
 if __name__ == "__main__":

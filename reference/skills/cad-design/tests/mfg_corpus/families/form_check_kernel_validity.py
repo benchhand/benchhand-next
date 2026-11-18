@@ -18,12 +18,13 @@ DEFECTS = SKILLS / "cad-design" / "tests" / "fixtures" / "defects" / "cadquery"
 
 
 def kernel_verdict(pn: str, edit: tuple[str, str] | None) -> Outcome:
+    """The build may refuse the mutant (no edit): that is its verdict. A twin that the build refuses is an error."""
     text = (DEFECTS / f"{pn}.py").read_text(encoding="utf-8")
     if edit:
         if edit[0] not in text:
             raise RuntimeError(f"{pn}.py has no {edit[0]!r} to edit")
         text = text.replace(*edit)
-    return readback_verdict(text)
+    return readback_verdict(text, refusal_is_a_verdict=edit is None)
 
 
 def t_bore(mutant: bool) -> Outcome:

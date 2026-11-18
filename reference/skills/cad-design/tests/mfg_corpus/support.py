@@ -15,7 +15,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from corpus import HERE, Outcome, Rejected, Skip
+from corpus import HERE, Outcome, Rejected, Skip, command_failed
 
 SKILLS = HERE.parents[2]
 REPO = SKILLS.parent
@@ -210,7 +210,7 @@ def _access_geometry() -> tuple[Path, str]:
         build = subprocess.run(["uv", "run", "--quiet", "--script", str(MOTION_FIXTURES / "access_fixture.py"),
                                 str(root / "geometry")], capture_output=True, text=True, timeout=900, check=False)
         if build.returncode != 0:
-            raise RuntimeError(f"access_fixture.py failed: {(build.stdout + build.stderr)[-1500:]}")
+            raise command_failed("access_fixture.py", build.args, build.returncode, build.stdout + build.stderr)
         _ACCESS_ROOT = root
     return _ACCESS_ROOT, hashlib.sha256((_ACCESS_ROOT / "geometry" / "socket.step").read_bytes()).hexdigest()
 
@@ -256,7 +256,7 @@ def access_packet_verdict(hw: Path, parts_dir: Path, attach: list[str], *prefixe
                           "--hw", str(hw), "--parts-dir", str(parts_dir), *pairs],
                          capture_output=True, text=True, timeout=1800, check=False)
     if run.returncode not in (0, 1):
-        raise RuntimeError(f"access.py exited {run.returncode}: {(run.stdout + run.stderr)[-1500:]}")
+        raise command_failed("access.py", run.args, run.returncode, run.stdout + run.stderr)
     printed = json.loads(run.stdout)
     record, problems = intent.check_record(hw)
     printed.pop("detail")
@@ -265,11 +265,12 @@ def access_packet_verdict(hw: Path, parts_dir: Path, attach: list[str], *prefixe
 
 # --- kernel validity (cad-model check: the cad.readback packet of a built version) ------------------------------
 
-def readback_verdict(model_source: str) -> Outcome:
+def readback_verdict(model_source: str, *, refusal_is_a_verdict: bool) -> Outcome:
     """What a release concludes about the cad.readback obligation of a one-part project whose model.py is
     `model_source`: cad_model run builds the version, cad_model check publishes its packet to hw/checks/<V>/cad/, and
     evidence.collect_packets reads it back sealed, as the release gate does. A build that refuses the part leaves no version and so no
-    packet: evidence then has nothing for the obligation and calls it unknown."""
+    packet: evidence then has nothing for the obligation and calls it unknown. The caller states what that refusal is.
+    True: the verdict of a defect model the kernel rejects. False: an error of the case, as for a twin."""
     import hashlib
     import shutil
     import subprocess
@@ -297,14 +298,20 @@ def readback_verdict(model_source: str) -> Outcome:
                                capture_output=True, text=True, timeout=1800, check=False)
         manifest = hw / "versions" / "v1" / "manifest.json"
         if build.returncode not in (0, 1) or (build.returncode == 0) != manifest.is_file():
-            raise RuntimeError(f"cad_model run exited {build.returncode}: {(build.stdout + build.stderr)[-1500:]}")
+            raise command_failed("cad_model run", build.args, build.returncode, build.stdout + build.stderr)
         if not manifest.is_file():  # the build refused the part: no version exists, so no packet and nothing a release can cite
+            if not refusal_is_a_verdict:
+                raise command_failed("cad_model run", build.args, build.returncode, build.stdout + build.stderr)
             return state_verdict(record, [], "v1", MANIFEST_SHA256, ("cad.readback@",))
         check = subprocess.run(["uv", "run", "--quiet", "--script", cad_model, "check", "v1", "--hw", str(hw)],
                                capture_output=True, text=True, timeout=1800, check=False)
         if check.returncode not in (0, 1):
-            raise RuntimeError(f"cad_model check exited {check.returncode}: {(check.stdout + check.stderr)[-1500:]}")
+            raise command_failed("cad_model check", check.args, check.returncode, check.stdout + check.stderr)
         sha = hashlib.sha256(manifest.read_bytes()).hexdigest()
+        packet = hw / "checks" / "v1" / "cad" / "result.json"
+        if not packet.is_file():  # a version exists, so a check that left no packet is a failed run and not an unevidenced obligation
+            raise RuntimeError(f"cad_model check exited {check.returncode} (`{' '.join(check.args)}`) but left no packet at "
+                               f"hw/checks/v1/cad/result.json: {(check.stdout + check.stderr)[-1500:]}")
         found, findings = _evidence().collect_packets(hw, "v1", sha)
         if findings:
             raise Rejected("evidence: " + "; ".join(f.message for f in findings))

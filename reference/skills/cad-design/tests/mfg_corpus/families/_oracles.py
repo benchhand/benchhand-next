@@ -19,7 +19,7 @@ import tempfile
 from collections.abc import Callable
 from typing import Any
 
-from corpus import FAMILIES_DIR, Outcome, Skip
+from corpus import FAMILIES_DIR, Outcome, Skip, command_failed
 
 DRIVER = FAMILIES_DIR / "_oracle_driver.py"
 _CACHE: dict[str, Outcome] = {}
@@ -38,7 +38,7 @@ def verdict(model: dict[str, Any] | None, fault: dict[str, Any] | None, changed_
             proc = subprocess.run([uv, "run", "--quiet", "--script", str(DRIVER), case_file, work],
                                   capture_output=True, text=True, check=False)  # no timeout: cold imports take minutes
         if proc.returncode != 0:
-            raise RuntimeError(f"driver exited {proc.returncode}: {proc.stderr[-800:]}")
+            raise command_failed("driver", proc.args, proc.returncode, proc.stderr)
         _CACHE[key] = json.loads(proc.stdout.strip().splitlines()[-1])["outcome"]
     return _CACHE[key]
 

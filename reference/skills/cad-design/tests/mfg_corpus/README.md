@@ -14,9 +14,13 @@ The rates are a baseline for ratcheting, not a gate. A low rate for a defect no 
     uv run --script skills/cad-design/tests/mfg_corpus/rates.py [--family ID ...] [--out PATH]
 
 It prints a table, writes the JSON report (default `<tempdir>/mfg-corpus-rates.json`) and prints
-`report: <path>`. The JSON is `{"format": 1, "families": [{family, check, owner, pairs, ran, skipped, errors, rejected, known_gaps,
+`report: <path>`. The JSON is `{"format": 1, "families": [{family, check, owner, pairs, ran, skipped, errors, known_gaps,
 detected, abstained, missed, false_positives, detection_rate, abstention_rate, false_positive_rate, results}]}`.
 Rates are `null` when no pair ran. Pairs that raise `Skip` are excluded from the rates and counted in `skipped`.
+A pair whose run errors (a command that exits non-zero, a refused packet or record, a missing output, an exception in
+setup or in the driver) is an error: in `errors`, in no rate and never an abstention. The command prints
+`error: <family>/<pair>: <command> exited <code>: <stderr tail>` for each and exits 1, with or without `--check-baseline`
+and whatever the baseline tolerates. A clean run whose check does not flag the mutant is a miss, not an error.
 
 ## Layout
 
@@ -63,7 +67,7 @@ real build passes.
 | --- | --- | --- |
 | `printed_verdict(shape, prefix)` | `form_check.probe` (with the bed build axis) -> `process_checks.assess(...).packet()` -> packet schema -> `evidence.assess` | `process.fdm.*@` |
 | `assembly_verdict(items, *prefixes)` | the `access.py` command's packet (order check over the chain's inventory, then path planning) -> schema -> `evidence.assess` | `assembly.order@`, `intent.assembly_operations@`, `assembly.access@` |
-| `readback_verdict(model_source)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
+| `readback_verdict(model_source, refusal_is_a_verdict=...)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
 | `purchase_verdict(record, *prefixes)` | `process_checks.assess(record, {})` (no geometry) -> packet -> schema -> `evidence.assess` | `purchase.`, `route.`, `process.*` |
 
 An evidence state maps to a verdict: `fail` is fail, `pass` and `not_applicable` are pass, anything else (unknown, stale,
@@ -77,8 +81,8 @@ to evidence in memory (assessed for a version label no repository uses, `v9000`)
 bundle, and the `access.py` packet drops its `detail` key. The packet and evidence logic are the real ones.
 `tests/test_mfg_corpus.py` fails when a family imports or calls an inner check.
 
-A packet the schema or evidence refuses is not a verdict: `support` raises `corpus.Rejected(reason)`, the pair is a miss
-and the reason is in the report (`rejected`).
+A packet the schema or evidence refuses is not a verdict: `support` raises `corpus.Rejected(reason)`, the pair is an error
+and the reason is in its `error`.
 
 `Pair(..., known_gap="why")` marks a mutant whose verdict is not trusted, for example one that FAILs for a wrong reason.
 The pair counts in `ran` and as a miss whatever the mutant returned, its twin's false positive still counts, and the

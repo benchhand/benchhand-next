@@ -54,9 +54,9 @@ class RateTests(unittest.TestCase):
         row = self.rows(pair("a", "fail"), corpus.Pair("b", "d", skipping))
         self.assertEqual((row["pairs"], row["ran"], row["skipped"], row["detection_rate"]), (2, 1, 1, 1.0))
 
-    def test_a_crashing_check_is_a_miss_not_a_detection(self) -> None:
+    def test_a_crashing_check_is_an_error_not_a_miss_or_a_detection(self) -> None:
         row = self.rows(corpus.Pair("a", "d", crashing))
-        self.assertEqual((row["errors"], row["detected"], row["missed"], row["detection_rate"]), (1, 0, 1, 0.0))
+        self.assertEqual((row["errors"], row["detected"], row["missed"], row["detection_rate"]), (1, 0, 0, None))
         self.assertIn("boom", row["results"][0]["error"])
 
     def test_a_twin_crash_voids_the_mutant_verdict_too(self) -> None:
@@ -66,17 +66,17 @@ class RateTests(unittest.TestCase):
             raise RuntimeError("twin boom")
 
         row = self.rows(corpus.Pair("a", "d", run))
-        self.assertEqual((row["errors"], row["detected"], row["missed"], row["detection_rate"]), (1, 0, 1, 0.0))
+        self.assertEqual((row["errors"], row["detected"], row["missed"], row["detection_rate"]), (1, 0, 0, None))
         self.assertIn("twin boom", row["results"][0]["error"])
         self.assertIsNone(row["results"][0]["mutant"])
 
-    def test_a_rejected_packet_is_a_miss_with_its_reason_not_a_detection(self) -> None:
+    def test_a_rejected_packet_is_an_error_with_its_reason_not_a_miss_or_a_detection(self) -> None:
         def refused(is_mutant: bool) -> str:
             raise corpus.Rejected("packet.invalid: it gives an obligation two outcomes")
 
         row = self.rows(corpus.Pair("a", "d", refused), pair("b", "fail"))
-        self.assertEqual((row["rejected"], row["errors"], row["detected"], row["missed"]), (1, 0, 1, 1))
-        self.assertIn("two outcomes", row["results"][0]["rejected"])
+        self.assertEqual((row["errors"], row["ran"], row["detected"], row["missed"]), (1, 1, 1, 0))
+        self.assertIn("two outcomes", row["results"][0]["error"])
 
     def test_a_known_gap_is_a_miss_whatever_the_mutant_returns_and_its_twin_still_counts(self) -> None:
         row = self.rows(corpus.Pair("a", "d", lambda m: "fail", known_gap="fails for the wrong reason"),
@@ -505,25 +505,160 @@ class PacketRefusalTests(unittest.TestCase):
 
     def test_a_schema_invalid_packet_is_rejected_with_the_schema_reason(self) -> None:
         result = self.pair_result({"schema_version": 1})
-        self.assertIsNone(result.error)
-        self.assertTrue((result.rejected or "").startswith("schema: packet does not match manufacturing-check-result.schema.json"),
-                        result.rejected)
+        self.assertTrue((result.error or "").startswith("Rejected: schema: packet does not match manufacturing-check-result.schema.json"),
+                        result.error)
 
     def test_a_schema_valid_packet_that_contradicts_its_outcomes_is_rejected_with_the_evidence_reason(self) -> None:
         self.assertEqual(self.packet["result"], "unknown")
         lying = {**self.packet, "result": "pass"}
         result = self.pair_result(lying)
-        self.assertIsNone(result.error)
-        self.assertIn("evidence: ", result.rejected or "")
-        self.assertIn("its result 'pass' is not what its outcomes show (unknown)", result.rejected or "")
+        self.assertIn("evidence: ", result.error or "")
+        self.assertIn("its result 'pass' is not what its outcomes show (unknown)", result.error or "")
 
-    def test_a_rejected_packet_is_a_miss_in_the_family_row_never_a_detection(self) -> None:
+    def test_a_rejected_packet_is_an_error_in_the_family_row_never_a_miss_or_a_detection(self) -> None:
         def run(is_mutant: bool) -> str:
             return self.support.release_verdict(self.record, {"schema_version": 1}, "process.fdm.")
 
         row = corpus.evaluate([corpus.Family("f", "c", (corpus.Pair("p", "d", run),))])[0]
-        self.assertEqual((row["ran"], row["rejected"], row["errors"], row["detected"], row["abstained"], row["missed"]),
-                         (1, 1, 0, 0, 0, 1))
+        self.assertEqual((row["ran"], row["errors"], row["detected"], row["abstained"], row["missed"]), (0, 1, 0, 0, 0))
+
+
+class CaseErrorTests(unittest.TestCase):
+    """A case whose run errors is an error: never a miss, never an abstention, never in a rate, and it fails rates.py
+    whatever the baseline tolerates (issue #187). Packet-level cases fail through their `run`. Oracle cases fail through
+    the `_oracles` runner, and these tests replace its subprocess with a fake."""
+
+    STDERR = "Traceback ...\nRecordError: v1 records are refused"
+
+    def rates(self, *pairs: corpus.Pair, check_baseline: bool = False, tolerance: bool = False,
+              matching: dict | None = None) -> tuple[int, str]:
+        import contextlib
+        import io
+
+        import rates
+
+        with tempfile.TemporaryDirectory() as tmp:
+            families = Path(tmp) / "families"
+            baseline = Path(tmp) / "baseline"
+            families.mkdir()
+            baseline.mkdir()
+            (families / "fam.py").write_text(
+                "import test_mfg_corpus_pairs\nfrom corpus import Family\n"
+                "FAMILY = Family('fam', 'chk', test_mfg_corpus_pairs.PAIRS)\n", encoding="utf-8")
+            if tolerance:  # a baseline that tolerates anything
+                write_baseline(baseline, "fam", detection=0.0, false_positive=1.0, ran=0)
+            if matching is not None:  # a baseline equal to the rates of the pairs that ran cleanly
+                write_baseline(baseline, "fam", **matching)
+            argv = ["--families-dir", str(families), "--baseline-dir", str(baseline), "--out", str(Path(tmp) / "o.json")]
+            out = io.StringIO()
+            with mock.patch.dict(sys.modules, {"test_mfg_corpus_pairs": mock.Mock(PAIRS=pairs)}), contextlib.redirect_stdout(out):
+                code = rates.main([*argv, "--check-baseline"] if check_baseline else argv)
+        return code, out.getvalue()
+
+    def oracle_pair(self, ident: str, returncode: int, stdout: str = "", mutant_ok: bool = False) -> corpus.Pair:
+        sys.path.insert(0, str(CORPUS / "families"))
+        import _oracles
+
+        def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, returncode, stdout, self.STDERR)
+
+        def run(is_mutant: bool) -> str:
+            with mock.patch("shutil.which", return_value="/bin/uv"), mock.patch("subprocess.run", fake):
+                _oracles._CACHE.clear()
+                return _oracles.verdict({"id": ident, "mutant": is_mutant}, None)
+
+        return corpus.Pair(ident, "d", run)
+
+    def test_an_error_beside_clean_pairs_fails_a_baseline_run_that_matches_the_clean_rates_exactly(self) -> None:
+        """The partial failure of issue #187: the surviving pairs meet their baseline, so only the error can fail the run."""
+        matching = {"detection": 1.0, "false_positive": 0.0, "ran": 1}
+        for label, broken in (("packet-level", corpus.Pair("broken", "d", crashing)),
+                              ("oracle", self.oracle_pair("broken", 2))):
+            with self.subTest(case=label):
+                code, text = self.rates(pair("fine", "fail"), broken, check_baseline=True, matching=matching)
+                self.assertEqual(code, 1, text)
+                self.assertIn("error: fam/broken:", text)
+                self.assertNotIn("baseline:", text)
+
+    def test_a_clean_family_that_matches_its_baseline_exactly_exits_zero(self) -> None:
+        code, text = self.rates(pair("fine", "fail"), check_baseline=True, matching={"detection": 1.0, "false_positive": 0.0, "ran": 1})
+        self.assertEqual(code, 0, text)
+        self.assertNotIn("baseline:", text)
+
+    def test_a_mutant_whose_run_errors_fails_rates_and_names_the_case(self) -> None:
+        for check_baseline in (False, True):
+            with self.subTest(check_baseline=check_baseline):
+                code, text = self.rates(corpus.Pair("broken", "d", crashing), check_baseline=check_baseline, tolerance=True)
+                self.assertEqual(code, 1, text)
+                self.assertRegex(text, r"error: fam/broken: RuntimeError: boom")
+
+    def test_a_twin_whose_run_errors_is_an_error_not_a_missing_false_positive(self) -> None:
+        def run(is_mutant: bool) -> str:
+            if is_mutant:
+                return "fail"
+            raise RuntimeError("twin boom")
+
+        row = corpus.evaluate([corpus.Family("f", "c", (corpus.Pair("a", "d", run),))])[0]
+        self.assertEqual((row["errors"], row["ran"], row["detected"], row["false_positives"], row["false_positive_rate"]),
+                         (1, 0, 0, 0, None))
+        code, text = self.rates(corpus.Pair("a", "d", run), tolerance=True)
+        self.assertEqual(code, 1, text)
+        self.assertIn("error: fam/a: RuntimeError: twin boom", text)
+
+    def test_an_error_leaves_every_rate_of_the_pairs_that_ran_untouched(self) -> None:
+        row = corpus.evaluate([corpus.Family("f", "c", (pair("a", "fail"), pair("b", "pass", "fail"), corpus.Pair("c", "d", crashing)))])[0]
+        self.assertEqual((row["ran"], row["errors"], row["missed"]), (2, 1, 1))
+        self.assertEqual((row["detection_rate"], row["abstention_rate"], row["false_positive_rate"]), (0.5, 0.0, 0.5))
+
+    def test_a_clean_run_that_does_not_detect_is_a_miss_and_not_an_error(self) -> None:
+        code, text = self.rates(pair("quiet", "pass"), check_baseline=True, tolerance=True)
+        self.assertEqual(code, 0, text)
+        self.assertNotIn("error:", text)
+        row = corpus.evaluate([corpus.Family("f", "c", (pair("quiet", "pass"),))])[0]
+        self.assertEqual((row["errors"], row["missed"], row["ran"]), (0, 1, 1))
+
+    def test_a_setup_exception_before_the_check_is_an_error(self) -> None:
+        def run(is_mutant: bool) -> str:
+            raise ValueError("the corpus record is invalid: ['record.v1 refused']")
+
+        code, text = self.rates(corpus.Pair("setup", "d", run), tolerance=True)
+        self.assertEqual(code, 1, text)
+        self.assertIn("error: fam/setup: ValueError: the corpus record is invalid", text)
+
+    def test_an_oracle_case_whose_driver_exits_non_zero_is_an_error_with_command_and_stderr(self) -> None:
+        for check_baseline in (False, True):
+            with self.subTest(check_baseline=check_baseline):
+                code, text = self.rates(self.oracle_pair("build", 2), check_baseline=check_baseline, tolerance=True)
+                self.assertEqual(code, 1, text)
+                self.assertIn("error: fam/build:", text)
+                self.assertIn("_oracle_driver.py", text)
+                self.assertIn("exited 2", text)
+                self.assertIn("RecordError: v1 records are refused", text)
+
+    def test_an_oracle_case_whose_driver_prints_no_verdict_is_an_error(self) -> None:
+        code, text = self.rates(self.oracle_pair("silent", 0), tolerance=True)
+        self.assertEqual(code, 1, text)
+        self.assertIn("error: fam/silent:", text)
+
+    def test_an_oracle_case_that_runs_clean_and_does_not_flag_is_a_miss(self) -> None:
+        code, text = self.rates(self.oracle_pair("clean", 0, stdout='{"outcome": "pass"}\n'), check_baseline=True, tolerance=True)
+        self.assertEqual(code, 0, text)
+        self.assertNotIn("error:", text)
+
+    @unittest.skipUnless(DEPS and shutil.which("uv"), "pyyaml, jsonschema and uv are required")
+    def test_a_packet_level_command_failure_names_the_command_and_the_stderr_tail(self) -> None:
+        import support
+
+        def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, 3, "", self.STDERR)
+
+        def run(is_mutant: bool) -> str:
+            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n", refusal_is_a_verdict=True)
+
+        with mock.patch("subprocess.run", fake):
+            code, text = self.rates(corpus.Pair("kernel", "d", run), tolerance=True)
+        self.assertEqual(code, 1, text)
+        self.assertRegex(text, r"(?s)error: fam/kernel: RuntimeError: cad_model run exited 3 \(`uv run --quiet --script \S*cad_model\.py run .*`\):.*RecordError")
 
 
 @unittest.skipUnless(DEPS and shutil.which("uv"), "pyyaml, jsonschema and uv are required")
@@ -544,24 +679,69 @@ class NativeExitCodeTests(unittest.TestCase):
             return subprocess.CompletedProcess(argv, check_code, "", "")
 
         def run(is_mutant: bool) -> str:
-            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n")
+            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n", refusal_is_a_verdict=True)
 
         with mock.patch("subprocess.run", fake):
             return corpus.evaluate([corpus.Family("f", "c", (corpus.Pair("p", "d", run),))])[0]
 
-    def test_a_build_killed_by_a_signal_is_an_error_and_a_miss_not_an_abstention(self) -> None:
+    def test_a_build_killed_by_a_signal_is_an_error_not_a_miss_or_an_abstention(self) -> None:
         row = self.verdict_row(-9, 0, manifest=False)
-        self.assertEqual((row["errors"], row["abstained"], row["missed"]), (1, 0, 1))
+        self.assertEqual((row["errors"], row["abstained"], row["missed"]), (1, 0, 0))
         self.assertIn("cad_model run exited -9", row["results"][0]["error"])
 
-    def test_a_check_killed_by_a_signal_is_an_error_and_a_miss_not_an_abstention(self) -> None:
+    def test_a_check_killed_by_a_signal_is_an_error_not_a_miss_or_an_abstention(self) -> None:
         row = self.verdict_row(0, -9, manifest=True)
-        self.assertEqual((row["errors"], row["abstained"], row["missed"]), (1, 0, 1))
+        self.assertEqual((row["errors"], row["abstained"], row["missed"]), (1, 0, 0))
         self.assertIn("cad_model check exited -9", row["results"][0]["error"])
+
+    def test_a_check_that_leaves_no_packet_is_an_error_naming_the_command_and_the_file(self) -> None:
+        row = self.verdict_row(0, 0, manifest=True)
+        self.assertEqual((row["errors"], row["abstained"], row["missed"], row["ran"]), (1, 0, 0, 0))
+        error = row["results"][0]["error"]
+        self.assertIn("cad_model check exited 0", error)
+        self.assertIn("cad_model.py check v1 --hw", error)
+        self.assertIn("checks/v1/cad/result.json", error)
 
     def test_a_build_that_refuses_the_part_with_exit_1_and_no_version_is_unevidenced_not_an_error(self) -> None:
         row = self.verdict_row(1, 0, manifest=False)
         self.assertEqual((row["errors"], row["abstained"], row["results"][0]["mutant"]), (0, 1, "unknown"))
+
+    def test_every_caller_of_readback_verdict_states_whether_a_build_refusal_is_a_verdict(self) -> None:
+        import inspect
+
+        import support
+
+        param = inspect.signature(support.readback_verdict).parameters["refusal_is_a_verdict"]
+        self.assertIs(param.default, inspect.Parameter.empty)
+        self.assertIs(param.kind, inspect.Parameter.KEYWORD_ONLY)
+        with self.assertRaises(TypeError):
+            support.readback_verdict("KERNEL = 'cadquery'\n")  # type: ignore[call-arg]
+
+    def test_an_access_packet_command_that_fails_is_an_error_naming_the_command(self) -> None:
+        import support
+
+        def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, 3, "", "access.py refused the record")
+
+        def run(is_mutant: bool) -> str:
+            return support.access_packet_verdict(Path("hw"), Path("parts"), ["TST-0102=TST-0101"], "assembly.access@")
+
+        with mock.patch("subprocess.run", fake):
+            row = corpus.evaluate([corpus.Family("f", "c", (corpus.Pair("p", "d", run),))])[0]
+        self.assertEqual((row["errors"], row["missed"], row["ran"]), (1, 0, 0))
+        self.assertIn("access.py exited 3", row["results"][0]["error"])
+        self.assertIn("access.py --hw hw --parts-dir parts --attach TST-0102=TST-0101", row["results"][0]["error"])
+        self.assertIn("access.py refused the record", row["results"][0]["error"])
+
+    def test_a_twin_whose_build_refuses_the_part_is_an_error_not_a_clean_twin(self) -> None:
+        def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, 1, "", "build refused the twin")
+
+        with mock.patch("subprocess.run", fake):
+            result = corpus.run_pair(family_pair("form_check_kernel_validity", "t_bore_unorientable_face"))
+        self.assertIn("cad_model run exited 1", result.error or "")
+        self.assertIn("build refused the twin", result.error or "")
+        self.assertEqual((result.mutant, result.twin), (None, None))
 
 
 def family_pair(family_id: str, pair_id: str) -> corpus.Pair:
