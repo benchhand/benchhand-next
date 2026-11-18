@@ -811,6 +811,169 @@ def clear_sheet() -> dict[str, Any]:
 
 
 @unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
+class PurchasedIdentityTests(Checks):
+    """A standard designation with a size (DIN 471 - 5x0.6) or a manufacturer part number identifies a bought item. A
+    supplier order code is not required. The designation field is canonical, and a BOM title that parses as a standard
+    designation stands in for an empty field and draws an advisory."""
+
+    pn = "TST-0901"
+    obligation = "purchase.identity@TST-0901/buy"
+
+    def bought(self, title: str = "Bushing", *, identity: dict[str, Any] | None = None, **procurement: Any) -> Any:
+        facts = {"identity": identity or known("TST item"), "specification": known("TST spec"),
+                 "ratings": known("TST rating", "supplier_typical", [datasheet("TST item")]),
+                 "availability": known("TST stock item")}
+        item = part(self.pn, [FX.operation("buy", "purchased", purchase=facts)], process="purchased", material=None,
+                    make_buy="buy", title=title, procurement={"mode": "catalog", **procurement})
+        item["intent"]["material_profile"] = FX.not_applicable("catalogue item")
+        return self.assess(FX.record(parts=[item], capabilities=[], materials=materials()))
+
+    def test_a_standard_designation_with_a_size_identifies_the_part_without_an_order_code(self) -> None:
+        for designation in ("DIN 471 - 5x0.6", "DIN 471 – 8×0.8", "ISO 4762 M5x20", "EN ISO 4017 - M8 x 30",
+                            "ISO/EN/DIN 898-1 M6x25", "ISO 2338 - 5 m6 x 20", "ISO 7089 - 5 - 200 HV", "ISO 7089 5", "DIN 125 - 8.4", "ASME B18.2.1 1/4-20 x 1", "ANSI B18.3 #10-24 x 1",
+                            "Retaining ring DIN 471 - 5x0.6, spring steel C60S"):
+            with self.subTest(designation=designation):
+                result = self.bought(designation=designation)
+                self.assertEqual(self.outcome(result, self.obligation), "pass")
+                self.assertEqual(self.codes(result, self.obligation), [])
+
+    def test_a_part_standard_still_counts_beside_a_feature_standard_or_with_the_number_of_one(self) -> None:
+        for designation in ("DIN 912 M5x20, thread ISO 965-1 6g", "DIN 965 M5x12"):
+            with self.subTest(designation=designation):
+                self.assertEqual(self.outcome(self.bought(designation=designation), self.obligation), "pass")
+
+    def test_a_feature_standard_alone_is_not_a_part_designation(self) -> None:
+        for designation in ("Heat-set insert, thread ISO 965-1 M10x1-6H", "ISO 286 - 5 H7 x 20", "ASME B1.1 1/4-20 x 1",
+                            "ISO/EN/DIN 965-1 M10x1-6H", "DIN ISO 965-1 M10x1-6H", "DIN EN ISO 965-1 M10x1-6H",
+                            "General tolerance ISO 2768-m"):
+            with self.subTest(designation=designation):
+                result = self.bought(designation=designation)
+                self.assertEqual(self.outcome(result, self.obligation), "fail")
+                self.assertEqual(self.codes(result, self.obligation), ["purchase.designation_missing"])
+
+    def test_a_feature_standard_designation_with_a_manufacturer_part_number_passes_or_stays_open(self) -> None:
+        spec = "Heat-set insert, thread ISO 965-1 M10x1-6H"
+        self.assertEqual(self.outcome(self.bought(designation=spec, manufacturer_part_number="QT-M10"), self.obligation), "pass")
+        opened = self.bought(designation=spec, open={"manufacturer_part_number": "supplier to confirm"})
+        self.assertEqual(self.outcome(opened, self.obligation), "unknown")
+
+    def test_a_made_to_drawing_cnc_part_gets_no_purchase_check(self) -> None:
+        made = milled("TST-0902", [end_mill(4.0, 25.0)], workholding=True, make_buy="buy",
+                      procurement={"mode": "made_to_drawing", "designation": "Shoulder pin to drawing"})
+        result = self.assess(FX.record(parts=[made], capabilities=[mill_profile()], materials=materials()))
+        self.assertEqual([o.id for o in result.expected if o.family.startswith("purchase.")], [])
+        self.assertEqual([o["obligation"] for o in result.outcomes if o["obligation"].startswith("purchase.")], [])
+        self.assertEqual([f["code"] for f in result.findings if f["code"].startswith("purchase.")], [])
+
+    def test_a_standard_number_without_a_size_does_not_identify_a_part(self) -> None:
+        for designation in ("DIN 471", "ISO 4762", "EN 10025-2", "DIN 471 retaining ring", "Standard fastener",
+                            "Washer ISO 7089 200HV"):
+            with self.subTest(designation=designation):
+                result = self.bought(designation=designation)
+                self.assertEqual(self.outcome(result, self.obligation), "fail")
+                self.assertEqual(self.codes(result, self.obligation), ["purchase.designation_missing"])
+
+    def test_a_fractional_or_unified_size_without_a_length_identifies_a_part(self) -> None:
+        for size in ("1/4-20", "1/4", "3/8-16", "#10-24", "5/16-18 UNC", "1/2\"", "1/4-20UNC", "1/4-20 UNC-2B", "1/4-20 x 1"):
+            designation = f"ASME B18.2.2 {size}"
+            with self.subTest(size=size, where="field"):
+                self.assertEqual(self.outcome(self.bought(designation=designation), self.obligation), "pass")
+            with self.subTest(size=size, where="title"):
+                self.assertEqual(self.outcome(self.bought(f"Hex nut {designation}"), self.obligation), "pass")
+
+    def test_a_size_token_that_continues_into_letters_is_not_a_size(self) -> None:
+        for size in ("1/4-20HV", "1/4abc", "1/4-20UNCX"):
+            designation = f"ASME B18.2.2 {size}"
+            with self.subTest(size=size, where="field"):
+                self.assertEqual(self.outcome(self.bought(designation=designation), self.obligation), "fail")
+            with self.subTest(size=size, where="title"):
+                self.assertEqual(self.outcome(self.bought(f"Hex nut {designation}"), self.obligation), "fail")
+
+    def test_a_grade_is_not_a_size_but_a_real_size_beside_a_grade_is(self) -> None:
+        """A token is a grade only with a grade marker: a hardness unit (HV, HB, HRC) after a number, or a stainless class
+        (A2-70). A property class (8.8) beside a thread size does not change the size. A decimal such as 8.4 is a washer size."""
+        cases = (
+            ("Washer ISO 7089 - 200 HV", "fail"), ("Washer ISO 7089 200 HV", "fail"), ("Washer ISO 7089 - 40 HRC", "fail"),
+            ("ISO 4762 - A2-70", "fail"), ("A2-70", "fail"),
+            ("ISO 7089 - 5 - 200 HV", "pass"), ("Washer ISO 7089 - 8 - 200 HV", "pass"), ("DIN 125 - 8.4", "pass"),
+            ("Washer ISO 7089 - 8.4 - 200 HV", "pass"), ("ISO 4762 M6x20 - 8.8", "pass"), ("ISO 4762 M6 - 8.8", "pass"),
+            ("ISO 4762 M3x10 10.9", "pass"),
+        )
+        self.assert_designations(cases)
+
+    def test_a_threaded_fastener_standard_needs_a_thread_designation_as_its_size(self) -> None:
+        """For ISO 4762 and the other listed screw, bolt and nut standards a bare number is not a size. An unlisted standard
+        (a washer, a ring, a pin) keeps a bare decimal as a size."""
+        cases = [("ISO 4762 - 8.8", "fail"), ("ISO 4762 10.9", "fail"), ("ISO 4017 - 10.9", "fail"), ("ISO 4762 5", "fail"),
+                 ("ISO 4032 - 8", "fail"), ("ISO 4762 5x20", "fail"), ("ISO 4762 1/4", "fail"), ("ISO 4762 #10", "fail"),
+                 ("ISO 4762 M6", "pass"), ("ISO 4762 #10-24", "pass"), ("ISO 4762 1/4-20", "pass"), ("ISO 4017 M8x30", "pass"),
+                 ("ISO 7089 - 8.8", "pass"), ("DIN 125 - 8.4", "pass"), ("DIN 471 - 5x0.6", "pass")]
+        # The table holds ISO 4762 itself. The loop covers the other eight listed standards.
+        for standard in ("ISO 4014", "ISO 4017", "ISO 7380", "ISO 10642", "ISO 4032", "DIN 912", "DIN 933", "DIN 934"):
+            cases += [(f"{standard} - 8.8", "fail"), (f"{standard} M6", "pass")]
+        self.assert_designations(cases)
+
+    def assert_designations(self, cases: Any) -> None:
+        for designation, expected in cases:
+            with self.subTest(designation=designation, where="field"):
+                result = self.bought(designation=designation)
+                self.assertEqual(self.outcome(result, self.obligation), expected)
+                if expected == "fail":
+                    self.assertEqual(self.codes(result, self.obligation), ["purchase.designation_missing"])
+            with self.subTest(designation=designation, where="title"):
+                self.assertEqual(self.outcome(self.bought(designation), self.obligation), expected)
+
+    def test_a_hardness_grade_in_the_title_is_not_a_size(self) -> None:
+        result = self.bought("Washer ISO 7089 200HV")
+        self.assertEqual(self.outcome(result, self.obligation), "fail")
+        self.assertEqual(self.codes(result, self.obligation), ["purchase.designation_missing"])
+
+    def test_a_manufacturer_part_number_identifies_a_non_standard_part(self) -> None:
+        result = self.bought(designation="Compression limiter CL8000, M4 x 8", manufacturer_part_number="CMPL 4 X 8 EK CL8000")
+        self.assertEqual(self.outcome(result, self.obligation), "pass")
+        self.assertEqual(self.codes(result, self.obligation), [])
+
+    def test_a_non_standard_part_without_a_manufacturer_part_number_fails(self) -> None:
+        for name, procurement in (("designation only", {"designation": "Heat-set insert QT-M10x12.7"}),
+                                  ("neither", {}),
+                                  ("the field wins over a standard title", {"designation": "Bushing xyz"})):
+            with self.subTest(case=name):
+                title = "Retaining ring DIN 471 - 5x0.6" if "wins" in name else "Heat-set insert"
+                result = self.bought(title, **procurement)
+                self.assertEqual(self.outcome(result, self.obligation), "fail")
+                found = self.finding(result, "purchase.designation_missing")
+                self.assertEqual((found["severity"], found["outcome"]), ("major", "fail"))
+
+    def test_a_standard_title_stands_in_for_an_empty_field_with_an_advisory(self) -> None:
+        result = self.bought("Retaining ring DIN 471 - 5x0.6")
+        self.assertEqual(self.outcome(result, self.obligation), "pass")
+        found = self.finding(result, "purchase.designation_in_title")
+        self.assertEqual((found["severity"], found["outcome"]), ("info", "pass"))
+        self.assertIn("procurement.designation", found["remedy"])
+
+    def test_an_unparseable_title_with_an_empty_field_fails(self) -> None:
+        for title in ("Bushing", "Retaining ring DIN 471"):
+            with self.subTest(title=title):
+                result = self.bought(title)
+                self.assertEqual(self.outcome(result, self.obligation), "fail")
+                self.assertEqual(self.codes(result, self.obligation), ["purchase.designation_missing"])
+
+    def test_an_open_manufacturer_part_number_is_unknown_not_fail(self) -> None:
+        result = self.bought(open={"manufacturer_part_number": "supplier not chosen yet"})
+        self.assertEqual(self.outcome(result, self.obligation), "unknown")
+        self.assertEqual(self.codes(result, self.obligation), ["purchase.designation_open"])
+
+    def test_an_open_field_does_not_excuse_a_part_that_is_identified_anyway(self) -> None:
+        result = self.bought(designation="DIN 471 - 5x0.6", open={"supplier_part_number": "pick at order time"})
+        self.assertEqual(self.outcome(result, self.obligation), "pass")
+
+    def test_an_identified_part_still_needs_a_known_identity_fact(self) -> None:
+        result = self.bought(designation="DIN 471 - 5x0.6", identity=FX.unknown("not recorded in this fixture"))
+        self.assertEqual(self.outcome(result, self.obligation), "unknown")
+        self.assertEqual(self.codes(result, self.obligation), ["purchase.identity_unknown"])
+
+
+@unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
 class OpticalRouteTests(Checks):
     """Decision 2: an optical requirement eliminates FDM and resin (see-through FDM is not a thing); a purchased
     transparent part needs traceable optical criteria, and cut stock must be an identified grade with a sourced

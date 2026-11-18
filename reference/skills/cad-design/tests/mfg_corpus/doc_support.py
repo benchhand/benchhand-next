@@ -222,6 +222,17 @@ def route_verdict(part: dict[str, Any], *prefixes: str) -> Outcome:
     return purchase_verdict(record, *prefixes)
 
 
+def record_verdict(hw: Path, *prefixes: str) -> Outcome:
+    """What a release concludes about the obligations starting with one of `prefixes` for the record written in `hw`, with
+    no geometry. The record is a whole project tree that a pair builds, not one part on the TST profiles."""
+    need()
+    record, problems = process_checks().intent().check_record(hw)
+    errors = [problem.message for problem in problems if problem.severity == "error"]
+    if errors:
+        raise ValueError(f"the fixture record is invalid: {errors}")
+    return purchase_verdict(record, *prefixes)
+
+
 def edit_bom(hw: Path, pn: str, change: Callable[[dict[str, str]], None]) -> None:
     """Rewrite the BOM row of `pn` through `change`."""
     import csv
