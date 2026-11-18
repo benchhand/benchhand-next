@@ -88,7 +88,8 @@ def documents(*, process: str = "fdm", orientation: Any = None, parts_of: list[d
         capabilities = [printer(), printer("tst_laser", "laser")]
     else:
         route = [fx.operation("print", process, "tst_printer",
-                              orientation=copy.deepcopy(orientation or IDENTITY_ORIENTATION), **extra)]
+                              orientation=copy.deepcopy(orientation or IDENTITY_ORIENTATION), supports={"strategy": "none"},
+                              **extra)]
         capabilities = [printer()]
     intent_extra: dict[str, Any] = {"components": parts_of} if parts_of is not None else {}
     if color is not UNSET:

@@ -720,12 +720,12 @@ class DocVerdictPathTests(unittest.TestCase):
     """The verdicts of the doc_* families come from the packet and evidence, so each helper changes its answer when what it
     reads changes, and it refuses a packet the schema rejects. A constant verdict or a swallowed error cannot pass these."""
 
-    def test_the_route_obligations_judge_the_four_manufacturing_defects(self) -> None:
+    def test_the_four_manufacturing_defects_are_detected_by_the_route_obligations(self) -> None:
         for pair_id in ("fdm_orientation", "fdm_supports", "cnc_setup", "cnc_workholding"):
             with self.subTest(pair=pair_id):
                 pair = family_pair("doc_manufacturing", pair_id)
                 self.assertIsNone(pair.known_gap)
-                self.assertEqual((pair.run(True), pair.run(False)), ("unknown", "pass"))
+                self.assertEqual((pair.run(True), pair.run(False)), ("fail", "pass"))
 
     def test_a_failing_joint_fact_of_the_record_fails_the_joint_verdict(self) -> None:
         import doc_support
