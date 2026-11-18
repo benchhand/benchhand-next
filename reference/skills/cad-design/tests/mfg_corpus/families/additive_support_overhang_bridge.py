@@ -48,13 +48,22 @@ def gusset_under_shelf(mutant: bool) -> Outcome:
 
 
 def horizontal_bore_roof(mutant: bool) -> Outcome:
-    """A horizontal bore along Y through a block: a 20 mm round roof against a 3 mm one."""
+    """A horizontal bore along Y through a block: a 20 mm round roof against a 3 mm teardrop one. The teardrop's flanks sit at the
+    45 deg overhang limit, so the roof needs no support."""
     s = solids()  # first: it raises Skip when OCP is absent
-    from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
-    from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeFace, BRepBuilderAPI_MakePolygon
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakePrism
+    from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt, gp_Vec
 
     radius = 10.0 if mutant else 1.5
     bore = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(20, -1, 20), gp_Dir(0, 1, 0)), radius, 32).Shape()
+    if not mutant:
+        side = radius / 2 ** 0.5  # the flank touches the circle here and rises to an apex radius*sqrt(2) above the axis
+        roof = BRepBuilderAPI_MakePolygon()
+        for x, z in ((20 - side, 20 + side), (20, 20 + radius * 2 ** 0.5), (20 + side, 20 + side)):
+            roof.Add(gp_Pnt(x, -1, z))
+        roof.Close()
+        bore = s.fuse(bore, BRepPrimAPI_MakePrism(BRepBuilderAPI_MakeFace(roof.Wire()).Face(), gp_Vec(0, 32, 0)).Shape())
     return _verdict(s.cut(s.box(0, 0, 0, 40, 30, 40), bore))
 
 
