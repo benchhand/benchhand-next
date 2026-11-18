@@ -47,6 +47,18 @@ if LAYOUT is None:
     LAYOUT_SPEC.loader.exec_module(LAYOUT)
 
 
+def load_reaction_project():
+    """fixtures/reaction_project.py: sealed versions with a real stop-reaction bundle."""
+    name = "cad_analysis_reaction_project"
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parent / "fixtures" / "reaction_project.py")
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
 CASE_TAIL = """material: {name: Aluminium 6061, E: 69000, nu: 0.33, density: 2700, yield: 276}
 fixed_faces: {plane: {axis: y, value: 50, tolerance: 0.000001}}
 loads:
@@ -933,6 +945,63 @@ if flag is not None:
             self.assertEqual((result["error"]["details"]["max_von_mises_mpa"],
                               result["error"]["details"]["max_displacement_mm"]), (0.0, 0.0))
             self.assertEqual(len(self.solve_calls(root)), 1)  # ccx solved once: the refusal reads its result
+
+    def reaction_run(self, root: Path, design_n: float, failing: bool = False) -> tuple[subprocess.CompletedProcess[str], Path]:
+        """Run the 50 N cantilever case as a versioned case whose load names IF-006, whose sealed stop-reaction bundle
+        holds a design reaction of `design_n` (a failing bundle, its recorded contact load understated, when `failing`).
+        The $CCX stand-in records every call. The real FreeCAD does the rest."""
+        reaction = load_reaction_project()
+        scenario = reaction.Scenario(self)
+        step = self.make_cantilever_step(root, "TST-0101 Beam")
+        shutil.copyfile(step, scenario.case_dir / "beam.step")
+        scenario.case.write_text("step: beam.step\n" + CANTILEVER_VERSIONED_TAIL.replace("force: [0, 0, -50]}",
+                                                                                      "force: [0, 0, -50], reaction: IF-006}"), encoding="utf-8")
+        if failing:
+            scenario.publish({"IF-006": reaction.entry("fail", {"min": reaction.end("understated", design_n)},
+                                                       recorded_contact_load_n=design_n / 2)}, outcome="fail")
+        else:
+            scenario.publish({"IF-006": reaction.entry(ends={"min": reaction.end("bounded", design_n)})})
+        ccx = self.stand_in(root, "ccx", "pass")
+        with patch.dict(os.environ, {"CCX": str(ccx)}):
+            done = subprocess.run([sys.executable, str(SCRIPT), str(scenario.case), "--hw", str(scenario.hw), "--version", "v1"],
+                                  capture_output=True, text=True, timeout=900)
+        return done, scenario.hw
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_load_below_the_modelled_stop_reaction_is_refused_before_ccx_runs(self) -> None:
+        """#153: the 50 N load names a stop whose design reaction is 60 N. fea_static refuses before it meshes, probes
+        the solvers or starts ccx. The $CCX stand-in gets no call at all, not even for its version."""
+        with tempfile.TemporaryDirectory(prefix="cad-fea-reaction-below-") as directory:
+            root = Path(directory)
+            done, hw = self.reaction_run(root, 60.0)
+            self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+            self.assertEqual(json.loads(done.stdout)["error"]["code"], "reaction_below_design")
+            self.assertFalse((root / "ccx-calls.log").exists(), "ccx ran for a case refused before the solve")
+            self.assertFalse((hw / "analysis" / "v1").exists())
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_load_at_the_modelled_stop_reaction_is_solved(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cad-fea-reaction-at-") as directory:
+            root = Path(directory)
+            done, hw = self.reaction_run(root, 50.0)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(json.loads(done.stdout)["status"], "pass")
+            self.assertEqual(len(self.solve_calls(root)), 1, "ccx solved the case once")
+            manifest = json.loads((hw / "analysis" / "v1" / "cantilever" / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["recipe"]["reactions"]["IF-006"]["design_reaction_n"], 50.0)
+
+    @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
+    def test_a_load_that_meets_the_design_reaction_of_a_failing_bundle_is_solved(self) -> None:
+        """The stop-reaction check failed (its recorded contact load is below the design reaction). The corrective FEA case
+        runs all the same: the 50 N load meets the 40 N design reaction, and the recipe records that reaction."""
+        with tempfile.TemporaryDirectory(prefix="cad-fea-reaction-fail-") as directory:
+            root = Path(directory)
+            done, hw = self.reaction_run(root, 40.0, failing=True)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(json.loads(done.stdout)["status"], "pass")
+            self.assertEqual(len(self.solve_calls(root)), 1, "ccx solved the case once")
+            manifest = json.loads((hw / "analysis" / "v1" / "cantilever" / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["recipe"]["reactions"]["IF-006"]["design_reaction_n"], 40.0)
 
     @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
     def test_gmsh_tools_mesh_with_the_gmsh_the_job_resolved(self) -> None:
