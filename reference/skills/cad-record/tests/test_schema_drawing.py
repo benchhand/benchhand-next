@@ -29,7 +29,7 @@ PROCUREMENT_COLUMNS = ["unit", "designation", "manufacturer", "manufacturer_part
 DATASHEET = b"%PDF-1.4 vendor datasheet stand-in\n"
 
 PRODUCT = {
-    "id": "test-fixture", "rigor": "pro", "units": "mm", "regime": "iso", "general_tolerance": "ISO 2768-m",
+    "id": "test-fixture", "units": "mm", "regime": "iso", "general_tolerance": "ISO 2768-m",
     "flow": {"stage": "detail", "recheck_from": "detail"},
     "drawing": {
         "definition": "model_and_drawing",
@@ -191,6 +191,10 @@ class DrawingRecordAdditions(unittest.TestCase):
             "press_fit": {"fit": "5 H7/p6", "pair": ["TST-0001", "TST-0002"], "axial_retainer": {"type": "shoulder"}}}
         self.procurement_columns = False
         self.assert_valid()
+
+    def test_product_record_refuses_the_retired_rigor_field(self) -> None:
+        self.docs["product.yaml"]["rigor"] = "pro"
+        self.assert_rejected("rigor")
 
     def test_product_drawing_policy_rejections(self) -> None:
         cases: dict[str, tuple[Callable[[dict], None], str]] = {

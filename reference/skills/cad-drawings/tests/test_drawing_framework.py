@@ -54,7 +54,7 @@ if fx is None:
 PN = "TST-0001"
 
 PRODUCT = {
-    "id": "frame-fixture", "rigor": "pro", "units": "mm", "regime": "iso", "general_tolerance": "ISO 2768-m",
+    "id": "frame-fixture", "units": "mm", "regime": "iso", "general_tolerance": "ISO 2768-m",
     "flow": {"stage": "detail", "recheck_from": "detail"},
     "drawing": {"definition": "model_and_drawing", "projection": "first_angle",
                 "standards": {"dimensioning": "ISO 129-1:2018", "gps_fundamentals": "ISO 8015:2011"},

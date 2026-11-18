@@ -1,5 +1,4 @@
 id: lamp-arm
-rigor: pro
 units: mm
 regime: iso
 general_tolerance: "ISO 2768-m"

@@ -119,7 +119,6 @@ CONTRIBUTOR = "/properties/contributors/items/properties"
 CASES: tuple[Case, ...] = (
     number(3, "min_wall_mm.fdm", PRODUCT, f"{WALL}/fdm", "[0.2, 25]", {"min": 0.4, "max": 3}, default=1.2),
     number(3, "min_wall_mm.cnc", PRODUCT, f"{WALL}/cnc", "[0.2, 25]", {"min": 0.4, "max": 3}),
-    number(8, "rigor", PRODUCT, "/properties/rigor", "maker,pro,regulated", None, shape="enum", default="pro"),
     number(9, "design.clearance_margin_mm", PRODUCT, "/properties/design/properties/clearance_margin_mm", "[0, 1]",
            {"max": 0.5}, default=0.1),
     number(10, "build_volume.x_mm", PRODUCT, f"{BUILD}/x_mm", "(0, 2000]", {"min": 20, "max": 500}),
@@ -256,6 +255,8 @@ CASES: tuple[Case, ...] = (
 BY_NAME = {case.name: case for case in CASES}
 # Rows of the audit table that live only in the product.yaml `flow.profile` schema, which flow PR 1 owns
 FLOW_PROFILE_ROWS = {1, 2, 4, 5, 6, 7}
+# Audit row 8 was the product `rigor` field, which the schema no longer has
+RETIRED_ROWS = {8}
 # Fields that state a fact about a real material, machine or part: they have no default
 FACTS = {
     "build_volume.x_mm", "build_volume.y_mm", "build_volume.z_mm",
@@ -410,8 +411,8 @@ def check_bounds(test: unittest.TestCase, case: Case, accept: Any, reject: Any, 
 class Rows(unittest.TestCase):
     def test_every_audit_row_is_covered_or_belongs_to_the_flow_profile(self) -> None:
         covered = {case.row for case in CASES} - {0}
-        self.assertEqual(covered | FLOW_PROFILE_ROWS, set(range(1, 56)))
-        self.assertFalse(covered & FLOW_PROFILE_ROWS)
+        self.assertEqual(covered | FLOW_PROFILE_ROWS | RETIRED_ROWS, set(range(1, 56)))
+        self.assertFalse(covered & (FLOW_PROFILE_ROWS | RETIRED_ROWS))
 
     def test_a_value_just_outside_each_hard_bound_is_an_error_and_the_bound_itself_is_accepted(self) -> None:
         for case in CASES:

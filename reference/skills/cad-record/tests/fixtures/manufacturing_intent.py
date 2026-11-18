@@ -137,7 +137,7 @@ def question(ident: str, text: str = "TST fixture question?", *, material: bool 
 
 
 def product(use: dict[str, Any] | None = None, stage: str = "parts", **extra: Any) -> dict[str, Any]:
-    data = {"record_version": 2, "id": "tst-product", "rigor": "pro", "units": "mm", "regime": "iso",
+    data = {"record_version": 2, "id": "tst-product", "units": "mm", "regime": "iso",
             "general_tolerance": "ISO 2768-m", "flow": {"stage": stage, "recheck_from": stage},
             "use_case": use if use is not None else use_case()}
     data.update(extra)

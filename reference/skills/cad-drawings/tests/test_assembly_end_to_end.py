@@ -86,7 +86,7 @@ def write_project(root: Path, regime: str = "iso", bom_pin_qty: int = 2) -> Path
     """A valid record and a version folder built from the fixture STEPs, hashed as ``cad_model.py run`` would."""
     hw = root / "project" / "hw"
     documents = {
-        "product.yaml": {"id": "pin-plate", "rigor": "pro", "units": "mm", "regime": regime,
+        "product.yaml": {"id": "pin-plate", "units": "mm", "regime": regime,
                          "general_tolerance": "ISO 2768-m", "flow": {"stage": "detail", "recheck_from": "detail"}},
         "requirements.yaml": {"requirements": [{"id": "REQ-001", "text": "Pins", "rationale": "Fixture", "source": "Test",
                                                 "priority": "must", "verification": {"method": "I", "criteria": "Made"}}]},

@@ -4,11 +4,10 @@
   "title": "CAD product record",
   "type": "object",
   "additionalProperties": false,
-  "required": ["record_version", "id", "rigor", "units", "regime", "general_tolerance", "flow", "use_case"],
+  "required": ["record_version", "id", "units", "regime", "general_tolerance", "flow", "use_case"],
   "properties": {
     "record_version": {"$ref": "manufacturing.schema.json#/$defs/record_version"},
     "id": {"type": "string", "minLength": 1, "pattern": "^[a-z0-9][a-z0-9-]*$"},
-    "rigor": {"type": "string", "enum": ["maker", "pro", "regulated"], "default": "pro"},
     "units": {"const": "mm"},
     "regime": {"type": "string", "enum": ["iso", "asme"]},
     "general_tolerance": {

@@ -1,6 +1,5 @@
 record_version: 2
 id: example-product
-rigor: pro
 units: mm
 regime: iso
 # Optional; enter user-approved SPDX identifiers. Never infer from LICENSE.

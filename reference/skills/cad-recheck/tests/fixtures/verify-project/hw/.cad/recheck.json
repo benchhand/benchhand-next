@@ -1,7 +1,7 @@
 {
-  "tree_hash": "9dc4ded9506bad43e934664482b7a3ce6fc72fd5ef82fc5106f578f92337fef7",
+  "tree_hash": "af7391659fd7d2bcee5d2ddbce93b1c55a3461d22eb21b488a74abf6d83719ac",
   "stage": "layout",
-  "record_sha256": "16f94d01da9e5169b71cab8a1a84f7880eba4f99b7f2defb809a98e273684f3c",
+  "record_sha256": "e7a5b6e1ba430e9b7309f58f22fd1d90f061d68f9b39a4f9406f6c18d2e30105",
   "expected_sha256": "ee60cc5872f48ae4dea826a4b6a7eeba00daf131f51b502ada4fa4af35b5aa5f",
   "version": "v1",
   "checks": {
@@ -10,7 +10,7 @@
     "record_version": 2,
     "version": "v1",
     "version_manifest_sha256": "229646f6bf882360de35a7b8ac8cfe1620c98a7d47e44bf8a4f34b4ddda6ff82",
-    "record_sha256": "16f94d01da9e5169b71cab8a1a84f7880eba4f99b7f2defb809a98e273684f3c",
+    "record_sha256": "e7a5b6e1ba430e9b7309f58f22fd1d90f061d68f9b39a4f9406f6c18d2e30105",
     "expected_sha256": "ee60cc5872f48ae4dea826a4b6a7eeba00daf131f51b502ada4fa4af35b5aa5f",
     "stage": "layout",
     "expected": [
@@ -343,9 +343,9 @@
     }
   },
   "passed": true,
-  "timestamp": "2026-11-18T00:55:16Z",
+  "timestamp": "2026-11-18T19:21:14Z",
   "tool_versions": {
-    "python": "3.13.18",
+    "python": "3.12.16",
     "git": "git version 2.56.1",
     "uv": "uv 0.13.7 (316c827e0 2026-11-03 aarch64-apple-darwin)"
   }

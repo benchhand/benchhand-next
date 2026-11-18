@@ -294,7 +294,7 @@ class RecheckHookTests(unittest.TestCase):
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
         product_path.parent.mkdir(parents=True, exist_ok=True)
         frozen_product = {
-            "id": "test-project", "rigor": "pro", "units": "mm", "regime": "iso",
+            "id": "test-project", "units": "mm", "regime": "iso",
             "general_tolerance": "ISO 2768-m",
             "flow": {"stage": "specify", "recheck_from": "release", "frozen": {
                 "version": "v1", "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
