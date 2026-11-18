@@ -359,7 +359,7 @@ class ValidateProject(unittest.TestCase):
         validator_copy.parent.mkdir(parents=True)
         shutil.copy2(VALIDATOR, validator_copy)
         for sibling in ("assembly_data.py", "assembly_operations.py", "design_rules.py", "layout.py",
-                        "manufacturing_intent.py", "evidence.py", "impact.py", "selection.py",
+                        "manufacturing_intent.py", "evidence.py", "evidence_paths.py", "impact.py", "selection.py",
                         "schema_registry.py", "yaml_loader.py", "emit.py"):
             shutil.copy2(VALIDATOR.with_name(sibling), validator_copy.with_name(sibling))
         shutil.copytree(SKILL / "schemas", self.project / "skill" / "schemas")
@@ -716,6 +716,16 @@ class LedgerEvidence(unittest.TestCase):
         found = [item for item in self.findings() if str(item.get("code", "")).startswith("waiver.")]
         self.assertEqual([(item["code"], item["severity"]) for item in found], [("waiver.unapproved", "error")])
         self.assertTrue(found[0]["path"].endswith("evidence.yaml#/entries/0/waiver"))
+
+    def test_a_ledger_entry_that_cites_scratch_is_refused_by_the_validator(self) -> None:
+        subject = {"PN": "LMP-0001"}
+        entry = {"id": "EV-001", "requirement": "REQ-001", "subject": subject, "level": "simulation_supported",
+                 "result": "planned", "method": "BRepExtrema script .cad-work/layout/regional.py"}
+        (self.hw / "manufacturing" / "evidence.yaml").write_text(yaml.safe_dump({"entries": [entry]}), encoding="utf-8")
+        found = [item for item in self.findings() if item.get("code") == "evidence.scratch_path"]
+        self.assertEqual([item["severity"] for item in found], ["error"])
+        self.assertIn(".cad-work/layout/regional.py", found[0]["message"])
+        self.assertTrue(found[0]["path"].endswith("evidence.yaml#/entries/EV-001"))
 
     def test_a_csv_pass_without_ledger_evidence_warns_and_blocks_from_the_freeze(self) -> None:
         path = self.hw / "verification.csv"
