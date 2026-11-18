@@ -83,13 +83,14 @@ mesh_size: 5
 """
 
 
-def hanging_freecad(root: Path, child_pid: Path) -> Path:
-    """A FreeCAD stand-in that runs the real job script, starts a solver-like child, writes its pid to
-    `child_pid`, and hangs in the job's STEP import."""
+def hanging_freecad(root: Path, child_pid: Path, startup_seconds: float = 0) -> Path:
+    """A FreeCAD stand-in that sleeps `startup_seconds`, runs the real job script, starts a solver-like child,
+    writes its pid to `child_pid`, and hangs in the job's STEP import."""
     freecad = root / "freecadcmd"
     freecad.write_text(f"""#!{sys.executable}
 import runpy, subprocess, sys, time
 from unittest import mock
+time.sleep({startup_seconds!r})
 child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
 open({str(child_pid)!r}, "w").write(str(child.pid))
 for name in ("Part", "Import", "ObjectsFem", "femmesh", "femmesh.gmshtools", "femtools", "femtools.ccxtools"):
@@ -128,6 +129,23 @@ def job_of(script: str) -> dict:
     match = re.search(r"^JOB=json[.]loads\((.*)\)$", script, flags=re.M)
     assert match is not None
     return json.loads(ast.literal_eval(match.group(1)))
+
+
+def timeout_clock_after_phase():
+    """Patch for `fea_static.lifecycle.run`: the job's timeout clock starts once the job has written its phase
+    file, so a slow start-up cannot spend the budget. The wait is bounded at 120 s, then the clock starts anyway."""
+    real_run = fea_static.lifecycle.run
+    real_communicate = fea_static.lifecycle.Supervised.communicate
+
+    def run(argv, *, cwd, **kwargs):
+        def communicate(process, input=None, timeout=None):
+            wait_until(lambda: any(Path(cwd).glob("fea_static_*_phase.json")), timeout=120)
+            return real_communicate(process, input, timeout=timeout)
+
+        with patch.object(fea_static.lifecycle.Supervised, "communicate", communicate):
+            return real_run(argv, cwd=cwd, **kwargs)
+
+    return patch("fea_static.lifecycle.run", run)
 
 
 def hanging_case(step: Path, timeout_seconds: float) -> dict:
@@ -1057,25 +1075,31 @@ if len(sys.argv) > 1:
             self.assertIn("not the recorded 0.1", result["error"]["message"])
             self.assertEqual(list(Path(result["run_directory"]).glob("GmshMesh*")), [])
 
-    def test_case_timeout_names_the_phase_its_knob_and_stops_the_jobs_children(self) -> None:
+    def assert_timeout_names_the_import_phase_and_stops_the_children(self, startup_seconds: float) -> None:
         from fea_static import run_job
         with tempfile.TemporaryDirectory(prefix="cad-fea-timeout-") as directory:
             root = Path(directory)
             step = root / "part.step"
             step.touch()
             child_pid = root / "child.pid"
-            freecad = hanging_freecad(root, child_pid)
-            case = hanging_case(step, timeout_seconds=5)
-            with patch("fea_static.find_freecad", return_value=freecad):
+            freecad = hanging_freecad(root, child_pid, startup_seconds)
+            case = hanging_case(step, timeout_seconds=1)
+            with patch("fea_static.find_freecad", return_value=freecad), timeout_clock_after_phase():
                 result, status = run_job(root / "case.yaml", case,
                                          solver_versions={"calculix": {"path": "/unused/ccx", "version": "2.23"}})
             self.assertEqual(status, 2)
             self.assertEqual(result["error"]["code"], "freecad_timeout")
             self.assertEqual(result["error"]["details"], {"phase": "import"})
-            self.assertIn("timeout_seconds of 5 while importing the STEP; raise timeout_seconds in the case YAML",
+            self.assertIn("timeout_seconds of 1 while importing the STEP; raise timeout_seconds in the case YAML",
                           result["error"]["message"])
             pid = int(child_pid.read_text(encoding="utf-8"))
             self.assertTrue(wait_until(lambda: not pid_runs(pid)), "a child of the timed-out FreeCAD job is still running")
+
+    def test_case_timeout_names_the_phase_its_knob_and_stops_the_jobs_children(self) -> None:
+        self.assert_timeout_names_the_import_phase_and_stops_the_children(startup_seconds=0)
+
+    def test_a_stand_in_that_starts_slower_than_the_old_5_s_budget_still_times_out_in_its_import_phase(self) -> None:
+        self.assert_timeout_names_the_import_phase_and_stops_the_children(startup_seconds=6)
 
     def test_killing_the_fea_process_outright_stops_the_job_and_frees_its_run_record(self) -> None:
         lifecycle = fea_static.lifecycle
