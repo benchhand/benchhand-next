@@ -460,12 +460,13 @@ class TreeAudit(TempProject):
         """Stored objects and build records sit where cad-model run writes them, are not sealed, earn no
         geometry role, and are no generated result for git; a half-written one is transient."""
         digest = "a" * 64
-        accepted = (".cad/parts/.gitignore", f".cad/parts/{digest}", ".cad/builds/.gitignore",
-                    f".cad/builds/{digest}.json")
-        for rel in (*accepted, f".cad/parts/.{digest}.4242.tmp", f".cad/builds/.{digest}.json.4242.tmp"):
+        accepted = (".cad/cache/.gitignore", f".cad/cache/objects/{digest}", f".cad/cache/locks/{digest}.lock",
+                    f".cad/cache/records/{digest}.json")
+        leftovers = (f".cad/cache/objects/.{digest}.4242.8417272384.tmp", f".cad/cache/records/.{digest}.json.4242.8417272384.tmp",
+                     ".cad/cache/.gitignore.4242.8417272384.tmp")  # store.py's staging names: pid, then thread id
+        for rel in (*accepted, *leftovers):
             write(self.hw / rel)
-        self.assertEqual(self.codes(), {f"hw/.cad/parts/.{digest}.4242.tmp": "layout.transient",
-                                        f"hw/.cad/builds/.{digest}.json.4242.tmp": "layout.transient"})
+        self.assertEqual(self.codes(), {f"hw/{rel}": "layout.transient" for rel in leftovers})
         for rel in (accepted[1], accepted[3]):
             with self.subTest(rel):
                 match = layout.classify(f"hw/{rel}")
@@ -473,7 +474,7 @@ class TreeAudit(TempProject):
                                  ("generated", None, "scratch"))
                 self.assertNotIn(match.role, ("definition", "manufacture", "evidence"))
                 self.assertIsNone(layout.result_root(rel))
-        for bad in (".cad/parts/abc", f".cad/parts/{digest}.step", f".cad/builds/{digest}"):
+        for bad in (".cad/cache/objects/abc", f".cad/cache/objects/{digest}.step", f".cad/cache/records/{digest}"):
             self.assertIsNone(layout.classify(f"hw/{bad}"), bad)
 
 

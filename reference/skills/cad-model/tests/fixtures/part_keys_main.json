@@ -1,0 +1,313 @@
+{
+ "source": "origin/main build.build_key on examples/lamp-arm",
+ "parts": [
+  {
+   "pn": "LMP-0001",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0001",
+    "name": "LMP-0001 Base plate and pivot boss",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0001/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0001.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "f0dcfff2d08f36a2709d2b781e8476cda0a76a71df24148e97b46922c7829830"
+   },
+   "key": "5a09dbc0f17fb5d4210398549113754935147e251632c58f62d9d993a0ba8c62"
+  },
+  {
+   "pn": "LMP-0002",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0002",
+    "name": "LMP-0002 Lower link",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0002/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0002.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "54ca8d8d1d08e4cfe0b694796efd9503721c24b14b94497725989cd7c4b1db81"
+   },
+   "key": "f5018d1cfe234c5421151a7b0390565f0fa6af8493e6ed855f040f1df8650fa9"
+  },
+  {
+   "pn": "LMP-0003",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0003",
+    "name": "LMP-0003 Upper link",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0003/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0003.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "9f5f63754f651715f951c1b1135a1205c1d8011bbdb5e733fb25e86209b9a203"
+   },
+   "key": "7e01c7c37ec6da4b3dd4c184610e9122050d669ac7e9c10a8cdbbe66a1d3adb2"
+  },
+  {
+   "pn": "LMP-0004",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0004",
+    "name": "LMP-0004 Lamp head housing",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0004/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0004.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "f6343d10e83e63a8938e7cd4aebc49bb53afa11284e8ed74c4487dd1e951719c"
+   },
+   "key": "f0ba8c223278ce2903950615192f0ca18e1d05bb7f62770e6956c9a4777a76bd"
+  },
+  {
+   "pn": "LMP-0005",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0005",
+    "name": "LMP-0005 M5 x 30 shoulder pin",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0005/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0005.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "227dedf5bede64d4904bd270b0f9da71a8f3e292a956e0ad24cac6f9252b1656"
+   },
+   "key": "da2014a4793d89f87e0cb0f9a318b458e371e6ce87607ca5a25de260b9ff08f8"
+  },
+  {
+   "pn": "LMP-0006",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0006",
+    "name": "LMP-0006 M5 x 25 shoulder pin",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0006/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0006.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "311fedac22047753a855b01bfb6e4561ea606c67e944e54542fbf1121f1fddd7"
+   },
+   "key": "0f65ef38648b4af81566f97246f8a4f18f592fa430cdfba5038559da8413991b"
+  },
+  {
+   "pn": "LMP-0007",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0007",
+    "name": "LMP-0007 M5 x 20 shoulder pin",
+    "model_frame": "assembly_zero",
+    "manufacture": "same",
+    "model": "/elsewhere/hw/parts/LMP-0007/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0007.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "7bebfb6d84a1c013f023731cef6d5f34a153d2e02bdba80d2346588f01898db6"
+   },
+   "key": "28fc28c1841217ae978c2865711f9629309ead5195157f99c64b1c5fb069af33"
+  },
+  {
+   "pn": "LMP-0008",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0008",
+    "name": "LMP-0008 Bushing SPIROL CMPL 4 X 8 EK CL8000",
+    "model_frame": "assembly_zero",
+    "manufacture": null,
+    "model": "/elsewhere/hw/parts/LMP-0008/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0008.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "d08f50ac131a54f9fad0e90982b6e0673b2496cb5509793a99fd080babcda6fb"
+   },
+   "key": "4df82b42bc4007ac88b27f5fb7eecdd7c3b7e6ccca763cb951617003bc61565f"
+  },
+  {
+   "pn": "LMP-0009",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0009",
+    "name": "LMP-0009 Bushing SPIROL CMPL 4 X 6 EK CL8100",
+    "model_frame": "assembly_zero",
+    "manufacture": null,
+    "model": "/elsewhere/hw/parts/LMP-0009/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0009.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "71f4677475c28be9dbbb697922f68a4db3fd13e5baead59a9e358eab7d9aa068"
+   },
+   "key": "e9dc2cdad436ea91172d58842fa29439f6531444b921c7bf217f9fffbafc4b68"
+  },
+  {
+   "pn": "LMP-0010",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0010",
+    "name": "LMP-0010 Heat-set insert QT M10x1 x 12.7 OD 12.6",
+    "model_frame": "assembly_zero",
+    "manufacture": null,
+    "model": "/elsewhere/hw/parts/LMP-0010/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0010.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "51c0bc87a6180a0eb2040b664ed52d6f1a2a98729f90b3bbe6681f3159f181c6"
+   },
+   "key": "370da08ff2f2140e8b47aa79c53f9aa1f6b3146fadba777372bce5d12c937079"
+  },
+  {
+   "pn": "LMP-0011",
+   "kernel": "cadquery",
+   "runtime": {
+    "tools": {
+     "python": "3.12.13",
+     "cadquery": "2.8.0",
+     "cadquery-ocp-novtk": "7.8.1.1.post1"
+    },
+    "distributions": [
+     "cadquery==2.8.0",
+     "cadquery-ocp-novtk==7.8.1.1.post1"
+    ]
+   },
+   "request": {
+    "pn": "LMP-0011",
+    "name": "LMP-0011 Retaining ring DIN 471 - 5x0.6",
+    "model_frame": "part_local",
+    "manufacture": null,
+    "model": "/elsewhere/hw/parts/LMP-0011/model.py",
+    "step": "/elsewhere/hw/versions/.v9.partial-1/parts/LMP-0011.step",
+    "manufacture_step": null
+   },
+   "inputs": {
+    "model.py": "d47a101b8b2445635929e4ef333f08ac5d1c48a365fbc8281c3bd751585e730a"
+   },
+   "key": "895cca180f25dac2d5d0dc09c3171eb3d1cc14b1cc9621c2a7d3615cb460c34f"
+  }
+ ]
+}

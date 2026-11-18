@@ -241,7 +241,7 @@ class InitAndDeliver(ScratchCase):
         self.assertFalse((self.hw / "parts" / "PRT-0001" / "__pycache__").exists())
         self.assertFalse((self.hw / "__pycache__").exists())
 
-    LEAD_CAD = (f".cad/parts/{'a' * 64}", ".cad/parts/.gitignore", f".cad/builds/{'a' * 64}.json",
+    LEAD_CAD = (f".cad/cache/objects/{'a' * 64}", ".cad/cache/.gitignore", f".cad/cache/records/{'a' * 64}.json",
                 ".cad/pairs-v2.sqlite", ".cad/pairs-v2.sqlite-wal", ".cad/pairs-v2.sqlite-shm", ".cad/.gitignore",
                 ".cad/runs/3f2b9c1e8d7a4b6c9e0f1a2b3c4d5e6f.json", ".cad/recheck.json")
 
@@ -259,7 +259,7 @@ class InitAndDeliver(ScratchCase):
         report = self.init("part-base_sub", "PRT-0001")
         scratch_hw = Path(report["scratch_hw"])
         seeded = {p.relative_to(scratch_hw).as_posix() for p in (scratch_hw / ".cad").rglob("*") if p.is_file()}
-        self.assertEqual(seeded, {f".cad/parts/{'a' * 64}", f".cad/builds/{'a' * 64}.json"})  # links; no caches
+        self.assertEqual(seeded, {f".cad/cache/objects/{'a' * 64}", f".cad/cache/records/{'a' * 64}.json"})  # links; no caches
         self.assertEqual(report["seeded_store_files"], 2)
         for rel in seeded:
             self.assertEqual((scratch_hw / rel).stat().st_ino, (self.hw / rel).stat().st_ino, rel)
@@ -267,7 +267,7 @@ class InitAndDeliver(ScratchCase):
         self.assertFalse([path for path in baseline["files"] if path.startswith(".cad/")])
         (scratch_hw / "parts" / "PRT-0001" / "model.py").write_text("def build(params):\n    return None\n",
                                                                      encoding="utf-8")
-        for rel in (f".cad/parts/{'b' * 64}", ".cad/pairs-v2.sqlite", ".cad/runs/x.json"):  # the scratch's own
+        for rel in (f".cad/cache/objects/{'b' * 64}", ".cad/pairs-v2.sqlite", ".cad/runs/x.json"):  # the scratch's own
             (scratch_hw / rel).parent.mkdir(parents=True, exist_ok=True)
             (scratch_hw / rel).write_text("scratch\n", encoding="utf-8")
         code, report = self.scratch("deliver", "--hw", "hw", "--unit", "part-base_sub")
@@ -301,7 +301,7 @@ class InitAndDeliver(ScratchCase):
         code, report = self.scratch(*build_args, timeout=1800)
         self.assertEqual((report["run"]["exit"], report["check"]["exit"]), (0, 0), report)
         written = {p.relative_to(scratch_hw).as_posix() for p in (scratch_hw / ".cad").rglob("*") if p.is_file()}
-        self.assertTrue({".cad/pairs-v2.sqlite", ".cad/parts/.gitignore", ".cad/builds/.gitignore"} <= written, written)
+        self.assertTrue({".cad/pairs-v2.sqlite", ".cad/cache/.gitignore"} <= written, written)
         code, report = self.scratch("deliver", "--hw", "hw", "--unit", "part-base_sub")
         self.assertEqual((code, report["status"]), (0, "delivered"), report)
         self.assertEqual(report["proposals"], [])

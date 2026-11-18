@@ -31,7 +31,14 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+OBJECTS = Path(".cad") / "cache" / "objects"
+RECORDS = Path(".cad") / "cache" / "records"
+FIXTURE = Path(__file__).resolve().parent / "fixtures" / "part_keys_main.json"
+
+
 class StoreTests(unittest.TestCase):
+    """cad-model's use of the cad-record store (cad-record tests/test_store.py tests the store itself)."""
+
     def setUp(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-store-test-")
         self.addCleanup(temporary.cleanup)
@@ -48,35 +55,35 @@ class StoreTests(unittest.TestCase):
     def test_an_interned_output_is_stored_once_and_linked(self) -> None:
         first = self.output("TST-0001.step", b"ISO-10303-21; one")
         digest = self.store.intern(first)
-        obj = self.hw / ".cad" / "parts" / digest
+        obj = self.hw / OBJECTS / digest
         self.assertEqual((digest, obj.read_bytes()), (sha(b"ISO-10303-21; one"), b"ISO-10303-21; one"))
         self.assertTrue(os.path.samefile(first, obj))
         twin = self.output("TST-0002.step", b"ISO-10303-21; one")  # equal bytes from another build
         self.assertEqual(self.store.intern(twin), digest)
         self.assertTrue(os.path.samefile(twin, obj))
-        self.assertEqual(sorted(p.name for p in obj.parent.iterdir()), sorted([".gitignore", digest]))
-        self.assertEqual((obj.parent / ".gitignore").read_text(encoding="utf-8"), "*\n")
+        self.assertEqual(twin.stat().st_mode & 0o777, 0o444)
+        self.assertEqual(sorted(p.name for p in obj.parent.iterdir()), [digest])
+        self.assertEqual((obj.parent.parent / ".gitignore").read_text(encoding="utf-8"), "*\n")
 
     def test_place_replaces_a_link_and_never_writes_through_it(self) -> None:
         old = self.store.intern(self.output("old.step", b"v1 bytes"))
         sealed = self.hw / "versions" / "v1" / "parts" / "TST-0001.step"
         staged = self.work / "TST-0001.step"
         for target in (sealed, staged):
-            self.store.place(old, target)
-        self.assertTrue(os.path.samefile(sealed, self.hw / ".cad" / "parts" / old))
+            self.store.place_object(old, target)
+        self.assertTrue(os.path.samefile(sealed, self.hw / OBJECTS / old))
         new = self.store.intern(self.output("new.step", b"v2 bytes"))
-        self.store.place(new, staged)  # staged held a link to the v1 object
+        self.store.place_object(new, staged)  # staged held a link to the v1 object
         self.assertEqual((staged.read_bytes(), sealed.read_bytes()), (b"v2 bytes", b"v1 bytes"))
-        self.assertEqual((self.hw / ".cad" / "parts" / old).read_bytes(), b"v1 bytes")
+        self.assertEqual((self.hw / OBJECTS / old).read_bytes(), b"v1 bytes")
         self.assertEqual(sorted(p.name for p in sealed.parent.iterdir()), ["TST-0001.step"])
 
     def test_without_hard_links_place_and_intern_copy_the_same_bytes(self) -> None:
-        with mock.patch.object(store.os, "link", side_effect=OSError(18, "Invalid cross-device link")):
-            first = self.output("TST-0001.step", b"copied")
-            digest = self.store.intern(first)
+        with mock.patch.object(store.load_store().os, "link", side_effect=OSError(18, "Invalid cross-device link")):
+            digest = self.store.intern(self.output("TST-0001.step", b"copied"))
             target = self.hw / "versions" / "v1" / "parts" / "TST-0001.step"
-            self.store.place(digest, target)
-        obj = self.hw / ".cad" / "parts" / digest
+            self.store.place_object(digest, target)
+        obj = self.hw / OBJECTS / digest
         self.assertEqual((obj.read_bytes(), target.read_bytes()), (b"copied", b"copied"))
         self.assertFalse(os.path.samefile(target, obj))
         self.assertEqual((target.stat().st_mode & 0o777, obj.stat().st_mode & 0o777), (0o444, 0o444))
@@ -85,13 +92,13 @@ class StoreTests(unittest.TestCase):
         """store gc removed an object after a run read its record: place reports the miss and leaves the
         target alone, so the part is built; interning the rebuilt bytes stores them again."""
         digest = self.store.intern(self.output("TST-0001.step", b"geometry"))
-        (self.hw / ".cad" / "parts" / digest).unlink()
+        (self.hw / OBJECTS / digest).unlink()
         target = self.hw / "versions" / ".v2.partial-2" / "parts" / "TST-0001.step"
-        self.assertFalse(self.store.place(digest, target))
-        self.assertEqual(list(target.parent.iterdir()), [])
+        self.assertFalse(self.store.place_object(digest, target))
+        self.assertFalse(target.exists())
         rebuilt = self.output("rebuilt.step", b"geometry")
         self.assertEqual(self.store.intern(rebuilt), digest)
-        self.assertTrue(os.path.samefile(rebuilt, self.hw / ".cad" / "parts" / digest))
+        self.assertTrue(os.path.samefile(rebuilt, self.hw / OBJECTS / digest))
 
     @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root writes through read-only modes")
     def test_a_later_rebuild_cannot_change_an_earlier_versions_bytes(self) -> None:
@@ -99,7 +106,7 @@ class StoreTests(unittest.TestCase):
         instead of changing v1; the runner writes a new file, and storing it never touches v1."""
         digest = self.store.intern(self.output("TST-0001.step", b"v1 geometry"))
         sealed = self.hw / "versions" / "v1" / "parts" / "TST-0001.step"
-        self.store.place(digest, sealed)
+        self.store.place_object(digest, sealed)
         self.assertEqual(sealed.stat().st_mode & 0o777, 0o444)
         for target in (sealed, self.work / "TST-0001.step"):  # the sealed copy and the linked staging path
             with self.subTest(target=target.name), self.assertRaises(PermissionError):
@@ -109,29 +116,33 @@ class StoreTests(unittest.TestCase):
         rebuilt.write_bytes(b"v2 geometry")
         self.store.intern(rebuilt)
         self.assertEqual(sealed.read_bytes(), b"v1 geometry")
-        self.assertEqual(store.file_sha(self.hw / ".cad" / "parts" / digest), digest)
+        self.assertEqual(store.file_sha(self.hw / OBJECTS / digest), digest)
 
-    def version(self, label: str, files: dict[str, bytes], keep: dict[str, str] | None = None) -> dict[str, str]:
+    def version(self, label: str, files: dict[str, bytes]) -> dict[str, str]:
         """A sealed version whose files are store objects, as `run` leaves it; returns path -> sha256."""
         folder = self.hw / "versions" / label
         shas = {}
         for rel, data in files.items():
             staged = self.output(f"{label}-{rel.replace('/', '-')}", data)
             shas[rel] = self.store.intern(staged)
-            self.store.place(shas[rel], folder / rel)
+            self.store.place_object(shas[rel], folder / rel)
         (folder / "manifest.json").write_text(json.dumps({"label": label, "files": shas}), encoding="utf-8")
         return shas
+
+    def part_key(self, pn: str) -> str:
+        return store.key({"format": 2, "kind": "part", "kernel": "cadquery", "runtime": {}, "request": {"pn": pn},
+                          "inputs": {}})
 
     def test_gc_frees_a_deleted_versions_own_outputs_and_keeps_shared_ones(self) -> None:
         v1 = self.version("v1", {"parts/A.step": b"shared base", "parts/B.step": b"arm v1, long" * 50})
         v2 = self.version("v2", {"parts/A.step": b"shared base", "parts/B.step": b"arm v2"})
         state = self.store.intern(self.output("state.step", b"flat blank"))  # in no manifest, needed by a record
-        for name, objects in (("base", {"step": v1["parts/A.step"], "manufacture_step": state}),
+        for name, members in (("base", {"step": v1["parts/A.step"], "manufacture_step": state}),
                               ("arm1", {"step": v1["parts/B.step"]}), ("arm2", {"step": v2["parts/B.step"]})):
-            self.store.save(store.key({"pn": name}), {"objects": objects})
+            self.assertEqual(self.store.claim(self.part_key(name), {"kind": "part", "members": members}), "claimed")
         shutil.rmtree(self.work.parent)  # the run's staging folder is gone once a version is sealed
         shutil.rmtree(self.hw / "versions" / "v1")
-        objects = self.hw / ".cad" / "parts"
+        objects = self.hw / OBJECTS
         before = sorted(p.name for p in objects.iterdir())
         code, dry = build.store_gc(self.hw, dry_run=True)
         self.assertEqual((code, dry["removed_objects"]), (0, [v1["parts/B.step"]]))
@@ -140,10 +151,9 @@ class StoreTests(unittest.TestCase):
         self.assertEqual((result["removed_objects"], result["records"]), ([v1["parts/B.step"]], {"kept": 2, "removed": 1}))
         self.assertEqual(result["removed_bytes"], len(b"arm v1, long" * 50))
         self.assertGreaterEqual(result["freed_bytes"], result["removed_bytes"])
-        self.assertEqual(sorted(p.name for p in objects.iterdir() if p.name != ".gitignore"),
-                         sorted({v2["parts/A.step"], v2["parts/B.step"], state}))
-        self.assertIsNotNone(self.store.record(store.key({"pn": "base"})))
-        self.assertIsNone(store.Store(self.hw).record(store.key({"pn": "arm1"})))
+        self.assertEqual(sorted(p.name for p in objects.iterdir()), sorted({v2["parts/A.step"], v2["parts/B.step"], state}))
+        self.assertIsNotNone(store.Store(self.hw).record(self.part_key("base")).record)
+        self.assertIsNone(store.Store(self.hw).record(self.part_key("arm1")).record)
         self.assertEqual(build.record.load_layout().verify(self.hw / "versions" / "v2"), [])
         self.assertEqual(build.store_gc(self.hw)[1]["objects"]["removed"], 0)
 
@@ -162,32 +172,83 @@ class StoreTests(unittest.TestCase):
             build.store_gc(self.hw)
         (self.hw / "versions" / ".v2.partial-7").rmdir()
         (release / "manifest.json").write_text("{", encoding="utf-8")
-        with self.assertRaisesRegex(build.UsageError, "cannot read"):
+        with self.assertRaisesRegex(build.UsageError, "cannot be read"):
             build.store_gc(self.hw)
-        self.assertTrue((self.hw / ".cad" / "parts" / shas["parts/A.step"]).is_file())
+        self.assertTrue((self.hw / OBJECTS / shas["parts/A.step"]).is_file())
 
     def test_a_record_is_reused_only_while_its_objects_hash_to_their_names(self) -> None:
         digest = self.store.intern(self.output("TST-0001.step", b"geometry"))
-        key = store.key({"kind": "part", "pn": "TST-0001"})
-        self.store.save(key, {"kind": "part", "objects": {"step": digest}, "result": {"ok": True}})
-        self.assertEqual(self.store.record(key)["objects"], {"step": digest})
-        self.assertEqual(sorted(p.name for p in (self.hw / ".cad" / "builds").iterdir()), [".gitignore", f"{key}.json"])
-        obj = self.hw / ".cad" / "parts" / digest
-        obj.unlink()  # a damaged object: other bytes under its name
-        obj.write_bytes(b"geometrX")
-        self.assertIsNone(store.Store(self.hw).record(key))
-        self.assertIsNone(self.store.record(store.key({"kind": "part", "pn": "TST-0002"})))
+        key = self.part_key("TST-0001")
+        self.store.claim(key, {"kind": "part", "members": {"step": digest}, "result": {"ok": True}})
+        self.assertEqual(self.store.record(key).record["members"], {"step": digest})
+        self.assertEqual(sorted(p.name for p in (self.hw / RECORDS).iterdir()), [f"{key}.json"])
+        obj = self.hw / OBJECTS / digest
+        os.chmod(obj, 0o644)
+        obj.write_bytes(b"geometrX")  # a damaged object: other bytes under its name
+        self.assertRegex(self.store.record(key).reason, "^stale: step ")  # the Store that checked it before
+        target = self.hw / "versions" / ".v2.partial-2" / "parts" / "TST-0001.step"
+        self.assertFalse(self.store.place_object(digest, target))
+        self.assertFalse(target.exists())
+        self.assertRegex(self.store.record(self.part_key("TST-0002")).reason, "^miss")
 
     def test_records_of_another_format_or_with_bad_names_are_never_reused(self) -> None:
         digest = self.store.intern(self.output("TST-0001.step", b"geometry"))
-        key = store.key({"pn": "TST-0001"})
-        path = self.hw / ".cad" / "builds" / f"{key}.json"
-        for text in ('{"format": 0, "objects": {}}', '{"format": 1, "objects": {"step": "../../etc/passwd"}}',
-                     f'{{"format": 1, "objects": {{"step": "{digest[:-1]}"}}}}', "not json"):
+        key = self.part_key("TST-0001")
+        path = self.hw / RECORDS / f"{key}.json"
+        for text in ('{"format": 0, "members": {}}', '{"format": 2, "members": {"step": "../../etc/passwd"}}',
+                     f'{{"format": 2, "members": {{"../step": "{digest}"}}}}', "not json"):
             with self.subTest(text=text):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(text, encoding="utf-8")
-                self.assertIsNone(store.Store(self.hw).record(key))
+                self.assertIsNone(store.Store(self.hw).record(key).record)
+
+    def test_a_part_build_for_a_version_is_cached_without_that_version_label(self) -> None:
+        digest = self.store.intern(self.output("TST-0001.step", b"geometry"))
+        with self.assertRaisesRegex(ValueError, "version label v1"):
+            self.store.claim(self.part_key("TST-0001"), {"kind": "part", "members": {"versions/v1/TST-0001.step": digest}},
+                             version_labels=("v1",))
+
+    def test_a_rebuild_after_its_runner_sources_changed_replaces_the_record_and_is_reused_next(self) -> None:
+        """Runner sources sit outside the key. After they change, `run` builds the part again, and that build's
+        record replaces the old one, so the run after reuses the part instead of rebuilding it every time."""
+        helper = self.hw / "lib" / "helper.py"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("X = 1\n", encoding="utf-8")
+        request = {"manufacture_step": None}
+        key = self.part_key("TST-0001")
+
+        def built(data: bytes) -> dict:  # each build writes a new file, as the runner does
+            path = self.output(f"TST-0001-{len(list(self.work.iterdir()))}.step", data)
+            return {"kind": "part", "kernel": "cadquery", "result": {"ok": True},
+                    "members": {"step": self.store.intern(path)},
+                    "sources": {"hw": {"lib/helper.py": sha(helper.read_bytes())}, "skills": {}}}
+
+        self.assertEqual(build.cache_part(self.store, key, built(b"one"), request, self.hw, "v1"), "claimed")
+        for version, data in ((2, b"one"), (3, b"two")):  # the same bytes, or bytes the changed helper now makes
+            with self.subTest(data=data):
+                helper.write_text(f"X = {version}\n", encoding="utf-8")
+                self.assertFalse(build.reusable(self.store.record(key).record, request, self.hw, {}))
+                self.assertEqual(build.cache_part(self.store, key, built(data), request, self.hw, f"v{version}"),
+                                 "claimed")
+                kept = store.Store(self.hw).record(key).record
+                self.assertTrue(build.reusable(kept, request, self.hw, {}))
+                self.assertEqual(kept["members"]["step"], sha(data))
+        self.assertEqual(build.cache_part(self.store, key, built(b"three"), request, self.hw, "v4")[:9], "conflict:")
+        self.assertEqual(store.Store(self.hw).record(key).record["members"]["step"], sha(b"two"))
+
+
+class PartKeyCompatibilityTests(unittest.TestCase):
+    """The keys of lamp-arm's part builds, computed by origin/main's build.build_key before the store moved to
+    cad-record, are unchanged: a project's parts rebuild once because the store folder moved, never because
+    their keys changed. The fixture holds main's materials and keys (tests/fixtures/part_keys_main.json)."""
+
+    def test_every_lamp_arm_part_key_is_byte_unchanged(self) -> None:
+        fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        rows = fixture["parts"]
+        self.assertEqual(len(rows), 11)
+        for row in rows:
+            with self.subTest(pn=row["pn"]):
+                self.assertEqual(build.build_key(row["request"], row["kernel"], row["runtime"], row["inputs"]), row["key"])
 
 
 class BuildKeyTests(unittest.TestCase):
@@ -239,12 +300,12 @@ class BuildKeyTests(unittest.TestCase):
             self.assertFalse(build.sources_hold(None, hw, {}))
 
     def test_a_record_stands_in_only_for_a_successful_build_with_the_files_it_needs(self) -> None:
-        good = {"kernel": "cadquery", "objects": {"step": "a" * 64}, "result": {"ok": True},
+        good = {"kernel": "cadquery", "members": {"step": "a" * 64}, "result": {"ok": True},
                 "sources": {"hw": {}, "skills": {}}}
         self.assertTrue(build.reusable(good, self.REQUEST, Path("/nowhere"), {}))
         different = {**self.REQUEST, "manufacture": "different", "manufacture_step": "/tmp/states/TST-0001.step"}
         self.assertFalse(build.reusable(good, different, Path("/nowhere"), {}))
-        for broken in ({**good, "objects": {}}, {**good, "result": {"ok": False}}, {**good, "kernel": "fake"},
+        for broken in ({**good, "members": {}}, {**good, "result": {"ok": False}}, {**good, "kernel": "fake"},
                        {**good, "sources": "x"}):
             with self.subTest(broken=broken):
                 self.assertFalse(build.reusable(broken, self.REQUEST, Path("/nowhere"), {}))

@@ -635,7 +635,7 @@ class KernelChecks:
         layout = build.record.load_layout()
         for folder in versions:
             self.assertEqual(layout.verify(folder), [], folder.name)
-        store = hw / ".cad" / "parts"
+        store = hw / ".cad" / "cache" / "objects"
         base = versions[0] / "parts" / "TST-0001.step"
         self.assertTrue(os.path.samefile(base, store / build.store.file_sha(base)))
         manifest = json.loads((versions[0] / "manifest.json").read_text(encoding="utf-8"))
@@ -643,7 +643,7 @@ class KernelChecks:
             with self.subTest(read_only=rel):  # TST-0002 was rebuilt in v2-v4; v1's bytes and mode stay
                 self.assertEqual((versions[0] / rel).stat().st_mode & 0o777, 0o444)
                 self.assertEqual(build.store.file_sha(versions[0] / rel), manifest["files"][rel])
-        self.assertEqual((store / ".gitignore").read_text(encoding="utf-8"), "*\n")
+        self.assertEqual((store.parent / ".gitignore").read_text(encoding="utf-8"), "*\n")
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
@@ -771,7 +771,7 @@ class ManufacturingStateTests(unittest.TestCase):
         set_model(rebuilds, "TST-0001", "cadquery", "base.py", base, "Base block", "Aluminum 6061-T6", "purchased")
         cls.runs["process"] = cli("run", str(rebuilds), "--label", "v7")
         step = rebuilds / "versions" / "v7" / "parts" / "TST-0001.step"
-        (rebuilds / ".cad" / "parts" / build.store.file_sha(step)).unlink()  # as if store gc ran
+        (rebuilds / ".cad" / "cache" / "objects" / build.store.file_sha(step)).unlink()  # as if store gc ran
         cls.runs["missing"] = cli("run", str(rebuilds), "--label", "v8")
 
     @classmethod
@@ -2659,6 +2659,57 @@ class ManufacturingColorTests(unittest.TestCase):
         self.assertEqual(self.runs["v3"][1]["cache"], {"parts": {"built": 0, "reused": 1},
                                                        "manufacturing": {"built": 0, "reused": 1}})
         self.assertEqual(self.model("v3"), self.model("v2"))
+
+
+@unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
+class ManufacturingStaleRecordTests(unittest.TestCase):
+    """A manufacturing record the code cannot use is a cache miss: the outputs are made again, the run exits 0 and
+    the record that replaces it is reused. Each case damages the one record of a real project from its sound
+    form: one from before `members` replaced `objects`, and the facts `make` reads (`derived`, `row`) removed
+    one at a time and together, so that losing either guard alone fails its own case."""
+
+    SHAPES = {"old shape": lambda record: {"format": record["format"], "kind": "manufacturing",
+                                           "objects": record["members"]},
+              "no derived": lambda record: {key: value for key, value in record.items() if key != "derived"},
+              "no row": lambda record: {key: value for key, value in record.items() if key != "row"},
+              "no derived and no row": lambda record: {key: value for key, value in record.items()
+                                                       if key not in ("derived", "row")}}
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.hw = hw = projects().loose_project(Path(cls.tmp.name) / "hw", "cadquery", [])
+        cls.runs = {"v1": cli("run", str(hw), "--label", "v1")}
+        cls.path = cls.record_path(hw)
+        sound = json.loads(cls.path.read_text(encoding="utf-8"))
+        cls.order = {}
+        for number, (shape, damage) in enumerate(cls.SHAPES.items()):
+            cls.path.write_text(json.dumps(damage(sound)), encoding="utf-8")
+            made, reused = f"v{2 * number + 2}", f"v{2 * number + 3}"
+            cls.order[shape] = (made, reused)
+            cls.runs[made] = cli("run", str(hw), "--label", made)
+            cls.runs[reused] = cli("run", str(hw), "--label", reused)
+
+    @classmethod
+    def record_path(cls, hw: Path) -> Path:
+        records = [path for path in (hw / ".cad" / "cache" / "records").glob("*.json")
+                   if json.loads(path.read_text(encoding="utf-8")).get("kind") == "manufacturing"]
+        assert len(records) == 1, records
+        return records[0]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def test_a_record_the_code_cannot_use_is_a_miss_that_remakes_the_outputs_and_is_then_replaced(self) -> None:
+        for shape, (made, reused) in self.order.items():
+            with self.subTest(shape=shape):
+                for label in (made, reused):
+                    proc = self.runs[label][0]
+                    self.assertNotIn("Traceback", proc.stdout + proc.stderr)
+                    self.assertEqual(proc.returncode, 0, label + proc.stderr[-3000:])
+                self.assertEqual(self.runs[made][1]["cache"]["manufacturing"], {"built": 1, "reused": 0})
+                self.assertEqual(self.runs[reused][1]["cache"]["manufacturing"], {"built": 0, "reused": 1})
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
