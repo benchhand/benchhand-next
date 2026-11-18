@@ -1,6 +1,6 @@
 {
   "detection_rate": 1.0,
   "abstention_rate": 0.0,
-  "false_positive_rate": 0.25,
-  "ran": 4
+  "false_positive_rate": 0.2,
+  "ran": 5
 }

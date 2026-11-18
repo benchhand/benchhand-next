@@ -112,6 +112,5 @@ FAMILY = Family(
              round_roof_large_mid_height),
         Pair("diamond_roof_mid_height", "20 mm mid-height bore left round where a diamond top avoids the overhang",
              diamond_roof_mid_height),
-        Pair("square_roof_bridge", "12 mm flat-roofed horizontal hole beyond the 5 mm bridge", square_roof_bridge,
-             known_gap="item 9: bridge span measured along the roof length"),
+        Pair("square_roof_bridge", "12 mm flat-roofed horizontal hole beyond the 5 mm bridge", square_roof_bridge),
     ))

@@ -334,6 +334,19 @@ class SupportPolicyTests(Checks):
         self.assertEqual(self.outcome(partial, "process.fdm.support@TST-0101/print"), "unknown")
         self.assertIn("process.fdm.support_region_unplanned", self.codes(partial))
 
+    def test_a_flat_downward_face_with_no_measured_span_is_judged_by_its_angle(self) -> None:
+        """A ceiling that is not a strip (a ring around a pillar, a notched outline) has bridge facts with no span."""
+        unmeasured = facts(faces=(face("f1", bed=True, normals=((0, 0, -1),)),
+                                  face("f10", features=("ceiling",), down_=down(90.0, 200.0, "bridge"))))
+        result = self.assess(printed("TST-0101", {"strategy": "none"}), geometry("TST-0101", unmeasured))
+        self.assertEqual(self.outcome(result, "process.fdm.support@TST-0101/print"), "fail")
+        self.assertEqual(self.finding(result, "process.fdm.overhang")["severity"], "major")
+        self.assertNotIn("process.fdm.overhang_uncalibrated", self.codes(result))
+        steep = facts(faces=(face("f1", bed=True, normals=((0, 0, -1),)),
+                             face("f10", features=("ceiling",), down_=down(45.0, 200.0, "bridge"))))
+        within = self.assess(printed("TST-0101", {"strategy": "none"}), geometry("TST-0101", steep))
+        self.assertEqual(self.outcome(within, "process.fdm.support@TST-0101/print"), "pass")
+
     def test_without_a_calibrated_limit_the_need_for_support_is_unknown_never_a_universal_angle(self) -> None:
         result = self.assess(printed("TST-0101", {"strategy": "none"}, calibrations=[]), geometry("TST-0101", SHELF))
         self.assertEqual(self.outcome(result, "process.fdm.support@TST-0101/print"), "unknown")
@@ -1167,6 +1180,38 @@ class ProbeGeometryTests(Checks):
         seat = self.assess(printed("TST-0102", unplanned, critical=SEAT_SURFACE), geometry("TST-0102", self.probed["seat"]))
         self.assertEqual(self.outcome(seat, "process.fdm.support@TST-0102/print"), "fail")
         self.assertIn("process.fdm.support_on_critical", self.codes(seat))
+
+    def test_a_flat_roof_is_judged_by_its_shape_on_real_geometry(self) -> None:
+        for case, expected in (
+            ("slot", ("bridge", 4.0)),  # 4 x 30, held on all four sides
+            ("beam_long", ("bridge", 4.0)),  # 4 x 30, held on the two long sides
+            ("beam_three", ("bridge", 4.0)),  # 4 x 28, held on both long sides and one end
+            ("beam_ends", ("bridge", 30.0)),  # 4 x 30, held on the two short ends only: the bridge runs along it
+            ("beam_corner", ("overhang", None)),  # 18 x 18, held on two adjacent sides only
+            ("beam_split_long", ("bridge", 4.0)),  # 4 x 30, long sides each two contiguous edges, ends free
+            ("beam_split_four", ("bridge", 4.0)),  # 4 x 26, long sides each two contiguous edges, ends held
+            ("pocket_notch", ("bridge", None)),  # 4 x 30 with a 3 x 2 notch in a short end: 95% of the strip
+            ("pocket_stadium", ("bridge", 4.0)),  # 4 x 30 with round ends
+            ("pocket_hole", ("bridge", None)),  # 4 x 30 with a vertical hole through the roof
+            ("pocket_rounded", ("bridge", 4.0)),  # 4 x 30 with R1 corners: straight ends with a tangent corner arc each side
+            ("pocket_flared", ("bridge", None)),  # one end flares out in two concave R1 arcs
+            ("pocket_scooped", ("bridge", None)),  # R1 corner arcs that are not tangent to the sides
+            ("pocket_reversed", ("bridge", 4.0)),  # a plain 4 x 30 roof whose long edges run in opposite directions
+            ("pocket_bowtie", ("bridge", None)),  # the two ends cross: low end of one run to high end of the other
+            ("pocket_elliptic", ("bridge", None)),  # a half-ellipse end is not a circle
+            ("pocket_elliptic_thin", ("bridge", None)),  # the same at 0.0015 mm wide: radius 0 is within tolerance of gap / 2
+            ("pocket_oversize", ("bridge", None)),  # corner arcs of radius 2.5 and 0.5 on a 4 mm gap: 2.5 is above gap / 2
+            ("pocket_stadium_hole", ("bridge", None)),  # the stadium with a 1 mm hole through a round end
+            ("pocket_stadium_notch", ("bridge", None)),  # the stadium with a notch confined to a round end
+            ("pocket_l", ("bridge", None)),  # two 30 x 4 arms
+            ("pocket_trapezoid", ("bridge", None)),  # parallel sides 10 and 6
+            ("pocket_ring", ("bridge", None)),  # an annulus around a pillar
+            ("pocket_boss", ("bridge", None)),  # 30 x 6 around a 7.5 x 4 boss: never the 5 mm gap
+        ):
+            with self.subTest(case):
+                # the locator can also match a wall closer than the tolerance (the 0.0015 mm strip), so take the face with a down fact
+                roof = next(f["down"] for f in self.probed[case]["faces"] if "roof" in f["features"] and "down" in f)
+                self.assertEqual((roof["kind"], roof["span_mm"]), expected)
 
     def test_the_pocket_corners_reach_and_visibility_are_measured(self) -> None:
         pocket = self.probed["pocket"]

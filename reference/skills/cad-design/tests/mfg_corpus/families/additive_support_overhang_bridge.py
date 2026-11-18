@@ -58,6 +58,30 @@ def horizontal_bore_roof(mutant: bool) -> Outcome:
     return _verdict(s.cut(s.box(0, 0, 0, 40, 30, 40), bore))
 
 
+def ring_ceiling(mutant: bool) -> Outcome:
+    """A plate around a pillar: the groove between them has a flat ring-shaped ceiling (a 90 deg overhang, not a strip)
+    against a 45 deg V-shaped one of the same footprint, open to the bed."""
+    s = solids()  # first: it raises Skip when OCP is absent
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeFace, BRepBuilderAPI_MakePolygon
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeRevol
+    from OCP.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt
+
+    x, y = 20.0, 20.0  # the pillar axis, in a 40 x 40 x 30 block
+
+    def cylinder(radius: float, z: float, height: float) -> Any:
+        return BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x, y, z), gp_Dir(0, 0, 1)), radius, height).Shape()
+
+    if mutant:
+        groove = s.cut(cylinder(10.0, -1.0, 11.0), cylinder(5.0, -2.0, 13.0))  # flat ceiling at z 10
+    else:
+        wire = BRepBuilderAPI_MakePolygon()
+        for radius, z in ((5.0, -1.0), (10.0, -1.0), (10.0, 5.0), (7.5, 7.5), (5.0, 5.0)):  # both flanks at 45 deg
+            wire.Add(gp_Pnt(x + radius, y, z))
+        wire.Close()
+        groove = BRepPrimAPI_MakeRevol(BRepBuilderAPI_MakeFace(wire.Wire()).Face(), gp_Ax1(gp_Pnt(x, y, 0), gp_Dir(0, 0, 1))).Shape()
+    return _verdict(s.cut(s.box(0, 0, 0, 40, 40, 30), groove))
+
+
 FAMILY = Family(
     id="additive_support_overhang_bridge", check="cad-design form_check.probe + process_checks/additive.py support",
     owner="cad-design",
@@ -66,4 +90,6 @@ FAMILY = Family(
         Pair("bridge_span", "12 mm bridge between posts, past the 5 mm calibration", bridge_span),
         Pair("bore_roof", "20 mm horizontal bore whose round roof exceeds the bridge calibration", horizontal_bore_roof),
         Pair("shelf_without_gusset", "flat shelf underside where a gusset would make it steep", gusset_under_shelf),
+        Pair("ring_ceiling", "flat ring-shaped ceiling around a pillar where a 45 deg V roof would be self-supporting",
+             ring_ceiling),
     ))
