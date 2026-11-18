@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: MPL-2.0
 
-"""Integration tests for the staged CAD recheck stamp and git hook.
+"""Integration tests for the staged CAD recheck stamp and its `--verify` check.
 
 The project is a small record version 2 record: a confirmed use case and one CNC part. A stamp needs the
 evidence packet of the staged record (cad-record evidence.py); the tests build it from a synthetic
@@ -27,7 +27,6 @@ from typing import Any
 
 SKILL = Path(__file__).resolve().parents[1]
 STAMP = SKILL / "scripts" / "stamp.py"
-INSTALLER = SKILL / "scripts" / "install-hook.py"
 ACCEPTANCE = SKILL.parent / "cad-record" / "tests" / "fixtures" / "acceptance.py"
 
 
@@ -46,7 +45,6 @@ class RecheckHookTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name) / "project"
         self.root.mkdir()
-        # The tests' global git config, so a test can set a global core.hooksPath as Git Defender does.
         self.global_config = Path(self.temporary.name) / "global.gitconfig"
         self.global_config.write_text("", encoding="utf-8")
         self.git("-c", "init.templateDir=", "init", "-q")
@@ -56,13 +54,6 @@ class RecheckHookTests(unittest.TestCase):
         self.add_part()
         self.git("add", "hw")
         self.git("commit", "-qm", "initial design")
-        hooks_dir = self.root / ".git" / "hooks"
-        if hooks_dir.is_dir():
-            for hook in hooks_dir.iterdir():
-                if not hook.name.endswith(".sample"):
-                    hook.unlink()
-        installed = self.install_hook()
-        self.assertEqual(installed.returncode, 0, installed.stderr)
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -116,11 +107,8 @@ class RecheckHookTests(unittest.TestCase):
         self.write_product(stage, threshold)
         self.git("add", "hw/product.yaml")
 
-    def install_hook(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return self.run_python(INSTALLER, "--project", str(self.root), *args)
-
-    def commit(self) -> subprocess.CompletedProcess[str]:
-        return self.git("commit", "-m", "design batch", check=False)
+    def verify(self) -> subprocess.CompletedProcess[str]:
+        return self.run_python(STAMP, "--verify", cwd=self.root)
 
     def evidence_packet(self, stage: str, *, outcome: str = "pass", project: Path | None = None) -> Path:
         """The evidence packet of the staged record at `stage`: every software check `outcome` in a
@@ -147,7 +135,7 @@ class RecheckHookTests(unittest.TestCase):
         self.write_product("release", "layout")
         self.git("add", "hw/product.yaml")
         self.write_product("specify", "layout")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("no staged hw/.cad/recheck.json", result.stderr)
 
@@ -157,14 +145,14 @@ class RecheckHookTests(unittest.TestCase):
         self.write_product("release", "layout")
         self.add_part(title="Staged edit")
         self.git("add", "hw/parts/PRT-0001/part.yaml")
-        result = self.commit()
+        result = self.verify()
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_missing_recheck_threshold_is_refused(self) -> None:
         product = self.root / "hw" / "product.yaml"
         product.write_text("id: test-project\nflow:\n  stage: release\n", encoding="utf-8")
         self.git("add", "hw/product.yaml")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing or unknown flow.recheck_from", result.stderr)
 
@@ -172,72 +160,9 @@ class RecheckHookTests(unittest.TestCase):
         product = self.root / "hw" / "product.yaml"
         product.write_text("id: test-project\nflow: [\n", encoding="utf-8")
         self.git("add", "hw/product.yaml")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("cannot parse staged hw/product.yaml", result.stderr)
-
-    def test_existing_hooks_path_is_refused_without_force(self) -> None:
-        self.git("config", "core.hooksPath", ".husky")
-        before = self.git("config", "--local", "--get", "core.hooksPath").stdout
-        result = self.install_hook()
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("core.hooksPath is set elsewhere", result.stderr)
-        self.assertEqual(self.git("config", "--local", "--get", "core.hooksPath").stdout, before)
-
-    def test_existing_hooks_path_is_replaced_with_force(self) -> None:
-        self.git("config", "core.hooksPath", ".husky")
-        result = self.install_hook("--force")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.git("config", "--get", "core.hooksPath").stdout.strip(), ".githooks")
-
-    def test_a_global_hooks_path_is_refused_even_with_force_and_names_the_verify_command(self) -> None:
-        managed = Path(self.temporary.name) / "managed-hooks"
-        managed.mkdir()
-        (managed / "pre-commit").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        (managed / "pre-commit").chmod(0o755)
-        self.git("config", "--local", "--unset", "core.hooksPath")
-        shutil.rmtree(self.root / ".githooks")
-        self.git("config", "--global", "core.hooksPath", str(managed))
-        global_before = self.global_config.read_bytes()
-        for args in ((), ("--force",)):
-            with self.subTest(args=args):
-                result = self.install_hook(*args)
-                self.assertEqual(result.returncode, 3, result.stderr)
-                self.assertIn(f"{managed.resolve()} (global scope)", result.stderr)
-                self.assertIn("--force does not override this", result.stderr)
-                self.assertIn(f"uv run --script {STAMP} --verify", result.stderr)
-                self.assertEqual(self.git("config", "--local", "--get", "core.hooksPath", check=False).stdout, "")
-                self.assertFalse((self.root / ".githooks").exists())
-                self.assertEqual(self.global_config.read_bytes(), global_before)
-
-        # The named alternative is the hook's own check: pass below the threshold, fail at it unstamped.
-        self.assertEqual(self.run_python(STAMP, "--verify", cwd=self.root).returncode, 0)
-        self.stage_product("release")
-        refused = self.run_python(STAMP, "--verify", cwd=self.root)
-        self.assertEqual(refused.returncode, 2)
-        self.assertIn("no staged hw/.cad/recheck.json", refused.stderr)
-
-    def test_existing_git_hook_is_refused_without_force(self) -> None:
-        hooks_path = self.git("rev-parse", "--git-path", "hooks").stdout.strip()
-        hooks_dir = self.root / hooks_path
-        hook = hooks_dir / "pre-commit"
-        hook.parent.mkdir(parents=True, exist_ok=True)
-        hook.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        result = self.install_hook()
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("existing non-sample hooks", result.stderr)
-        self.assertEqual(self.git("config", "--local", "--get", "core.hooksPath").stdout.strip(), ".githooks")
-
-    def test_existing_git_hook_is_ignored_with_force(self) -> None:
-        hooks_path = self.git("rev-parse", "--git-path", "hooks").stdout.strip()
-        hooks_dir = self.root / hooks_path
-        hook = hooks_dir / "pre-commit"
-        hook.parent.mkdir(parents=True, exist_ok=True)
-        hook.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        result = self.install_hook("--force")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.git("config", "--get", "core.hooksPath").stdout.strip(), ".githooks")
-
 
     def gate_packet(self, stage: str, *, outcome: str = "pass") -> Path:
         """The evidence packet at `stage` of a producer that shows only the checks due at or before `stage`:
@@ -272,8 +197,7 @@ class RecheckHookTests(unittest.TestCase):
         self.provisional_gate("parts")
         result = self.stamp_gate("layout")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.run_python(STAMP, "--verify", cwd=self.root).returncode, 0)
-        self.assertEqual(self.commit().returncode, 0)
+        self.assertEqual(self.verify().returncode, 0)
 
     def test_a_stamp_two_stages_behind_flow_stage_is_refused(self) -> None:
         self.provisional_gate("detail")
@@ -327,17 +251,16 @@ class RecheckHookTests(unittest.TestCase):
     def test_at_or_after_threshold_refuses_missing_stamp(self) -> None:
         self.stage_product("layout")
         self.git("add", "hw/product.yaml")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("no staged hw/.cad/recheck.json", result.stderr)
-        self.assertIn("uv run --script", result.stderr)
 
     def test_matching_passing_stamp_is_accepted(self) -> None:
         self.stage_product("detail")
         stamp = self.stamp(passed=True, stage="detail")
         self.assertTrue(stamp["passed"])
         self.assertEqual(stamp["tree_hash"], self.staged_hash())
-        result = self.commit()
+        result = self.verify()
         self.assertEqual(result.returncode, 0, result.stderr)
 
 
@@ -346,7 +269,7 @@ class RecheckHookTests(unittest.TestCase):
         stray.parent.mkdir()
         stray.write_bytes(b"hidden generated payload")
         self.stage_product("design_freeze", "layout")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("CAD layout has", result.stderr)
 
@@ -383,7 +306,7 @@ class RecheckHookTests(unittest.TestCase):
         stray.write_text("stray\n", encoding="utf-8")
         self.git("add", "hw/product.yaml", "hw/versions", "hw/stray.md")
 
-        result = self.commit()
+        result = self.verify()
 
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("stray.md", result.stderr)
@@ -433,7 +356,7 @@ class RecheckHookTests(unittest.TestCase):
         self.write_product("detail", "layout", legacy=True)
         self.git("add", "hw/product.yaml")
         self.stamp_refused(checks, "record.version_unsupported")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("record.version_unsupported", result.stderr)
 
@@ -458,25 +381,25 @@ class RecheckHookTests(unittest.TestCase):
         data["checks"]["gate"] = {"stage": "detail", "passed": True, "findings": []}
         path.write_text(json.dumps(data), encoding="utf-8")
         self.git("add", "hw/.cad/recheck.json")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("blocking finding", result.stderr)
 
     def test_the_recheck_threshold_may_move_earlier_but_never_later(self) -> None:
         self.stage_product("detail", "release")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("later than HEAD's layout", result.stderr)
         self.stage_product("specify", "intent")
         self.stage_product("ground", "intent")  # an earlier threshold is always allowed
-        self.assertEqual(self.commit().returncode, 0, self.commit().stderr)
+        self.assertEqual(self.verify().returncode, 0, self.verify().stderr)
 
     def test_editing_staged_file_makes_stamp_stale(self) -> None:
         self.stage_product("detail")
         self.stamp(passed=True, stage="detail")
         self.add_part(title="Edited")
         self.git("add", "hw/parts/PRT-0001/part.yaml")
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("stamp is stale", result.stderr)
 
@@ -496,7 +419,7 @@ class RecheckHookTests(unittest.TestCase):
         stamp = self.stamp_with(self.run_report(checks))
         self.assertEqual(stamp["checks"], json.loads(checks.read_text(encoding="utf-8")))
         self.git("add", "hw/.cad/recheck.json")
-        self.assertEqual(self.commit().returncode, 0)
+        self.assertEqual(self.verify().returncode, 0)
 
     def test_an_evidence_run_that_stopped_has_no_packet_and_cannot_stamp(self) -> None:
         self.stage_product("detail")
@@ -521,7 +444,7 @@ class RecheckHookTests(unittest.TestCase):
         stamp = self.stamp(passed=False, stage="detail")
         self.assertFalse(stamp["passed"])
         self.assertEqual(stamp["tree_hash"], self.staged_hash())
-        result = self.commit()
+        result = self.verify()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("does not say passed: true", result.stderr)
 

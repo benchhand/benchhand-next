@@ -81,12 +81,6 @@ class PlanTests(unittest.TestCase):
                 "click-8.5.1",
             ),
         )  # every distribution cad_model.py's header names
-        self.hook = environment(
-            self.root,
-            "cad-recheck-stamp-3333333333333333",
-            "cad-recheck-stamp.py",
-            ("PyYAML-6.0.3", "jsonschema-4.26.0"),
-        )  # stamp.py runs validate.py's layout check
         # Not the plugin's: another tool's validate.py, an unshipped name, and a shared environment.
         environment(
             self.root, "validate-4444444444444444", "validate.py", ("requests-2.32.0",)
@@ -111,11 +105,10 @@ class PlanTests(unittest.TestCase):
                 "run-cadquery-0123456789abcdef": ("run_cadquery.py", "stale"),
                 "run-cadquery-1111111111111111": ("run_cadquery.py", "recent"),
                 "cad-model-2222222222222222": ("cad_model.py", "current"),
-                "cad-recheck-stamp-3333333333333333": ("cad-recheck-stamp.py", "stale"),
             },
         )
 
-    def test_the_shipped_names_include_the_kernel_runners_and_the_installed_hook(
+    def test_the_shipped_names_include_the_kernel_runners(
         self,
     ) -> None:
         for name in (
@@ -123,7 +116,6 @@ class PlanTests(unittest.TestCase):
             "run_build123d.py",
             "cad_model.py",
             "render.py",
-            "cad-recheck-stamp.py",
         ):
             with self.subTest(name=name):
                 self.assertIn(name, self.scripts)
@@ -138,10 +130,10 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(
             sorted(Path(path).name for path in deleted),
-            ["cad-recheck-stamp-3333333333333333", "run-cadquery-0123456789abcdef"],
+            ["run-cadquery-0123456789abcdef"],
         )
         self.assertTrue(self.recent.is_dir() and self.current.is_dir())
-        self.assertFalse(self.stale.exists() or self.hook.exists())
+        self.assertFalse(self.stale.exists())
 
     def test_main_is_a_dry_run_unless_delete_is_given(self) -> None:
         cache = subprocess.CompletedProcess(["uv"], 0, f"{self.root.parent}\n", "")
@@ -156,10 +148,10 @@ class PlanTests(unittest.TestCase):
             self.assertEqual(clean_envs.main([]), 0)
         text = "".join(call.args[0] for call in stdout.write.call_args_list)
         self.assertIn(
-            "Dry run: nothing was deleted. Rerun with --delete to remove the 2 stale environments.",
+            "Dry run: nothing was deleted. Rerun with --delete to remove the 1 stale environments.",
             text,
         )
-        self.assertTrue(self.stale.is_dir() and self.hook.is_dir())
+        self.assertTrue(self.stale.is_dir())
 
 
 class MeasureTests(unittest.TestCase):
