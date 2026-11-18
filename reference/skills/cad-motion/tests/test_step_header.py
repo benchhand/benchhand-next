@@ -15,6 +15,8 @@ HERE = Path(__file__).resolve().parent
 PROBE = HERE / "fixtures" / "step_header_probe.py"
 
 FILE_NAME = re.compile(rb"FILE_NAME\('[^']*','([^']*)'")
+# STEP wraps long lines, so the name may follow a line break
+VALIDATION_PROPERTY = re.compile(rb"PROPERTY_DEFINITION\('geometric validation property',\s*'([^']*)'")
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required to write STEP through OCP")
@@ -28,12 +30,12 @@ class StepHeaderTests(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.tmp.cleanup()
 
-    def write(self, name: str, epoch: str | None = None) -> bytes:
+    def write(self, name: str, epoch: str | None = None, mode: str = "box") -> bytes:
         env = {key: value for key, value in os.environ.items() if key != "SOURCE_DATE_EPOCH"}
         if epoch is not None:
             env["SOURCE_DATE_EPOCH"] = epoch
         out = self.root / name
-        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(PROBE), str(out)], env=env,
+        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(PROBE), str(out), mode], env=env,
                               capture_output=True, text=True, check=False, timeout=900)
         self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
         return out.read_bytes()
@@ -43,6 +45,15 @@ class StepHeaderTests(unittest.TestCase):
         time.sleep(1.1)   # the wall clock OCCT would stamp has moved on
         second = self.write("b.step")
         self.assertEqual(first, second)
+
+    def test_curved_and_assembly_writes_are_byte_identical_with_validation_properties(self) -> None:
+        # volume, area and centroid are floats from adaptive integration: curved faces and the assembly path must repeat them exactly
+        for mode in ("halftorus", "tilted", "assembly", "placed"):
+            with self.subTest(mode=mode):
+                first = self.write(f"{mode}-a.step", mode=mode)
+                second = self.write(f"{mode}-b.step", mode=mode)
+                self.assertEqual(sorted(VALIDATION_PROPERTY.findall(first)), [b"centroid", b"surface area", b"volume"])
+                self.assertEqual(first, second)
 
     def test_header_time_is_the_fixed_date(self) -> None:
         self.assertEqual(FILE_NAME.search(self.write("fixed.step")).group(1), b"1980-01-01T00:00:00")
