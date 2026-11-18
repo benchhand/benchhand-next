@@ -415,5 +415,109 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(list(found[1]), list(second))
 
 
+class WordCommand(click.Command):
+    """A command that reads its words by `screen_words`, as a converted script does."""
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        return super().parse_args(ctx, cli_mod.screen_words(self, ctx, args))
+
+
+def word_command(seen: list[Any] | None = None) -> WordCommand:
+    def callback(**params: Any) -> None:
+        if seen is not None:
+            seen.append(params)
+
+    return WordCommand("probe", callback=callback, params=[
+        click.Option(["--out"]), click.Option(["--count"], type=click.IntRange(1, 5)),
+        click.Option(["--pair"], multiple=True), click.Option(["--flag"], is_flag=True),
+        click.Argument(["hw"], nargs=-1)])
+
+
+class WordScreenTests(unittest.TestCase):
+    def screen(self, *words: str, help_names: tuple[str, ...] = ("--help",)) -> list[str]:
+        command = word_command()
+        return cli_mod.screen_words(command, click.Context(command, help_option_names=list(help_names)), list(words))
+
+    def test_option_like_follows_argparse(self) -> None:
+        for text, expected in (("--out", True), ("-x", True), ("--", True), ("-", False), ("hw", False), ("", False),
+                               ("-5", False), ("-0.5", False), ("-.5", False), ("-5x", True), ("-a b", False),
+                               ("--out=x", True)):
+            with self.subTest(text=text):
+                self.assertIs(cli_mod.option_like(text), expected)
+
+    def test_option_like_and_screen_words_need_no_click_to_import(self) -> None:
+        with mock.patch.dict(sys.modules, {"click": None}):
+            module = load_fresh("cad_record_cli_noclick_words", CLI_PATH)
+            self.assertIs(module.option_like("--x"), True)
+            self.assertTrue(callable(module.screen_words))
+
+    def test_a_value_that_looks_like_an_option_is_refused(self) -> None:
+        for words in (("--out", "--flag"), ("--out", "-x"), ("--out", "--"), ("--out",), ("--count", "--flag")):
+            with self.subTest(words=words):
+                with self.assertRaises(click.BadOptionUsage):
+                    self.screen(*words)
+
+    def test_a_value_that_argparse_takes_as_a_value_passes_through(self) -> None:
+        for value in ("-1", "-0.5", "-", "-a b", ""):
+            with self.subTest(value=value):
+                self.assertEqual(self.screen("--out", value), ["--out", value])
+
+    def test_the_equals_form_of_a_registered_option_takes_a_value_with_a_space(self) -> None:
+        self.assertEqual(self.screen("--out=my report.json", "--pair=a b"), ["--out=my report.json", "--pair=a b"])
+        self.assertEqual(self.screen("a", "--out=my report.json"), ["--out=my report.json", "--", "a"])
+
+    def test_a_value_with_a_space_in_a_separate_word_stays_a_value(self) -> None:
+        self.assertEqual(self.screen("--out", "my report.json", "hw"), ["--out", "my report.json", "--", "hw"])
+
+    def test_an_equals_word_with_an_unregistered_name_follows_the_space_rule(self) -> None:
+        self.assertEqual(self.screen("--bogus=a b"), ["--", "--bogus=a b"])
+        with self.assertRaises(click.NoSuchOption):
+            self.screen("--bogus=ab")
+
+    def test_the_equals_form_takes_any_value_and_is_converted(self) -> None:
+        self.assertEqual(self.screen("--out=--flag", "--count=3"), ["--out=--flag", "--count=3"])
+        with self.assertRaises(click.BadParameter):
+            self.screen("--count=0")
+
+    def test_every_occurrence_of_a_typed_option_is_converted_in_order(self) -> None:
+        for words in (("--count", "0", "--count", "1"), ("--count", "1", "--count", "9"), ("--count", "x")):
+            with self.subTest(words=words):
+                with self.assertRaises(click.BadParameter):
+                    self.screen(*words)
+        self.assertEqual(self.screen("--count", "1", "--count", "2"), ["--count", "1", "--count", "2"])
+
+    def test_a_help_flag_ends_the_screen_and_hides_what_follows(self) -> None:
+        self.assertEqual(self.screen("--count", "1", "--help", "--count", "0", "--bogus", "--out"),
+                         ["--count", "1", "--help"])
+        self.assertEqual(self.screen("a", "-h", "--bogus", help_names=("-h", "--help")), ["-h"])
+        with self.assertRaises(click.BadParameter):
+            self.screen("--count", "0", "--help")
+
+    def test_an_unknown_option_is_refused_after_the_whole_line_is_read(self) -> None:
+        with self.assertRaises(click.NoSuchOption):
+            self.screen("--bogus", "hw")
+        with self.assertRaises(click.BadParameter):  # a bad value earlier on the line wins, as in argparse
+            self.screen("--bogus", "--count", "0")
+
+    def test_positionals_follow_a_double_dash_in_their_order(self) -> None:
+        self.assertEqual(self.screen("a", "--flag", "-5", "--out", "o", "-x y", "b"),
+                         ["--flag", "--out", "o", "--", "a", "-5", "-x y", "b"])
+
+    def test_a_double_dash_from_the_caller_makes_the_rest_positional(self) -> None:
+        self.assertEqual(self.screen("--flag", "--", "--count", "1"), ["--flag", "--", "--count", "1"])
+        self.assertEqual(self.screen("--", "a"), ["--", "a"])
+
+    def test_a_shielded_positional_reaches_the_command_whole(self) -> None:
+        for word in ("-alt hw", "-5", "-ab hw", "-x y"):
+            with self.subTest(word=word):
+                seen: list[Any] = []
+                result = CliRunner().invoke(word_command(seen), ["--flag", word])
+                self.assertEqual((result.exit_code, seen[0]["hw"], seen[0]["flag"]), (0, (word,), True), result.output)
+
+    def test_a_help_flag_still_prints_help(self) -> None:
+        result = CliRunner().invoke(word_command(), ["--count", "1", "--help", "--bogus"])
+        self.assertEqual((result.exit_code, "Usage" in result.output), (0, True))
+
+
 if __name__ == "__main__":
     unittest.main()

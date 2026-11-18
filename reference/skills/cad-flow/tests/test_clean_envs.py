@@ -73,6 +73,7 @@ class PlanTests(unittest.TestCase):
                 "trimesh-4.9.0",
                 "numpy-2.3.0",
                 "python_fcl-0.7.0.11",
+                "click-8.5.1",
             ),
         )  # every distribution cad_model.py's header names
         self.hook = environment(
