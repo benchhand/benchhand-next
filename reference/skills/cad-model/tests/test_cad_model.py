@@ -10,6 +10,7 @@ cadmodel directly and need neither uv nor OCP.
 from __future__ import annotations
 
 import contextlib
+import copy
 import csv
 import hashlib
 import importlib.util
@@ -31,6 +32,8 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest import mock
+
+import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "cad-drawings" / "scripts"))
@@ -79,7 +82,10 @@ STRAP_V = math.pi / 4 * (10 ** 2 - 8 ** 2) * 10
 FLAT_LENGTH = math.pi / 2 * 9
 FLAT_STATE = ("manufacture: {relationship: different, state: flat, reason: elastic_bending, decision: DR-001,"
               " volume_rel_tolerance: 1.0e-6}\n")
-FLAT_PRODUCT = "id: strap\nbuild_volume: {x_mm: 60, y_mm: 60, z_mm: 5, margin_mm: 0}\n"
+FLAT_PRODUCT = "id: strap\n"
+# The printer is 60 x 60 x 5 mm. Printing the flat blank with its 2 mm thickness up is the approved rotation
+# [0, 0, sqrt(1/2), sqrt(1/2)] (a quarter turn about Z).
+STRAP_ORIENTATION = {"status": "approved", "rotation": {"quaternion": [0, 0, math.sqrt(0.5), math.sqrt(0.5)]}, "decision": "DR-001"}
 STRAP_JOINT = ("joints:\n  - {{id: J-001, type: fixed, parent: TST-0001, child: {pn}, axis: [0, 0, 1],"
                " origin: [0, 0, 0], min: 0, max: 0, nominal: 0}}\n")
 
@@ -101,15 +107,17 @@ def assert_same_holes(case: unittest.TestCase, got: list[dict], want: list[dict]
 
 
 def set_model(hw: Path, pn: str, kernel: str, template: str, params: dict, title: str, material: str,
-              process: str = "cnc", extra: str = "", make_buy: str = "make") -> None:
+              process: str = "cnc", extra: str = "", make_buy: str = "make", part_intent: dict | None = None) -> None:
     folder = hw / "parts" / pn
     folder.mkdir(parents=True, exist_ok=True)
     source = (FIXTURES / kernel / template).read_text(encoding="utf-8")
     source = re.sub(r"^PARAMS = .*$", f"PARAMS = {params!r}", source, count=1, flags=re.M)
     (folder / "model.py").write_text(source, encoding="utf-8")
-    (folder / "part.yaml").write_text(
+    record = yaml.safe_load(
         f"PN: {pn}\nrev: X1\ntitle: {title}\nmaterial: {material}\nprocess: {process}\nfinish: none\n"
-        f"mass_target: 100\nmake_buy: {make_buy}\nsupplier: null\n{extra}", encoding="utf-8")
+        f"mass_target: 100\nmake_buy: {make_buy}\nsupplier: null\n{extra}")
+    record["intent"] = part_intent if part_intent is not None else projects().part_intent(material)
+    (folder / "part.yaml").write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8")
 
 
 def two_part_project(root: Path, kernel: str) -> Path:
@@ -118,11 +126,27 @@ def two_part_project(root: Path, kernel: str) -> Path:
     (hw / "product.yaml").write_text("id: twoarm\n", encoding="utf-8")
     (hw / "assembly.yaml").write_text(ASSEMBLY, encoding="utf-8")
     set_model(hw, "TST-0001", kernel, "base.py", {"size": 40.0, "height": 20.0, "bore": 6.0}, *PARTS["TST-0001"][:2])
+    projects().upgrade_project(hw)
     return hw
 
 
-def set_strap(hw: Path, kernel: str, flat: str = "flat", manufacture: str = FLAT_STATE, pn: str = STRAP) -> None:
-    set_model(hw, pn, kernel, "strap.py", {**STRAP_PARAMS, "flat": flat}, "Strap", "TPU 95A", "fdm", manufacture)
+def strap_intent(components: list | None = None) -> dict:
+    fx = projects().shared()
+    intent = projects().part_intent("TPU 95A", route=[fx.operation("print", "fdm", "tst_printer",
+                                                                    orientation=copy.deepcopy(STRAP_ORIENTATION))])
+    if components is not None:
+        intent["components"] = components
+    return intent
+
+
+# The two pieces of the split blank (flat="split"), each bound by an interior point of its own solid.
+SPLIT_PIECES = [{"id": "left", "witness": [3.534, 1.0, 25.0]}, {"id": "right", "witness": [11.603, 1.0, 25.0]}]
+
+
+def set_strap(hw: Path, kernel: str, flat: str = "flat", manufacture: str = FLAT_STATE, pn: str = STRAP,
+              components: list | None = None) -> None:
+    set_model(hw, pn, kernel, "strap.py", {**STRAP_PARAMS, "flat": flat}, "Strap", "TPU 95A", "fdm", manufacture,
+              part_intent=strap_intent(components))
 
 
 def flat_project(root: Path, kernel: str, name: str = "flat-hw") -> Path:
@@ -133,13 +157,24 @@ def flat_project(root: Path, kernel: str, name: str = "flat-hw") -> Path:
     (hw / "assembly.yaml").write_text(STRAP_JOINT.format(pn=STRAP), encoding="utf-8")
     set_model(hw, "TST-0001", kernel, "base.py", {"size": 40.0, "height": 20.0, "bore": 6.0}, *PARTS["TST-0001"][:2])
     set_strap(hw, kernel)
+    projects().upgrade_project(hw)
+    set_printer(hw)
     return hw
+
+
+def set_printer(hw: Path, x_mm: float = 60.0) -> None:
+    """The strap's printer: a 60 x 60 x 5 mm measured envelope (its x size is `x_mm`)."""
+    fx = projects().shared()
+    printer = fx.capability_profile("tst_printer", "fdm", envelope={
+        axis: fx.known(fx.quantity(size, "mm"), "measured", [fx.source("calibration", "tst_printer envelope")])
+        for axis, size in zip("xyz", (x_mm, 60.0, 5.0))})
+    (hw / "manufacturing" / "capabilities.yaml").write_text(yaml.safe_dump({"profiles": [printer]}, sort_keys=False), encoding="utf-8")
 
 
 def set_arm(hw: Path, kernel: str, template: str = "arm.py", bought: bool = False, **changes: float) -> None:
     """The swing arm, made to its model; `bought` makes it a catalogue part, which has no manufacturing output."""
     params = {**ARM, **changes}
-    if template == "arm_invalid.py":
+    if template in ("arm_invalid.py", "arm_reversed_face.py"):
         params = {k: params[k] for k in ("length", "width", "thickness", "z0")}
     record = ("purchased", "procurement: {mode: catalog}\n", "buy") if bought else ("cnc", "", "make")
     set_model(hw, "TST-0002", kernel, template, params, *PARTS["TST-0002"][:2], *record)
@@ -154,6 +189,7 @@ def safe_project(root: Path, kernel: str) -> Path:
     (hw / "assembly.yaml").write_text("joints:\n" + joints, encoding="utf-8")
     for pn, case in SAFE_CASES.items():
         set_model(hw, pn, kernel, "safe_case.py", {"case": case}, f"Safe edit {case}", "PETG")
+    projects().upgrade_project(hw)
     return hw
 
 
@@ -190,6 +226,8 @@ def kernel_sequence(root: Path, kernel: str) -> dict:
     runs["v4-refused-state"] = {
         "latest": json.loads((hw / "versions" / "latest.json").read_text(encoding="utf-8"))["label"],
         "versions": sorted(p.name for p in (hw / "versions").iterdir())}
+    set_arm(hw, kernel, "arm_reversed_face.py")
+    runs["v4-reversed"] = cli("run", str(hw), "--label", "v4")
     set_arm(hw, kernel, "arm_invalid.py", bought=True)
     runs["v4"] = cli("run", str(hw), "--label", "v4")
     runs["v4-model"] = (hw / "parts" / "TST-0002" / "model.py").read_text(encoding="utf-8")
@@ -476,17 +514,27 @@ class KernelChecks:
         self.assertEqual([(f["pn"], f["check"], f["type"]) for f in result["findings"]],
                          [("TST-0002", "manufacture", "ManufactureError")])
         self.assertEqual(result["findings"][0].keys(), FINDING_KEYS)
-        self.assertIn("native: valid", result["findings"][0]["message"])
-        self.assertIn("native", result["manufacturing"]["TST-0002"]["blocking_failures"])
+        self.assertIn("components: bound", result["findings"][0]["message"])
+        self.assertIn("holds no solid", result["findings"][0]["message"])
         # nothing sealed, no partial folder left, latest still names v3
         self.assertEqual(self.runs["v4-refused-state"], {"latest": "v3", "versions": ["latest.json", "v1", "v2", "v3"]})
+
+    def test_a_made_part_whose_one_solid_is_invalid_blocks_the_version(self) -> None:
+        proc, result, _ = self.runs["v4-reversed"]
+        self.assertEqual(proc.returncode, 1, proc.stderr[-3000:])
+        self.assertEqual([(f["pn"], f["check"], f["type"]) for f in result["findings"]],
+                         [("TST-0002", "manufacture", "ManufactureError")])
+        self.assertIn("native: valid", result["findings"][0]["message"])
+        self.assertEqual(result["manufacturing"]["TST-0002"]["blocking_failures"], ["native", "step"])
 
     def test_versions_snapshot_the_record_they_were_built_from(self) -> None:
         hw = self.runs["hw"]
         v2 = hw / "versions" / "v2"
         manifest = json.loads((v2 / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(sorted(manifest["record"]), ["record/assembly.yaml", "record/parts/TST-0001/part.yaml",
-                                                      "record/parts/TST-0002/part.yaml", "record/product.yaml"])
+        self.assertEqual(sorted(manifest["record"]), [
+            "record/assembly.yaml", "record/interfaces.yaml", "record/manufacturing/capabilities.yaml",
+            "record/manufacturing/materials.yaml", "record/manufacturing/selection.yaml", "record/parts/TST-0001/part.yaml",
+            "record/parts/TST-0002/part.yaml", "record/product.yaml", "record/requirements.yaml"])
         for name, sha in manifest["record"].items():
             self.assertEqual(manifest["files"][name], sha)
         # v2's arm was made; the current record buys it (v4), and the snapshot keeps the old state
@@ -520,9 +568,10 @@ class KernelChecks:
         self.assertEqual(base["native"]["kernel_volume_mm3"], base["installed"]["kernel_volume_mm3"])
         self.assertEqual(base["placement"]["transform"], [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]])
         placement = strap["placement"]
-        self.assertEqual((placement["method"], placement["orientation"], placement["determinant"]),
-                         ("axis_aligned", "xzy", 1.0))
-        self.assertEqual([row[:3] for row in placement["transform"]], [[-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]])
+        self.assertEqual((placement["method"], placement["orientation"]), ("approved", "approved"))
+        self.assertAlmostEqual(placement["determinant"], 1.0, places=12)  # the quaternion [0, 0, sqrt(1/2), sqrt(1/2)] is exact to ~1e-15
+        for row, want in zip(placement["transform"], [[-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]]):
+            assert_vectors(self, row[:3], want, places=12)
         for name, sha in strap["files"].items():
             self.assertEqual(hashlib.sha256((made / STRAP / name).read_bytes()).hexdigest(), sha, name)
             self.assertEqual(manifest["files"][f"manufacturing/{STRAP}/{name}"], sha)
@@ -680,7 +729,7 @@ class ManufacturingStateTests(unittest.TestCase):
         attempt("tolerance")
         # A blank 10 % too long, a blank in two pieces, and a blank that is an open shell.
         set_strap(hw, "cadquery", flat="long")
-        set_strap(hw, "cadquery", flat="split", pn="TST-0004")
+        set_strap(hw, "cadquery", flat="split", pn="TST-0004", components=SPLIT_PIECES)
         set_strap(hw, "cadquery", flat="open", pn="TST-0005")
         attempt("identity", ("TST-0004", "TST-0005"))
         # A manufacturing-only change: the declared tolerance; the installed definitions stay identical.
@@ -707,7 +756,7 @@ class ManufacturingStateTests(unittest.TestCase):
         # Each manufacturing-only input on its own, in a copy, so the pointer cases above keep their state.
         cls.rebuilds = rebuilds = root / "rebuilds" / "hw"
         shutil.copytree(hw, rebuilds)
-        (rebuilds / "product.yaml").write_text(FLAT_PRODUCT.replace("x_mm: 60", "x_mm: 61"), encoding="utf-8")
+        set_printer(rebuilds, 61.0)  # the machine envelope is an input of the manufacturing outputs
         cls.runs["volume"] = cli("run", str(rebuilds), "--label", "v4")
         set_strap(rebuilds, "cadquery", manufacture=FLAT_STATE.replace("1.0e-6", "2.0e-6").replace(
             "}\n", ", mesh: {linear_deflection_mm: 0.1, angular_deflection_rad: 0.2}}\n"))
@@ -752,7 +801,7 @@ class ManufacturingStateTests(unittest.TestCase):
         self.assertTrue(all((f["check"], f["type"]) == ("manufacture", "ManufactureError") for f in found.values()))
         self.assertIn("identity: volume_within_tolerance", found[STRAP]["message"])
         self.assertIn("same_solids", found["TST-0004"]["message"])
-        self.assertIn("native: valid", found["TST-0005"]["message"])
+        self.assertIn("holds no solid", found["TST-0005"]["message"])  # a v2 part binds solids before judging validity
         identity = self.runs["identity"][1]["manufacturing"][STRAP]["checks"]["identity"]
         self.assertAlmostEqual(identity["difference_mm3"], STRAP_V * 0.1, places=6)
         self.assertAlmostEqual(identity["allowed_mm3"], STRAP_V * 1e-6, places=10)
@@ -964,7 +1013,13 @@ class CheckPairCacheTests(unittest.TestCase):
         return {k: v for k, v in result.items() if k != "timings_s"}
 
     def kept(self, name: str) -> dict:
-        return self.without_timings(self.checks[name])
+        """The result without its timings and the packet's `reused`; `reused` depends on which check of a version
+        ran first (it publishes the cad.readback packet, the others find it sealed), so `reuse` asserts it by name."""
+        result = self.without_timings(self.checks[name])
+        return {**result, "packet": {k: v for k, v in result["packet"].items() if k != "reused"}}
+
+    def reuse(self, *names: str) -> list[bool]:
+        return [self.checks[name]["packet"]["reused"] for name in names]
 
     def counts(self, name: str) -> tuple[int, int]:
         timings = self.checks[name]["timings_s"]
@@ -973,12 +1028,21 @@ class CheckPairCacheTests(unittest.TestCase):
     def test_a_cold_and_a_warm_cache_report_what_no_cache_does(self) -> None:
         for proc, result, _ in self.built:
             self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
+        # layout.reusable returns a sealed hw/checks/<V>/cad bundle only when its recipe (producer + packet digest) and
+        # version manifest are unchanged; the pair cache changes how a verdict is measured, not the verdict, so:
+        #   v1 no cache: first check of v1, no sealed readback packet yet -> False
+        #   v1 cold:     v1's packet is sealed and this check's packet is identical -> True
+        #   v1 warm:     same, still unchanged -> True
+        self.assertEqual(self.reuse("v1 no cache", "v1 cold", "v1 warm"), [False, True, True])
         self.assertEqual(self.kept("v1 cold"), self.kept("v1 no cache"))
         self.assertEqual(self.kept("v1 warm"), self.kept("v1 no cache"))
         self.assertEqual((self.counts("v1 cold"), self.counts("v1 warm")), ((2, 0), (0, 2)))
         self.assertEqual(self.checks["v1 cold"]["timings_s"]["cleared"]["box"], 1)
 
     def test_the_next_version_measures_only_the_pairs_of_its_changed_part(self) -> None:
+        # v2 seeded:   first check of v2, no sealed readback packet for v2 yet (v1's does not count) -> False
+        # v2 no cache: v2's packet is sealed by the seeded check and this one is identical -> True
+        self.assertEqual(self.reuse("v2 seeded", "v2 no cache"), [False, True])
         self.assertEqual(self.kept("v2 seeded"), self.kept("v2 no cache"))
         self.assertEqual(self.counts("v2 seeded"), (1, 1))
 
@@ -1152,6 +1216,7 @@ def insert_project(root: Path) -> Path:
     set_model(hw, INSERT, "cadquery", "base.py", {"size": 4.0, "height": 4.0, "bore": 1.0}, "Insert", "PETG")
     with (hw / "parts" / INSERT / "part.yaml").open("a", encoding="utf-8") as part:
         part.write("model_frame: part_local\n")
+    projects().upgrade_project(hw)
     return hw
 
 
@@ -1821,7 +1886,7 @@ def snapshot_of(records: dict, product: dict | None = None):
     import yaml
 
     files = {f"parts/{pn}/part.yaml": yaml.safe_dump(data).encode() for pn, data in records.items()}
-    files["product.yaml"] = yaml.safe_dump(product or {"id": "test"}).encode()
+    files["product.yaml"] = yaml.safe_dump(product or {"id": "test", "record_version": 2}).encode()
     return build.record.read_snapshot(files)
 
 
@@ -1884,8 +1949,9 @@ def projects():
     name = "cad_model_manufacturing_projects"
     if name not in sys.modules:
         spec = importlib.util.spec_from_file_location(name, FIXTURES / "manufacturing_projects.py")
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # registered only once complete: kernels build in threads
+        sys.modules[name] = module
     return sys.modules[name]
 
 
@@ -1999,44 +2065,24 @@ class ManufacturingIntentRuleTests(unittest.TestCase):
         self.assertEqual(plans, {})
         self.assertIn("print orientation: orientation quaternion norm", dict(refused)[projects().PN])
 
-    def test_a_record_version_1_part_keeps_its_auto_fit_labelled_unapproved(self) -> None:
-        part = ManufactureRuleTests.part("TST-0001")
-        snapshot = snapshot_of({"TST-0001": part}, {"id": "t", "build_volume": {"x_mm": 35, "y_mm": 10, "z_mm": 5}})
-        plans, _, _ = manufacture.plan(snapshot)
-        self.assertEqual(plans["TST-0001"].intent, {"record_version": 1, "status": "unknown",
-                                                   "reason": build.record.load_intent().LEGACY_REASON})
-        with BoxPart((35.0, 10.0, 5.0)).measured(oriented=False):
-            chosen, volume = manufacture.pose(plans["TST-0001"], None, mock.Mock())
-        self.assertEqual((chosen.status, chosen.approved, chosen.method, chosen.name, volume.source),
-                         ("unapproved_auto_fit", False, "axis_aligned", "xyz", "product.yaml build_volume"))
-        self.assertIn("never an approved orientation", chosen.reason)
-
-    def test_unbindable_solids_stay_unknown_for_a_version_1_part_and_refuse_a_version_2_part(self) -> None:
-        """A record version 1 part declares no components: its several solids still export whole, their
-        identity unknown (legacy) with every solid listed, never guessed; a version 2 part refuses."""
-        legacy = manufacture.plan(snapshot_of({"TST-0001": ManufactureRuleTests.part("TST-0001", process="cnc")}))[0]
+    def test_unbindable_solids_refuse_a_part_that_declares_no_components(self) -> None:
+        """A part declaring no components refuses several solids: identity is never guessed."""
         entry = {"PN": "TST-0001", "product": "TST-0001 Part", "mesh": None, "outputs": ["part.step", "manufacturing.json"]}
         solid = mock.Mock(facts=lambda: {"volume_mm3": 1.0})
         refusal = manufacture.components.BindingError("TST-0001: 2 solids, but part.yaml intent.components declares none")
         target = Path(self.tmp.name) / "out"
+        _, plans, _, _ = self.plan()
         with mock.patch.object(manufacture.components, "bind", side_effect=refusal), \
                 mock.patch.object(manufacture.components, "solids", return_value=[solid, solid]), \
                 mock.patch.object(manufacture, "_write") as write:
-            found = manufacture.export(target, legacy["TST-0001"], entry, mock.Mock(), None)
-            write.assert_called_once()
-            identity = found["component_identity"]
-            self.assertEqual((identity["status"], identity["solids"]), ("unknown", [{"volume_mm3": 1.0}] * 2))
-            self.assertTrue(identity["reason"].startswith(build.record.load_intent().LEGACY_REASON), identity["reason"])
-            self.assertEqual((found["components"], found["component_outputs"], found["placement"]["pose"]),
-                             ({}, [], "model_frame"))
-            _, plans, _, _ = self.plan()
             with self.assertRaisesRegex(manufacture.components.BindingError, "declares none"):
                 manufacture.export(target, plans[projects().PN], entry, mock.Mock(), None)
+            write.assert_not_called()
 
     def test_declared_components_set_the_solid_count_check_expects(self) -> None:
         """A record version 2 part made as installed declares its definition's solid count by its
         components' multiplicities, which replaces the previous version's count; --expect-solids still
-        wins; a different state, a sole solid and a record version 1 snapshot declare none."""
+        wins; a different state and a sole solid declare none."""
         import yaml
 
         mp = projects()
@@ -2053,7 +2099,6 @@ class ManufacturingIntentRuleTests(unittest.TestCase):
                                "decision": "DR-001", "volume_rel_tolerance": 1e-6}
         self.assertEqual(declared({**kit, f"parts/{mp.PN}/part.yaml": yaml.safe_dump(part).encode()}), {})
         self.assertEqual(declared(dict(self.write(mp.documents()).files)), {})
-        self.assertEqual(declared(dict(snapshot_of({"TST-0001": ManufactureRuleTests.part("TST-0001")}).files)), {})
         parts, baseline = {mp.PN: mock.Mock(shape="kit")}, {mp.PN: {"solids": 2}}
         with mock.patch.object(check.occ, "count", return_value=3):
             row = check.solid_structure(parts, {}, baseline, "v1", {mp.PN: 3})["parts"][mp.PN]
@@ -2126,20 +2171,6 @@ class ManufacturingIntentRuleTests(unittest.TestCase):
         self.assertEqual((bounded["mass_g"], bounded["centre_of_mass_mm"]), (None, None))
         self.assertAlmostEqual(bounded["mass"]["value_g"]["lower"], 8.8, places=9)
         self.assertAlmostEqual(bounded["mass"]["value_g"]["upper"], 10.4, places=9)
-
-    def test_the_legacy_density_table_is_a_labelled_density_only_estimate(self) -> None:
-        import yaml
-
-        table = yaml.safe_load(build.LEGACY_DENSITIES.read_text(encoding="utf-8"))
-        self.assertEqual(sorted(table), ["densities_g_cm3"], "the table holds densities and nothing else")
-        mass = build.legacy_mass("PETG", 1000.0, (1.0, 2.0, 3.0), build.load_densities())
-        self.assertAlmostEqual(mass["mass_g"], 1.27, places=12)
-        self.assertEqual((mass["mass"]["source"], mass["mass"]["basis"], mass["centre_of_mass_mm"]),
-                         ("legacy_density_table", "estimate", [1.0, 2.0, 3.0]))
-        self.assertIn("never supplies strength", mass["mass"]["note"])
-        unknown = build.legacy_mass("TST unobtainium", 1000.0, (1.0, 2.0, 3.0), build.load_densities())
-        self.assertEqual((unknown["mass_g"], unknown["centre_of_mass_mm"], unknown["mass"]["status"]),
-                         (None, None, "unknown"))
 
     def test_totals_give_an_assembly_centre_of_mass_only_when_every_occurrence_has_one(self) -> None:
         metrics = {"TST-0001": {"volume_mm3": 10.0, "mass_g": 2.0}, "TST-0002": {"volume_mm3": 5.0, "mass_g": None}}
@@ -2789,43 +2820,43 @@ class ManufacturingInputCacheTests(unittest.TestCase):
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
-class LegacyOutputTests(unittest.TestCase):
-    """Plan section 11 row 19, model part: a record version 1 build stays readable and claims nothing new."""
+class UnsupportedRecordTests(unittest.TestCase):
+    """A record that is not version 2 is refused by `run` and `check`, and nothing is written."""
 
-    def test_a_legacy_build_is_labelled_and_an_older_manifest_still_checks(self) -> None:
-        runs = all_runs()["cadquery"]
-        _, result, _ = runs["flat"]
-        self.assertEqual([p["code"] for p in result["record"]["problems"]], ["record.migration_required"])
-        folder = runs["flat-hw"] / "versions" / "v1"
-        manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
-        strap = manifest["manufacturing"][STRAP]
-        self.assertEqual((strap["intent"]["record_version"], strap["intent"]["status"]), (1, "unknown"))
-        self.assertEqual((strap["placement"]["pose"], strap["placement"]["approved"]), ("unapproved_auto_fit", False))
-        main = strap["components"]["main"]  # explicit unknown (legacy): no profile, route or plan is claimed
-        self.assertEqual((main["material_profile"], main["operations"], main["planned"], strap["component_identity"]),
-                         ({"status": "unknown", "reason": build.record.load_intent().LEGACY_REASON}, None, None,
-                          {"status": "bound"}))
-        self.assertEqual(json.loads((folder / "metrics.json").read_text(encoding="utf-8"))["mass_source"],
-                         "legacy_density_table")
-        features = json.loads((folder / manifest["manufacturing_features"]).read_text(encoding="utf-8"))
-        self.assertEqual((features["parts"][STRAP]["frame"], features["parts"][STRAP]["correspondence"]["manufacture_only"]),
-                         ("manufacture", ["outer_face"]))
-        with tempfile.TemporaryDirectory() as tmp:  # strip what sidecar schema 2 adds: an older version's manifest
-            older = Path(tmp) / "hw"
-            shutil.copytree(runs["flat-hw"], older, symlinks=True)
-            path = older / "versions" / "v1" / "manifest.json"
-            data = json.loads(path.read_text(encoding="utf-8"))
-            for entry in data["manufacturing"].values():
-                for key in ("intent", "components", "component_outputs", "component_identity"):
-                    entry.pop(key, None)
-                for key in ("frame", "pose", "approved", "operation", "decision", "reason", "build_volume"):
-                    entry["placement"].pop(key, None)
-            path.chmod(0o644)
-            path.write_text(json.dumps(data), encoding="utf-8")
-            proc, checked, _ = cli("check", "v1", "--hw", str(older))
-        self.assertEqual(proc.returncode, 0, proc.stdout[-3000:] + proc.stderr[-2000:])
-        self.assertEqual((checked["checks"]["manufacturing"]["status"], checked["checks"]["manufacturing"]["complete"]),
-                         ("pass", True))
+    @staticmethod
+    def with_version(path: Path, version: object) -> None:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data.pop("record_version", None)
+        if version is not None:
+            data["record_version"] = version
+        path.chmod(0o644)  # a sealed version's record snapshot is read-only
+        path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+    def test_run_refuses_a_record_version_other_than_2_and_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            hw = two_part_project(Path(tmp), "cadquery")
+            set_arm(hw, "cadquery")
+            for version in (1, 3, None):
+                self.with_version(hw / "product.yaml", version)
+                before = sorted(p.relative_to(hw).as_posix() for p in hw.rglob("*"))
+                with self.subTest(version=version):
+                    proc, _, _ = cli("run", str(hw), "--label", "v1")
+                    self.assertEqual(proc.returncode, 2, proc.stdout[-2000:] + proc.stderr[-2000:])
+                    self.assertIn("record_version", proc.stderr)
+                    self.assertEqual(sorted(p.relative_to(hw).as_posix() for p in hw.rglob("*")), before)
+
+    def test_check_refuses_a_version_whose_record_snapshot_is_not_version_2(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            hw = two_part_project(Path(tmp), "cadquery")
+            set_arm(hw, "cadquery")
+            proc, _, _ = cli("run", str(hw), "--label", "v1")
+            self.assertEqual(proc.returncode, 0, proc.stdout[-2000:] + proc.stderr[-2000:])
+            for version in (1, 3, None):
+                self.with_version(hw / "versions" / "v1" / "record" / "product.yaml", version)
+                with self.subTest(version=version):
+                    proc, _, _ = cli("check", "v1", "--hw", str(hw))
+                    self.assertEqual(proc.returncode, 2, proc.stdout[-2000:] + proc.stderr[-2000:])
+                    self.assertIn("record_version", proc.stderr)
 
 
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")

@@ -471,15 +471,15 @@ class Cli(unittest.TestCase):
         self.assertEqual({p: p.read_bytes() for p in self.hw.rglob("*") if p.is_file()}, before, "report only")
         self.assertTrue((self.hw.parent / ".cad-work" / "impact.json").is_file())
 
-    def test_a_version_1_record_refuses_with_the_migration_command(self) -> None:
+    def test_an_unsupported_record_version_refuses(self) -> None:
         product = self.hw / "product.yaml"
         data = yaml.safe_load(product.read_text(encoding="utf-8"))
         del data["record_version"]
         product.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
         self.build("v1")
         code, report = self.run_cli("--since-version", "v1")
-        self.assertEqual((code, report["code"]), (2, "record.migration_required"))
-        self.assertIn("migrate.py", report["action"])
+        self.assertEqual((code, report["code"]), (2, "record.version_unsupported"))
+        self.assertIn("record version 2 only", report["message"])
 
 
 if __name__ == "__main__":

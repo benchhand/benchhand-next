@@ -18,7 +18,6 @@ from modload import result_payload  # noqa: E402
 SKILL = Path(__file__).resolve().parents[1]
 VALIDATOR = SKILL / "scripts" / "validate.py"
 LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
-V1_MINIMAL = SKILL / "tests" / "fixtures" / "record_v1_minimal" / "hw"  # a minimal record version 1
 
 
 def sha(path: Path) -> str:
@@ -42,16 +41,13 @@ class MigrationPlan(unittest.TestCase):
         self.project = Path(temporary.name) / "project"
         self.hw = self.project / "hw"
         shutil.copytree(LAMP, self.hw)
-        # a demo-style record: a v1 built before manufacturing outputs, a version 1 release, loose files
+        # a demo-style record: a built v1 and loose files
         version = self.hw / "versions" / "v1"
         write(version / "assembly.step")
         write(version / "manifest.json", json.dumps({"label": "v1", "files": {"assembly.step": sha(version / "assembly.step")}}))
-        write(self.hw / "releases" / "A" / "manifest.json", json.dumps(
-            {"product_id": "lamp-arm", "rev": "A", "released_at": "2026-01-01T00:00:00Z", "files": ["hw/bom.csv"],
-             "checks": {}}))
         for name in ("print/LMP-0004_flat.step", "print/LMP-0004_bent.step", "print/LMP-0004.stl",
                      "print/VXA-0004_flat.step", "print/export_flat_plug.py", "print/settings.ini",
-                     "drawings/LMP-0001/sheet-1.svg", "renders/v1/iso.png", "notes.md", "docs/notes.md", "docs/.DS_Store"):
+                     "notes.md", "docs/notes.md", "docs/.DS_Store"):
             write(self.hw / name, f"{name}\n")
 
     def plan(self, *extra: str) -> tuple[int, Any]:
@@ -86,34 +82,12 @@ class MigrationPlan(unittest.TestCase):
                          ("script", "move", ".cad-work/migration/print/export_flat_plug.py", "high", None, []))
         self.assertEqual(row("hw/print/settings.ini"),
                          ("data", "move", ".cad-work/migration/print/settings.ini", "low", None, []))
-        self.assertEqual(row("hw/drawings/LMP-0001/sheet-1.svg"),
-                         ("legacy", "rebuild", "hw/drawings/<V>/LMP-0001/", "medium",
-                          "cad-drawings drawing.py, assembly_drawing.py", []))
-        self.assertEqual(row("hw/renders/v1/iso.png"),
-                         ("legacy", "rebuild", "hw/renders/v1/<subject>/", "medium", "cad-render render.py", []))
         self.assertEqual(row("hw/notes.md"), ("document", "move", "hw/docs/notes.md", "high", None, []))
         self.assertTrue(items["hw/notes.md"]["destination_exists"], "hw/docs/notes.md already exists: a collision")
         self.assertEqual(row("hw/docs/.DS_Store")[:2], ("metadata", "remove"))
-        self.assertEqual(row("hw/versions/v1"), ("legacy version", "keep", None, "high", model, []))
-        self.assertIn("cannot be frozen or released", items["hw/versions/v1"]["action"])
-        self.assertEqual(row("hw/releases/A")[:2], ("legacy release", "keep"))
         for item in plan["items"]:
             self.assertTrue(item["action"], item["path"])
         self.assertEqual(sum(plan["counts"].values()), len(plan["items"]))
-
-    def test_a_version_1_record_gets_a_migrate_row(self) -> None:
-        shutil.rmtree(self.hw)
-        shutil.copytree(V1_MINIMAL, self.hw)
-        self.assertNotIn("record_version", (self.hw / "product.yaml").read_text(encoding="utf-8"), "the input is version 1")
-        code, plan = self.plan()
-        self.assertEqual(code, 0, plan)
-        items = {item["path"]: item for item in plan["items"]}
-        item = items["hw/product.yaml"]
-        self.assertEqual((item["classification"], item["operation"], item["destination"], item["confidence"], item["rebuild"],
-                          item["collisions"]), ("record version", "migrate", None, "high", "cad-record/scripts/migrate.py", []))
-        self.assertEqual(item["code"], "record.migration_required")
-        self.assertIn("--dry-run", item["action"])
-        self.assertEqual(plan["counts"]["migrate"], 1)
 
     def test_the_report_goes_to_stdout_or_a_path_under_cad_work_only(self) -> None:
         before = tree(self.hw)

@@ -28,7 +28,6 @@ import yaml
 SKILL = Path(__file__).resolve().parents[2]
 SCRIPTS = SKILL / "scripts"
 LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
-V1_MINIMAL = SKILL / "tests" / "fixtures" / "record_v1_minimal" / "hw"  # a minimal record version 1: one part, no interfaces
 SYNTHETIC = "synthetic test fixture value, not material, machine or supplier data"
 
 
@@ -54,11 +53,6 @@ def schema_registry_module() -> Any:
 def ref_validator(ref: str) -> Any:
     """A validator of one schema or definition of cad-record's schemas by its `$ref`, offline."""
     return schema_registry_module().ref_validator(SKILL / "schemas", ref)
-
-
-def migrate_module() -> Any:
-    """cad-record migrate.py (needs PyYAML and jsonschema)."""
-    return _module("cad_record_migrate", SCRIPTS / "migrate.py")
 
 
 # --- facts ------------------------------------------------------------------------------------------------------
@@ -278,8 +272,8 @@ def record(*, parts: list[dict[str, Any]] | None = None, interfaces: list[dict[s
 
 
 def current_documents(documents: dict[str, Any]) -> dict[str, Any]:
-    """A hand-written record version 1 test fixture ({path below hw/: document}) as record version 2 in migrate.py's
-    shape: every manufacturing-intent field an explicit unknown, legacy drawing.operations moved to operations.
+    """A hand-written test fixture without the record version 2 blocks ({path below hw/: document}) as record version 2:
+    every manufacturing-intent field an explicit unknown, drawing.operations moved to operations.
     For fixtures about other record contracts, which read the same in both versions."""
     out = copy.deepcopy(documents)
     out["product.yaml"] = {**out["product.yaml"], "record_version": 2}
@@ -305,7 +299,7 @@ def current_documents(documents: dict[str, Any]) -> dict[str, Any]:
 
 
 def upgrade_record(hw: Path) -> Path:
-    """Rewrite the hand-written record version 1 test fixture below `hw` as record version 2 (current_documents)."""
+    """Rewrite the hand-written test fixture below `hw` as record version 2 (current_documents)."""
     hw = Path(hw)
     names = ["product.yaml", "requirements.yaml", "interfaces.yaml", "assembly.yaml",
              *(p.relative_to(hw).as_posix() for p in sorted(hw.glob("parts/*/part.yaml")))]
@@ -428,47 +422,8 @@ def tst_record() -> dict[str, Any]:
     )
 
 
-V1_OPERATIONS = """  operations:
-    - id: press_base_pin
-      kind: press_fit
-      part: LMP-0001
-      into: LMP-0001
-      interface: IF-001
-      direction: [0, 0, -1]
-      tools: ["Arbor press or pin punch"]
-      acceptance: {kind: standoff, features: [head_underside, hub_top_face]}
-    - id: ring_base
-      kind: retaining_ring
-      part: LMP-0001
-      into: LMP-0001
-      interface: IF-001
-      direction: [0, 0, 1]
-      tools: ["External circlip pliers"]
-      acceptance: {kind: engaged, features: [ring_groove]}
-"""
-V1_OPERATION_IDS = ["press_base_pin", "ring_base"]
-
-
-def add_v1_interface(hw: Path) -> None:
-    """Give a copy of the V1_MINIMAL record the interface it lacks, without a functional block, as in version 1."""
-    interface = {"id": "IF-001", "from": "base_sub", "to": "base_sub", "type": "motion", "description": "TST interface"}
-    (hw / "interfaces.yaml").write_text(yaml.safe_dump({"interfaces": [interface]}, sort_keys=False), encoding="utf-8")
-
-
-def add_v1_operations(hw: Path) -> None:
-    """Give a copy of the V1_MINIMAL record two installation operations under drawing.operations, as in version 1.
-    They name IF-001 (add_v1_interface) and the fixture's one part, and the text edit keeps the file's comments."""
-    path = hw / "assembly.yaml"
-    text = path.read_text(encoding="utf-8")
-    anchor = "  subassembly_sheets: [base_sub]\n"
-    assert text.count(anchor) == 1
-    path.write_text(text.replace(anchor, anchor + V1_OPERATIONS), encoding="utf-8")
-
-
 def migrated_copy(src_hw: Path, dst_hw: Path, today: date | None = None) -> Path:
-    """Copy the record at `src_hw` (by default a version 1 example) to `dst_hw` and migrate it to record
-    version 2 with migrate.py, as a test fixture for code that reads current records."""
+    """Copy the record at `src_hw` to `dst_hw` unchanged (the examples are record version 2), as a test fixture
+    for code that reads current records. The name and the unused date parameter stay for tests written when this migrated."""
     shutil.copytree(src_hw, dst_hw)
-    migrate = migrate_module()
-    migrate.apply(migrate.plan(dst_hw, today or date(2026, 1, 1)))
     return dst_hw

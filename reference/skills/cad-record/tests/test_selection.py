@@ -21,6 +21,7 @@ import yaml
 HERE = Path(__file__).resolve().parent
 SKILL = HERE.parent
 SCRIPT = SKILL / "scripts" / "selection.py"
+EXAMPLE = SKILL.parents[1] / "examples" / "lamp-arm" / "hw"
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
@@ -497,18 +498,19 @@ class CommandLine(unittest.TestCase):
         self.assertIn("intent.reference", {p["code"] for p in report["problems"]})
         self.assertEqual(self.run_cli(str(hw.parent / "missing")).returncode, 2)
 
-    def test_a_legacy_record_is_readable_and_not_assessed(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix="cad-selection-legacy-")
+    def test_a_record_of_an_unsupported_version_is_invalid_and_not_assessed(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-selection-version-")
         self.addCleanup(temporary.cleanup)
         hw = Path(temporary.name) / "hw"
-        shutil.copytree(fx.V1_MINIMAL, hw)
-        self.assertNotIn("record_version", (hw / "product.yaml").read_text(encoding="utf-8"), "the input is version 1")
+        shutil.copytree(EXAMPLE, hw)
+        product = hw / "product.yaml"
+        product.write_text(product.read_text(encoding="utf-8").replace("record_version: 2", "record_version: 1"), encoding="utf-8")
         before = tree_digest(hw)
         result = self.run_cli(str(hw), "--json")
-        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.returncode, 2, result.stderr)
         report = json.loads(result.stdout)
-        self.assertEqual((report["status"], report["record_version"]), ("not_assessed", 1))
-        self.assertIn("record.migration_required", {p["code"] for p in report["problems"]})
+        self.assertEqual((report["status"], report["record_version"]), ("invalid", 0))
+        self.assertIn("record.version_unsupported", {p["code"] for p in report["problems"]})
         self.assertFalse(report["use_case"]["final_ready"])
         self.assertEqual(tree_digest(hw), before)
 

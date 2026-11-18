@@ -139,7 +139,7 @@ def plan(color: str | None = None, material: str = "PETG") -> manufacture.Plan:
                                    outputs=("part.step", "part.stl", "part.3mf", "manufacturing.json"))
     part = types.SimpleNamespace(intent=types.SimpleNamespace(color=color))
     record = {"rev": "A", "title": "T", "material": material, "process": "fdm", "finish": None}
-    return manufacture.Plan("TST-0001", record, policy, 2, part, {}, None, {})
+    return manufacture.Plan("TST-0001", record, policy, part, {}, None, {})
 
 
 def entry_of(chosen: manufacture.Plan) -> dict[str, object]:

@@ -60,6 +60,14 @@ mesh_size: 5
 """
 
 
+CANTILEVER_VERSIONED_TAIL = """part: TST-0101
+material: {conditions: {conditioning: dry, temperature: {value: 23, units: deg_C}}}
+fixed_faces: {plane: {axis: x, value: 0, tolerance: 0.000001}}
+loads: [{selector: {plane: {axis: x, value: 100, tolerance: 0.000001}}, force: [0, 0, -50]}]
+mesh_size: 5
+"""
+
+
 def hanging_freecad(root: Path, child_pid: Path) -> Path:
     """A FreeCAD stand-in that runs the real job script, starts a solver-like child, writes its pid to
     `child_pid`, and hangs in the job's STEP import."""
@@ -638,13 +646,14 @@ mesh_size: 5
         with patch("fea_static.find_freecad", return_value=None):
             self.assertEqual(main(["unused.yaml"]), 2)
 
-    def make_cantilever_step(self, root: Path) -> Path:
+    def make_cantilever_step(self, root: Path, label: str = "Beam") -> Path:
         step = root / "cantilever.step"
         job = root / "make_cantilever.py"
         job.write_text(
             f'''import FreeCAD as App, Part, Import
 doc=App.newDocument("CantileverFixture")
 beam=doc.addObject("Part::Feature", "Beam")
+beam.Label={label!r}
 beam.Shape=Part.makeBox(100, 10, 5)
 doc.recompute()
 Import.export([beam], {str(step)!r})
@@ -1181,6 +1190,17 @@ class LoadApplication(unittest.TestCase):
         self.assertIsNone(failure_checks.zero_result(0.0, 0.0, [("FaceForce0", 0.0)]))
 
 
+# A versioned case takes its material from the part's profile in the version's record snapshot (record version 2).
+VERSIONED_TAIL = """part: TST-0101
+material: {conditions: {conditioning: dry, temperature: {value: 23, units: deg_C}}}
+fixed_faces: {plane: {axis: y, value: 50, tolerance: 0.000001}}
+loads:
+  - selector: {plane: {axis: y, value: 150, tolerance: 0.000001}}
+    force: [0, 0, -50]
+mesh_size: 5
+"""
+
+
 class VersionedPublicationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -1192,12 +1212,17 @@ class VersionedPublicationTests(unittest.TestCase):
         self.step = self.case_dir / "beam.step"
         self.step.write_bytes(b"STEP geometry")
         self.case = self.case_dir / "case.yaml"
-        self.case.write_text("step: beam.step\n" + CASE_TAIL, encoding="utf-8")
+        self.case.write_text("step: beam.step\n" + VERSIONED_TAIL, encoding="utf-8")
+        import test_fea_conditions as sourced  # the record version 2 fixture of the sourced-material tests
+
+        documents = sourced.documents()
+        sourced.fx.write_record(self.hw, documents)
         version = self.hw / "versions" / "v1"
         record = version / "record"
-        record.mkdir(parents=True)
-        for name in ("product.yaml", "interfaces.yaml", "assembly.yaml"):
-            (record / name).write_text("{}\n", encoding="utf-8")
+        for name in documents:
+            if not name.startswith("_") and (self.hw / name).is_file():
+                (record / name).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(self.hw / name, record / name)
         files = {path.relative_to(version).as_posix(): fea_static.hashlib.sha256(path.read_bytes()).hexdigest()
                  for path in version.rglob("*") if path.is_file()}
         (version / "manifest.json").write_text(json.dumps({"label": "v1", "files": files}), encoding="utf-8")
@@ -1270,6 +1295,7 @@ class VersionedPublicationTests(unittest.TestCase):
     def test_standalone_output_override_outside_cad_work_is_refused(self) -> None:
         with patch("fea_static.find_freecad", return_value=Path("/fake/freecadcmd")):
             output = __import__("io").StringIO()
+            self.case.write_text("step: beam.step\n" + CASE_TAIL, encoding="utf-8")  # a standalone case
             with patch("sys.stdout", output):
                 status = fea_static.main([str(self.case), "--out", str(self.project / "results.json")])
         self.assertEqual(status, 2)
@@ -1369,9 +1395,9 @@ class VersionedPublicationTests(unittest.TestCase):
         wrapper.parent.mkdir()
         wrapper.write_text(f'#!/bin/sh\nexec "{FREECADCMD.resolve()}" "$@"\n', encoding="utf-8")
         wrapper.chmod(0o755)
-        step = StaticFEAContracts.make_cantilever_step(self, Path(self.temporary.name))
+        step = StaticFEAContracts.make_cantilever_step(self, Path(self.temporary.name), "TST-0101 Beam")
         shutil.copyfile(step, self.case_dir / "cantilever.step")
-        self.case.write_text(f"step: cantilever.step\n{CANTILEVER_TAIL}", encoding="utf-8")
+        self.case.write_text(f"step: cantilever.step\n{CANTILEVER_VERSIONED_TAIL}", encoding="utf-8")
         env = {key: value for key, value in os.environ.items() if key not in ("CCX", "GMSH")}
         run = subprocess.run([sys.executable, str(SCRIPT), "hw/analysis/cases/cantilever/case.yaml",
                               "--hw", "hw", "--version", "v1"], cwd=self.project, capture_output=True, text=True,
@@ -1379,7 +1405,8 @@ class VersionedPublicationTests(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         report = json.loads(run.stdout)
         self.assertLess(abs(report["max_von_mises_mpa"] / 120.0 - 1), 0.05)
-        self.assertLess(abs(report["max_displacement_mm"] / 2.31884 - 1), 0.05)
+        # delta = P L^3 / (3 E I) = 50 N * (100 mm)^3 / (3 * 70000 MPa * 10 * 5^3 / 12 mm^4) = 2.285714 mm; the profile gives E = 70000
+        self.assertLess(abs(report["max_displacement_mm"] / 2.285714 - 1), 0.05)
         for tool in ("gmsh", "calculix"):  # the wrapper's directory and PATH hold neither tool
             with self.subTest(tool=tool):
                 path = Path(report["solver_versions"][tool]["path"])
@@ -1390,9 +1417,9 @@ class VersionedPublicationTests(unittest.TestCase):
 
     @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
     def test_relative_hw_publishes_a_solved_bundle(self) -> None:
-        step = StaticFEAContracts.make_cantilever_step(self, Path(self.temporary.name))
+        step = StaticFEAContracts.make_cantilever_step(self, Path(self.temporary.name), "TST-0101 Beam")
         shutil.copyfile(step, self.case_dir / "cantilever.step")
-        self.case.write_text(f"step: cantilever.step\n{CANTILEVER_TAIL}", encoding="utf-8")
+        self.case.write_text(f"step: cantilever.step\n{CANTILEVER_VERSIONED_TAIL}", encoding="utf-8")
         run = subprocess.run([sys.executable, str(SCRIPT), "hw/analysis/cases/cantilever/case.yaml",
                               "--hw", "hw", "--version", "v1"],
                              cwd=self.project, capture_output=True, text=True, timeout=600)

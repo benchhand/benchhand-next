@@ -687,17 +687,14 @@ class QualificationBypasses(SourcedFEACase):
 class LegacyExplicitValues(SourcedFEACase):
     EXPLICIT = {"E": 69000, "nu": 0.33, "density": 2700, "yield": 276}
 
-    def test_a_record_version_1_case_keeps_its_numbers_labelled_unsourced(self) -> None:
+    def test_a_version_of_an_unsupported_record_version_is_refused(self) -> None:
         docs = documents()
         docs["product.yaml"] = {key: value for key, value in docs["product.yaml"].items()
                                 if key not in ("record_version", "use_case")}
         self.build(docs)
         status, report = self.call(self.case(dict(self.EXPLICIT)))
-        self.assertEqual(status, 0, report)
-        self.assertEqual(report["material"]["source"], "unsourced_explicit")
-        self.assertEqual((report["evidence"]["level"], report["evidence"]["exploratory"], report["evidence"]["service_evidence"]),
-                         (None, True, False))
-        self.assertNotIn("engineering", report)
+        self.assertNotEqual(status, 0, report)
+        self.assertIn("record.version_unsupported", json.dumps(report))
 
     def test_a_standalone_case_keeps_its_numbers_labelled_unsourced(self) -> None:
         path = self.case(dict(self.EXPLICIT))

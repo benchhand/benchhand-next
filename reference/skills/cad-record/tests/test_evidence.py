@@ -529,11 +529,11 @@ class ProgressiveGates(unittest.TestCase):
         record = normalized(documents())
         self.assertIn("gate.use_case", codes(assess(record, packet(record)).gate("design_freeze"), "error"))
 
-    def test_a_version_1_record_gets_one_migration_gate(self) -> None:
-        legacy = mi.normalize_record({"product.yaml": {"id": "old", "flow": {"stage": "parts"}}})
-        gate = evidence.assess(legacy).gate("parts")
+    def test_a_record_of_an_unsupported_version_gets_one_version_gate(self) -> None:
+        old = mi.normalize_record({"product.yaml": {"id": "old", "flow": {"stage": "parts"}}})
+        gate = evidence.assess(old).gate("parts")
         self.assertEqual([f.code for f in gate], ["gate.record"])
-        self.assertIn("migrate.py", gate[0].message)
+        self.assertIn("record_version None is not supported", gate[0].message)
 
 
 class ReleasePolicy(unittest.TestCase):
@@ -948,14 +948,19 @@ class EvidenceRun(BuiltRecord):
         self.assertEqual((code, report["status"], self.spawned), (1, "refused", []))
         self.assertIn("stale: build the version again", report["findings"][0]["message"])
 
-    def test_a_version_1_record_is_refused_and_runs_nothing(self) -> None:
+    def test_a_record_version_other_than_2_is_refused_and_runs_nothing(self) -> None:
         product = self.hw / "product.yaml"
-        data = yaml.safe_load(product.read_text(encoding="utf-8"))
-        del data["record_version"]
-        product.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
-        code, report = self.run_scope("commit", "parts")
-        self.assertEqual((code, report["status"], report["steps"], report["packet"], self.spawned), (1, "refused", [], None, []))
-        self.assertEqual([f["code"] for f in report["findings"]], ["record.migration_required"])
+        original = yaml.safe_load(product.read_text(encoding="utf-8"))
+        for version in (1, 3, None):
+            with self.subTest(record_version=version):
+                data = {key: value for key, value in original.items() if key != "record_version"}
+                if version is not None:
+                    data["record_version"] = version
+                product.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+                code, report = self.run_scope("commit", "parts")
+                self.assertEqual((code, report["status"], report["steps"], report["packet"], self.spawned),
+                                 (1, "refused", [], None, []))
+                self.assertEqual([f["code"] for f in report["findings"]], ["record.version_unsupported"])
 
     def test_a_full_run_whose_steps_pass_fails_when_the_packet_gate_blocks(self) -> None:
         code, report = self.run_scope("full", "parts")  # nothing shows the obligations due at parts

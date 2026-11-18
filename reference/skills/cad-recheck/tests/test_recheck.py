@@ -423,15 +423,14 @@ class RecheckHookTests(unittest.TestCase):
         self.assertIn(text, result.stderr)
         self.assertFalse((self.root / "hw" / ".cad" / "recheck.json").exists())
 
-    def test_a_version_1_record_is_neither_stamped_nor_committed_at_the_threshold(self) -> None:
+    def test_a_record_without_the_current_version_is_neither_stamped_nor_committed_at_the_threshold(self) -> None:
         checks = self.evidence_packet("detail")
         self.write_product("detail", "layout", legacy=True)
         self.git("add", "hw/product.yaml")
-        self.stamp_refused(checks, "record.migration_required")
+        self.stamp_refused(checks, "record.version_unsupported")
         result = self.commit()
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("record.migration_required", result.stderr)
-        self.assertIn("migrate.py", result.stderr)
+        self.assertIn("record.version_unsupported", result.stderr)
 
     def test_a_due_unknown_check_cannot_be_stamped_passed(self) -> None:
         self.stage_product("detail")

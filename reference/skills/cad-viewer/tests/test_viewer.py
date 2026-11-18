@@ -581,6 +581,48 @@ class PartMapLoading(Fixture):
             record.load_version(self.hw, "latest")
 
 
+class OccurrenceInputSchema(Fixture):
+    """record.load_version reads part-map.json and manifest.json as schema 2 only."""
+
+    def rewrite(self, part_map: object, manifest: object) -> None:
+        """Set each input's schema_version (None: absent), as a schema-1 file would hold it, and reseal the manifest."""
+        folder = self.hw / "versions" / "v1"
+        for name, schema in (("part-map.json", part_map), ("manifest.json", manifest)):
+            data = json.loads((folder / name).read_text(encoding="utf-8"))
+            data.pop("schema_version", None)
+            if schema is not None:
+                data["schema_version"] = schema
+            if name == "manifest.json" and schema != 2:  # schema 1 keys its poses by PN
+                data["pose"]["transforms"] = {pn: rows for pn, rows in zip(PNS, data["pose"]["transforms"].values())}
+            (folder / name).write_text(json.dumps(data), encoding="utf-8")
+        data = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+        data["files"] = {p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                         for p in folder.rglob("*") if p.is_file() and p.name != "manifest.json"}
+        (folder / "manifest.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def test_schema_2_inputs_load(self) -> None:
+        make_version(self.hw, "v1")
+        self.assertEqual(record.load_version(self.hw, "v1").label, "v1")
+
+    def test_schema_1_or_unversioned_inputs_are_refused(self) -> None:
+        for label, schema in (("schema 1", 1), ("no schema", None)):
+            with self.subTest(inputs=label):
+                make_version(self.hw, "v1")
+                self.rewrite(schema, schema)
+                with self.assertRaisesRegex(ViewerError, "schema_version"):
+                    record.load_version(self.hw, "v1")
+                shutil.rmtree(self.hw / "versions")
+
+    def test_mixed_schemas_are_refused(self) -> None:
+        for part_map, manifest in ((1, 2), (2, 1), (None, 2), (2, None)):
+            with self.subTest(part_map=part_map, manifest=manifest):
+                make_version(self.hw, "v1")
+                self.rewrite(part_map, manifest)
+                with self.assertRaisesRegex(ViewerError, "schema_version"):
+                    record.load_version(self.hw, "v1")
+                shutil.rmtree(self.hw / "versions")
+
+
 class CheckFindings(Fixture):
     CHECK = {
         "status": "fail", "label": "v1", "pose": "nominal", "blocking_failures": ["interference"], "warnings": [],

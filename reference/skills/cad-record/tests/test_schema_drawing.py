@@ -144,7 +144,7 @@ class DrawingRecordAdditions(unittest.TestCase):
         (self.hw / "parts" / "TST-0002" / "sources").mkdir(parents=True, exist_ok=True)
         (self.hw / "parts" / "TST-0002" / "sources" / "dp.pdf").write_bytes(DATASHEET)
         # Record version 2 (fx.current_documents): the drawing, procurement and fit additions read the same in both
-        # versions, and a record version 1 project no longer validates (record.migration_required).
+        # versions, and a record of another version no longer validates (record.version_unsupported).
         parts = {f"parts/{pn}/part.yaml": part for pn, part in self.parts.items()}
         for name, document in fx.current_documents({**self.docs, **parts}).items():
             (self.hw / name).parent.mkdir(parents=True, exist_ok=True)

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import csv
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -52,14 +51,6 @@ class BuildGuide(unittest.TestCase):
         """The lamp example migrated to record version 2, which build_guide.py requires."""
         self.hw.rmdir()
         return fx.migrated_copy(LAMP_EXAMPLE / "hw", self.hw)
-
-    def copy_v1_lamp_example(self) -> Path:
-        shutil.copytree(LAMP_EXAMPLE / "hw", self.hw, dirs_exist_ok=True)
-        return self.hw
-
-    def copy_v1_record(self) -> Path:
-        shutil.copytree(fx.V1_MINIMAL, self.hw, dirs_exist_ok=True)
-        return self.hw
 
     def make_version(self, hw: Path, version: str) -> None:
         version_dir = hw / "versions" / version
@@ -370,9 +361,14 @@ class BuildGuide(unittest.TestCase):
         for rev, version, released_at in (("A", "v3", "2026-10-01T00:00:00Z"), ("B", "v4", "2026-10-02T00:00:00Z")):
             (hw / "releases" / rev).mkdir(parents=True)
             (hw / "releases" / rev / "manifest.json").write_text(json.dumps({
-                "schema_version": 2, "product_id": "released", "rev": rev, "released_at": released_at,
+                "schema_version": 3, "product_id": "released", "rev": rev, "released_at": released_at,
                 "frozen": {"version": version}, "files": {"bom.csv": {"sha256": "0" * 64, "original": "hw/bom.csv"}},
             }), encoding="utf-8")
+        (hw / "releases" / "C").mkdir(parents=True)  # a manifest version this guide does not know cites nothing
+        (hw / "releases" / "C" / "manifest.json").write_text(json.dumps({
+            "schema_version": 2, "product_id": "released", "rev": "C", "released_at": "2026-10-03T00:00:00Z",
+            "frozen": {"version": "v5"}, "files": {"bom.csv": {"sha256": "0" * 64, "original": "hw/bom.csv"}},
+        }), encoding="utf-8")
         for version, link, release in (("v3", "[hw/releases/A/manifest.json](", ("A", "2026-10-01")),
                                        ("v4", "[hw/releases/B/manifest.json](", ("B", "2026-10-02")),
                                        ("v5", "MISSING: no hw/releases/<REV>/manifest.json approves v5 |",
@@ -413,27 +409,21 @@ class BuildGuide(unittest.TestCase):
         self.assertIn("version manifest is missing", result.stderr)
         self.assertFalse((self.out / "index.md").exists())
 
-    def test_a_version_1_record_is_refused_with_the_migration_finding_and_nothing_is_written(self) -> None:
-        hw = self.copy_v1_record()
-        self.assertNotIn("record_version", (hw / "product.yaml").read_text(encoding="utf-8"), "the input is version 1")
-        self.make_version(hw, "v1")
-        result = self.run_guide(hw)
-        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn("record.migration_required", result.stderr)
-        self.assertIn("migrate.py", result.stderr)
-        self.assertFalse(self.out.exists())
-
     def test_an_unsupported_record_version_is_refused_with_the_version_finding(self) -> None:
         hw = self.copy_lamp_example()
         self.make_version(hw, "v1")
         path = hw / "product.yaml"
-        product = yaml.safe_load(path.read_text(encoding="utf-8"))
-        product["record_version"] = 3
-        path.write_text(yaml.safe_dump(product, sort_keys=False), encoding="utf-8")
-        result = self.run_guide(hw)
-        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn("record.version_unsupported", result.stderr)
-        self.assertFalse(self.out.exists())
+        original = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for version in (1, 3, None):
+            product = {**original, "record_version": version}
+            if version is None:
+                del product["record_version"]
+            path.write_text(yaml.safe_dump(product, sort_keys=False), encoding="utf-8")
+            result = self.run_guide(hw)
+            with self.subTest(record_version=version):
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn("record.version_unsupported", result.stderr)
+                self.assertFalse(self.out.exists())
 
 
 if __name__ == "__main__":

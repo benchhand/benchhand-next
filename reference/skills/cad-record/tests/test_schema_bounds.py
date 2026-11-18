@@ -289,7 +289,6 @@ NOT_IN_AUDIT = {
     ("manufacturing-materials.schema.json", "/$defs/profile/properties/revision"): "a revision counter",
     ("manufacturing.schema.json", "/$defs/money/properties/amount"): "sign-only; a plausibility band is tracked in #141",
     ("part.schema.json", "/$defs/component/properties/multiplicity"): "an instance count",
-    ("release-manifest.schema.json", "/$defs/v2/properties/manufacturing/additionalProperties/properties/quantity"): "a unit count",
     ("release-manifest.schema.json", "/$defs/v3/properties/manufacturing/additionalProperties/properties/quantity"): "a unit count",
 }
 # Nodes that a listed case covers without a case of their own

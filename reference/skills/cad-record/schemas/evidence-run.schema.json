@@ -8,7 +8,7 @@
   "properties": {
     "kind": {"const": "cad-evidence-run"},
     "schema_version": {"const": 1},
-    "status": {"description": "pass: every step passed (and, in the full scope, the packet's gate); fail: a step or the full scope's gate blocked; no_result: a producer gave no result or a stray run was found; refused: the version is not built or the record is record version 1", "enum": ["pass", "fail", "no_result", "refused"]},
+    "status": {"description": "pass: every step passed (and, in the full scope, the packet's gate); fail: a step or the full scope's gate blocked; no_result: a producer gave no result or a stray run was found; refused: the version is not built or the record is not record version 2", "enum": ["pass", "fail", "no_result", "refused"]},
     "scope": {"enum": ["commit", "full"]},
     "stage": {"description": "the gate the packet applies; null only when the run was refused before reading it", "type": ["string", "null"]},
     "version": {"type": "string"},

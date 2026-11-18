@@ -415,21 +415,18 @@ class TreeAudit(TempProject):
     def test_exceptions_rules_and_strays(self) -> None:
         for rel in ("versions/.v2.partial-41/parts/LMP-0001.step", "versions/.latest.json.tmp", ".cad/.recheck.json.tmp",
                     "docs/.DS_Store", "parts/LMP-0001/__pycache__/model.cpython-312.pyc", ".gitignore",
-                    "drawings/LMP-0001/sheet-1.svg", "renders/v3/iso.png", "concept/screenshots/x-1.png",
                     "parts/LMP-0001/.cad-work/hw/part.yaml", "notes.md", "parts/LMP-0001/helper.py", "print/flat.dat",
                     "specs/datasheet.pdf"):
             write(self.hw / rel)
         self.assertEqual(self.codes(**{"hw/specs/datasheet.pdf": "LMP-0008"}), {
             "hw/versions/.v2.partial-41": "layout.transient", "hw/versions/.latest.json.tmp": "layout.transient",
             "hw/.cad/.recheck.json.tmp": "layout.transient", "hw/docs/.DS_Store": "layout.metadata",
-            "hw/parts/LMP-0001/__pycache__": "layout.metadata", "hw/drawings/LMP-0001/sheet-1.svg": "layout.legacy",
-            "hw/renders/v3/iso.png": "layout.legacy", "hw/concept/screenshots/x-1.png": "layout.legacy",
+            "hw/parts/LMP-0001/__pycache__": "layout.metadata",
             "hw/parts/LMP-0001/.cad-work": "layout.nested_scratch", "hw/notes.md": "layout.stray",
             "hw/parts/LMP-0001/helper.py": "layout.stray", "hw/print/flat.dat": "layout.stray",
             "hw/specs/datasheet.pdf": "layout.misplaced"})
         canonical = {p.path: p.canonical_location for p in layout.audit(self.hw, {"hw/specs/datasheet.pdf": "LMP-0008"}).problems}
         self.assertEqual(canonical["hw/notes.md"], "hw/docs/notes.md")
-        self.assertEqual(canonical["hw/drawings/LMP-0001/sheet-1.svg"], "hw/drawings/<V>/LMP-0001/")
         self.assertEqual(canonical["hw/specs/datasheet.pdf"], "hw/parts/LMP-0008/sources/datasheet.pdf")
         self.assertEqual(canonical["hw/parts/LMP-0001/helper.py"], ".cad-work/migration/parts/LMP-0001/helper.py")
 

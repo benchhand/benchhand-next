@@ -37,9 +37,36 @@ def shared() -> Any:
     if name not in sys.modules:
         spec = importlib.util.spec_from_file_location(name, SHARED)
         assert spec and spec.loader
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # registered only once complete: two build threads may call this together
+        sys.modules[name] = module
     return sys.modules[name]
+
+
+# Nominal fully dense densities (g/cm3) of the materials the hand-written test projects name.
+DENSITIES = {"PETG": 1.27, "Aluminum 6061-T6": 2.70, "TPU 95A": 1.21}
+
+
+def profile_id(material: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", material.lower()).strip("_")
+
+
+def part_intent(material: str, route: Any = None) -> dict[str, Any]:
+    """The intent of a hand-written test part: the material profile of its `material` name, when it has one."""
+    return shared().intent(material_profile=profile_id(material) if material in DENSITIES else None, route=route)
+
+
+def upgrade_project(hw: Path) -> Path:
+    """Complete a hand-written test project below `hw` as a record version 2 record, with a density-only
+    material profile for each material in DENSITIES."""
+    fx = shared()
+    fx.upgrade_record(hw)
+    profiles = [fx.material_profile(profile_id(name), properties=[fx.material_property("density", density, "g_cm3")])
+                for name, density in DENSITIES.items()]
+    import yaml
+
+    (hw / "manufacturing" / "materials.yaml").write_text(yaml.safe_dump({"profiles": profiles}, sort_keys=False), encoding="utf-8")
+    return hw
 
 
 def printer(ident: str = "tst_printer", process: str = "fdm") -> dict[str, Any]:

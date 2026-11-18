@@ -33,6 +33,8 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import yaml
+
 HERE = Path(__file__).resolve().parent
 CORPUS = HERE.parent
 SKILLS = CORPUS.parents[2]
@@ -46,6 +48,23 @@ FIXTURES = CORPUS / "fixtures" / "oracles"
 PARTS = {"TST-0001": ("Base block", "base", "block.py"), "TST-0002": ("Mounting plate", "plate", "plate.py"),
          "TST-0003": ("Heat-set insert", "insert", "insert.py")}
 DEFAULT = {"base": {}, "plate": {}, "insert": {}, "hole_d": 7.77}
+# Record version 2 documents. The project is a bare synthetic record: every manufacturing-intent field is an explicit
+# unknown, because the oracles read the model and its exports, never the manufacturing intent.
+UNKNOWN = {"status": "unknown", "reason": "not recorded in the oracle corpus"}
+USE_CASE_GROUPS = {"environment": ("temperature", "heat_sources", "moisture", "chemicals", "uv", "corrosion"),
+                   "loads": (), "motion": ("speed", "range", "duty_cycle", "friction", "wear", "service_life"),
+                   "accuracy": ("tolerance", "repeatability", "surface_finish", "dimensional_stability"),
+                   "consequences": ("failure", "severity", "forbidden_outcomes", "standards", "supervision",
+                                    "approval_authority"),
+                   "logistics": ("quantity", "budget", "lead_time", "maintenance", "repair"),
+                   "capability": ("equipment", "operator", "outsourcing"),
+                   "release_scope": ("purpose", "operating_limits", "exclusions")}
+REQUIREMENTS = {"requirements": [{"id": "REQ-001", "text": "corpus requirement", "rationale": "corpus",
+                                  "source": "corpus", "priority": "must",
+                                  "verification": {"method": "T", "criteria": "corpus"}}],
+                "preferences": [], "assumptions": [], "open_questions": []}
+MANUFACTURING = {"capabilities.yaml": {"profiles": []}, "materials.yaml": {"profiles": []},
+                 "selection.yaml": {"status": "not_assessed", "candidates": []}}
 INTERFACES = """interfaces:
   - id: IF-001
     from: base
@@ -55,17 +74,33 @@ INTERFACES = """interfaces:
     limits:
       heat_set:
         - {{pair: [TST-0001, TST-0003], hole_d: {hole_d}, hole_tol: [-0.04, 0.04], insert: "M4 x 8", source: "corpus", feature: seat}}
+    functional:
+      critical: {{status: unknown, reason: not recorded in the oracle corpus}}
+      functions: {{status: unknown, reason: not recorded in the oracle corpus}}
 """
 ASSEMBLY = """joints:
   - {id: J-001, type: fixed, parent: TST-0001, child: TST-0002, axis: [0, 0, 1], origin: [0, 0, 0], min: 0, max: 0, nominal: 0}
   - {id: J-002, type: fixed, parent: TST-0001, child: TST-0003, axis: [0, 0, 1], origin: [0, 0, 0], min: 0, max: 0, nominal: 0}
+operations: {status: unknown, reason: not recorded in the oracle corpus}
 """
+
+
+def product_record() -> dict[str, Any]:
+    use_case: dict[str, Any] = {**UNKNOWN, "service_class": UNKNOWN, "purpose": UNKNOWN, "users": UNKNOWN}
+    for group, names in USE_CASE_GROUPS.items():
+        use_case[group] = {name: UNKNOWN for name in names} if names else UNKNOWN
+    use_case["evidence_policy"] = UNKNOWN
+    return {"id": "oracles", "record_version": 2, "use_case": use_case}
 
 
 def write_project(hw: Path, model: dict[str, Any]) -> None:
     hw.mkdir(parents=True)
-    (hw / "product.yaml").write_text("id: oracles\n", encoding="utf-8")
+    (hw / "product.yaml").write_text(yaml.safe_dump(product_record(), sort_keys=False), encoding="utf-8")
+    (hw / "requirements.yaml").write_text(yaml.safe_dump(REQUIREMENTS, sort_keys=False), encoding="utf-8")
     (hw / "assembly.yaml").write_text(ASSEMBLY, encoding="utf-8")
+    (hw / "manufacturing").mkdir()
+    for name, document in MANUFACTURING.items():
+        (hw / "manufacturing" / name).write_text(yaml.safe_dump(document), encoding="utf-8")
     write_models(hw, model)
 
 
@@ -83,9 +118,11 @@ def write_models(hw: Path, model: dict[str, Any]) -> None:
         folder = hw / "parts" / pn
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "model.py").write_text(source, encoding="utf-8")
-        (folder / "part.yaml").write_text(
-            f"PN: {pn}\nrev: X1\ntitle: {title}\nmaterial: PETG\nprocess: cnc\nfinish: none\nmass_target: 100\n"
-            "make_buy: make\nsupplier: null\n", encoding="utf-8")
+        part = {"PN": pn, "rev": "X1", "title": title, "material": "PETG", "process": "cnc", "finish": "none",
+                "mass_target": 100, "make_buy": "make", "supplier": None,
+                "intent": {name: UNKNOWN for name in ("functions", "material_profile", "service", "critical_surfaces",
+                                                      "route")}}
+        (folder / "part.yaml").write_text(yaml.safe_dump(part, sort_keys=False), encoding="utf-8")
 
 
 def with_defaults(model: dict[str, Any] | None) -> dict[str, Any]:

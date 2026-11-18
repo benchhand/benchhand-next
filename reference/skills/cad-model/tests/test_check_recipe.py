@@ -111,8 +111,7 @@ class ReadbackRecipeTests(unittest.TestCase):
             for relative, change in (("cad-model/scripts/cadmodel/check.py", None),
                                      ("cad-model/scripts/cadmodel/manufacture.py", None),
                                      ("cad-model/scripts/cadmodel/occ.py", None),
-                                     ("cad-fits/data/iso286.json", ISO286_IT6_EDIT),
-                                     ("cad-model/assets/materials.yaml", None)):
+                                     ("cad-fits/data/iso286.json", ISO286_IT6_EDIT)):
                 with self.subTest(edited=relative), edited(tree, relative, change):
                     after = probe(tree)
                     self.assertNotEqual(after["readback"], before["readback"])

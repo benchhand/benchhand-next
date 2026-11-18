@@ -326,17 +326,19 @@ class Release(ReleaseCase):
         """stackup.py publishes the stack at hw/analysis/cases/<case>/case.yaml as hw/analysis/<V>/<case>/, the
         bundle release.py requires for that case, whatever the stack's own (uppercase) id."""
         hw = self.project()
-        stack = {"id": "STK-001", "title": "Bearing end float", "units": "mm",
-                 "requirement": {"min": 0.0, "max": 0.40, "method": "worst_case"},
-                 "contributors": [{"id": "A", "nominal": 50.0, "tol": 0.05, "direction": 1},
-                                  {"id": "B", "nominal": 49.8, "tol": 0.05, "direction": -1}]}
+        source = {"kind": "user", "reference": "TST stack input", "origin": "TST fixture user"}
+        stack = {"intent_version": 2, "id": "STK-001", "title": "Bearing end float", "units": "mm",
+                 "subject": {"PN": "LMP-0002", "feature": "hub_bore"}, "dimension_state": "assembled", "consequence": "performance",
+                 "relevant": ["assembly"], "requirement": {"min": 0.0, "max": 0.40, "method": "worst_case", "source": source},
+                 "contributors": [{"id": "A", "category": "assembly", "nominal": 50.0, "tol": 0.05, "direction": 1, "source": source},
+                                  {"id": "B", "category": "assembly", "nominal": 49.8, "tol": 0.05, "direction": -1, "source": source}]}
         case = write(hw / "analysis" / "cases" / "end-float" / "case.yaml", yaml.safe_dump(stack, sort_keys=False))
         code, report = self.release(hw)
         self.assertEqual(code, 1)
         self.assertIn("analysis case end-float has no result for v1", json.dumps(report["findings"]))
         run = subprocess.run([sys.executable, str(STACKUP), str(case), "--hw", str(hw), "--version", "v1"],
                              capture_output=True, text=True, timeout=120, check=False)
-        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(run.returncode, 0, run.stderr + run.stdout[-3000:])
         self.assertEqual(json.loads(run.stdout)["bundle"], str(hw / "analysis" / "v1" / "end-float"))
         code, report = self.release(hw)
         self.assertEqual(code, 0, report.get("findings"))
@@ -548,6 +550,18 @@ class Pruning(ReleaseCase):
         with self.assertRaisesRegex(layout.LayoutError, "manifest version 9"):
             prune.plan(hw, "A", "v3")
 
+    def test_a_missing_or_older_release_manifest_schema_refuses_the_plan_and_changes_nothing(self) -> None:
+        hw = self.released()
+        manifest_path = hw / "releases" / "B" / "manifest.json"
+        for label, document, named in (("missing schema", {"product_id": "lamp-arm", "rev": "B", "files": ["hw/bom.csv"]}, "None"),
+                                       ("schema 2", {"schema_version": 2, "product_id": "lamp-arm", "rev": "B"}, "2")):
+            with self.subTest(manifest=label):
+                write(manifest_path, json.dumps(document))
+                before = tree(hw)
+                with self.assertRaisesRegex(layout.LayoutError, f"manifest version {named}"):
+                    prune.plan(hw, "A", "v3")
+                self.assertEqual(tree(hw), before, "a refused plan changes no file")
+
 
 class Documents(ReleaseCase):
     def guide(self, hw: Path, *extra: str) -> None:
@@ -722,18 +736,18 @@ def open_selection(hw: Path) -> None:
 class Acceptance(ReleaseCase):
     """The intent acceptance of a record version 2 release: anchor, evidence and service policy."""
 
-    def test_a_version_1_record_refuses_until_it_is_migrated(self) -> None:
+    def test_a_record_without_the_current_version_refuses(self) -> None:
         hw = self.project()
         edit_yaml(hw / "product.yaml", lambda data: data.pop("record_version"))
         before = tree(hw)
         code, report = self.release(hw)
         self.assertEqual((code, report["status"]), (1, "refused"))
-        self.assertIn("record.migration_required", [item.get("code") for item in report["findings"]])
+        self.assertIn("record.version_unsupported", [item.get("code") for item in report["findings"]])
         self.assertEqual(tree(hw), before)
 
     def test_a_freeze_without_an_acceptance_anchor_refuses(self) -> None:
         hw = self.project(anchor=False)
-        self.assertEqual(validate.blocking(validate.validate_project(hw)), [], "readable: a legacy-freeze warning only")
+        self.assertEqual(validate.blocking(validate.validate_project(hw)), [], "readable: only the release refuses an unanchored freeze")
         self.refused_with(hw, "release.frozen", "anchors no evidence_sha256")
 
     def test_evidence_accepted_after_the_freeze_needs_a_new_anchor(self) -> None:
@@ -771,7 +785,7 @@ class Acceptance(ReleaseCase):
         hw = self.project(service_class="production", ledger=waive_fdm_trials)
         self.refused_with(hw, "release.acceptance", "release.trial_not_permitted")
 
-    def test_a_sealed_package_is_read_by_its_own_manifest_version(self) -> None:
+    def test_a_sealed_package_is_verified_and_any_other_manifest_version_is_refused(self) -> None:
         hw = self.project()
         self.assertEqual(self.release(hw)[0], 0)
         code, report = release.sealed(hw, "A", "v1", "DR-005")
@@ -783,15 +797,10 @@ class Acceptance(ReleaseCase):
         code, report = release.sealed(hw, "A", "v1", "DR-005")
         self.assertEqual(code, 1)
         self.assertIn("not the digest of its sealed inventory", report["findings"][0]["message"])
-        # the same package as a version 2 seal: inspectable as sealed, never re-certified as version 3
-        legacy = {key: value for key, value in manifest.items() if key not in ("acceptance", "record_version")}
-        legacy.update(schema_version=2, files={k: v for k, v in manifest["files"].items() if not k.startswith("acceptance/")},
-                      manufacturing={pn: {k: v for k, v in entry.items() if k != "route"}
-                                     for pn, entry in manifest["manufacturing"].items()})
-        shutil.rmtree(hw / "releases" / "A" / "acceptance")
-        path.write_text(json.dumps(legacy), encoding="utf-8")
+        path.write_text(json.dumps({**manifest, "schema_version": 2}), encoding="utf-8")
         code, report = release.sealed(hw, "A", "v1", "DR-005")
-        self.assertEqual((code, report["manifest_version"]), (0, 2))
+        self.assertEqual(code, 1)
+        self.assertIn("its manifest version 2 is not one this release.py reads", report["findings"][0]["message"])
 
     def test_an_open_or_stale_selection_refuses_the_release(self) -> None:
         hw = self.project(before_build=open_selection)

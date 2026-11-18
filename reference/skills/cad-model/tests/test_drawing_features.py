@@ -9,6 +9,7 @@ The capture tests build small two-part projects through `cad_model.py run` in bo
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import re
 import subprocess
@@ -202,6 +203,18 @@ def set_model(hw: Path, pn: str, kernel: str, fixture: str, title: str, params: 
                                       "mass_target: 100\nmake_buy: make\nsupplier: null\n", encoding="utf-8")
 
 
+def upgrade(hw: Path) -> Path:
+    """Complete the hand-written project below `hw` as a record version 2 record (cad-model's project fixtures)."""
+    name = "cad_model_manufacturing_projects"
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, FIXTURES / "manufacturing_projects.py")
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # registered only once complete: kernels build in threads
+        sys.modules[name] = module
+    return sys.modules[name].upgrade_project(hw)
+
+
 def project(root: Path, name: str, base: tuple[str, str], arm_kernel: str) -> Path:
     hw = root / name / "hw"
     hw.mkdir(parents=True)
@@ -209,7 +222,7 @@ def project(root: Path, name: str, base: tuple[str, str], arm_kernel: str) -> Pa
     (hw / "assembly.yaml").write_text(ASSEMBLY, encoding="utf-8")
     set_model(hw, "TST-0001", base[0], base[1], "Base block")
     set_model(hw, "TST-0002", arm_kernel, "arm.py", "Swing arm", ARM)
-    return hw
+    return upgrade(hw)
 
 
 def run(hw: Path, label: str) -> tuple[subprocess.CompletedProcess[str], dict]:

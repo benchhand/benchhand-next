@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""assembly_operations: one normalizer of new and legacy operations, its dual-authority refusal, declared
+"""assembly_operations: one normalizer of operations, its drawing.operations refusal, declared
 insertion paths, and the pure joint-evidence checks with their `assembly.joint` outcomes. Kernel-free; the
 order checks of plan section 11 row 15 are in skills/cad-motion/tests/test_access.py beside the geometric ones."""
 
@@ -36,11 +36,9 @@ def validator(definition: str):
 
 
 class NormalizeTests(unittest.TestCase):
-    def test_new_and_legacy_operations_normalize_to_the_same_semantics(self) -> None:
+    def test_operations_normalize_from_the_top_level_list(self) -> None:
         current = ops.normalize({"operations": [PRESS]})
-        legacy = ops.normalize({"drawing": {"number": "D-1", "operations": [PRESS]}})
-        self.assertEqual((current.authority, legacy.authority), ("operations", "drawing.operations"))
-        self.assertEqual(ops.summary(current), ops.summary(legacy))
+        self.assertEqual(current.authority, "operations")
         [op] = current.items
         self.assertEqual(op.direction, (0.0, 0.0, -1.0))
         self.assertTrue(op.installs and op.geometric_acceptance)
@@ -48,10 +46,12 @@ class NormalizeTests(unittest.TestCase):
         self.assertFalse(op.tools[0].declared or op.tools[0].reach_known)
         self.assertIsNone(op.tools[0].envelope_artifact)
 
-    def test_both_authorities_are_refused(self) -> None:
-        with self.assertRaises(ops.OperationsError) as caught:
-            ops.normalize({"operations": [PRESS], "drawing": {"operations": [PRESS]}})
-        self.assertEqual(caught.exception.code, "intent.dual_authority")
+    def test_drawing_operations_are_refused_beside_or_instead_of_the_top_level_list(self) -> None:
+        for assembly in ({"operations": [PRESS], "drawing": {"operations": [PRESS]}},
+                         {"drawing": {"number": "D-1", "operations": [PRESS]}}):
+            with self.subTest(assembly=assembly), self.assertRaises(ops.OperationsError) as caught:
+                ops.normalize(assembly)
+            self.assertEqual(caught.exception.code, "intent.dual_authority")
 
     def test_unknown_or_absent_operations_stay_unknown(self) -> None:
         unknown = ops.normalize({"operations": fx.unknown("not planned yet")})

@@ -39,41 +39,6 @@ if "cad_record_mi_fixtures" not in sys.modules:
 intent = fx.intent_module()
 ON = date(2026, 6, 1)
 
-# Bearing end float: housing width A closes against two bearings B, D and a spacer C.
-#   A = 50.00 +0.10/-0.00 (+)   B = D = 20.00 +/-0.05 (-)   C = 9.90 +0.00/-0.06 (-)
-# Hand calculation:
-#   nominal gap      = 50.00 - 20.00 - 9.90 - 20.00                      = 0.10
-#   worst-case max   = 50.10 - 19.95 - 9.84 - 19.95                      = 0.36
-#   worst-case min   = 50.00 - 20.05 - 9.90 - 20.05                      = 0.00
-#   mid-limit means  = 50.05 - 20.00 - 9.87 - 20.00                      = 0.18
-#   RSS half-range   = sqrt(0.05^2 + 0.05^2 + 0.03^2 + 0.05^2) = sqrt(0.0084) = 0.0916515
-#   RSS min / max    = 0.18 -/+ 0.0916515                                = 0.0883485 / 0.2716515
-STACK = {
-    "id": "STK-001",
-    "title": "Bearing end float",
-    "units": "mm",
-    "requirement": {"min": 0.02, "max": 0.40, "method": "worst_case"},
-    "contributors": [
-        {"id": "A", "nominal": 50.00, "tol_plus": 0.10, "tol_minus": 0.00, "direction": 1},
-        {"id": "B", "nominal": 20.00, "tol": 0.05, "direction": -1},
-        {"id": "C", "nominal": 9.90, "tol_plus": 0.00, "tol_minus": 0.06, "direction": -1},
-        {"id": "D", "nominal": 20.00, "tol": 0.05, "direction": -1},
-    ],
-}
-
-STACK_YAML = """\
-id: STK-001
-title: Bearing end float
-units: mm
-requirement: {min: 0.02, max: 0.40, method: worst_case}
-contributors:
-  - {id: A, nominal: 50.00, tol_plus: 0.10, tol_minus: 0.00, direction: 1}
-  - {id: B, nominal: 20.00, tol: 0.05, direction: -1}
-  - {id: C, nominal: 9.90, tol_plus: 0.00, tol_minus: 0.06, direction: -1}
-  - {id: D, nominal: 20.00, tol: 0.05, direction: -1}
-"""
-
-
 def fixture(name: str) -> dict:
     return yaml.safe_load((FIXTURES / name).read_text(encoding="utf-8"))
 
@@ -161,50 +126,6 @@ def evidence_module() -> object:
 def check_result_validator():
     """A validator of cad-record manufacturing-check-result.schema.json, the packet contract, offline."""
     return fx.ref_validator("https://srobroek.com/cad/schemas/manufacturing-check-result.schema.json")
-
-
-class StackupHandCalculationTests(unittest.TestCase):
-    def test_worst_case_and_rss_match_hand_calculation(self) -> None:
-        result = stackup.compute(STACK)
-        self.assertAlmostEqual(result["nominal"], 0.10, places=6)
-        self.assertAlmostEqual(result["mean"], 0.18, places=6)
-        self.assertAlmostEqual(result["worst_case"]["min"], 0.00, places=6)
-        self.assertAlmostEqual(result["worst_case"]["max"], 0.36, places=6)
-        rss = math.sqrt(0.0084)
-        self.assertAlmostEqual(result["rss"]["half_range"], rss, places=6)
-        self.assertAlmostEqual(result["rss"]["min"], 0.18 - rss, places=6)
-        self.assertAlmostEqual(result["rss"]["max"], 0.18 + rss, places=6)
-
-    def test_requirement_verdict_follows_governing_method(self) -> None:
-        result = stackup.compute(STACK)
-        self.assertEqual(result["requirement"]["pass_by_method"], {"worst_case": False, "rss": True})
-        self.assertFalse(result["requirement"]["pass"])
-        rss_governed = dict(STACK, requirement={"min": 0.02, "max": 0.40, "method": "rss"})
-        self.assertTrue(stackup.compute(rss_governed)["requirement"]["pass"])
-
-    def test_legacy_quadrature_stays_labelled_an_unqualified_heuristic(self) -> None:
-        rss = stackup.compute(STACK)["rss"]
-        self.assertIn("unqualified quadrature heuristic", rss["qualification"])
-        self.assertIn("not a probabilistic range", rss["qualification"])
-
-    def test_contribution_shares_sum_to_100(self) -> None:
-        rows = stackup.compute(STACK)["contributors"]
-        self.assertAlmostEqual(sum(r["wc_contribution_pct"] for r in rows), 100.0, places=4)
-        self.assertAlmostEqual(sum(r["rss_contribution_pct"] for r in rows), 100.0, places=4)
-
-    def test_invalid_contributors_are_rejected(self) -> None:
-        bad_cases = [
-            {"contributors": []},
-            {"contributors": [{"nominal": 1.0, "tol": 0.1, "direction": 2}]},
-            {"contributors": [{"nominal": 1.0, "tol": -0.1, "direction": 1}]},
-            {"contributors": [{"nominal": 1.0, "tol_plus": 0.1, "direction": 1}]},
-            {"contributors": [{"nominal": 1.0, "tol": 0.1, "tol_plus": 0.1, "tol_minus": 0.1, "direction": 1}]},
-            {"contributors": [{"nominal": "1", "tol": 0.1, "direction": 1}]},
-            {"contributors": [{"nominal": 1.0, "tol": 0.1, "direction": 1}], "requirement": {"method": "rss"}},
-        ]
-        for case in bad_cases:
-            with self.subTest(case=case), self.assertRaises(stackup.StackError):
-                stackup.compute(case)
 
 
 class IntentStackContractTests(unittest.TestCase):
@@ -390,9 +311,14 @@ class IntentStackContractTests(unittest.TestCase):
             with self.subTest(case=mutate.__name__), self.assertRaises(stackup.StackError):
                 stackup.compute(stack)
 
-    def test_a_legacy_stack_cannot_bind_a_record(self) -> None:
-        with self.assertRaises(stackup.StackError):
-            stackup.compute(copy.deepcopy(STACK), record=object())
+    def test_a_stack_without_intent_version_2_is_refused(self) -> None:
+        stack = fixture("closing_gap.yaml")
+        for version in (1, "2", True):
+            with self.subTest(intent_version=version), self.assertRaisesRegex(stackup.StackError, "intent_version must be 2"):
+                stackup.compute({**stack, "intent_version": version})
+        del stack["intent_version"]
+        with self.assertRaisesRegex(stackup.StackError, "intent_version must be 2"):
+            stackup.compute(stack)
 
     # ---- row 10: laser tab-and-slot
 
@@ -570,51 +496,10 @@ class StackupCliTests(unittest.TestCase):
                 timeout=300,
             )
 
-    def test_failing_requirement_exits_1_with_json(self) -> None:
-        proc = self.run_cli(STACK_YAML)
-        self.assertEqual(proc.returncode, 1, proc.stderr)
-        result = json.loads(proc.stdout)
-        self.assertAlmostEqual(result["worst_case"]["max"], 0.36, places=6)
-
-    def test_passing_requirement_exits_0(self) -> None:
-        proc = self.run_cli(STACK_YAML.replace("method: worst_case", "method: rss"))
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-
     def test_malformed_yaml_exits_2(self) -> None:
         proc = self.run_cli("contributors: [unclosed\n")
         self.assertEqual(proc.returncode, 2)
         self.assertIn("invalid YAML", proc.stderr)
-
-    def test_stack_publishes_a_version_bound_analysis_bundle(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            project = root / "project"
-            hw = project / "hw"
-            hw.mkdir(parents=True)
-            version = hw / "versions" / "v1"
-            version.mkdir(parents=True)
-            record = version / "record"
-            record.mkdir()
-            (record / "product.yaml").write_text("{}\n", encoding="utf-8")
-            files = {path.relative_to(version).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-                     for path in version.rglob("*") if path.is_file()}
-            (version / "manifest.json").write_text(json.dumps({"label": "v1", "files": files}), encoding="utf-8")
-            stack = dict(STACK)
-            stack["id"] = "STK-101"
-            stack_dir = hw / "analysis" / "cases" / "stk-101"
-            stack_dir.mkdir(parents=True)
-            stack_path = stack_dir / "stack.yaml"
-            stack_path.write_text(yaml.safe_dump(stack, sort_keys=False), encoding="utf-8")
-            proc = subprocess.run(["uv", "run", "--quiet", "--script", str(SCRIPT), str(stack_path),
-                                   "--hw", str(hw), "--version", "v1"], capture_output=True, text=True,
-                                  check=False, timeout=300)
-            self.assertEqual(proc.returncode, 1, proc.stderr)
-            output = json.loads(proc.stdout)
-            bundle = hw / "analysis" / "v1" / "STK-101"
-            manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(output["bundle"], str(bundle))
-            self.assertEqual(manifest["recipe"]["source_yaml_sha256"], hashlib.sha256(stack_path.read_bytes()).hexdigest())
-            self.assertEqual(json.loads((bundle / "results.json").read_text(encoding="utf-8"))["nominal"], 0.1)
 
     def test_intent_stack_binds_the_version_record_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -634,26 +519,57 @@ class StackupCliTests(unittest.TestCase):
             self.assertEqual(manifest["recipe"]["options"]["intent_version"], 2)
             self.assertEqual(output["check_bundle"], "hw/checks/v1/stack-closing-gap")
 
+    def assembly_stack(self) -> dict:
+        """A PN-subject stack of two sourced assembly contributors that passes: 0.2 mm +/- 0.1 against 0.0 to 0.4."""
+        source = {"kind": "user", "reference": "TST stack input", "origin": "TST fixture user"}
+        return {"intent_version": 2, "id": "STK-021", "title": "PN stack", "units": "mm",
+                "subject": {"PN": "TST-0001", "feature": "pivot_bore"}, "dimension_state": "assembled",
+                "consequence": "performance", "relevant": ["assembly"],
+                "requirement": {"min": 0.0, "max": 0.4, "method": "worst_case", "source": source},
+                "contributors": [{"id": "A", "category": "assembly", "nominal": 50.2, "tol": 0.05, "direction": 1, "source": source},
+                                 {"id": "B", "category": "assembly", "nominal": 50.0, "tol": 0.05, "direction": -1, "source": source}]}
+
+    def test_a_snapshot_that_is_not_record_version_2_is_refused_and_nothing_is_published(self) -> None:
+        for label, change in (("absent", lambda text: text.replace("record_version: 2\n", "")),
+                              ("unknown", lambda text: text.replace("record_version: 2", "record_version: 3")),
+                              ("non-mapping", lambda text: "- not\n- a mapping\n")):
+            with self.subTest(snapshot=label), tempfile.TemporaryDirectory() as directory:
+                hw = fx.write_record(Path(directory) / "project" / "hw", closing_gap_documents())
+                case = write_case(hw, "pn-stack", self.assembly_stack())
+                snapshot_version(hw)
+                product = hw / "versions" / "v1" / "record" / "product.yaml"
+                product.write_text(change(product.read_text(encoding="utf-8")), encoding="utf-8")
+                version = hw / "versions" / "v1"  # reseal the manifest over the edited snapshot, so only the version is wrong
+                files = {path.relative_to(version).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                         for path in version.rglob("*") if path.is_file() and path.name != "manifest.json"}
+                (version / "manifest.json").write_text(json.dumps({"label": "v1", "files": files}), encoding="utf-8")
+                args = ["uv", "run", "--quiet", "--script", str(SCRIPT), str(case), "--hw", str(hw), "--version", "v1"]
+                proc = subprocess.run(args, capture_output=True, text=True, check=False, timeout=300)
+                self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+                self.assertIn("record_version", proc.stderr)
+                self.assertFalse((hw / "analysis" / "v1").exists(), "no analysis bundle")
+                self.assertFalse((hw / "checks").exists(), "no check packet")
+
+    def test_the_same_pn_stack_passes_against_a_record_version_2_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            hw = fx.write_record(Path(directory) / "project" / "hw", closing_gap_documents())
+            case = write_case(hw, "pn-stack", self.assembly_stack())
+            snapshot_version(hw)
+            proc = subprocess.run(["uv", "run", "--quiet", "--script", str(SCRIPT), str(case), "--hw", str(hw),
+                                   "--version", "v1"], capture_output=True, text=True, check=False, timeout=300)
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertTrue((hw / "analysis" / "v1" / "pn-stack").is_dir())
+
     def test_rerun_reuses_bundle_and_recipe_change_requires_replace(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            project = root / "project"
-            hw = project / "hw"
-            version = hw / "versions" / "v1"
-            record = version / "record"
-            record.mkdir(parents=True)
-            (record / "product.yaml").write_text("{}\n", encoding="utf-8")
-            files = {path.relative_to(version).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-                     for path in version.rglob("*") if path.is_file()}
-            (version / "manifest.json").write_text(json.dumps({"label": "v1", "files": files}), encoding="utf-8")
-            stack = dict(STACK, id="STK-102")
-            stack_path = root / "stack.yaml"
-            stack_path.write_text(yaml.safe_dump(stack, sort_keys=False), encoding="utf-8")
-            args = ["uv", "run", "--quiet", "--script", str(SCRIPT), str(stack_path),
-                    "--hw", str(hw), "--version", "v1"]
+            project = Path(directory) / "project"
+            hw = fx.write_record(project / "hw", closing_gap_documents())
+            case = write_case(hw, "closing-gap", fixture("closing_gap.yaml"))
+            snapshot_version(hw)
+            args = ["uv", "run", "--quiet", "--script", str(SCRIPT), str(case), "--hw", str(hw), "--version", "v1"]
             first = subprocess.run(args, capture_output=True, text=True, check=False, timeout=300)
             self.assertEqual(first.returncode, 1, first.stderr)
-            bundle = hw / "analysis" / "v1" / "STK-102"
+            bundle = hw / "analysis" / "v1" / "closing-gap"
             original = {path.relative_to(bundle).as_posix(): path.read_bytes()
                         for path in bundle.rglob("*") if path.is_file()}
             second = subprocess.run(args, capture_output=True, text=True, check=False, timeout=300)
@@ -662,8 +578,8 @@ class StackupCliTests(unittest.TestCase):
             self.assertEqual(original, {path.relative_to(bundle).as_posix(): path.read_bytes()
                                         for path in bundle.rglob("*") if path.is_file()})
 
-            stack_path.write_text(stack_path.read_text(encoding="utf-8").replace("nominal: 50", "nominal: 51"),
-                                  encoding="utf-8")
+            case.write_text(case.read_text(encoding="utf-8").replace("Cover closing gap", "Cover closing gap, rechecked"),
+                            encoding="utf-8")
             changed = subprocess.run(args, capture_output=True, text=True, check=False, timeout=300)
             self.assertEqual(changed.returncode, 2)
             self.assertIn("--replace", changed.stderr)
@@ -681,7 +597,7 @@ class StackupCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             stack_path = root / "stack.yaml"
-            stack_path.write_text(STACK_YAML, encoding="utf-8")
+            stack_path.write_text((FIXTURES / "closing_gap.yaml").read_text(encoding="utf-8"), encoding="utf-8")
             proc = subprocess.run(["uv", "run", "--quiet", "--script", str(SCRIPT), str(stack_path),
                                   "--out", str(root / "outside.json")], capture_output=True, text=True,
                                  check=False, timeout=300)

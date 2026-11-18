@@ -4,7 +4,7 @@
   "title": "Manufacturing-intent definitions shared by the record, profile, finding and evidence schemas",
   "description": "Record version 2 contracts. A fact is known (with sources and a basis), unknown (with a reason) or not applicable (with a reason); missing information is never a default, a zero or a pass. scripts/manufacturing_intent.py adds the checks a schema cannot state: finite numbers, ordered intervals, unit dimensions, unit quaternions and resolved references.",
   "$defs": {
-    "record_version": {"description": "The project record version product.yaml declares; absent means version 1, which readers still parse but gated actions refuse until migrate.py migrates it", "const": 2},
+    "record_version": {"description": "The project record version product.yaml declares; any other value, or none, is refused", "const": 2},
     "semantic_id": {"$ref": "drawing.schema.json#/$defs/semantic_id"},
     "pn": {"$ref": "drawing.schema.json#/$defs/pn"},
     "decision": {"$ref": "product.schema.json#/$defs/decision"},

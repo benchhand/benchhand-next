@@ -11,11 +11,13 @@ Needs `uv`; the first run creates the uv environments (see test_cad_model.py).
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import shutil
-import sys
 import subprocess
+import sys
+import threading
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -62,6 +64,21 @@ CASES: dict[str, list[dict]] = {
 PNS = {case: f"HOL-{i:04d}" for i, case in enumerate(CASES, start=1)}
 
 
+_UPGRADE_LOCK = threading.Lock()
+
+
+def upgrade(hw: Path) -> Path:
+    """Complete the hand-written project below `hw` as a record version 2 record (cad-model's project fixtures)."""
+    name = "cad_model_manufacturing_projects"
+    with _UPGRADE_LOCK:  # both kernels build in threads and the fixture modules register before they finish loading
+        if name not in sys.modules:
+            spec = importlib.util.spec_from_file_location(name, FIXTURES / "manufacturing_projects.py")
+            assert spec and spec.loader
+            sys.modules[name] = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(sys.modules[name])
+        return sys.modules[name].upgrade_project(hw)
+
+
 def hole_project(root: Path, kernel: str) -> Path:
     """An hw/ record with one cnc part per case, all fixed to the first."""
     hw = root / kernel / "hw"
@@ -80,7 +97,7 @@ def hole_project(root: Path, kernel: str) -> Path:
         (folder / "part.yaml").write_text(
             f"PN: {pn}\nrev: X1\ntitle: Hole case {case}\nmaterial: Aluminum 6061-T6\nprocess: cnc\n"
             f"finish: none\nmass_target: 100\nmake_buy: make\nsupplier: null\n", encoding="utf-8")
-    return hw
+    return upgrade(hw)
 
 
 def uv_script(script: Path, *args: str) -> subprocess.CompletedProcess[str]:

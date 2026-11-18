@@ -5,11 +5,9 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["subassemblies", "joints"],
-  "not": {"description": "one authority for installation operations: top-level operations or the legacy drawing.operations, never both",
-          "required": ["operations", "drawing"], "properties": {"drawing": {"required": ["operations"]}}},
   "properties": {
     "operations": {
-      "description": "Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded. Record version 1 kept them in drawing.operations",
+      "description": "Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded",
       "oneOf": [{"type": "array", "items": {"$ref": "#/$defs/assembly_operation"}},
                 {"$ref": "manufacturing.schema.json#/$defs/fact_unknown"}]
     },
@@ -218,8 +216,7 @@
           }
         },
         "items": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/drawing_item"}},
-        "subassembly_sheets": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"}},
-        "operations": {"type": "array", "items": {"$ref": "#/$defs/assembly_operation"}}
+        "subassembly_sheets": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"}}
       }
     },
     "assembly_operation": {

@@ -1117,7 +1117,7 @@ class OtherRouteKindTests(Checks):
 
 @unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
 class DispatchContractTests(Checks):
-    """The closed table answers every route kind's families except physical evidence; a version 1 record is
+    """The closed table answers every route kind's families except physical evidence; a record of an unsupported version is
     not assessable; a handler cannot link a failing finding to an obligation it did not fail."""
 
     def test_the_table_covers_every_check_family_but_physical_evidence(self) -> None:
@@ -1127,14 +1127,12 @@ class DispatchContractTests(Checks):
                 self.assertEqual(set(pc.TABLE[kind]), wanted)
         self.assertEqual(set(pc.TABLE), set(MI.PROCESS_CHECKS))
 
-    def test_a_version_1_record_is_refused_with_its_migration(self) -> None:
-        temporary = tempfile.TemporaryDirectory(prefix="cad-process-v1-")
-        self.addCleanup(temporary.cleanup)
-        hw = Path(temporary.name) / "hw"
-        shutil.copytree(FX.V1_MINIMAL, hw)
-        record = MI.load_record(hw)
-        self.assertEqual(record.version, 1)
-        with self.assertRaisesRegex(pc.NotAssessable, "migrat"):
+    def test_a_record_of_an_unsupported_version_is_not_assessable(self) -> None:
+        documents = FX.tst_record()
+        del documents["product.yaml"]["record_version"]
+        record = MI.normalize_record(documents)
+        self.assertEqual(record.version, 0)
+        with self.assertRaisesRegex(pc.NotAssessable, "not supported"):
             pc.expected(record)
 
     def test_the_fixture_record_assesses_every_owned_obligation_without_geometry(self) -> None:

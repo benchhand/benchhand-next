@@ -49,12 +49,13 @@ def intent_record(**changes) -> dict:
         "explode": [{"ref": "@pin-a", "offset_mm": [0, 0, 30]}],
         "items": [{"item": 1, "PN": BASE}, {"item": 2, "PN": PIN, "occurrences": ["@pin-a", "@pin-b"]}],
         "subassembly_sheets": ["pins"],
-        "operations": [{"id": "press_pin_a", "kind": "press_fit", "part": "@pin-a", "into": BASE, "interface": "IF-001",
-                        "direction": [1, 0, 0], "acceptance": {"kind": "seated", "features": ["pin_end", "plate_top"]},
-                        "verify_joint": "J-001"}],
     }
+    operations = [{"id": "press_pin_a", "kind": "press_fit", "part": "@pin-a", "into": BASE, "interface": "IF-001",
+                   "direction": [1, 0, 0], "acceptance": {"kind": "seated", "features": ["pin_end", "plate_top"]},
+                   "verify_joint": "J-001"}]
+    operations = changes.pop("operations", operations)  # installation operations live beside the drawing block
     drawing.update(changes)
-    return {"drawing": drawing}
+    return {"drawing": drawing, "operations": operations}
 
 
 BOM = [{"level": "1", "PN": BASE, "rev": "X1", "qty": "1", "title": "Base plate", "material": "PETG"},
@@ -73,7 +74,7 @@ class Intent(unittest.TestCase):
             read_intent({"subassemblies": [], "joints": []})
 
     def test_acceptance_names_the_features_its_kind_needs(self) -> None:
-        op = dict(intent_record()["drawing"]["operations"][0], acceptance={"kind": "seated", "features": ["pin_end"]})
+        op = dict(intent_record()["operations"][0], acceptance={"kind": "seated", "features": ["pin_end"]})
         with self.assertRaisesRegex(IntentError, "seated names 2 feature"):
             read_intent(intent_record(operations=[op]))
 

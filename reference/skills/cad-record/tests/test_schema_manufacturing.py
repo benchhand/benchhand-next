@@ -219,12 +219,13 @@ class RecordDocuments(SchemaCase):
 
         self.assert_cases("product.schema.json", fx.product(), {
             "version 2 needs a use case": (drop("use_case"), False),
-            "legacy (no version) has no use case": (drop("record_version"), False),
-            "version 1 legacy without either": (lambda d: (d.pop("record_version"), d.pop("use_case")), True),
+            "no version is refused": (drop("record_version"), False),
+            "a version 1 product (neither record_version nor use_case) is refused": (
+                lambda d: (d.pop("record_version"), d.pop("use_case")), False),
             "explicit version 1 is not a version": (lambda d: d.update(record_version=1), False),
             "version 3 is unsupported": (lambda d: d.update(record_version=3), False),
             "a version 2 freeze anchors evidence": (frozen(True), True),
-            "a freeze from before migration stays readable": (frozen(False), True),
+            "a freeze without an evidence anchor is readable": (frozen(False), True),
             "use case missing a question area": (lambda d: d["use_case"].pop("loads"), False),
             "confirmed needs a decision": (lambda d: d["use_case"].update(status="confirmed"), False),
             "confirmed with its decision": (lambda d: d["use_case"].update(status="confirmed", decision="DR-001"), True),
@@ -335,7 +336,7 @@ class RecordDocuments(SchemaCase):
                    "items": [{"item": 1, "PN": "TST-0001"}]}
         self.assert_cases("assembly.schema.json", base, {
             "operations unknown": (lambda d: d.update(operations=fx.unknown("not recorded", "Q-012")), True),
-            "legacy drawing operations alone": (lambda d: (d.pop("operations"), d.update(drawing={**drawing, "operations": [operation]})), True),
+            "drawing operations alone": (lambda d: (d.pop("operations"), d.update(drawing={**drawing, "operations": [operation]})), False),
             "both authorities": (lambda d: d.update(drawing={**drawing, "operations": [operation]}), False),
             "a close operation names what it encloses": (lambda d: d["operations"].append({"id": "close", "kind": "close", "part": "TST-0002",
                                                                                            "into": "TST-0001"}), False),
@@ -489,7 +490,7 @@ class RecordDocuments(SchemaCase):
             "record version 1": (lambda d: d.update(record_version=1), False),
         })
 
-    def test_release_manifest_v3_and_older_versions(self) -> None:
+    def test_release_manifest_v3_only(self) -> None:
         frozen = {"version": "v1", "manifest_sha256": "a" * 64, "decision": "DR-001", "evidence_sha256": "b" * 64}
         v3 = {"schema_version": 3, "record_version": 2, "product_id": "tst", "rev": "A", "released_at": "2026-01-01T00:00:00Z",
               "frozen": frozen, "approval": "DR-002", "files": {"bom.csv": {"sha256": "c" * 64, "original": "hw/bom.csv"}},
@@ -512,14 +513,14 @@ class RecordDocuments(SchemaCase):
                                                                                     "consequence": "x"}]), False),
             "claim of an invented level": (lambda d: d["acceptance"].update(claims={"REQ-001": ["certified"]}), False),
         })
+        # The manifests the older releases wrote, valid before manifest versions 1 and 2 were removed: refused now.
         v2 = {k: v for k, v in v3.items() if k not in ("record_version", "acceptance")}
         v2.update(schema_version=2, frozen={k: v for k, v in frozen.items() if k != "evidence_sha256"},
                   manufacturing={"TST-0001": {"process": "fdm", "quantity": 1, "files": ["manufacturing/TST-0001/part.step"]}})
-        self.assert_valid("release-manifest.schema.json", v2)
-        self.assert_valid("release-manifest.schema.json", {"product_id": "tst", "rev": "A", "released_at": "2026-01-01T00:00:00Z",
-                                                           "files": ["hw/bom.csv"], "checks": {}})
-        self.assertTrue(errors("release-manifest.schema.json", {**v2, "acceptance": v3["acceptance"]}), "v2 has no acceptance")
-
+        v1 = {"product_id": "tst", "rev": "A", "released_at": "2026-01-01T00:00:00Z", "files": ["hw/bom.csv"], "checks": {}}
+        for label, older in (("version 2", v2), ("version 1", v1)):
+            with self.subTest(manifest=label):
+                self.assertTrue(errors("release-manifest.schema.json", older), f"a {label} release manifest is refused")
 
 class ShippedAssets(SchemaCase):
     def test_the_template_is_record_version_2_with_nothing_chosen(self) -> None:

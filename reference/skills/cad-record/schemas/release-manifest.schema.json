@@ -2,10 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://srobroek.com/cad/schemas/release-manifest.schema.json",
   "title": "CAD release manifest",
-  "description": "Version 1 (no schema_version) lists project files in place. Version 2, written by release.py, seals a package of byte copies under hw/releases/<rev>/. Version 3 adds the record version 2 acceptance anchor: the frozen evidence digest, its inventory, the release scope, claims and waivers. Sealed packages are read by their own version and never rewritten or re-certified.",
-  "if": {"type": "object", "required": ["schema_version"]},
-  "then": {"if": {"properties": {"schema_version": {"const": 3}}}, "then": {"$ref": "#/$defs/v3"}, "else": {"$ref": "#/$defs/v2"}},
-  "else": {"$ref": "#/$defs/v1"},
+  "description": "Written by release.py: a package of byte copies under hw/releases/<rev>/ (schema_version 3) with the record version 2 acceptance anchor: the frozen evidence digest, its inventory, the release scope, claims and waivers.",
+  "$ref": "#/$defs/v3",
   "$defs": {
     "product_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
     "rev": {"type": "string", "pattern": "^[A-HJ-NPRTUVWY]$"},
@@ -15,67 +13,28 @@
       "description": "A path inside the package directory",
       "type": "string", "pattern": "^(?!/)(?!.*(^|/)\\.{1,2}(/|$))(?!manifest\\.json$)[^\\\\]+$"
     },
-    "v1": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["product_id", "rev", "released_at", "files", "checks"],
-      "properties": {
-        "product_id": {"$ref": "#/$defs/product_id"},
-        "rev": {"$ref": "#/$defs/rev"},
-        "released_at": {"type": "string", "format": "date-time"},
-        "files": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
-        "checks": {"$ref": "#/$defs/checks"}
+    "files": {
+      "description": "Every package file but manifest.json, keyed by its path in the package, with its sha256 and the immutable original it copies",
+      "type": "object", "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/package_path"},
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["sha256", "original"],
+        "properties": {
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "original": {"type": "string", "pattern": "^hw/(?!releases/)(?!.*(^|/)\\.{1,2}(/|$))[^\\\\]+$"}
+        }
       }
     },
-    "v2": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["schema_version", "product_id", "rev", "released_at", "frozen", "approval", "files", "manufacturing", "bundles", "checks"],
-      "properties": {
-        "schema_version": {"const": 2},
-        "product_id": {"$ref": "#/$defs/product_id"},
-        "rev": {"$ref": "#/$defs/rev"},
-        "released_at": {"type": "string", "format": "date-time"},
-        "frozen": {"$ref": "product.schema.json#/$defs/frozen"},
-        "approval": {"description": "the decision record approving this release", "$ref": "product.schema.json#/$defs/decision"},
-        "files": {
-          "description": "Every package file but manifest.json, keyed by its path in the package, with its sha256 and the immutable original it copies",
-          "type": "object", "minProperties": 1,
-          "propertyNames": {"$ref": "#/$defs/package_path"},
-          "additionalProperties": {
-            "type": "object", "additionalProperties": false, "required": ["sha256", "original"],
-            "properties": {
-              "sha256": {"$ref": "#/$defs/sha256"},
-              "original": {"type": "string", "pattern": "^hw/(?!releases/)(?!.*(^|/)\\.{1,2}(/|$))[^\\\\]+$"}
-            }
-          }
-        },
-        "manufacturing": {
-          "description": "Per custom-made PN of the frozen version: its process, assembled quantity and package files",
-          "type": "object",
-          "propertyNames": {"pattern": "^[A-Z]{2,5}-[0-9]{4}$"},
-          "additionalProperties": {
-            "type": "object", "additionalProperties": false, "required": ["process", "quantity", "files"],
-            "properties": {
-              "process": {"$ref": "manufacturing.schema.json#/$defs/primary_process"},
-              "quantity": {"type": "integer", "minimum": 1},
-              "files": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/package_path"}}
-            }
-          }
-        },
-        "bundles": {
-          "description": "The drawing, check, analysis and other bundles the release selected, by manifest sha256",
-          "type": "array", "uniqueItems": true,
-          "items": {
-            "type": "object", "additionalProperties": false, "required": ["layout", "path", "manifest_sha256"],
-            "properties": {
-              "layout": {"type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)*$"},
-              "path": {"type": "string", "pattern": "^hw/(?!.*(^|/)\\.{1,2}(/|$))[^\\\\]+$"},
-              "manifest_sha256": {"$ref": "#/$defs/sha256"}
-            }
-          }
-        },
-        "checks": {"$ref": "#/$defs/checks"}
+    "bundles": {
+      "description": "The drawing, check, analysis and other bundles the release selected, by manifest sha256",
+      "type": "array", "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["layout", "path", "manifest_sha256"],
+        "properties": {
+          "layout": {"type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)*$"},
+          "path": {"type": "string", "pattern": "^hw/(?!.*(^|/)\\.{1,2}(/|$))[^\\\\]+$"},
+          "manifest_sha256": {"$ref": "#/$defs/sha256"}
+        }
       }
     },
     "v3": {
@@ -91,7 +50,7 @@
         "released_at": {"type": "string", "format": "date-time"},
         "frozen": {"allOf": [{"$ref": "product.schema.json#/$defs/frozen"}, {"required": ["evidence_sha256"]}]},
         "approval": {"description": "the decision record approving this release", "$ref": "product.schema.json#/$defs/decision"},
-        "files": {"$ref": "#/$defs/v2/properties/files"},
+        "files": {"$ref": "#/$defs/files"},
         "manufacturing": {
           "description": "Per custom-made PN of the frozen version: its process, assembled quantity, package files, the route kinds it was assessed for and its per-component files",
           "type": "object",
@@ -111,7 +70,7 @@
             }
           }
         },
-        "bundles": {"$ref": "#/$defs/v2/properties/bundles"},
+        "bundles": {"$ref": "#/$defs/bundles"},
         "checks": {"$ref": "#/$defs/checks"},
         "acceptance": {
           "description": "What the release is accepted for, sealed from its own package bytes: the canonical acceptance inventory and its digest (equal to frozen.evidence_sha256), the release scope, the evidence levels claimed per requirement, the approved waivers and any obligations left open within a permitted trial scope. Unknown is never a pass, and a waiver stays waived",

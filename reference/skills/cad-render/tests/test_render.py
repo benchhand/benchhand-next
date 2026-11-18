@@ -96,6 +96,53 @@ class VersionManifestSchema(unittest.TestCase):
             render.version_reader.validate_version_manifest({"schema_version": 1, "record": {}, "manufacturing": {}})
 
 
+class OccurrenceInputSchema(unittest.TestCase):
+    """cad-render's loader and the shared `built_occurrences` accept schema 2 occurrence inputs
+    (part-map.json and manifest.json) and refuse every other schema."""
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.hw = Path(temporary.name) / "hw"
+        self.folder = box_version.write(self.hw, "v1", BOXES, box_parts(), record_version=2)
+
+    def rewrite(self, part_map: object, manifest: object) -> None:
+        """Set each input's schema_version (None: absent) and reseal the manifest's file inventory."""
+        for name, schema in (("part-map.json", part_map), ("manifest.json", manifest)):
+            path = self.folder / name
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data.pop("schema_version", None)
+            if schema is not None:
+                data["schema_version"] = schema
+            path.write_text(json.dumps(data), encoding="utf-8")
+        data = json.loads((self.folder / "manifest.json").read_text(encoding="utf-8"))
+        data["files"] = {p.relative_to(self.folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                         for p in sorted(self.folder.rglob("*")) if p.is_file() and p.name != "manifest.json"}
+        (self.folder / "manifest.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def test_schema_2_inputs_load_and_give_one_occurrence_per_pn(self) -> None:
+        version = render.resolve_version(self.hw, "v1")
+        self.assertEqual(sorted(version.occurrences), sorted(BOXES))
+
+    def test_schema_1_or_unversioned_inputs_are_refused_by_both_readers(self) -> None:
+        for label, schema in (("schema 1", 1), ("no schema", None)):
+            with self.subTest(inputs=label):
+                self.rewrite(schema, schema)
+                with self.assertRaisesRegex(render.InfraError, "schema_version"):
+                    render.resolve_version(self.hw, "v1")
+                part_map = json.loads((self.folder / "part-map.json").read_text(encoding="utf-8"))
+                manifest = json.loads((self.folder / "manifest.json").read_text(encoding="utf-8"))
+                with self.assertRaisesRegex(render.version_reader.VersionError, "schema_version"):
+                    render.version_reader.built_occurrences(part_map, manifest)
+
+    def test_one_input_at_schema_1_with_the_other_at_schema_2_is_refused(self) -> None:
+        for part_map, manifest in ((1, 2), (2, 1), (None, 2), (2, None)):
+            with self.subTest(part_map=part_map, manifest=manifest):
+                self.rewrite(part_map, manifest)
+                with self.assertRaisesRegex(render.InfraError, "schema_version"):
+                    render.resolve_version(self.hw, "v1")
+
+
 GOOD = dict(subject=(30, 20, 70, 60), shadow=(40, 60, 95, 75))
 # A grounded subject: its bottom rows stand on the floor, its contact shadow fills the rows below,
 # and floor to its right lies under an overhang.
@@ -884,7 +931,7 @@ class VisibilityChecks(unittest.TestCase):
         box_version.write(self.hw, "v2", BOXES, box_parts("transparent"), record_version=2)
         version = render.resolve_version(self.hw, "v2")
         requirements(self.hw, {**FRONT, "min_visible_fraction": 0.9}, text="Edited after v2 was built.")
-        path, source = render.requirements_input(self.hw, version)
+        path, source = render.requirements_input(version)
         self.assertEqual((path, source), (version.record / "requirements.yaml", "version_snapshot"))
         checks, digest = render.visibility_checks(path, self.by_pn, self.records)
         self.assertEqual((checks[0]["min_visible_fraction"], digest), (0.5, hashlib.sha256(snapshot).hexdigest()))
@@ -893,14 +940,19 @@ class VisibilityChecks(unittest.TestCase):
         box_version.write(self.hw, "v2", BOXES, box_parts("transparent"), record_version=2)
         version = render.resolve_version(self.hw, "v2")
         requirements(self.hw, FRONT)  # written after v2 was built: not v2's requirements
-        path, source = render.requirements_input(self.hw, version)
+        path, source = render.requirements_input(version)
         self.assertEqual(source, "version_snapshot")
         self.assertEqual(render.visibility_checks(path, self.by_pn, self.records), ([], None))
 
-    def test_an_older_version_falls_back_to_the_current_file_labelled_unbound(self) -> None:
-        requirements(self.hw, FRONT)
-        self.assertEqual(render.requirements_input(self.hw, self.version),
-                         (self.hw / "requirements.yaml", "current_unbound"))
+    def test_a_version_that_names_no_record_version_2_is_refused_not_checked_against_the_live_file(self) -> None:
+        requirements(self.hw, FRONT)  # the live hw/requirements.yaml must not stand in for a version with no snapshot
+        for label, record_version in (("no record_version", None), ("record_version 1", 1)):
+            with self.subTest(manifest=label):
+                self.version.manifest.pop("record_version", None)
+                if record_version is not None:
+                    self.version.manifest["record_version"] = record_version
+                with self.assertRaisesRegex(render.InfraError, "record_version"):
+                    render.requirements_input(self.version)
 
 
 class VisibilityGrade(unittest.TestCase):
@@ -1074,9 +1126,10 @@ class BrowserRender(unittest.TestCase):
         return proc.returncode, result_payload(proc.stdout)
 
     def test_an_opaque_window_hides_the_target_and_a_transparent_one_shows_it(self) -> None:
-        box_version.write(self.hw, "v1", BOXES, box_parts("opaque"))
-        box_version.write(self.hw, "v2", BOXES, box_parts("transparent"))
-        requirements(self.hw, FRONT)
+        self.hw.mkdir(parents=True, exist_ok=True)
+        requirements(self.hw, FRONT)  # before the builds: a version snapshots the requirements file present at build time
+        box_version.write(self.hw, "v1", BOXES, box_parts("opaque"), record_version=2)
+        box_version.write(self.hw, "v2", BOXES, box_parts("transparent"), record_version=2)
         reports = {}
         for label in ("v1", "v2"):
             code, summary = self.render("--version", label, "--views", "front",
@@ -1097,10 +1150,10 @@ class BrowserRender(unittest.TestCase):
 
     def test_an_unchanged_part_view_is_copied_and_a_changed_one_rendered(self) -> None:
         views = ("--views", "iso", PART_VIEW)
-        box_version.write(self.hw, "v1", BOXES, box_parts())
+        box_version.write(self.hw, "v1", BOXES, box_parts(), record_version=2)
         code, first = self.render("--version", "v1", *views)
         self.assertEqual((code, first["reused"]), (0, {}))
-        box_version.write(self.hw, "v2", {**BOXES, OTHER: GROWN_OTHER}, box_parts())
+        box_version.write(self.hw, "v2", {**BOXES, OTHER: GROWN_OTHER}, box_parts(), record_version=2)
         code, second = self.render("--version", "v2", *views)
         self.assertEqual((code, second["reused"]), (0, {PART_VIEW: "v1"}))
         self.assertEqual(sorted(name for name in second["view_wall_s"] if not name.endswith("_s")), ["iso"])
@@ -1108,7 +1161,7 @@ class BrowserRender(unittest.TestCase):
         self.assertNotEqual(Path(second["pngs"]["iso"]).read_bytes(), Path(first["pngs"]["iso"]).read_bytes())
         record = json.loads((Path(second["out_dir"]) / "render.json").read_text(encoding="utf-8"))["views"][PART_VIEW]
         self.assertEqual(record["reused"]["bundle"], "hw/renders/v1/assembly")
-        box_version.write(self.hw, "v3", {**BOXES, OTHER: GROWN_OTHER, TARGET: GROWN_TARGET}, box_parts())
+        box_version.write(self.hw, "v3", {**BOXES, OTHER: GROWN_OTHER, TARGET: GROWN_TARGET}, box_parts(), record_version=2)
         code, third = self.render("--version", "v3", *views)
         self.assertEqual((code, third["reused"]), (0, {}))
         self.assertIn(PART_VIEW, third["view_wall_s"])

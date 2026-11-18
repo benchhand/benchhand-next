@@ -26,10 +26,21 @@ BOM_SCRIPT = HERE / "scripts" / "bom.py"
 BUILDER = HERE / "fixtures" / "build_assembly.py"
 SPEC = importlib.util.spec_from_file_location("cad_bom", BOM_SCRIPT)
 RECORD_VALIDATOR = HERE.parent / "cad-record" / "scripts" / "validate.py"
+RECORD_FIXTURES = HERE.parent / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py"
 assert SPEC and SPEC.loader
 bom = importlib.util.module_from_spec(SPEC)
 sys.modules["cad_bom"] = bom
 SPEC.loader.exec_module(bom)
+
+def record_fixtures() -> object:
+    """cad-record's shared record fixture builder, loaded by path."""
+    spec = importlib.util.spec_from_file_location("cad_record_mi_fixtures", RECORD_FIXTURES)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault("cad_record_mi_fixtures", module)
+    spec.loader.exec_module(module)
+    return module
+
 
 PARTS = {
     "BASE-0001": "rev: X2\ntitle: Base plate\nmaterial: PETG\nprocess: fdm\nmake_buy: make\nmass_target: 40\n",
@@ -263,10 +274,8 @@ class StepRoundTripTests(unittest.TestCase):
             (hw / "verification.csv").write_text(
                 "requirement_id,method,criteria,result,evidence\nREQ-001,I,Fits,planned,\n", encoding="utf-8"
             )
-            # The record as current cad-record reads it: record version 2, migrated with explicit unknowns.
-            migrated = subprocess.run([sys.executable, str(RECORD_VALIDATOR.with_name("migrate.py")), str(project), "--apply"],
-                                      capture_output=True, text=True, check=False, timeout=120)
-            self.assertEqual(migrated.returncode, 0, migrated.stdout + migrated.stderr)
+            # The record as current cad-record reads it: record version 2 with explicit unknowns.
+            record_fixtures().upgrade_record(hw)
 
             bom_proc, _ = self.run_bom(hw)
             self.assertEqual(bom_proc.returncode, 0, bom_proc.stderr)
