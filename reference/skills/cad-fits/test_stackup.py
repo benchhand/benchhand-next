@@ -325,6 +325,63 @@ class IntentStackContractTests(unittest.TestCase):
         with self.assertRaisesRegex(stackup.StackError, "intent_version must be 2"):
             stackup.compute(stack)
 
+    def test_contribution_shares_sum_to_100(self) -> None:
+        # Hand derivation from closing_gap.yaml: half-tolerances H 0.08, B 0.06, S 0.06, C 0.02, T 0.08 sum to
+        # 0.30, so each share is 100 * half / 0.30:
+        #   H = T = 26.666667 (80/3)   B = S = 20   C = 6.666667 (20/3)
+        # The result rounds each share to 6 decimals, so the shares sum to 100 within 5 * 0.5e-6; allow 1e-5.
+        # Dropped from the v1 test: the rss_contribution_pct half (that field is not in a v2 result) and the flat
+        # row key (v2 keeps the share under row["resolved"]).
+        rows = stackup.compute(fixture("closing_gap.yaml"))["contributors"]
+        expected = {"H": 80 / 3, "B": 20.0, "S": 20.0, "C": 20 / 3, "T": 80 / 3}
+        self.assertEqual(len(rows), 5)
+        shares = {row["id"]: row["resolved"]["wc_contribution_pct"] for row in rows}
+        self.assertEqual(shares.keys(), expected.keys())
+        for ident, share in expected.items():
+            with self.subTest(contributor=ident):
+                self.assertAlmostEqual(shares[ident], share, delta=1e-6)
+        self.assertAlmostEqual(sum(shares.values()), 100.0, delta=1e-5)
+
+    def test_invalid_contributors_are_rejected(self) -> None:
+        # Dropped from the v1 test: the legacy requirement method rss case, which
+        # test_perfect_dimensions_and_double_counting_are_refused already covers. One bad change per case.
+        baseline = fixture("closing_gap.yaml")
+        self.assertEqual(stackup.compute(baseline)["outcome"], "fail")  # a valid v2 stack that computes
+
+        def negative_tolerance(s: dict) -> None:
+            contributor(s, "H")["tol"] = -0.08
+
+        def both_tolerance_forms(s: dict) -> None:
+            contributor(s, "H").update(tol_plus=0.08, tol_minus=0.08)
+
+        def missing_tol_minus(s: dict) -> None:
+            entry = contributor(s, "H")
+            del entry["tol"]
+            entry["tol_plus"] = 0.08
+
+        def non_numeric_nominal(s: dict) -> None:
+            contributor(s, "H")["nominal"] = "20.22"
+
+        def bad_direction(s: dict) -> None:
+            contributor(s, "H")["direction"] = 2
+
+        def no_contributors(s: dict) -> None:
+            s["contributors"] = []
+
+        cases = [
+            (negative_tolerance, "tolerances are magnitudes and must be >= 0"),
+            (both_tolerance_forms, "give either tol or tol_plus/tol_minus, not both"),
+            (missing_tol_minus, "needs tol, or both tol_plus and tol_minus"),
+            (non_numeric_nominal, r"contributors\[0\]\.nominal must be a finite number, got '20\.22'"),
+            (bad_direction, r"contributors\[0\]\.direction must be 1 or -1, got 2"),
+            (no_contributors, "contributors must be a non-empty list"),
+        ]
+        for mutate, message in cases:
+            stack = copy.deepcopy(baseline)
+            mutate(stack)
+            with self.subTest(case=mutate.__name__), self.assertRaisesRegex(stackup.StackError, message):
+                stackup.compute(stack)
+
     # ---- row 10: laser tab-and-slot
 
     def test_nominal_laser_tab_slot_fails_its_kerf_thickness_and_coating_interval(self) -> None:
