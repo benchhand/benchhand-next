@@ -509,6 +509,20 @@ class RequiredChecks(unittest.TestCase):
         self.assertFalse(any(i.startswith("process.") for i in found if "TST-0002" in i and "cnc" not in i),
                          "a made-to-drawing buy gets its actual route's checks, never FDM ones")
 
+    def lamp_with_unknown_fdm_routes(self) -> Path:
+        """A copy of the lamp-arm record whose fdm parts carry the legacy unknown route."""
+        scratch = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, scratch, ignore_errors=True)
+        hw = scratch / "hw"
+        shutil.copytree(fx.LAMP, hw)
+        for pn, question in (("LMP-0001", "Q-012"), ("LMP-0004", "Q-015")):
+            path = hw / "parts" / pn / "part.yaml"
+            lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+            start = next(i for i, line in enumerate(lines) if line.startswith("  route:"))
+            legacy = f"  route: {{status: unknown, reason: not recorded before record version 2, question: {question}}}\n"
+            path.write_text("".join(lines[:start]) + legacy, encoding="utf-8")
+        return hw
+
     def test_unknowns_and_unsupported_kinds_are_explicit_gaps(self) -> None:
         documents = fx.tst_record()
         documents["parts/TST-0002/part.yaml"]["intent"]["route"] = [fx.operation("sinter", "sintering")]
@@ -521,7 +535,7 @@ class RequiredChecks(unittest.TestCase):
         self.assertIn("optical.route@TST-0004", found, "transparency still demands an optical route")
         self.assertIn("engineering.load_cases@TST-0001", found)
         self.assertNotIn("engineering.creep@TST-0001", found)
-        legacy = {o.id for o in mi.required_checks(mi.load_record(fx.LAMP))}
+        legacy = {o.id for o in mi.required_checks(mi.load_record(self.lamp_with_unknown_fdm_routes()))}
         self.assertIn("intent.route@LMP-0001", legacy)
         self.assertIn("intent.use_case@product", legacy)
         self.assertFalse(any(i.startswith("process.fdm") for i in legacy), "a legacy fdm label dispatches no process checks")

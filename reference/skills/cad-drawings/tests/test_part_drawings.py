@@ -88,10 +88,11 @@ FINISHED_ROUTES = {
 
 
 def with_finished_route(text: str, route: str) -> str:
-    """A migrated part.yaml whose unknown route is replaced by `route`, the rest unchanged."""
+    """A migrated part.yaml whose route is replaced by `route`, the rest unchanged."""
     lines = text.splitlines(keepends=True)
-    index = next(i for i, line in enumerate(lines) if line.startswith("  route: {status: unknown"))
-    return "".join(lines[:index]) + route + "".join(lines[index + 1:])
+    index = next(i for i, line in enumerate(lines) if line.startswith("  route:"))
+    end = next((i for i in range(index + 1, len(lines)) if not lines[i].startswith("    ")), len(lines))
+    return "".join(lines[:index]) + route + "".join(lines[end:])
 
 
 def sheet(*annotations: str) -> str:

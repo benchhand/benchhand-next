@@ -61,4 +61,22 @@ intent:
   material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Aluminum 6061-T6 is a declaration, not a sourced grade', question: Q-013}
   service: {status: unknown, reason: not recorded before record version 2, question: Q-013}
   critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-013}
-  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label cnc names no operations, capability, orientation, supports or inspection', question: Q-013}
+  route:
+    - id: machine
+      kind: cnc
+      title: Machine the lower link from 6061-T6
+      capability: {status: unknown, reason: "no capability profile of the machine shop is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      output_state: machined
+      setup:
+        stock:
+          grade: {status: known, value: "6061-T6", basis: user_declared, sources: [{kind: decision, reference: "DR-001", decision: DR-001}]}
+          form: {status: unknown, reason: "the record names no stock form or size", question: Q-013}
+        workholding: {method: {status: unknown, reason: "no workholding is recorded", question: Q-013}}
+      post_processing: ["Deburr; no coating"]
+    - id: ream
+      kind: reaming
+      title: Ream the elbow bore through both cheeks in one pass
+      capability: {status: unknown, reason: "no capability profile of the reaming operator is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      input_state: machined
+      targets: [{feature: elbow_bore}]
+      setup: {datums: [hub_seat, hub_bore]}

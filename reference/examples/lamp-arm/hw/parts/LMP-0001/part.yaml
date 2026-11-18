@@ -67,4 +67,19 @@ intent:
   material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material PETG is a declaration, not a sourced grade', question: Q-012}
   service: {status: unknown, reason: not recorded before record version 2, question: Q-012}
   critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-012}
-  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label fdm names no operations, capability, orientation, supports or inspection', question: Q-012}
+  route:
+    - id: print
+      kind: fdm
+      title: Print the base plate and pivot boss in PETG, boss up
+      capability: {status: unknown, reason: "no capability profile of the print bureau is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      output_state: printed
+      orientation: {status: proposed, rotation: {quaternion: [1, 0, 0, 0]}, note: "Drawing note: printed boss-up with datum face A on the build plate; the manufacture frame equals the model frame, so the pose is the identity. Not yet approved by a decision."}
+      supports: {status: unknown, reason: "no support strategy is recorded; the drawing names none", question: Q-012}
+      post_processing: ["Remove burrs and stringing"]
+    - id: finish_holes
+      kind: drilling
+      title: Drill or ream the bushing seat to its limits after printing (the drawing does not say which)
+      capability: {status: unknown, reason: "no capability profile of the drilling or reaming operator is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      input_state: printed
+      targets: [{feature: seat}]
+      setup: {datums: [bed_face]}

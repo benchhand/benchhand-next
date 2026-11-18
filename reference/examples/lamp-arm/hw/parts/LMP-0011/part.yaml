@@ -24,4 +24,15 @@ intent:
   material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Spring steel C60S is a declaration, not a sourced grade', question: Q-022}
   service: {status: unknown, reason: not recorded before record version 2, question: Q-022}
   critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-022}
-  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label purchased names no operations, capability, orientation, supports or inspection', question: Q-022}
+  route:
+    - id: buy
+      kind: purchased
+      title: Buy the DIN 471 - 5x0.6 retaining ring
+      output_state: installed
+      purchase:
+        identity: {status: known, value: "DIN 471 - 5x0.6", basis: standard, sources: [{kind: datasheet, reference: "Beneri DIN 471 datasheet", revision: "undated, retrieved 2026-10-27", url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf", accessed: "2026-10-27"}]}
+        specification: {status: known, value: "DIN 471 - 5x0.6, spring steel C60S, phosphated and oiled, per the Beneri datasheet", basis: user_declared, sources: [{kind: datasheet, reference: "Beneri DIN 471 datasheet", revision: "undated, retrieved 2026-10-27", url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf", accessed: "2026-10-27"}]}
+        ratings: {status: unknown, reason: "no load, speed or temperature rating is recorded for this item; DR-004 cites none", question: Q-022}
+        availability: {status: unknown, reason: "no supplier is selected (DR-004 open items)", question: Q-022}
+        supplier_evidence:
+          - {kind: datasheet, reference: "Beneri DIN 471 datasheet", revision: "undated, retrieved 2026-10-27", url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf", accessed: "2026-10-27"}

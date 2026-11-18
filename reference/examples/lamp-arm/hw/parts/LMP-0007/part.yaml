@@ -56,4 +56,22 @@ intent:
   material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Stainless steel A2 is a declaration, not a sourced grade', question: Q-018}
   service: {status: unknown, reason: not recorded before record version 2, question: Q-018}
   critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-018}
-  route: {status: unknown, reason: 'not recorded before record version 2; the legacy process label cnc names no operations, capability, orientation, supports or inspection', question: Q-018}
+  route:
+    - id: turn
+      kind: cnc
+      title: Turn the M5 x 20 shoulder pin to drawing
+      capability: {status: unknown, reason: "no capability profile of the pin maker is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      provider: outsourced
+      output_state: machined
+      setup:
+        stock:
+          grade: {status: known, value: "stainless steel A2", basis: user_declared, sources: [{kind: decision, reference: "DR-004", decision: DR-004}]}
+          form: {status: unknown, reason: "the record names no stock form or size", question: Q-018}
+        workholding: {method: {status: unknown, reason: "no workholding is recorded", question: Q-018}}
+      post_processing: ["Grind or precision-turn the press band and journal to their limits"]
+    - id: passivate
+      kind: coating
+      title: Passivate the pin
+      capability: {status: unknown, reason: "no capability profile of the passivation provider is recorded in manufacturing/capabilities.yaml", question: Q-010}
+      provider: outsourced
+      input_state: machined
