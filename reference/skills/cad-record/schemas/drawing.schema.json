@@ -342,7 +342,7 @@
         "pair": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"$ref": "assembly.schema.json#/$defs/part_ref"}},
         "hole": {"$ref": "#/$defs/fit_endpoint"},
         "shaft": {"$ref": "#/$defs/fit_endpoint"},
-        "engagement_length_mm": {"description": "How far the pin, shaft or insert enters its mating bore during assembly, in mm", "type": "number", "exclusiveMinimum": 0},
+        "engagement_length_mm": {"description": "engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived.", "type": "number", "exclusiveMinimum": 0},
         "note": {"type": "string", "minLength": 1},
         "axial_retainer": {"$ref": "#/$defs/axial_retainer"}
       },
@@ -368,7 +368,7 @@
         "hole_d": {"type": "number", "exclusiveMinimum": 0, "maximum": 100, "x-plausible": {"min": 1.5, "max": 25}},
         "hole_tol": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
         "depth_min": {"type": "number", "exclusiveMinimum": 0, "maximum": 100, "x-plausible": {"min": 1.5, "max": 25}},
-        "engagement_length_mm": {"description": "How far the pin, shaft or insert enters its mating bore during assembly, in mm", "type": "number", "exclusiveMinimum": 0},
+        "engagement_length_mm": {"description": "engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived.", "type": "number", "exclusiveMinimum": 0},
         "insert": {"type": "string", "minLength": 1},
         "source": {"type": "string", "pattern": "^https?://\\S+$"},
         "note": {"type": "string", "minLength": 1},
