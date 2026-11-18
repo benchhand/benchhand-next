@@ -182,6 +182,29 @@ class Variants(unittest.TestCase):
         self.assertFalse([ident for ident in result.stale_obligations if ident.startswith("intent.")])
         self.assertEqual(result.earliest_stage, "intent")
 
+    def test_an_interface_only_edit_stales_the_stop_reaction(self) -> None:
+        """The stop reaction reads the interface's recorded contact load and its load references, so an edit that
+        touches nothing but the interface must stale it. The generic engineering. domains leave `interface` out."""
+        extra = {"id": "static_b", "kind": "static", "direction": [0, 0, -1], "requirements": ["REQ-001"],
+                 "magnitude": fx.known(fx.quantity(20, "N"))}
+        self.docs["product.yaml"]["use_case"]["loads"].append(extra)
+        self.docs["interfaces.yaml"]["interfaces"].append(fx.interface("IF-011", "TST-0001", "TST-0002", "other", {
+            "critical": fx.known(True), "functions": [{"function": "structural"}], "loads": ["head_load", "static_b"],
+            "contact": {"materials": [fx.unknown("fixture"), fx.unknown("fixture")],
+                        "load": fx.known(fx.quantity(240, "N"))}}))
+        self.before = normalized(self.docs)
+
+        def contact_load(docs: dict[str, Any]) -> None:
+            docs["interfaces.yaml"]["interfaces"][-1]["functional"]["contact"]["load"] = fx.known(fx.quantity(400, "N"))
+
+        def load_reference(docs: dict[str, Any]) -> None:
+            docs["interfaces.yaml"]["interfaces"][-1]["functional"]["loads"] = ["head_load"]
+        for name, change in (("contact.load", contact_load), ("load reference", load_reference)):
+            with self.subTest(edit=name):
+                result = self.compare(change)
+                self.assertEqual(result.changed.get("IF-011"), ("interface",))
+                self.assertIn("engineering.stop_reaction@IF-011", result.stale_obligations)
+
     def test_nothing_changed_is_no_impact(self) -> None:
         result = self.compare(lambda docs: None)
         self.assertFalse(result.any)
