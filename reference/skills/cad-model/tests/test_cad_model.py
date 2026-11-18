@@ -2895,6 +2895,53 @@ class AbstentionAggregationTests(unittest.TestCase):
         self.assertEqual(result["status"], "pass")
 
 
+@unittest.skipUnless(shutil.which("uv"), "uv is required for the kernel environments")
+class ReferenceOvershootTests(unittest.TestCase):
+    """The agreement abstains, with its default budget, when its reference mesh strays from a part's surface. The
+    fixture project holds a disc with a torus fillet (R44.85 mm, r1.2 mm). `check_with_control_off.py` runs the real
+    `check` with BRepMesh's control of every surface switched off in that process, which leaves the fillet's reference
+    0.0775 mm off its surface, past the 0.05 mm the reach allows. No test passes a budget."""
+
+    CONTROL_OFF = FIXTURES / "check_with_control_off.py"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.hw = two_part_project(Path(cls.tmp.name), "cadquery")
+        set_model(cls.hw, "TST-0001", "cadquery", "ring.py", {"radius": 46.05, "height": 20.0, "fillet": 1.2},
+                  *PARTS["TST-0001"][:2])
+        set_arm(cls.hw, "cadquery")
+        cls.built = cli("run", str(cls.hw), "--label", "v1")
+        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(cls.CONTROL_OFF), "check", "v1", "--hw", str(cls.hw),
+                               "--no-cache"], capture_output=True, text=True, check=False)
+        cls.proc, cls.report = proc, (result_payload(proc.stdout) if proc.stdout.strip() else {})
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def test_the_default_budget_makes_the_overshooting_occurrence_unknown_naming_part_face_and_error(self) -> None:
+        self.assertEqual(self.built[0].returncode, 0, self.built[0].stderr[-3000:])
+        self.assertEqual(self.proc.returncode, 0, self.proc.stdout[-3000:] + self.proc.stderr[-2000:])
+        agreement = self.report["checks"]["glb_step_agreement"]
+        row = agreement["occurrences"]["TST-0001"]
+        self.assertEqual((agreement["status"], row["status"]), ("unknown", "unknown"), row)
+        self.assertRegex(row["reason"], r"TST-0001 lies 0\.0\d{3} mm from the surface on face \d+ \(Torus\), "
+                                        r"beyond the 0\.0500 mm")
+
+    def test_the_overshoot_is_listed_in_the_abstentions_and_blocks_nothing(self) -> None:
+        self.assertIn("glb_step_agreement", self.report["abstentions"])
+        self.assertNotIn("glb_step_agreement", self.report["blocking_failures"])
+        self.assertEqual(self.report["status"], "pass")
+
+    def test_the_production_mesher_agrees_on_the_same_project(self) -> None:
+        """The abstention comes from the uncontrolled mesher: the unpatched check passes this project."""
+        proc, result, _ = cli("check", "v1", "--hw", str(self.hw), "--no-cache")
+        self.assertEqual(proc.returncode, 0, proc.stdout[-3000:] + proc.stderr[-2000:])
+        self.assertEqual(result["checks"]["glb_step_agreement"]["status"], "pass")
+        self.assertNotIn("glb_step_agreement", result["abstentions"])
+
+
 @unittest.skipUnless(shutil.which("uv"), "uv is required for the OCP environment")
 class StaticSuspectTests(unittest.TestCase):
     """check's pair geometry checks every kernel reading against its own bounds, as the sweep does:

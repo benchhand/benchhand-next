@@ -82,6 +82,75 @@ class AgreementTests(unittest.TestCase):
         self.assertEqual(torus["matched"], 1.0, torus)  # the exported GLB holds every one of them
         self.assertLessEqual(torus["worst_mm"], 1.25 * torus["linear_mm"], torus)
 
+    def test_parts_whose_reference_honours_its_deflection_still_agree(self) -> None:
+        """A small fillet disc and the R44.85 mm fillet ring (the shape of lamp-arm's LMP-0004 face 28): their reference
+        meshes lie within the reach's 0.05 mm share, so the verdict stands."""
+        reference = self.probe["reference"]
+        for name in ("disc", "ring"):
+            self.assertEqual(reference[name]["verdict"].get("status"), "pass", reference[name])
+            self.assertLess(reference[name]["deviation"]["error_mm"], reference["budget_mm"], reference[name])
+
+    def test_the_abstain_threshold_is_the_reaches_share_of_the_reference_not_its_requested_deflection(self) -> None:
+        """A ball of R5 mm: its 0.25 rad reference sags more than the 0.025 mm requested for it, less than 0.05 mm.
+        The reach's own 2x margin covers that, so the verdict stands."""
+        reference = self.probe["reference"]
+        self.assertAlmostEqual(reference["budget_mm"], 0.05, places=9)
+        mid = reference["mid"]
+        self.assertGreater(mid["deviation"]["error_mm"], reference["reference_share_mm"], mid)
+        self.assertLess(mid["deviation"]["error_mm"], reference["budget_mm"], mid)
+        self.assertEqual(mid["verdict"].get("status"), "pass", mid)
+
+    def test_a_reference_mesh_beyond_its_budget_makes_the_verdict_unknown(self) -> None:
+        """The fillet ring's reference lies 0.02 mm from the torus. Held to a 0.01 mm budget (the parameter, as no solid
+        sags past the real 0.05 mm once the mesher holds its deflection) the verdict becomes unknown, never pass."""
+        tight = self.probe["reference"]["tight"]
+        self.assertGreater(tight["deviation"]["error_mm"], 0.01, tight)
+        self.assertEqual(tight["verdict"].get("status"), "unknown", tight)
+        self.assertNotIn("glb_to_step_mm", tight["verdict"])  # the code never compared the meshes
+
+    def test_the_unknown_names_the_part_the_face_and_the_measured_error(self) -> None:
+        tight = self.probe["reference"]["tight"]
+        deviation, reason = tight["deviation"], tight["verdict"].get("reason", "")
+        self.assertIn("PART", reason)
+        self.assertIn(f"face {deviation['face']} ({deviation['surface']})", reason)
+        self.assertIn(f"{deviation['error_mm']:.4f} mm", reason)
+        self.assertIn("0.0100 mm", reason)  # the threshold it enforced
+
+    def test_a_curved_extrusion_is_measured_and_a_reference_beyond_its_budget_makes_it_unknown(self) -> None:
+        """A bent spline profile extruded 5 mm: its reference triangles lie off the surface of extrusion by more than a
+        0.001 mm budget. The old code skipped surfaces of extrusion. The verdict names the face and its type."""
+        curved = self.probe["reference"]["curved"]
+        self.assertIsNotNone(curved["deviation"], curved)
+        self.assertEqual(curved["deviation"]["surface"], "SurfaceOfExtrusion")
+        self.assertGreater(curved["deviation"]["error_mm"], 0.001, curved)
+        row = curved["tight_verdict"]
+        self.assertEqual(row.get("status"), "unknown", row)
+        self.assertIn(f"face {curved['deviation']['face']} (SurfaceOfExtrusion)", row.get("reason", ""))
+
+    def test_a_flat_extrusion_is_not_measured_and_still_agrees(self) -> None:
+        """The same extrusion of collinear points is a plane in all but name: skipped, so even a 0.001 mm budget
+        leaves the verdict at pass."""
+        flat = self.probe["reference"]["flat"]
+        self.assertIsNone(flat["deviation"], flat)
+        self.assertEqual(flat["tight_verdict"].get("status"), "pass", flat)
+
+    def test_a_cylinder_is_not_measured_and_agrees(self) -> None:
+        """With the mesher holding its deflection a cylinder's reference lies a chord sagitta off (0.011 mm at R10 mm and
+        0.25 rad, within the 0.025 mm requested at every radius tried). Cylinders are the most common face, so the code skips them."""
+        cylinder = self.probe["reference"]["cylinder"]
+        self.assertIsNone(cylinder["deviation"], cylinder)
+        self.assertEqual(cylinder["verdict"].get("status"), "pass", cylinder)
+
+    def test_a_bspline_face_beyond_its_budget_is_unknown_with_the_few_triangles_sampled(self) -> None:
+        """A bulging B-spline patch held to a 0.001 mm budget: the largest triangles sampled per face still find that the
+        reference strays, and the verdict names the face and its type."""
+        patch = self.probe["reference"]["bspline"]
+        self.assertIsNotNone(patch["deviation"], patch)
+        self.assertEqual(patch["deviation"]["surface"], "BSplineSurface")
+        row = patch["tight_verdict"]
+        self.assertEqual(row.get("status"), "unknown", row)
+        self.assertIn(f"face {patch['deviation']['face']} (BSplineSurface)", row.get("reason", ""))
+
     def test_a_hole_eight_millimetres_off_does_not_agree(self) -> None:
         self.assertEqual(self.status("hole_moved_8_mm"), "fail")
 

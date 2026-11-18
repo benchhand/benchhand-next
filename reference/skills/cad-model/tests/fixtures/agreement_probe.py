@@ -16,12 +16,17 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from OCP.BRepAdaptor import BRepAdaptor_Curve
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
-from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
-from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_MakeFace, BRepBuilderAPI_MakeWire
+from OCP.BRepFilletAPI import BRepFilletAPI_MakeFillet
+from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakePrism, BRepPrimAPI_MakeSphere
+from OCP.collections import Array1_gp_Pnt, Array2_gp_Pnt
+from OCP.GeomAPI import GeomAPI_PointsToBSpline, GeomAPI_PointsToBSplineSurface
+from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt, gp_Vec
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-from cadmodel import agreement, mesh  # noqa: E402
+from cadmodel import agreement, mesh, occ  # noqa: E402
 
 LINEAR = 0.04  # the exporter's deflection in these cases, mm: what a 40 mm part gets (0.0005 of its diagonal)
 LARGE_LINEAR = 0.05  # the deflection of a large assembly's GLB, such as examples/lamp-arm's, mm
@@ -100,6 +105,108 @@ def glb_case(folder: Path) -> dict[str, Any]:
                {"name": "inner", "rotation": [0.0, quarter, 0.0, quarter], "mesh": 0}], 0)
     read = agreement.read_glb(folder / "nested.glb")
     return {"names": sorted(read), "points": read["inner"].points.tolist(), "triangles": read["inner"].triangles.tolist()}
+
+
+def fillet_ring(radius: float = 46.05) -> Any:
+    """A 10 mm tall disc of `radius` mm whose top rim carries a 1.2 mm fillet. At the default radius that is a torus of
+    R44.85 mm, r1.2 mm, the shape of lamp-arm's worst face (LMP-0004, face 28)."""
+    body = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1)), radius, 10.0).Shape()
+    fillet = BRepFilletAPI_MakeFillet(body)
+    for edge in occ.subshapes(body, "EDGE"):
+        curve = BRepAdaptor_Curve(occ.downcast(edge, "EDGE"))
+        if str(curve.GetType()).endswith("Circle") and abs(curve.Circle().Location().Z() - 10.0) < 1e-6:
+            fillet.Add(1.2, occ.downcast(edge, "EDGE"))
+    return fillet.Shape()
+
+
+def write_mesh_glb(path: Path, triangles: Any, name: str) -> None:
+    """A glTF holding one node `name` with the mesh `triangles` (a `Mesh` of the agreement code, mm, Z up), the inverse of
+    `agreement.read_glb`: (x, y, z) -> (x, z, -y) / 1000 m, 32-bit indices."""
+    points = (triangles.points[:, [0, 2, 1]] * np.array([1.0, 1.0, -1.0]) / 1000.0).astype("<f4").tobytes()
+    indices = triangles.triangles.astype("<u4").reshape(-1).tobytes()
+    document = {
+        "asset": {"version": "2.0"}, "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"name": name, "mesh": 0}],
+        "meshes": [{"name": name, "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]}],
+        "accessors": [{"bufferView": 0, "componentType": 5126, "count": len(triangles.points), "type": "VEC3"},
+                      {"bufferView": 1, "componentType": 5125, "count": len(triangles.triangles) * 3, "type": "SCALAR"}],
+        "bufferViews": [{"buffer": 0, "byteOffset": 0, "byteLength": len(points)},
+                        {"buffer": 0, "byteOffset": len(points), "byteLength": len(indices)}],
+        "buffers": [{"byteLength": len(points) + len(indices)}]}
+    text = json.dumps(document).encode()
+    text += b" " * (-len(text) % 4)
+    binary = points + indices
+    binary += b"\0" * (-len(binary) % 4)
+    body = struct.pack("<I4s", len(text), b"JSON") + text + struct.pack("<I4s", len(binary), b"BIN\0") + binary
+    path.write_bytes(struct.pack("<4sII", b"glTF", 2, 12 + len(body)) + body)
+
+
+def attempt(call: Any) -> Any:
+    """`call()`, or the failure as data: one missing behavior then fails its own test, not the whole probe."""
+    try:
+        return call()
+    except Exception as error:  # noqa: BLE001
+        return {"error": f"{type(error).__name__}: {error}"}
+
+
+def sphere(radius: float) -> Any:
+    """A ball: BRepMesh bounds a sphere by its angular deflection, so the radius sets the reference's sag."""
+    return BRepPrimAPI_MakeSphere(radius).Shape()
+
+
+def extrusion(points: list[tuple[float, float]], height: float) -> Any:
+    """The profile through `points` (a spline) closed by a straight edge, extruded `height` mm: its spline side is a
+    surface of extrusion, curved when the points bend and flat when they are collinear."""
+    array = Array1_gp_Pnt(1, len(points))
+    for number, (x, y) in enumerate(points, 1):
+        array.SetValue(number, gp_Pnt(x, y, 0))
+    spline = BRepBuilderAPI_MakeEdge(GeomAPI_PointsToBSpline(array).Curve()).Edge()
+    (x0, y0), (x1, y1) = points[0], points[-1]
+    closing = BRepBuilderAPI_MakeEdge(gp_Pnt(x1, y1, 0), gp_Pnt(x0, y0, 0)).Edge()
+    face = BRepBuilderAPI_MakeFace(BRepBuilderAPI_MakeWire(spline, closing).Wire(), True).Face()
+    return BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, height)).Shape()
+
+
+def bspline_patch() -> Any:
+    """A 30 x 30 mm face on a B-spline surface that bulges 4 mm over a 4 x 4 grid of points."""
+    grid = Array2_gp_Pnt(1, 4, 1, 4)
+    for i in range(4):
+        for j in range(4):
+            grid.SetValue(i + 1, j + 1, gp_Pnt(10.0 * i, 10.0 * j, 4.0 if i in (1, 2) and j in (1, 2) else 0.0))
+    return BRepBuilderAPI_MakeFace(GeomAPI_PointsToBSplineSurface(grid).Surface(), 1e-6).Face()
+
+
+def reference_checks(folder: Path) -> dict[str, Any]:
+    """The reference mesh's own error. Each shape's GLB is its mesh at the exporter's deflections, judged by
+    `occurrences`: a small fillet disc (R4.8 mm torus), the large fillet ring (R44.85 mm, r1.2 mm), a ball of
+    R5 mm whose 0.25 rad reference sags between the requested 0.025 mm and the reach's 0.05 mm share. With the
+    mesher holding its deflection no solid sags past 0.05 mm, so the probe also judges the ring against a 0.01 mm budget."""
+    placements = {"r": agreement.Placement("PART", ROT, (0.0, 0.0, 0.0))}
+    reference_linear = LARGE_LINEAR * agreement.REFERENCE_FACTOR
+    report: dict[str, Any] = {"reference_share_mm": reference_linear,
+                              "budget_mm": agreement.REACH_MARGIN * reference_linear}
+    for name, shape in (("disc", fillet_ring(6.0)), ("ring", fillet_ring(46.05)), ("mid", sphere(5.0)),
+                        ("curved", extrusion([(0, 0), (10, 4), (20, 6), (30, 4), (40, 0)], 5.0)),
+                        ("flat", extrusion([(0, 0), (10, 0), (20, 0), (30, 0), (40, 0)], 5.0)),
+                        ("cylinder", BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1)), 10.0, 20.0).Shape()),
+                        ("bspline", bspline_patch())):
+        glb = folder / f"{name}.glb"
+        write_mesh_glb(glb, agreement.reference(shape, LARGE_LINEAR), "part")
+
+        def judged(shape: Any = shape, glb: Path = glb, **options: Any) -> dict[str, Any]:
+            row: dict[str, Any] = agreement.occurrences(
+                glb, {"r": "part"}, {"PART": shape}, placements, LARGE_LINEAR, **options)["r"]
+            return row
+
+        def deviation(shape: Any = shape) -> dict[str, Any] | None:
+            found = agreement.reference_deviation(shape, reference_linear)
+            return None if found is None else {"error_mm": found.error_mm, "face": found.face, "surface": found.surface}
+
+        report[name] = {"verdict": attempt(judged), "deviation": attempt(deviation)}
+        if name == "ring":
+            report["tight"] = {"verdict": attempt(lambda: judged(reference_budget_mm=0.01)), "deviation": report[name]["deviation"]}
+        if name in ("curved", "flat", "bspline"):
+            report[name]["tight_verdict"] = attempt(lambda: judged(reference_budget_mm=0.001))
+    return report
 
 
 def abstentions(folder: Path) -> dict[str, Any]:
@@ -226,5 +333,5 @@ if __name__ == "__main__":
     folder = Path(sys.argv[1])
     glb = glb_case(folder)
     print(json.dumps({"cases": cases(), "glb": glb, "abstentions": abstentions(folder),
-                      "exporter_deflection_mm": exporter_deflections(),
+                      "reference": reference_checks(folder), "exporter_deflection_mm": exporter_deflections(),
                       "reference_torus": reference_torus_error(), "glb_torus": glb_torus_error(folder)}))
