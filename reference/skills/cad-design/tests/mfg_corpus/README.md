@@ -25,6 +25,7 @@ Rates are `null` when no pair ran. Pairs that raise `Skip` are excluded from the
       rates.py               the command above
       capability_profile.py  materials() / capabilities(): the TEST profile as record documents (needs pyyaml)
       families/<id>.py       one module per family; exposes FAMILY (or FAMILIES)
+      doc_support.py         helpers of the doc_* families: the lamp-arm record copy, edits, the pipeline, process_checks cases
       fixtures/
         test_capabilities.yaml     the TEST capability profile: printer test_printer (fdm), material test_polymer,
                                    synthetic calibrations; the shipped templates stay empty
@@ -63,6 +64,7 @@ real build passes.
 | `printed_verdict(shape, prefix)` | `form_check.probe` (with the bed build axis) -> `process_checks.assess(...).packet()` -> packet schema -> `evidence.assess` | `process.fdm.*@` |
 | `assembly_verdict(items, *prefixes)` | the `access.py` command's packet (order check over the chain's inventory, then path planning) -> schema -> `evidence.assess` | `assembly.order@`, `intent.assembly_operations@`, `assembly.access@` |
 | `readback_verdict(model_source)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
+| `purchase_verdict(record, *prefixes)` | `process_checks.assess(record, {})` (no geometry) -> packet -> schema -> `evidence.assess` | `purchase.`, `route.`, `process.*` |
 
 An evidence state maps to a verdict: `fail` is fail, `pass` and `not_applicable` are pass, anything else (unknown, stale,
 planned, waived, or no packet at all) is unknown. A stage that refuses before it produces a packet (the build of a

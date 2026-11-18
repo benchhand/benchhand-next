@@ -225,6 +225,7 @@ class RatchetGuardTests(unittest.TestCase):
 
 
 DEPS = importlib.util.find_spec("yaml") is not None and importlib.util.find_spec("jsonschema") is not None
+DOC_DEPS = DEPS and importlib.util.find_spec("defusedxml") is not None
 
 
 @unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
@@ -378,11 +379,213 @@ class NativeExitCodeTests(unittest.TestCase):
         self.assertEqual((row["errors"], row["abstained"], row["results"][0]["mutant"]), (0, 1, "unknown"))
 
 
+def family_pair(family_id: str, pair_id: str) -> corpus.Pair:
+    family = next(item for item in corpus.load_families() if item.id == family_id)
+    return next(item for item in family.pairs if item.id == pair_id)
+
+
+@unittest.skipUnless(DOC_DEPS, "pyyaml, jsonschema and defusedxml are required")
+class DocLeakTests(unittest.TestCase):
+    """A doc_* mutant carries its defect and nothing else: the identifier or step it removes is absent from EVERY document the
+    generator writes (build guide, okh.toml, DIN checklist), and the twin still has it. The check reads the whole output, so a
+    string that survives in another field (an interface display text, say) shows up."""
+
+    NAMES = ("index.md", "okh.toml", "din-spec-3105-1-checklist.md")
+
+    def documents(self, family_id: str, pair_id: str, mutant: bool) -> dict[str, str]:
+        """The documents of build_guide.make_guide for the pair's record, as the pair's own run builds it."""
+        import doc_support
+
+        module = doc_support.load("cad_record_build_guide", doc_support.RECORD / "scripts" / "build_guide.py")
+        found: dict[str, str] = {}
+
+        def capture(hw: Path, root: Path, prefixes: tuple[str, ...]) -> str:
+            version = hw / "versions" / doc_support.VERSION
+            version.mkdir(parents=True, exist_ok=True)
+            (version / "manifest.json").write_text(json.dumps({"label": doc_support.VERSION, "manufacturing": {}}), encoding="utf-8")
+            found.update(module.make_guide(hw, doc_support.VERSION, root / "docs"))
+            return "pass"
+
+        with mock.patch.object(doc_support, "judge", capture):
+            family_pair(family_id, pair_id).run(mutant)
+        self.assertEqual(sorted(found), sorted(self.NAMES))
+        return found
+
+    def assert_absent_from_mutant_present_in_twin(self, family_id: str, pair_id: str, tokens: tuple[str, ...]) -> None:
+        mutant, twin = self.documents(family_id, pair_id, True), self.documents(family_id, pair_id, False)
+        for token in tokens:
+            with self.subTest(pair=pair_id, token=token):
+                self.assertEqual([name for name, text in mutant.items() if token in text], [], "survives in the mutant")
+                self.assertTrue([name for name, text in twin.items() if token in text], "missing from the twin")
+
+    def test_each_removed_step_or_field_is_absent_from_every_document(self) -> None:
+        cases = {
+            ("doc_heatset_insert", "iron_missing"): ("Soldering iron", "230"),
+            ("doc_heatset_insert", "iron_temperature"): ("230",),
+            ("doc_heatset_insert", "pressing_depth"): ("depth min",),
+            ("doc_retaining_ring", "no_pliers"): ("pliers",),
+            ("doc_fastener_bom", "hole_without_fastener"): ("SCR-0001", "Fasten item 12"),
+        }
+        for (family_id, pair_id), tokens in cases.items():
+            self.assert_absent_from_mutant_present_in_twin(family_id, pair_id, tokens)
+
+    def test_the_added_screws_of_the_reverse_pair_are_in_the_mutant_only(self) -> None:
+        mutant = self.documents("doc_fastener_bom", "fastener_without_hole", True)
+        twin = self.documents("doc_fastener_bom", "fastener_without_hole", False)
+        for token in ("SCR-0002", "M3"):
+            with self.subTest(token=token):
+                self.assertTrue([name for name, text in mutant.items() if token in text])
+                self.assertEqual([name for name, text in twin.items() if token in text], [])
+
+
+@unittest.skipUnless(DOC_DEPS, "pyyaml, jsonschema and defusedxml are required")
+class DocRecordLeakTests(unittest.TestCase):
+    """The doc_manufacturing and doc_retaining_ring/no_groove_part mutants generate no document, so the check reads the record:
+    the part document of the mutant lacks what the pair removes, and the twin has it."""
+
+    def dump(self, part: dict) -> str:
+        return json.dumps(part, sort_keys=True, default=str)
+
+    def test_a_stock_less_printed_part_names_no_material_profile_anywhere(self) -> None:
+        import doc_support
+
+        mutant, twin = self.dump(doc_support.fdm_part(material=False)), self.dump(doc_support.fdm_part())
+        self.assertNotIn(doc_support.POLYMER, mutant)
+        self.assertIn(doc_support.POLYMER, twin)
+
+    def test_the_other_printed_part_mutants_lack_the_key_they_remove(self) -> None:
+        import doc_support
+
+        for kwargs, token in (({"orientation": False}, '"orientation"'), ({"supports": False}, '"supports"'),
+                              ({"route": False}, '"print"')):
+            with self.subTest(removed=token):
+                self.assertNotIn(token, self.dump(doc_support.fdm_part(**kwargs)))
+                self.assertIn(token, self.dump(doc_support.fdm_part()))
+
+    def test_a_setup_less_milled_part_has_none_of_the_setup_keys(self) -> None:
+        import doc_support
+
+        mutant, twin = self.dump(doc_support.cnc_part(setup=False)), self.dump(doc_support.cnc_part())
+        for token in ('"setup"', '"datums"', '"access"', '"workholding"', '"dimensions"'):
+            with self.subTest(token=token):
+                self.assertNotIn(token, mutant)
+                self.assertIn(token, twin)
+
+    def test_a_milled_part_without_workholding_keeps_the_rest_of_its_setup(self) -> None:
+        import doc_support
+
+        mutant = self.dump(doc_support.cnc_part(workholding=False))
+        self.assertNotIn('"workholding"', mutant)
+        for token in ('"setup"', '"datums"', '"access"', '"dimensions"'):
+            self.assertIn(token, mutant)
+
+    def test_a_pin_without_a_groove_has_no_groove_in_its_drawing(self) -> None:
+        import doc_support
+        import yaml
+
+        corpus.load_families()
+        family = sys.modules["mfg_corpus_family_doc_retaining_ring"]
+        for mutant in (True, False):
+            with self.subTest(mutant=mutant), doc_support.workspace() as root:
+                hw = doc_support.lamp(root)
+                family.part_groove(hw, mutant)
+                text = (hw / "parts" / "LMP-0005" / "part.yaml").read_text(encoding="utf-8")
+                self.assertEqual("groove" in yaml.safe_load(text)["drawing"]["features"], not mutant)
+                self.assertEqual("groove" in text, not mutant)
+
+
+@unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
+class DocVerdictPathTests(unittest.TestCase):
+    """The verdicts of the doc_* families come from the packet and evidence, so each helper changes its answer when what it
+    reads changes, and it refuses a packet the schema rejects. A constant verdict or a swallowed error cannot pass these."""
+
+    def test_the_route_obligations_judge_the_four_manufacturing_defects(self) -> None:
+        for pair_id in ("fdm_orientation", "fdm_supports", "cnc_setup", "cnc_workholding"):
+            with self.subTest(pair=pair_id):
+                pair = family_pair("doc_manufacturing", pair_id)
+                self.assertIsNone(pair.known_gap)
+                self.assertEqual((pair.run(True), pair.run(False)), ("unknown", "pass"))
+
+    def test_a_failing_joint_fact_of_the_record_fails_the_joint_verdict(self) -> None:
+        import doc_support
+
+        fx = doc_support.fixtures()
+        short = {"criterion": fx.criterion("edge_distance", ">=", 4.5, "mm", source=fx.source("standard", "TST-STD-2 insert edge distance")),
+                 "distance": fx.known(fx.quantity(1.0, "mm"))}
+
+        def change(hw: Path, mutant: bool) -> None:
+            if mutant:
+                doc_support.edit(hw, "assembly.yaml", lambda assembly: doc_support.operation(
+                    assembly, "heat_set_socket_insert").update(edge_distance=short))
+
+        run = doc_support.lamp_verdict(change, "assembly.joint@op:heat_set_socket_insert")
+        self.assertEqual((run(True), run(False)), ("fail", "unknown"))
+
+    def bought(self, **purchase: object) -> dict:
+        import doc_support
+
+        fx = doc_support.fixtures()
+        facts = {"identity": fx.known("TST-BRG 608"),
+                 "specification": fx.known("TST ISO 15 608", "standard", [fx.source("standard", "TST ISO 15")]),
+                 "ratings": fx.known("TST C 3.3 kN", "supplier_typical", [fx.source("datasheet", "TST bearing")]),
+                 "availability": fx.known("TST stock item")}
+        facts.update(purchase)
+        part = doc_support.made_part("TST-0003", [fx.operation("buy", "purchased", purchase=facts)], "purchased", None)
+        part.update(make_buy="buy", procurement={"mode": "catalog"})
+        part["intent"]["material_profile"] = fx.not_applicable("catalogue item")
+        return part
+
+    def test_the_purchase_verdict_follows_the_facts_of_the_record(self) -> None:
+        import doc_support
+
+        fx = doc_support.fixtures()
+        known = doc_support.route_verdict(self.bought(), "purchase.identity@")
+        unknown = doc_support.route_verdict(self.bought(identity=fx.unknown("not recorded")), "purchase.identity@")
+        self.assertEqual((known, unknown), ("pass", "unknown"))
+
+    def test_a_purchase_packet_that_only_the_schema_rejects_is_refused(self) -> None:
+        """The packet is the real one plus a key the schema forbids (additionalProperties false). Evidence reads the packet
+        without noticing, so only the schema step can refuse it, and the reason names that step."""
+        import types
+
+        import doc_support
+
+        pc = doc_support.process_checks()
+        real = pc.assess
+
+        def assess_with_extra_key(*args: object, **kwargs: object) -> object:
+            result = real(*args, **kwargs)
+            return types.SimpleNamespace(packet=lambda dependencies: {**result.packet(dependencies), "unreviewed": True})
+
+        with mock.patch.object(pc, "assess", assess_with_extra_key), self.assertRaisesRegex(corpus.Rejected, r"^schema:"):
+            doc_support.route_verdict(self.bought(), "purchase.identity@")
+
+    def test_purchase_verdict_runs_from_a_process_that_only_imports_support(self) -> None:
+        """#106 calls it without doc_support, so it sets up its own import path."""
+        script = (
+            "import pathlib, sys, tempfile\n"
+            f"sys.path.insert(0, {str(CORPUS)!r})\n"
+            "import support\n"
+            "fx = support.load('cad_record_mi_fixtures', support.SKILLS / 'cad-record' / 'tests' / 'fixtures' / 'manufacturing_intent.py')\n"
+            "ev = support.load('cad_record_evidence', support.SKILLS / 'cad-record' / 'scripts' / 'evidence.py')\n"
+            "with tempfile.TemporaryDirectory() as tmp:\n"
+            "    hw = fx.write_record(pathlib.Path(tmp) / 'hw', fx.record())\n"
+            "    record, _ = ev.mi.check_record(hw)\n"
+            "print(support.purchase_verdict(record, 'route.consistency@'))\n")
+        done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, check=False, cwd=tempfile.gettempdir(),
+                              env={k: v for k, v in os.environ.items() if k != "PYTHONPATH"})
+        self.assertEqual(done.returncode, 0, done.stderr[-600:])
+        self.assertEqual(done.stdout.strip(), "unknown")
+
+
 class DependencyGuardTests(unittest.TestCase):
     """A family whose tool is absent skips its pairs: neither an error nor a verdict."""
 
+    DOC = {"doc_fastener_bom", "doc_heatset_insert", "doc_install_step", "doc_instruction_order", "doc_manufacturing",
+           "doc_retaining_ring"}
     NEEDS = {"yaml": {"assembly_operations_order", "access_assembly", "additive_min_feature", "additive_stability",
-                      "additive_support_overhang_bridge", "stability_contact_hull"},
+                      "additive_support_overhang_bridge", "stability_contact_hull"} | DOC,
+             "jsonschema": DOC - {"doc_install_step", "doc_instruction_order"},
              "OCP": {"additive_min_feature", "additive_stability", "additive_support_overhang_bridge",
                      "stability_contact_hull"}}
 
