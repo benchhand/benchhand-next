@@ -137,7 +137,7 @@
       "properties": {
         "input_unit": {"const": "deg"},
         "output_unit": {"enum": ["mm", "deg"]},
-        "period_deg": {"type": "number", "exclusiveMinimum": 0},
+        "period_deg": {"type": "number", "exclusiveMinimum": 0, "maximum": 360},
         "interpolation": {"const": "linear"},
         "samples": {
           "type": "array", "minItems": 2,
@@ -156,8 +156,8 @@
         "origin_mm": {"$ref": "#/$defs/vector"},
         "crank_axis": {"$ref": "#/$defs/vector"},
         "bank_axis": {"$ref": "#/$defs/vector"},
-        "crank_radius_mm": {"type": "number", "exclusiveMinimum": 0},
-        "rod_length_mm": {"type": "number", "exclusiveMinimum": 0},
+        "crank_radius_mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000, "x-plausible": {"max": 200}},
+        "rod_length_mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000, "x-plausible": {"max": 500}},
         "phase_deg": {"type": "number"}
       }
     },

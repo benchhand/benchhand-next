@@ -9,6 +9,42 @@
   },
   "$defs": {
     "conditioning": {"description": "dry as moulded or dried, moisture-conditioned, as received, or not stated", "enum": ["dry", "conditioned", "as_received", "unknown"]},
+    "qty_modulus": {
+      "description": "Elastic, flexural, shear and creep modulus: above 0 and at most 1200 GPa, diamond's",
+      "allOf": [
+        {"if": {"required": ["units"], "properties": {"units": {"const": "GPa"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1200}, "lower": {"exclusiveMinimum": 0, "maximum": 1200}, "upper": {"exclusiveMinimum": 0, "maximum": 1200}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "MPa"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1200000}, "lower": {"exclusiveMinimum": 0, "maximum": 1200000}, "upper": {"exclusiveMinimum": 0, "maximum": 1200000}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "bar"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 12000000}, "lower": {"exclusiveMinimum": 0, "maximum": 12000000}, "upper": {"exclusiveMinimum": 0, "maximum": 12000000}}}}
+      ]
+    },
+    "fact_modulus": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_modulus"}}}},
+    "qty_density": {
+      "description": "Density: above 0 and at most 25 g/cm3; below 0.5 g/cm3 is unusual for a solid",
+      "x-plausible": {"min": 0.5, "units": "g_cm3"},
+      "allOf": [
+        {"if": {"required": ["units"], "properties": {"units": {"const": "g_cm3"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 25}, "lower": {"exclusiveMinimum": 0, "maximum": 25}, "upper": {"exclusiveMinimum": 0, "maximum": 25}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "kg_m3"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 25000}, "lower": {"exclusiveMinimum": 0, "maximum": 25000}, "upper": {"exclusiveMinimum": 0, "maximum": 25000}}}}
+      ]
+    },
+    "fact_density": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_density"}}}},
+    "qty_temperature": {
+      "description": "A temperature property: above absolute zero and at most 1000 deg_C; above 300 deg_C is unusual for a printed polymer",
+      "x-plausible": {"max": 300, "units": "deg_C"},
+      "allOf": [
+        {"if": {"required": ["units"], "properties": {"units": {"const": "deg_C"}}}, "then": {"properties": {"value": {"exclusiveMinimum": -273.15, "maximum": 1000}, "lower": {"exclusiveMinimum": -273.15, "maximum": 1000}, "upper": {"exclusiveMinimum": -273.15, "maximum": 1000}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "K"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1273.15}, "lower": {"exclusiveMinimum": 0, "maximum": 1273.15}, "upper": {"exclusiveMinimum": 0, "maximum": 1273.15}}}}
+      ]
+    },
+    "fact_temperature": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_temperature"}}}},
+    "qty_poisson": {
+      "description": "Poisson's ratio: 0 up to, not including, 0.5",
+      "x-plausible": {"max": 0.45, "units": "dimensionless"},
+      "allOf": [
+        {"if": {"required": ["units"], "properties": {"units": {"const": "dimensionless"}}}, "then": {"properties": {"value": {"minimum": 0, "exclusiveMaximum": 0.5}, "lower": {"minimum": 0, "exclusiveMaximum": 0.5}, "upper": {"minimum": 0, "exclusiveMaximum": 0.5}}}},
+        {"if": {"required": ["units"], "properties": {"units": {"const": "percent"}}}, "then": {"properties": {"value": {"minimum": 0, "exclusiveMaximum": 50}, "lower": {"minimum": 0, "exclusiveMaximum": 50}, "upper": {"minimum": 0, "exclusiveMaximum": 50}}}}
+      ]
+    },
+    "fact_poisson": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_poisson"}}}},
     "profile": {
       "type": "object", "additionalProperties": false,
       "required": ["id", "revision", "title", "level", "family", "grade", "form", "process_state", "typical_not_allowable", "properties"],
@@ -63,7 +99,13 @@
             "notes": {"$ref": "manufacturing.schema.json#/$defs/text"}
           }
         }
-      }
+      },
+      "allOf": [
+        {"if": {"required": ["name"], "properties": {"name": {"enum": ["youngs_modulus", "flexural_modulus", "shear_modulus", "creep_modulus"]}}}, "then": {"properties": {"value": {"$ref": "#/$defs/fact_modulus"}}}},
+        {"if": {"required": ["name"], "properties": {"name": {"enum": ["density"]}}}, "then": {"properties": {"value": {"$ref": "#/$defs/fact_density"}}}},
+        {"if": {"required": ["name"], "properties": {"name": {"enum": ["heat_deflection_temperature", "vicat_softening_temperature", "glass_transition_temperature", "melting_temperature", "max_service_temperature"]}}}, "then": {"properties": {"value": {"$ref": "#/$defs/fact_temperature"}}}},
+        {"if": {"required": ["name"], "properties": {"name": {"enum": ["poisson_ratio"]}}}, "then": {"properties": {"value": {"$ref": "#/$defs/fact_poisson"}}}}
+      ]
     }
   }
 }

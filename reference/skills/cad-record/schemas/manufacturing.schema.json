@@ -93,7 +93,7 @@
       "properties": {
         "lower": {"type": "number"},
         "upper": {"type": "number"},
-        "confidence": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "confidence": {"type": "number", "exclusiveMinimum": 0, "maximum": 1, "x-plausible": {"min": 0.2}},
         "note": {"$ref": "#/$defs/text"}
       },
       "dependentRequired": {"lower": ["upper"], "upper": ["lower"]}

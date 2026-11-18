@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://srobroek.com/cad/schemas/motion-plan.schema.json",
+  "title": "CAD motion plan (hw/motion/cases/<case>/plan.yaml)",
+  "description": "A choreography over the record's independent joints, as cad-motion plan.py reads it. Hard bounds are errors; x-plausible bands are warnings (plausibility.<field>). plan.validate still checks the joint ids, the targets against each joint's limits and the expanded frame count (at most 10000)",
+  "type": "object", "additionalProperties": false, "required": ["schema", "segments"],
+  "properties": {
+    "schema": {"const": 1},
+    "case": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "title": {"type": "string"},
+    "fps": {
+      "description": "Playback rate in frames per second; frames are spaced by max_step, not by time",
+      "x-unit": "Hz", "type": "integer", "minimum": 1, "maximum": 120, "default": 30, "x-plausible": {"min": 10, "max": 60}
+    },
+    "max_step": {
+      "description": "The largest independent-joint change between consecutive frames: deg for revolute joints, mm for prismatic ones. A step near the joint's range skips collisions",
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "default": {"deg": 5, "mm": 1},
+      "properties": {
+        "deg": {"type": "number", "exclusiveMinimum": 0, "maximum": 90, "default": 5, "x-plausible": {"max": 10}},
+        "mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 100, "default": 1, "x-plausible": {"max": 10}}
+      }
+    },
+    "start": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "number"}},
+    "segments": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "title": {"type": "string"},
+          "to": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "number"}},
+          "easing": {"enum": ["linear", "ease_in_out"], "default": "linear"},
+          "camera": {"enum": ["iso", "front", "side"], "default": "iso"},
+          "hold_frames": {"type": "integer", "minimum": 1, "maximum": 10000}
+        },
+        "oneOf": [
+          {"required": ["to"], "not": {"required": ["hold_frames"]}},
+          {"required": ["hold_frames"], "not": {"anyOf": [{"required": ["to"]}, {"required": ["easing"]}]}}
+        ],
+        "additionalProperties": false
+      }
+    },
+    "coverage": {"enum": ["full", "partial"], "default": "full"},
+    "coverage_reason": {"type": "string", "minLength": 1},
+    "generated": {"type": "string"}
+  },
+  "if": {"properties": {"coverage": {"const": "partial"}}, "required": ["coverage"]},
+  "then": {"required": ["coverage_reason"]},
+  "else": {"not": {"required": ["coverage_reason"]}}
+}

@@ -71,11 +71,11 @@
         "mesh": {
           "type": "object", "additionalProperties": false, "required": ["linear_deflection_mm", "angular_deflection_rad"],
           "properties": {
-            "linear_deflection_mm": {"type": "number", "exclusiveMinimum": 0},
-            "angular_deflection_rad": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.141592653589793}
+            "linear_deflection_mm": {"type": "number", "minimum": 0.001, "maximum": 1, "default": 0.05, "x-plausible": {"min": 0.01, "max": 0.2}},
+            "angular_deflection_rad": {"type": "number", "exclusiveMinimum": 0, "maximum": 3.141592653589793, "default": 0.1, "x-plausible": {"min": 0.05, "max": 0.5}}
           }
         },
-        "same_state_volume_rel_tolerance": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+        "same_state_volume_rel_tolerance": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.1, "default": 1e-9, "x-plausible": {"max": 0.001}}
       }
     },
     "storage": {

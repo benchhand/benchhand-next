@@ -15,7 +15,7 @@
     "process": {"anyOf": [{"$ref": "manufacturing.schema.json#/$defs/primary_process"}, {"type": "null"}]},
     "make_buy": {"type": ["string", "null"], "enum": ["make", "buy", null]},
     "supplier": {"type": ["string", "null"]},
-    "mass": {"type": ["number", "null"], "exclusiveMinimum": 0},
+    "mass": {"description": "grams, copied from the part mass_target", "type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 10000000, "x-plausible": {"max": 50000}},
     "unit": {"description": "what qty counts; the BOM counts STEP instances", "enum": ["pcs"]},
     "designation": {"type": ["string", "null"]},
     "manufacturer": {"type": ["string", "null"]},

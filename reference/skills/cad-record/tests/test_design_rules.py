@@ -4,6 +4,7 @@ a copy of the lamp example migrated to record version 2, and through design_rule
 
 from __future__ import annotations
 
+import json
 import math
 import sys
 import tempfile
@@ -343,6 +344,26 @@ class VisibilityBindings(LampRecord):
                 found = self.coded("visibility.")
                 self.assertEqual(list(found), [location])
                 self.assertEqual((found[location]["code"], found[location]["severity"]), ("visibility.binding", "error"))
+
+
+class SchemaDefaults(unittest.TestCase):
+    """Each default in a schema equals the value these rules apply, read from the module. Until the config loader makes
+    the schema the single source, a change to one without the other fails here."""
+
+    def schema(self, name: str) -> Any:
+        return json.loads((SKILL / "schemas" / name).read_text(encoding="utf-8"))
+
+    def test_the_visibility_fraction_default_is_the_one_a_binding_gets(self) -> None:
+        field = self.schema("requirements.schema.json")["properties"]["requirements"]["items"]["properties"]["visibility"][
+            "items"]["properties"]["min_visible_fraction"]
+        requirements = {"requirements": [{"id": "REQ-001", "visibility": [{"view": "iso", "window": ["A"], "targets": ["B"]}]}]}
+        applied = rules.visibility_bindings(requirements)[0].min_visible_fraction
+        self.assertEqual((field["default"], field["default"]), (applied, rules.DEFAULT_MIN_VISIBLE_FRACTION))
+
+    def test_the_clearance_margin_default_is_the_one_the_rules_apply(self) -> None:
+        field = self.schema("product.schema.json")["properties"]["design"]["properties"]["clearance_margin_mm"]
+        applied = rules.clearance_margins({"id": "x"}, None).default_mm
+        self.assertEqual((field["default"], field["default"]), (applied, rules.DEFAULT_CLEARANCE_MARGIN_MM))
 
 
 if __name__ == "__main__":
