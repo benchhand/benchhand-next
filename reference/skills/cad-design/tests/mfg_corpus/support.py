@@ -221,15 +221,12 @@ def assembly_verdict(items: list[dict[str, Any]], *prefixes: str) -> Outcome:
     """What a release concludes about the obligations whose id starts with one of `prefixes` for the five parts with
     `items` as the assembly operations. The packet is access.py's own (its order check over the chain's inventory, then
     the path planning), as the access.py command prints it."""
-    import json
     import shutil
-    import subprocess
     import tempfile
 
     require("yaml")
     root, _ = _access_geometry()
     fx = load("cad_record_mi_fixtures", SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
-    intent = load("cad_record_manufacturing_intent", SKILLS / "cad-record" / "scripts" / "manufacturing_intent.py")
     parts = [fx.part(pn, TITLES[pn], process="cnc") for pn in PNS]
     interface = fx.interface("IF-001", "TST-0101", "TST-0102", "mounting",
                              limits={"press_fit": {"fit": "22 H7/p6", "pair": ["TST-0102", "TST-0101"]}})
@@ -239,14 +236,25 @@ def assembly_verdict(items: list[dict[str, Any]], *prefixes: str) -> Outcome:
         source = hw / "manufacturing" / "sources" / "socket.step"
         source.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(root / "geometry" / "socket.step", source)
-        attach = [arg for pn in PNS[1:] for arg in ("--attach", f"{pn}=TST-0101")]
-        run = subprocess.run(["uv", "run", "--quiet", "--script", str(SKILLS / "cad-motion" / "scripts" / "access.py"),
-                              "--hw", str(hw), "--parts-dir", str(root / "geometry" / "parts"), *attach],
-                             capture_output=True, text=True, timeout=1800, check=False)
-        if run.returncode not in (0, 1):
-            raise RuntimeError(f"access.py exited {run.returncode}: {(run.stdout + run.stderr)[-1500:]}")
-        printed = json.loads(run.stdout)
-        record, problems = intent.check_record(hw)
+        return access_packet_verdict(hw, root / "geometry" / "parts", [f"{pn}=TST-0101" for pn in PNS[1:]], *prefixes)
+
+
+def access_packet_verdict(hw: Path, parts_dir: Path, attach: list[str], *prefixes: str) -> Outcome:
+    """What a release concludes about the obligations whose id starts with one of `prefixes` for the record at `hw`
+    whose built parts are in `parts_dir`, with `attach` as the `--attach REF=PARENT` pairs. The packet is the one the
+    access.py command prints, as in assembly_verdict."""
+    import json
+    import subprocess
+
+    intent = load("cad_record_manufacturing_intent", SKILLS / "cad-record" / "scripts" / "manufacturing_intent.py")
+    pairs = [arg for pair in attach for arg in ("--attach", pair)]
+    run = subprocess.run(["uv", "run", "--quiet", "--script", str(SKILLS / "cad-motion" / "scripts" / "access.py"),
+                          "--hw", str(hw), "--parts-dir", str(parts_dir), *pairs],
+                         capture_output=True, text=True, timeout=1800, check=False)
+    if run.returncode not in (0, 1):
+        raise RuntimeError(f"access.py exited {run.returncode}: {(run.stdout + run.stderr)[-1500:]}")
+    printed = json.loads(run.stdout)
+    record, problems = intent.check_record(hw)
     printed.pop("detail")
     return release_verdict(record, printed, *prefixes)
 
