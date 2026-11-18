@@ -205,7 +205,7 @@ open_questions:
     safety_relevant: true
     status: open
   - id: Q-021
-    question: 'LMP-0010 (Heat-set insert QT M10x1 x 12.7 OD 12.6): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Brass and process purchased; they stay declarations, not evidence.'
+    question: 'LMP-0010 (Heat-set insert M10x1 x 12.7 OD 12.6): which functions does it serve, which loads and service conditions does it see, which material profile (family or exact grade) and which complete route (operations, capability, orientation, setups, supports, finishing and inspection) apply, and which surfaces are critical? The legacy record declares material Brass and process purchased; they stay declarations, not evidence.'
     subjects:
       - {PN: LMP-0010}
     owner: lead

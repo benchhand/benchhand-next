@@ -1,9 +1,8 @@
-"""LMP-0010 Heat-set insert QT M10x1 x 12.7 OD 12.6: cad-design reference model, CadQuery 2.8, fidelity F2.
+"""LMP-0010 Heat-set insert M10x1 x 12.7 OD 12.6: cad-design reference model, CadQuery 2.8, fidelity F2.
 
-Catalogue brass heat-set insert for the lampholder's M10x1 nipple (DR-004): the In-saiL
-QT-M10x12.7-OD12.6 envelope with its thread specified M10x1, heat-staked into the head's
-socket boss. Modelled as its envelope: the knurl at the published 12.6 over the full 12.7
-length (the 11.8 pilot length is not published) and the thread as a plain bore at the
+Brass heat-set insert for the lampholder's M10x1 nipple (DR-004), heat-staked into the head's
+socket boss. No catalogue part is identified, so this is a design envelope: the knurl at 12.6
+over the full 12.7 length (no pilot) and the thread as a plain bore at the
 M10x1 basic minor diameter D1 = D - 1.0825 P (ISO 724).
 
 Zero pose, assembly coordinates: on the shade axis (430, 0), installed end flush with the

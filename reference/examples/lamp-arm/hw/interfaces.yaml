@@ -60,7 +60,7 @@ interfaces:
     limits:
       thread: M10x1-6H
       heat_set:
-        - {pair: [LMP-0004, LMP-0010], engagement_length_mm: 12.7, hole_d: 11.95, hole_tol: [-0.05, 0.05], depth_min: 13.7, insert: "In-saiL QT-M10x12.7-OD12.6, thread M10x1 to order", source: "https://www.ppmcn.com/qt-m10x127-od126-product/", note: "OD 12.60 +/-0.12 (In-saiL drawing LF646) in the 11.9/12.0 hole: 0.48/0.82 diametral embedment (STK-103); 6.0 minimum wall", feature: insert_hole}
+        - {pair: [LMP-0004, LMP-0010], engagement_length_mm: 12.7, hole_d: 11.95, hole_tol: [-0.05, 0.05], depth_min: 13.7, insert: "heat-set insert M10x1-6H, L 12.7, OD 12.6 (LMP-0010; no catalogue part identified)", source: "https://www.cnckitchen.com/s/CNCKitchen_Heat-Set-Insert-Dimensions-and-Design-Guidelines.pdf", note: "Source of hole_d 11.95 +/-0.05 and of the 0.48/0.82 diametral embedment (STK-103): UNKNOWN. Derived from In-saiL QT-M10x12.7-OD12.6 (M10x1.5), which LMP-0010 no longer cites. The source URL is CNC Kitchen's M10 row (L 12.7, insert diameter D1 12.6, hole diameter D2 12.0, wall W 6.0; blind hole min. L+1). It states no pitch and matches In-saiL's M10x1.5 insert in L, OD and W, with D2 12.0 inside In-saiL's 11.9/12.0, so it most likely describes the same M10x1.5 part. These values size an M10 insert of unknown pitch; they are not confirmed for the decided M10x1 insert, which no maker searched lists", feature: insert_hole}
     functional:
       critical: {status: unknown, reason: not recorded before record version 2, question: Q-027}
       functions: {status: unknown, reason: not recorded before record version 2, question: Q-027}

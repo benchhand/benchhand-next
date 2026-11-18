@@ -53,9 +53,9 @@ PARAMS = {
     "shade_mid": [35.2, 21.4],  # (r, z) of the dome's mid point
     "rim": [46.0, 2.0],  # (r, z) of the outer rim edge
     "shade_wall": 2.4,
-    "socket_boss_r": 12.5,  # In-saiL 6.0 minimum wall around the 12.6 insert
+    "socket_boss_r": 12.5,  # 6.0 minimum wall around the 12.6 insert (CNC Kitchen M10 x 12.7)
     "socket_boss_z": 50.0,
-    "insert_hole_d": 11.95,  # In-saiL QT M10 x 12.7 hole 11.9/12.0, mid-limit
+    "insert_hole_d": 11.95,  # source UNKNOWN (see interfaces.yaml heat_set note)
     "insert_hole_depth": 13.7,  # insert L 12.7 + 1 mm (CNC Kitchen heat-set guidance)
     "grip_flutes": 20,
     "grip_r": 0.8,
