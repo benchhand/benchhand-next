@@ -335,13 +335,18 @@ class QualifiedProfile(SourcedFEACase):
         self.assertEqual(report["engineering"]["result"], "unknown")
         self.validate_packet(report["engineering"])
 
-    def test_a_criterion_service_loads_and_convergence_make_strength_and_stiffness_pass(self) -> None:
+    def test_a_criterion_service_loads_and_convergence_pass_stiffness_and_leave_a_full_mode_strength_unknown(self) -> None:
+        # A full solve's yield safety factor rests on one mesh's peak von Mises stress: 3.0 meets REQ-001's 2, but
+        # only the two-mesh stress study of a mode: stress case can pass strength.
         self.build(documents())
         status, report = self.call(self.convergent_case())
         self.assertEqual(status, 0, report)
         self.assertEqual(report["required_safety_factor"], 2.0)  # from REQ-001, not a bare case number
         self.assertTrue(report["evidence"]["service_evidence"], report["evidence"]["gaps"])
-        self.assertEqual(self.outcomes(report), {f"engineering.stiffness@{PN}": "pass", f"engineering.strength@{PN}": "pass"})
+        self.assertEqual(self.outcomes(report), {f"engineering.stiffness@{PN}": "pass", f"engineering.strength@{PN}": "unknown"})
+        finding = next(f for f in report["engineering"]["findings"] if f["obligation"] == f"engineering.strength@{PN}")
+        self.assertEqual((finding["code"], finding["measured"]), ("fea.strength.unverified", {"value": 3.0, "units": "dimensionless"}))
+        self.assertIn("mode: stress", finding["uncertainty"])
         self.assertEqual({row["level"] for row in report["engineering"]["outcomes"]}, {"simulation_supported"})
         self.assertEqual(report["engineering"]["dependencies"]["decision_dr_002"],
                          hashlib.sha256(decision_path(self.hw, "DR-002").read_bytes()).hexdigest())
@@ -469,7 +474,10 @@ class QualifiedProfile(SourcedFEACase):
 
 class QualificationBypasses(SourcedFEACase):
     """A pass needs service loads shown covered as vectors and a convergence study that is approved, bound to this
-    case and converged. Anything unproven is unknown, never pass, and never service evidence."""
+    case and converged. Anything unproven is unknown, never pass, and never service evidence. These cases are full
+    mode, so a covered case passes stiffness and leaves strength unknown: one mesh's peak is no strength value."""
+
+    COVERED = ("unknown", "pass")  # (strength, stiffness) of a full-mode case whose gaps are all closed
 
     def verdicts(self, report: dict[str, Any]) -> tuple[str, str]:
         outcomes = self.outcomes(report)
@@ -506,14 +514,14 @@ class QualificationBypasses(SourcedFEACase):
 
     def test_a_larger_load_along_the_direction_and_a_small_cross_component_still_pass(self) -> None:
         self.build(documents())
-        self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [0, 0, -60])))), ("pass", "pass"))
+        self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [0, 0, -60])))), self.COVERED)
         self.solved.clear()
-        self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [0.2, 0, -50])))), ("pass", "pass"))  # 0.4% across
+        self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [0.2, 0, -50])))), self.COVERED)  # 0.4% across
 
     def test_split_loads_that_add_up_to_the_service_vector_pass(self) -> None:
         self.build(documents())
         report = self.solve(self.loads_case(([2], [0, 0, -30]), ([3], [0, 0, -20])))
-        self.assertEqual(self.verdicts(report), ("pass", "pass"))
+        self.assertEqual(self.verdicts(report), self.COVERED)
 
     def test_a_force_in_the_wrong_direction_keeps_the_verdict_unknown(self) -> None:
         self.build(documents())
@@ -584,7 +592,7 @@ class QualificationBypasses(SourcedFEACase):
                     self.solved.clear()
                     self.build(documents(direction=direction))
                     report = self.solve(self.loads_case(([2], force)))
-                    self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
+                    self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
 
     def test_a_direction_just_outside_the_unit_tolerance_is_still_refused(self) -> None:
         for scale in (1 - 1.1e-6, 1 + 1.1e-6):
@@ -599,7 +607,7 @@ class QualificationBypasses(SourcedFEACase):
                 self.build(documents(direction=direction))
                 force = [50 * c for c in direction]
                 report = self.solve(self.loads_case(([2], force)))
-                self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
+                self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
 
     # -- the direction's frame is the one its `application` names ---------------------------------------------------
 
@@ -611,19 +619,19 @@ class QualificationBypasses(SourcedFEACase):
     def test_a_direction_stated_against_the_analysed_part_is_read_as_given(self) -> None:
         for application in ({"PN": PN}, {"PN": PN, "occurrence": "@bracket"}):
             with self.subTest(application=application):
-                self.assertEqual(self.framed_verdicts(application, [0, 30, -40]), ("pass", "pass"))
+                self.assertEqual(self.framed_verdicts(application, [0, 30, -40]), self.COVERED)
 
     def test_a_direction_stated_against_another_part_is_rotated_into_the_analysed_part_frame(self) -> None:
         """R_OTHER takes (0, .6, -.8) to (0, .8, .6) in the assembly; R_BRACKET undone takes that to (.8, 0, .6)."""
         for application in ({"PN": OTHER}, {"PN": OTHER, "occurrence": "@other"}):
             with self.subTest(application=application):
-                self.assertEqual(self.framed_verdicts(application, [40, 0, 30]), ("pass", "pass"))
+                self.assertEqual(self.framed_verdicts(application, [40, 0, 30]), self.COVERED)
 
     def test_a_direction_stated_in_the_assembly_frame_is_rotated_into_the_analysed_part_frame(self) -> None:
         """R_BRACKET undone takes the assembly direction (0, .6, -.8) to (.6, 0, -.8)."""
         for application in (None, {"product": True}, {"interface": "IF-001"}, {"assembly_operation": "mount-bracket"}):
             with self.subTest(application=application):
-                self.assertEqual(self.framed_verdicts(application, [30, 0, -40]), ("pass", "pass"))
+                self.assertEqual(self.framed_verdicts(application, [30, 0, -40]), self.COVERED)
 
     def test_a_frame_that_cannot_be_confirmed_leaves_the_load_unknown_and_names_the_gap(self) -> None:
         both = [("bracket", PN, R_BRACKET), ("other-a", OTHER, R_OTHER), ("other-b", OTHER, R_OTHER)]
@@ -703,9 +711,9 @@ class QualificationBypasses(SourcedFEACase):
             docs["assembly.yaml"]["operations"].append({"id": {"not": "a name"}})
 
         report = self.frame_report({"PN": PN}, self.BOTH, [0, 30, -40], tweak=operation)
-        self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
+        self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
         report = self.frame_report({"assembly_operation": "mount-bracket"}, self.BOTH, [30, 0, -40], tweak=operation)
-        self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
+        self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
 
     def test_an_assembly_zero_part_with_an_occurrence_it_does_not_own_leaves_the_load_unknown(self) -> None:
         """The neighbour's model frame is the assembly frame, so a bare reference to it confirms with no placement. An
@@ -731,7 +739,7 @@ class QualificationBypasses(SourcedFEACase):
         for application in ({"PN": OTHER}, {"PN": OTHER, "occurrence": "@other"}):
             with self.subTest(application=application):
                 self.build(framed_documents(application, placed, other_frame="assembly_zero"))
-                self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [30, 0, -40])))), ("pass", "pass"))
+                self.assertEqual(self.verdicts(self.solve(self.loads_case(([2], [30, 0, -40])))), self.COVERED)
 
     def test_a_missing_frame_module_leaves_the_load_unknown_through_main_and_seals_the_absence(self) -> None:
         """Each of the four files is really absent from a scratch copy of the modules, not read through a stand-in."""
@@ -777,7 +785,7 @@ class QualificationBypasses(SourcedFEACase):
         for application in ({"PN": PN}, {"PN": PN, "occurrence": "@bracket"}):
             with self.subTest(application=application):
                 report = self.frame_report(application, self.BOTH, [0, 30, -40], pose={"J1": 30.0})
-                self.assertEqual(self.verdicts(report), ("pass", "pass"), report["evidence"]["gaps"])
+                self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
 
     # -- a convergence decision counts only as an approved, bound, converged study ---------------------------------
 
@@ -807,7 +815,7 @@ class QualificationBypasses(SourcedFEACase):
         self.assertEqual(self.refused(path), ["analysis.convergence"])
         old_form.unlink()
         self.approve(study)
-        self.assertEqual(self.verdicts(self.fresh(path)), ("pass", "pass"))
+        self.assertEqual(self.verdicts(self.fresh(path)), self.COVERED)
 
     def test_a_decision_without_a_study_or_with_an_empty_one_proves_nothing(self) -> None:
         self.build(documents())
@@ -853,7 +861,7 @@ class QualificationBypasses(SourcedFEACase):
         path = self.convergent_case()
         study = self.study(path, loads=[{"selector": {"indices": [2]}, "force": [0, 0, -50.00001]}])
         self.approve(study)
-        self.assertEqual(self.verdicts(self.fresh(path)), ("pass", "pass"))
+        self.assertEqual(self.verdicts(self.fresh(path)), self.COVERED)
 
     def test_a_coarse_case_mesh_is_unproven_even_when_the_two_finest_meshes_agree(self) -> None:
         """Sizes 4, 2, 1 with the case at 4: the finest pair differs 0.4 percent, but the case's own mesh reads
@@ -874,7 +882,7 @@ class QualificationBypasses(SourcedFEACase):
         self.approve(self.study(path, refinements=[{"size_mm": 4, "max_von_mises_mpa": 82.5, "max_displacement_mm": 0.198},
                                                    {"size_mm": 2, "max_von_mises_mpa": 83.0, "max_displacement_mm": 0.199},
                                                    {"size_mm": 1, "max_von_mises_mpa": 83.3, "max_displacement_mm": 0.199}]))
-        self.assertEqual(self.verdicts(self.solve(path)), ("pass", "pass"))
+        self.assertEqual(self.verdicts(self.solve(path)), self.COVERED)
 
     def test_plane_selectors_bind_by_value_not_by_spelling(self) -> None:
         """0 and 0.0, 1e-06 and 0.000001, 100 and 100.0 select the same plane."""
@@ -887,7 +895,7 @@ class QualificationBypasses(SourcedFEACase):
         respelled = {"supports": {"plane": {"axis": "x", "value": 0.0, "tolerance": 1e-06}},
                      "loads": [{"selector": {"plane": {"axis": "x", "value": 100.0, "tolerance": 1e-06}}, "force": [0, 0, -50]}]}
         self.approve(self.study(path, **respelled))
-        self.assertEqual(self.verdicts(self.solve(path)), ("pass", "pass"))
+        self.assertEqual(self.verdicts(self.solve(path)), self.COVERED)
         for name, change in {"another support plane value": {"supports": {"plane": {"axis": "x", "value": 0.5, "tolerance": 1e-06}}},
                              "another load plane axis": {"loads": [{"selector": {"plane": {"axis": "y", "value": 100.0,
                                                                                            "tolerance": 1e-06}}, "force": [0, 0, -50]}]},

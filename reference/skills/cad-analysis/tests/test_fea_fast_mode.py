@@ -146,6 +146,14 @@ class FastCase(conditions_tests.SourcedFEACase):
                                                  f"engineering.strength@{PN}": "unknown"})
         self.assertEqual(report["engineering"]["result"], "unknown")
 
+    def test_a_fast_strength_reason_names_the_stress_study_and_not_acceptance_strength(self) -> None:
+        # A fast case refuses acceptance.strength, so a reason that asks for it sends the reader into a refusal (#218).
+        report, _ = self.fast_results()
+        row = next(row for row in report["engineering"]["outcomes"] if row["obligation"] == f"engineering.strength@{PN}")
+        self.assertIn("mode: stress", row["uncertainty"])
+        self.assertIn("stress study", row["uncertainty"])
+        self.assertNotIn("acceptance.strength", row["uncertainty"])
+
     def test_a_fast_run_reports_the_peak_displacement_and_no_stress_figure_or_stress_verdict(self) -> None:
         for name, result in zip(("stdout", "published results.json"), self.fast_results()):
             with self.subTest(name):

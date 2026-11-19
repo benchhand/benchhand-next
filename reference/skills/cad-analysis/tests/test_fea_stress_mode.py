@@ -21,6 +21,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -91,17 +92,18 @@ def truss_plan() -> list[dict[str, Any]]:
             {"frd": fine, "inp": plane_inp(fine, TRUSS_PLANES), "displacement": [0.0, 0.41]}]
 
 
-def interior_plan(coarse_peak: float = 99.0, fine_peak: float = 100.0) -> list[dict[str, Any]]:
-    """Synthetic meshes whose peak sits at x=50, far from both faces: a strength-eligible settled study."""
+def interior_plan(coarse_peak: float = 99.0, fine_peak: float = 100.0, peak_x: float = 50.0) -> list[dict[str, Any]]:
+    """Synthetic meshes whose peak sits at x=`peak_x`. At x=50, far from both faces, the study is a strength-eligible
+    settled one. At x=4, within h_coarse of the 3 mm cutoff, it settles away from the support."""
     plan = []
-    for lvl, peak in ((stress_tests.level(1.0, kept=200, peak=coarse_peak), 0.19),
-                      (stress_tests.level(0.75, kept=2000, peak=fine_peak), 0.2)):
+    for lvl, peak in ((stress_tests.level(1.0, kept=200, peak=coarse_peak, peak_x=peak_x), 0.19),
+                      (stress_tests.level(0.75, kept=2000, peak=fine_peak, peak_x=peak_x), 0.2)):
         plan.append({"frd": stress_tests.level_as_frd(lvl), "inp": inp_text([1], [2]), "displacement": [0.0, peak]})
     return plan
 
 
 class StressCase(conditions_tests.SourcedFEACase):
-    """A versioned stress case with a sourced stiffness criterion and an approved convergence study."""
+    """A versioned stress case with a sourced stiffness criterion. Its own two-mesh study is its mesh convergence."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -148,10 +150,8 @@ class StressCase(conditions_tests.SourcedFEACase):
         return status, json.loads(output.getvalue())
 
     def stress_case(self, mesh_size: float, **extra: Any) -> Path:
-        path = self.case({"conditions": conditions_tests.SERVICE}, mode="stress", mesh_size=mesh_size,
-                         acceptance={"stiffness": "REQ-002"}, mesh_convergence={"decision": "DR-002"}, **extra)
-        self.approve(self.study(path))
-        return path
+        return self.case({"conditions": conditions_tests.SERVICE}, mode="stress", mesh_size=mesh_size,
+                         acceptance={"stiffness": "REQ-002"}, **extra)
 
     def run_stress(self, plan: list[dict[str, Any]], mesh_size: float = 4.5, *,
                    replace: bool = False) -> tuple[int, dict[str, Any]]:
@@ -210,83 +210,232 @@ class Outcomes(StressCase):
                 self.assertEqual(result["max_displacement_mm"], 0.2)  # the fine solve's, not the coarse 0.19
                 self.assertEqual(result["run_id"], self.jobs[1]["run_id"])  # the run that completed the study
 
-    def test_an_unknown_study_still_passes_the_run_and_the_stiffness_check(self) -> None:
-        # mesh_size 2 is the size the approved convergence study (DR-002) is bound to.
-        status, report = self.run_stress(truss_plan(), mesh_size=2)
-        self.assertEqual(status, 0, report)
-        self.assertEqual((report["status"], report["status_scope"]), ("pass", "run"))
-        self.assertEqual(self.outcomes(report)[f"engineering.stiffness@{PN}"], "pass")
 
-    def test_no_study_outcome_gives_strength_a_verdict_before_the_conditions_module_reads_the_study(self) -> None:
-        # fea_conditions reads safety_factor_yield; a stress result reports none, so strength stays unknown even
-        # for a strength-eligible settled study. Mapping the study onto the obligation is the next change.
-        for name, plan, size in (("settled", interior_plan(), 1.0), ("away", cantilever_plan(), 4.5),
-                                 ("unknown", truss_plan(), 6)):
+STRENGTH = f"engineering.strength@{PN}"
+STIFFNESS = f"engineering.stiffness@{PN}"
+# Result fields that state a stress figure or a yield safety factor: a stress result publishes none of them.
+STRESS_RESULT_KEYS = {"safety_factor_yield", "max_von_mises_mpa", "required_safety_factor", "sigma_away_mpa"}
+# A study fea_stress_study could report for an interior peak of 100 MPa: strength-eligible, so 250 / 100 = 2.5.
+SETTLED_STUDY = {"outcome": "settled", "strength_eligible": True, "sigma_mpa": 100.0, "sigma_info_mpa": None,
+                 "reasons": [], "message": "settled: h_coarse=1 mm h_fine=0.75 mm", "delta_sigma": 0.01,
+                 "delta_displacement": 0.0, "mesh_sizes_mm": {"coarse": 1.0, "fine": 0.75}, "step_ratio": 0.75}
+# Settled on the exclusion boundary: its mesh convergence holds, and it gives no strength value.
+AWAY_STUDY = {**SETTLED_STUDY, "outcome": "settled_away_from_support", "strength_eligible": False, "sigma_mpa": None,
+              "sigma_info_mpa": 103.9, "reasons": ["exclusion_boundary"], "message": "settled_away_from_support: see #209"}
+
+
+class StrengthFromTheStudy(StressCase):
+    """A stress case that names REQ-001 (yield safety factor >= 2) and REQ-002 (displacement <= 0.5 mm). The
+    profile's yield strength is 250 MPa, so a settled 100 MPa gives a factor of 2.5, 125 MPa exactly 2 and
+    131 MPa 1.908. Every case covers head_load, so only the study and the material decide strength."""
+
+    def strength_case(self, mesh_size: float, *, conditions: dict[str, Any] | None = None, **extra: Any) -> Path:
+        return self.case({"conditions": conditions or conditions_tests.SERVICE}, mode="stress", mesh_size=mesh_size,
+                         acceptance={"strength": "REQ-001", "stiffness": "REQ-002"}, **extra)
+
+    def solve(self, plan: list[dict[str, Any]], mesh_size: float = 1.0, *, docs: dict[str, Any] | None = None,
+              **extra: Any) -> dict[str, Any]:
+        """Run the two solves of `plan`, never reusing a bundle an earlier subtest published."""
+        self.unpublish()
+        self.jobs.clear()
+        self.plan = plan
+        self.build(docs or conditions_tests.documents())
+        status, report = self.call(self.strength_case(mesh_size, **extra))
+        self.assertEqual(status, 0, report)
+        return report
+
+    def crafted(self, **fields: Any) -> dict[str, Any]:
+        """The report of a stress result with these fields, solved by a stand-in for the whole study."""
+        def run_case(case_path: Path, case: dict[str, Any], **kwargs: Any) -> tuple[dict[str, Any], int]:
+            run_dir = Path(kwargs["scratch_root"]) / "jobs" / "fea_static" / "run"
+            run_dir.mkdir(parents=True, exist_ok=True)
+            (run_dir / "solver.dat").write_text("solver output\n", encoding="utf-8")
+            result = {"mode": "stress", "max_displacement_mm": 0.2, "status": "pass", "status_scope": "run",
+                      "node_count": 1349, "element_count": 600, "run_directory": str(run_dir),
+                      "retained_files": ["solver.dat"], "solver_versions": conditions_tests.TOOLS, **fields}
+            kwargs["result_path"].write_text(json.dumps(result), encoding="utf-8")
+            return result, 0
+
+        self.unpublish()
+        self.build(conditions_tests.documents())
+        path = self.strength_case(1.0)
+        with patch("fea_static.run_case", side_effect=run_case):
+            status, report = self.call(path)
+        self.assertEqual(status, 0, report)
+        return report
+
+    def unpublish(self) -> None:
+        """Remove the published bundles: a subtest with other solver results has the same recipe, so a bundle an
+        earlier subtest published would be reused and the solve skipped."""
+        for published in ("analysis", "checks"):
+            shutil.rmtree(self.hw / published / "v1", ignore_errors=True)
+
+    def strength(self, report: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None]:
+        """The strength outcome row and its finding (None for a pass)."""
+        row = next(row for row in report["engineering"]["outcomes"] if row["obligation"] == STRENGTH)
+        finding = next((f for f in report["engineering"]["findings"] if f["obligation"] == STRENGTH), None)
+        return row, finding
+
+    def test_a_settled_study_whose_factor_meets_the_criterion_passes_strength(self) -> None:
+        report = self.solve(interior_plan())  # 250 / 100 = 2.5
+        self.assertEqual(self.outcomes(report), {STRENGTH: "pass", STIFFNESS: "pass"})
+        convergence = report["mesh"]["convergence"]
+        self.assertEqual((convergence["status"], convergence["method"]), ("demonstrated", "two_mesh_stress_study"))
+        self.assertTrue(report["evidence"]["service_evidence"], report["evidence"]["gaps"])
+        self.assertNotIn("one mesh", json.dumps(report))
+
+    def test_a_settled_study_whose_factor_misses_the_criterion_fails_and_the_run_still_passes(self) -> None:
+        report = self.solve(interior_plan(130.0, 131.0))  # 250 / 131 = 1.908
+        row, finding = self.strength(report)
+        self.assertEqual(row["outcome"], "fail")
+        assert finding is not None
+        self.assertEqual((finding["code"], finding["severity"]), ("fea.strength.margin", "critical"))
+        self.assertEqual(finding["measured"]["units"], "dimensionless")
+        self.assertAlmostEqual(finding["measured"]["value"], 1.9084, places=4)
+        self.assertEqual(finding["requirements"], ["REQ-001"])
+        # The run's status is the solver runs', and the factor lives only in the packet's finding.
+        for name, result in (("stdout", report), ("published results.json", self.published(report))):
             with self.subTest(name):
-                self.jobs.clear()
-                status, report = self.run_stress(plan, size, replace=True)
-                self.assertEqual(status, 0, report)
-                self.assertEqual(self.outcomes(report)[f"engineering.strength@{PN}"], "unknown")
-                self.assertEqual(stress_tests_keys(report) & {"max_von_mises_mpa", "safety_factor_yield"}, set())
+                self.assertEqual((result["status"], result["status_scope"]), ("pass", "run"))
+                self.assertEqual(fast_tests.keys(result) & STRESS_RESULT_KEYS, set())
 
+    def test_a_factor_exactly_at_the_criterion_passes(self) -> None:
+        report = self.solve(interior_plan(124.0, 125.0))  # 250 / 125 = 2.0, and REQ-001 reads >= 2
+        self.assertEqual(self.outcomes(report)[STRENGTH], "pass")
 
-def stress_tests_keys(value: Any) -> set[str]:
-    return fast_tests.keys(value)
+    def test_the_factor_divides_by_the_larger_of_the_two_kept_peaks(self) -> None:
+        # 250 / 126 = 1.984 misses 2; either solve's 124 MPa alone would give 2.016 and pass.
+        for coarse, fine in ((124.0, 126.0), (126.0, 124.0)):
+            with self.subTest(coarse=coarse, fine=fine):
+                report = self.solve(interior_plan(coarse, fine))
+                row, finding = self.strength(report)
+                self.assertEqual(row["outcome"], "fail")
+                assert finding is not None
+                self.assertAlmostEqual(finding["measured"]["value"], 1.9841, places=4)
 
+    def test_an_interval_yield_strength_is_taken_at_its_lower_bound(self) -> None:
+        # Yield 240 to 300 MPa at a settled 125 MPa: 240 / 125 = 1.92 misses 2, where 300 / 125 = 2.4 would pass.
+        tested = conditions_tests.fx.quantity(lower=10, upper=40, units="deg_C")
+        interval = conditions_tests.prop("yield_strength", 250, "MPa", temperature=tested)
+        interval["value"]["value"] = conditions_tests.fx.quantity(lower=240, upper=300, units="MPa")
+        profile = conditions_tests.alloy(conditions_tests.prop("youngs_modulus", 70000, "MPa", temperature=tested),
+                                         conditions_tests.prop("poisson_ratio", 0.33, "dimensionless", temperature=tested),
+                                         conditions_tests.prop("density", 2700, "kg_m3", temperature=tested), interval)
+        report = self.solve(interior_plan(124.0, 125.0), docs=conditions_tests.documents(profiles=[profile]))
+        row, finding = self.strength(report)
+        self.assertEqual(row["outcome"], "fail")
+        assert finding is not None
+        self.assertAlmostEqual(finding["measured"]["value"], 1.92, places=4)
 
-class StrengthAcceptance(StressCase):
-    """A stress case that names a sourced acceptance.strength (REQ-001, yield safety factor at least 2): the
-    criterion exists, the study yields a figure or none, and the strength obligation stays unknown because the
-    result carries no yield safety factor. Nothing in the published result states one either."""
+    def test_an_uncovered_service_load_keeps_a_factor_that_meets_the_criterion_unknown(self) -> None:
+        report = self.solve(interior_plan(), loads=[{"selector": {"indices": [2]}, "force": [0, 0, -20],
+                                                     "load": "head_load"}])
+        row, finding = self.strength(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertIn("reaches 50 N", row["uncertainty"])
+        assert finding is not None
+        self.assertEqual(finding["measured"], {"value": 2.5, "units": "dimensionless"})
 
-    STRESS_RESULT_KEYS = {"safety_factor_yield", "max_von_mises_mpa", "required_safety_factor", "sigma_away_mpa"}
+    def test_an_open_basis_gap_keeps_a_factor_that_meets_the_criterion_unknown(self) -> None:
+        # Analysed at 23 deg_C against a 15 to 30 deg_C service range: a basis gap, with head_load fully covered.
+        report = self.solve(interior_plan(), conditions=conditions_tests.DRY_23C)  # 250 / 100 = 2.5
+        self.assertEqual(report["evidence"]["gaps"],
+                         ["the analysed temperature 23 deg_C does not cover the service temperature 15..30 deg_C"])
+        row, finding = self.strength(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertIn("does not cover the service temperature", row["uncertainty"])
+        assert finding is not None
+        self.assertEqual((finding["code"], finding["measured"]),
+                         ("fea.strength.unverified", {"value": 2.5, "units": "dimensionless"}))
 
-    def strength_case(self, mesh_size: float) -> Path:
-        path = self.case({"conditions": conditions_tests.SERVICE}, mode="stress", mesh_size=mesh_size,
-                         acceptance={"strength": "REQ-001", "stiffness": "REQ-002"},
-                         mesh_convergence={"decision": "DR-002"})
-        self.approve(self.study(path))
-        return path
-
-    def test_strength_stays_unknown_for_every_outcome_and_no_yield_safety_factor_is_published(self) -> None:
-        for outcome, plan, size in (("settled", interior_plan(), 1.0),
-                                    ("settled_away_from_support", cantilever_plan(), 4.5),
-                                    ("unknown", truss_plan(), 6.0)):
-            with self.subTest(outcome):
-                self.jobs.clear()
-                self.plan = plan
-                self.build(conditions_tests.documents())
-                status, report = self.call(self.strength_case(size), "--replace")
-                self.assertEqual(status, 0, report)
-                published = self.published(report)
-                self.assertEqual(report["stress_study"]["outcome"], outcome)
-                self.assertEqual(published["stress_study"]["outcome"], outcome)
-                self.assertEqual(self.outcomes(report)[f"engineering.strength@{PN}"], "unknown")
-                self.assertEqual(report["engineering"]["result"], "unknown")
-                for name, result in (("stdout", report), ("published results.json", published)):
-                    self.assertEqual(fast_tests.keys(result) & self.STRESS_RESULT_KEYS, set(), name)
-
-    def test_the_strength_finding_names_the_sourced_criterion_and_states_no_measured_value(self) -> None:
-        self.plan = interior_plan()
-        self.build(conditions_tests.documents())
-        status, report = self.call(self.strength_case(1.0))
-        self.assertEqual(status, 0, report)
-        finding = next(row for row in report["engineering"]["findings"] if row["code"] == "fea.strength.unverified")
+    def test_a_study_settled_away_from_support_leaves_strength_unknown_and_points_to_209(self) -> None:
+        # Cantilever 4.5 mm to 3 mm: 103.9 MPa on the cutoff, for information only. 250 / 103.9 would pass.
+        report = self.solve(cantilever_plan(), 4.5)
+        self.assertEqual(report["stress_study"]["outcome"], "settled_away_from_support")
+        row, finding = self.strength(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertIn("#209", row["uncertainty"])
+        assert finding is not None
         self.assertEqual(finding["measured"]["status"], "unknown")
-        criterion = finding["criterion"]
-        self.assertEqual((criterion["property"], criterion["operator"], criterion["value"]),
-                         ("yield_safety_factor", ">=", 2.0))  # REQ-001's sourced criterion
+        self.assertEqual(self.outcomes(report)[STIFFNESS], "pass")  # stress and displacement both settled
 
-    def test_the_sealed_check_packet_carries_the_same_unknown_strength_and_evidence_reads_it(self) -> None:
+    def test_a_study_settled_away_from_support_whose_figure_would_miss_the_criterion_is_unknown_not_a_fail(self) -> None:
+        # Peaks of 130 and 131 MPa at x=4, on the 3 mm cutoff: 250 / 131 = 1.908 would miss 2, but the figure is
+        # information only, so the miss is no verdict either (O4).
+        report = self.solve(interior_plan(130.0, 131.0, peak_x=4.0))
+        found = report["stress_study"]
+        self.assertEqual((found["outcome"], found["sigma_mpa"], found["sigma_info_mpa"]),
+                         ("settled_away_from_support", None, 131.0))
+        self.assertEqual(report["mesh"]["convergence"]["status"], "demonstrated")
+        row, finding = self.strength(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertIn("#209", row["uncertainty"])
+        assert finding is not None
+        self.assertEqual((finding["code"], finding["severity"]), ("fea.strength.unverified", "major"))
+        self.assertEqual(finding["measured"]["status"], "unknown")
+        self.assertIn("#209", finding["measured"]["reason"])
+        self.assertEqual(report["engineering"]["result"], "unknown")
+
+    def test_an_unknown_study_leaves_strength_and_stiffness_unknown_and_the_run_passes(self) -> None:
+        report = self.solve(truss_plan(), 6.0)  # Truss member 6 mm to 4.5 mm: 13.93% apart
+        self.assertEqual((report["status"], report["status_scope"]), ("pass", "run"))
+        self.assertEqual(self.outcomes(report), {STRENGTH: "unknown", STIFFNESS: "unknown"})
+        convergence = report["mesh"]["convergence"]
+        self.assertEqual((convergence["status"], convergence["method"]), ("not_demonstrated", "two_mesh_stress_study"))
+        self.assertTrue(any("stress_not_settled" in gap for gap in report["evidence"]["gaps"]), report["evidence"]["gaps"])
+
+    def test_a_stress_case_without_a_strength_criterion_leaves_strength_unknown(self) -> None:
         self.plan = interior_plan()
         self.build(conditions_tests.documents())
-        status, report = self.call(self.strength_case(1.0))
-        self.assertEqual((status, report["check_bundle"]), (0, "hw/checks/v1/fea-bracket"), report)
+        status, report = self.call(self.stress_case(1.0))
+        self.assertEqual(status, 0, report)
+        row, _ = self.strength(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertIn("acceptance.strength", row["uncertainty"])
+
+    def test_a_study_outside_the_strength_rule_leaves_strength_unknown(self) -> None:
+        self.assertEqual(self.outcomes(self.crafted(stress_study=SETTLED_STUDY))[STRENGTH], "pass")  # the control
+        cases: dict[str, dict[str, Any]] = {
+            "settled away from support, claiming a figure": {**SETTLED_STUDY, "outcome": "settled_away_from_support"},
+            "unknown, claiming a figure": {**SETTLED_STUDY, "outcome": "unknown"},
+            "an outcome the study never states": {**SETTLED_STUDY, "outcome": "converged"},
+            "settled but not strength-eligible": {**SETTLED_STUDY, "strength_eligible": False},
+            "an eligibility that is not true": {**SETTLED_STUDY, "strength_eligible": 1},
+            "an information figure beside the figure": {**SETTLED_STUDY, "sigma_info_mpa": 100.0},
+            "no figure": {**SETTLED_STUDY, "sigma_mpa": None},
+            "a bool figure": {**SETTLED_STUDY, "sigma_mpa": True},
+            "a zero figure": {**SETTLED_STUDY, "sigma_mpa": 0.0},
+            "a negative figure": {**SETTLED_STUDY, "sigma_mpa": -100.0},
+            "a nan figure": {**SETTLED_STUDY, "sigma_mpa": math.nan},
+            "an infinite figure": {**SETTLED_STUDY, "sigma_mpa": math.inf},
+            "a text figure": {**SETTLED_STUDY, "sigma_mpa": "100"},
+        }
+        for name, found in cases.items():
+            with self.subTest(name):
+                self.assertEqual(self.outcomes(self.crafted(stress_study=found))[STRENGTH], "unknown")
+
+    def test_a_stress_study_that_is_text_or_missing_leaves_strength_and_stiffness_unknown(self) -> None:
+        for name, fields in (("text", {"stress_study": fea_modes.STRESS_STUDY}), ("missing", {})):
+            with self.subTest(name):
+                report = self.crafted(**fields)
+                self.assertEqual(self.outcomes(report), {STRENGTH: "unknown", STIFFNESS: "unknown"})
+                self.assertEqual(report["mesh"]["convergence"]["status"], "not_demonstrated")
+
+    def test_a_p95_figure_never_stands_in_for_the_study(self) -> None:
+        # The study's convergence holds and it gives no figure. 250 / 50 = 5 would pass, but p95 is a mesh-stability
+        # indicator, not a strength value.
+        indicator = {"p95_von_mises_mpa": 50.0, "nodes": 1349, "label": fea_modes.P95_LABEL}
+        report = self.crafted(stress_study=AWAY_STUDY, mesh_stability_indicator=indicator)
+        self.assertEqual(report["mesh"]["convergence"]["status"], "demonstrated")
+        self.assertEqual(self.outcomes(report)[STRENGTH], "unknown")
+
+    def test_the_sealed_check_packet_carries_the_strength_fail_and_evidence_reads_it(self) -> None:
+        report = self.solve(interior_plan(130.0, 131.0))
+        self.assertEqual(report["check_bundle"], "hw/checks/v1/fea-bracket", report)
         bundle = self.hw / "checks" / "v1" / "fea-bracket"
         packet = json.loads((bundle / "result.json").read_text(encoding="utf-8"))
         self.assertEqual(packet, report["engineering"])
-        self.assertEqual({row["obligation"]: row["outcome"] for row in packet["outcomes"]}[f"engineering.strength@{PN}"],
-                         "unknown")
+        self.assertEqual(packet["result"], "fail")
         manifest_sha = hashlib.sha256((self.hw / "versions" / "v1" / "manifest.json").read_bytes()).hexdigest()
         packets, findings = conditions_tests.evidence_module().collect_packets(self.hw, "v1", manifest_sha)
         self.assertEqual((findings, [p.bundle for p in packets]), ([], ["hw/checks/v1/fea-bracket"]))
@@ -431,6 +580,15 @@ class Refusals(StressCase):
         self.assertIn("required_safety_factor", report["error"]["message"])
         self.assertEqual(self.jobs, [])
 
+    def test_a_stress_case_that_names_a_mesh_convergence_decision_is_refused_before_the_solve(self) -> None:
+        # The two-mesh study is a stress case's only convergence evidence: a decision record would stand beside it.
+        self.build(conditions_tests.documents())
+        status, report = self.call(self.stress_case(4.5, mesh_convergence={"decision": "DR-002"}))
+        self.assertEqual(status, 2, report)
+        self.assertEqual(report["error"]["code"], "invalid_case")
+        self.assertIn("mesh_convergence", report["error"]["message"])
+        self.assertEqual(self.jobs, [])
+
     def test_a_mode_that_is_not_full_fast_or_stress_is_still_refused(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -440,7 +598,7 @@ class Refusals(StressCase):
             with self.assertRaisesRegex(fea_static.CaseError, "mode must be one of full, fast, stress"):
                 fea_static.load_case(path)
 
-    def test_a_stress_case_accepts_a_strength_acceptance_for_the_later_mapping(self) -> None:
+    def test_a_stress_case_accepts_a_strength_acceptance(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "beam.step").write_bytes(b"ISO-10303-21; beam\n")
