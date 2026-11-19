@@ -67,15 +67,17 @@ real build passes.
 | --- | --- | --- |
 | `printed_verdict(shape, prefix)` | `form_check.probe` (with the bed build axis) -> `process_checks.assess(...).packet()` -> packet schema -> `evidence.assess` | `process.fdm.*@` |
 | `assembly_verdict(items, *prefixes)` | the `access.py` command's packet (order check over the chain's inventory, then path planning) -> schema -> `evidence.assess` | `assembly.order@`, `intent.assembly_operations@`, `assembly.access@` |
-| `readback_verdict(model_source, refusal_is_a_verdict=...)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
+| `readback_verdict(model_source, manufacture=None)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
 | `oracle_case(model, fault, prefixes=..., changed_only=...)` | `fixtures/oracles/build_case.py` (the three-part project with one exporter fault), `cad_model check [--changed-only]` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.glb_step_agreement@`, `cad.declared_dimensions@` |
 | `purchase_verdict(record, *prefixes)` | `process_checks.assess(record, {})` (no geometry) -> packet -> schema -> `evidence.assess` | `purchase.`, `route.`, `process.*` |
 
 An evidence state maps to a verdict: `fail` is fail, `pass` and `not_applicable` are pass, anything else (unknown, stale,
-planned, waived, or no packet at all) is unknown. A stage that refuses before it produces a packet (the build of a
-part, a guide) has no obligation of its own: evidence shows the obligation unevidenced, so the verdict is unknown. A record
-that expects no such obligation at all raises `Rejected` (the release asks nothing of the check). Say so in the family's
-notes and open a gap for it.
+planned, waived, or no packet at all) is unknown. A stage that refuses before it produces a packet (a guide) has no
+obligation of its own: evidence shows the obligation unevidenced, so the verdict is unknown. A build that refuses the
+part is not a verdict: the case never reached the check that the family tests, so `readback_verdict` raises an error
+that names the command (#192). A family that tests a check after the build gives its mutant a form the build accepts.
+A record that expects no such obligation at all raises `Rejected` (the release asks nothing of the check). Say so in the
+family's notes and open a gap for it.
 
 One departure from a sealed release, stated so nobody reads it as the real thing: the `access.py` and additive packets go
 to evidence in memory (assessed for a version label no repository uses, `v9000`) instead of from a sealed `hw/checks/`

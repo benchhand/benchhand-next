@@ -265,12 +265,12 @@ def access_packet_verdict(hw: Path, parts_dir: Path, attach: list[str], *prefixe
 
 # --- kernel validity (cad-model check: the cad.readback packet of a built version) ------------------------------
 
-def readback_verdict(model_source: str, *, refusal_is_a_verdict: bool) -> Outcome:
+def readback_verdict(model_source: str, *, manufacture: Mapping[str, Any] | None = None) -> Outcome:
     """What a release concludes about the cad.readback obligation of a one-part project whose model.py is
     `model_source`: cad_model run builds the version, cad_model check publishes its packet to hw/checks/<V>/cad/, and
-    evidence.collect_packets reads it back sealed, as the release gate does. A build that refuses the part leaves no version and so no
-    packet: evidence then has nothing for the obligation and calls it unknown. The caller states what that refusal is.
-    True: the verdict of a defect model the kernel rejects. False: an error of the case, as for a twin."""
+    evidence.collect_packets reads it back sealed, as the release gate does. `manufacture` is the part.yaml manufacture
+    block (None: none, so the part is made as installed). A build that refuses the part leaves no version, so the case
+    never reached the check: that is an error naming the command, never a verdict."""
     import hashlib
     import shutil
     import subprocess
@@ -285,8 +285,12 @@ def readback_verdict(model_source: str, *, refusal_is_a_verdict: bool) -> Outcom
     fx = projects.shared()
     intent = load("cad_record_manufacturing_intent", SKILLS / "cad-record" / "scripts" / "manufacturing_intent.py")
     cad_model = str(SKILLS / "cad-model" / "scripts" / "cad_model.py")
+    documents = projects.documents()
+    if manufacture is not None:
+        part = f"parts/{projects.PN}/part.yaml"
+        documents[part] = {**documents[part], "manufacture": dict(manufacture)}
     with tempfile.TemporaryDirectory() as tmp:
-        hw = fx.write_record(Path(tmp) / "project" / "hw", projects.documents())
+        hw = fx.write_record(Path(tmp) / "project" / "hw", documents)
         model = hw / "parts" / projects.PN / "model.py"
         model.parent.mkdir(parents=True, exist_ok=True)
         model.write_text(model_source, encoding="utf-8")
@@ -297,12 +301,8 @@ def readback_verdict(model_source: str, *, refusal_is_a_verdict: bool) -> Outcom
         build = subprocess.run(["uv", "run", "--quiet", "--script", cad_model, "run", str(hw), "--label", "v1"],
                                capture_output=True, text=True, timeout=1800, check=False)
         manifest = hw / "versions" / "v1" / "manifest.json"
-        if build.returncode not in (0, 1) or (build.returncode == 0) != manifest.is_file():
+        if build.returncode != 0 or not manifest.is_file():  # a refused part has no version, so the check never ran
             raise command_failed("cad_model run", build.args, build.returncode, build.stdout + build.stderr)
-        if not manifest.is_file():  # the build refused the part: no version exists, so no packet and nothing a release can cite
-            if not refusal_is_a_verdict:
-                raise command_failed("cad_model run", build.args, build.returncode, build.stdout + build.stderr)
-            return state_verdict(record, [], "v1", MANIFEST_SHA256, ("cad.readback@",))
         check = subprocess.run(["uv", "run", "--quiet", "--script", cad_model, "check", "v1", "--hw", str(hw)],
                                capture_output=True, text=True, timeout=1800, check=False)
         if check.returncode not in (0, 1):

@@ -482,7 +482,7 @@ class CaseErrorTests(unittest.TestCase):
             return subprocess.CompletedProcess(argv, 3, "", self.STDERR)
 
         def run(is_mutant: bool) -> str:
-            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n", refusal_is_a_verdict=True)
+            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n")
 
         with mock.patch("subprocess.run", fake):
             code, text = self.rates(corpus.Pair("kernel", "d", run), tolerance=True)
@@ -508,7 +508,7 @@ class NativeExitCodeTests(unittest.TestCase):
             return subprocess.CompletedProcess(argv, check_code, "", "")
 
         def run(is_mutant: bool) -> str:
-            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n", refusal_is_a_verdict=True)
+            return support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n")
 
         with mock.patch("subprocess.run", fake):
             return corpus.evaluate([corpus.Family("f", "c", (corpus.Pair("p", "d", run),))])[0]
@@ -531,20 +531,13 @@ class NativeExitCodeTests(unittest.TestCase):
         self.assertIn("cad_model.py check v1 --hw", error)
         self.assertIn("checks/v1/cad/result.json", error)
 
-    def test_a_build_that_refuses_the_part_with_exit_1_and_no_version_is_unevidenced_not_an_error(self) -> None:
+    def test_a_build_that_refuses_the_part_with_exit_1_and_no_version_is_an_error_naming_the_command(self) -> None:
+        """The refused part never reached cad_model check, so the case has no verdict (issue #192)."""
         row = self.verdict_row(1, 0, manifest=False)
-        self.assertEqual((row["errors"], row["abstained"], row["results"][0]["mutant"]), (0, 1, "unknown"))
-
-    def test_every_caller_of_readback_verdict_states_whether_a_build_refusal_is_a_verdict(self) -> None:
-        import inspect
-
-        import support
-
-        param = inspect.signature(support.readback_verdict).parameters["refusal_is_a_verdict"]
-        self.assertIs(param.default, inspect.Parameter.empty)
-        self.assertIs(param.kind, inspect.Parameter.KEYWORD_ONLY)
-        with self.assertRaises(TypeError):
-            support.readback_verdict("KERNEL = 'cadquery'\n")  # type: ignore[call-arg]
+        self.assertEqual((row["errors"], row["abstained"], row["missed"], row["ran"]), (1, 0, 0, 0))
+        error = row["results"][0]["error"]
+        self.assertIn("cad_model run exited 1", error)
+        self.assertIn("cad_model.py run", error)
 
     def test_an_access_packet_command_that_fails_is_an_error_naming_the_command(self) -> None:
         import support
@@ -566,11 +559,38 @@ class NativeExitCodeTests(unittest.TestCase):
         def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
             return subprocess.CompletedProcess(argv, 1, "", "build refused the twin")
 
-        with mock.patch("subprocess.run", fake):
-            result = corpus.run_pair(family_pair("form_check_kernel_validity", "t_bore_unorientable_face"))
-        self.assertIn("cad_model run exited 1", result.error or "")
-        self.assertIn("build refused the twin", result.error or "")
-        self.assertEqual((result.mutant, result.twin), (None, None))
+        twin = family_pair("form_check_kernel_validity", "t_bore_unorientable_face")
+        with mock.patch("subprocess.run", fake), self.assertRaises(RuntimeError) as raised:
+            twin.run(False)
+        self.assertIn("cad_model run exited 1", str(raised.exception))
+        self.assertIn("build refused the twin", str(raised.exception))
+
+
+@unittest.skipUnless(DEPS and shutil.which("uv"), "pyyaml, jsonschema and uv are required")
+class ReadbackManufactureStateTests(unittest.TestCase):
+    """readback_verdict builds its one-part project with the manufacturing state the caller names (issue #192)."""
+
+    def manufacture_the_build_reads(self, **state: object) -> list[object]:
+        import support
+        import yaml
+
+        seen: list[object] = []
+
+        def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+            part = Path(argv[6]) / "parts" / "TST-0001" / "part.yaml"  # uv run --quiet --script <cad_model.py> run <hw> ...
+            seen.append(yaml.safe_load(part.read_text(encoding="utf-8")).get("manufacture"))
+            return subprocess.CompletedProcess(argv, 1, "", "refused")
+
+        with mock.patch("subprocess.run", fake), self.assertRaises(RuntimeError):
+            support.readback_verdict("KERNEL = 'cadquery'\nPARAMS = {}\n", **state)  # type: ignore[arg-type]
+        return seen
+
+    def test_the_part_record_the_build_reads_holds_the_named_manufacturing_state(self) -> None:
+        different = {"relationship": "different", "state": "repaired", "reason": "corpus_twin", "decision": "DR-001",
+                     "volume_abs_tolerance_mm3": 700.0}
+        for label, state, expected in (("different", {"manufacture": different}, [different]), ("unnamed", {}, [None])):
+            with self.subTest(state=label):
+                self.assertEqual(self.manufacture_the_build_reads(**state), expected)
 
 
 def family_pair(family_id: str, pair_id: str) -> corpus.Pair:
