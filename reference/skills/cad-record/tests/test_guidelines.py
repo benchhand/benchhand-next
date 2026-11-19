@@ -418,6 +418,56 @@ class LineWidth(Directories):
         self.assertIn("not finite", found.reasons[0])
         self.assertNotIn("Infinity", gl.trace_bytes([found]).decode("utf-8"))
 
+    def specific_over_generic(self, specific: dict[str, Any]) -> Any:
+        put(self.shipped, "g", guideline("fdm.generic", [limit("min_wall", ">=", 0.8)]))
+        put(self.shipped, "n", guideline("fdm.nozzle.d2", [specific], nozzle_diameter=fx.quantity(lower=1.9, upper=2.1)))
+        return resolve(record(nozzle=2.0), self.catalog(), "min_wall")
+
+    def test_a_more_specific_limit_that_overflows_is_unknown_and_never_loses_to_the_generic_one(self) -> None:
+        found = self.specific_over_generic(per_line("min_wall", 1e308, 0.8, base="nozzle_diameter"))
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("fdm.nozzle.d2@1 min_wall: the computed limit inf mm is not finite", found.reasons[0])
+        self.assertTrue(any("not finite" in w for w in found.warnings), found.warnings)
+        self.assertIn("not finite", gl.trace_bytes([found]).decode("utf-8"))
+
+    def test_the_same_specific_limit_without_the_overflow_still_wins(self) -> None:
+        found = self.specific_over_generic(per_line("min_wall", 4, 0.8, base="nozzle_diameter"))
+        self.assertEqual((found.status, found.value), ("guideline", mi.Quantity("mm", value=8.0)))
+
+    def test_a_more_specific_limit_without_a_base_is_unknown_and_never_loses_to_the_generic_one(self) -> None:
+        put(self.shipped, "g", guideline("fdm.generic", [limit("min_wall", ">=", 0.8)]))
+        put(self.shipped, "n", guideline("fdm.pa", [per_line("min_wall", 3, 0.8)], material_family=["pa"]))
+        found = resolve(record(nozzle=None), self.catalog(), "min_wall")
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("neither a line width nor a nozzle diameter", found.reasons[0])
+
+    def test_an_unresolved_limit_of_the_same_set_leaves_the_plain_floor(self) -> None:
+        put(self.shipped, "g", guideline("fdm.generic", [limit("min_wall", ">=", 0.8), per_line("min_wall", 3, 0.8)]))
+        found = resolve(record(nozzle=None), self.catalog(), "min_wall")
+        self.assertEqual((found.status, found.value), ("guideline", mi.Quantity("mm", value=0.8)))
+
+    def test_an_unresolved_limit_keeps_the_equally_specific_plain_floor_above_a_generic_one(self) -> None:
+        put(self.shipped, "g", guideline("fdm.generic", [limit("min_wall", ">=", 0.8)]))
+        put(self.shipped, "pa", guideline("fdm.material.pa", [limit("min_wall", ">=", 1.2), per_line("min_wall", 3, 0.8)],
+                                          material_family=["pa"]))
+        found = resolve(record(nozzle=None), self.catalog(), "min_wall")
+        self.assertEqual((found.status, found.value), ("guideline", mi.Quantity("mm", value=1.2)))
+
+    def test_an_unresolved_limit_below_a_higher_ranked_survivor_does_not_block_it(self) -> None:
+        put(self.shipped, "g", guideline("fdm.generic", [limit("min_wall", ">=", 0.8)]))
+        put(self.shipped, "pa", guideline("fdm.material.pa", [per_line("min_wall", 3, 0.8)], material_family=["pa"]))
+        put(self.shipped, "cf", guideline("fdm.material.pa_cf", [limit("min_wall", ">=", 2.0)], material_family=["pa"], filler=["cf"]))
+        found = resolve(record(nozzle=None, filler="cf"), self.catalog(), "min_wall")
+        self.assertEqual((found.status, found.value), ("guideline", mi.Quantity("mm", value=2.0)))
+
+    def test_an_unresolved_limit_is_not_hidden_by_a_higher_candidate_that_is_rejected_as_a_relaxation(self) -> None:
+        put(self.shipped, "g", guideline("fdm.generic", [limit("min_wall", ">=", 0.8)]))
+        put(self.shipped, "pa", guideline("fdm.material.pa", [per_line("min_wall", 3, 0.8)], material_family=["pa"]))
+        put(self.shipped, "cf", guideline("fdm.material.pa_cf", [limit("min_wall", ">=", 0.5)], material_family=["pa"], filler=["cf"]))
+        found = resolve(record(nozzle=None, filler="cf"), self.catalog(), "min_wall")
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("fdm.material.pa@1 min_wall: the profile states neither a line width nor a nozzle diameter", found.reasons[0])
+
     def test_a_relative_limit_on_an_angle_is_refused_by_name(self) -> None:
         bad = guideline("fdm.generic", [])
         bad["limits"] = [limit("overhang_angle", "<=", relative={"relative_to": "line_width", "factor": 1, "floor": fx.quantity(40, "deg")})]
