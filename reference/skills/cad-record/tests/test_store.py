@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import importlib.util
 import json
@@ -15,7 +16,9 @@ import os
 import sys
 import tempfile
 import threading
+import types
 import unittest
+from collections.abc import Iterator
 from pathlib import Path
 from unittest import mock
 
@@ -33,6 +36,7 @@ def _load(name: str, filename: str):
 
 layout = _load("cad_record_layout", "layout.py")
 store = _load("cad_record_store", "store.py")
+TICK_NS = 2_000_000_000  # the racy window: FAT stamps mtime in 2 s steps, the coarsest clock the store allows for
 
 
 def sha(data: bytes) -> str:
@@ -176,17 +180,24 @@ class Records(Fixture):
         self.assertRegex(found.reason, r"^stale: mesh\.unv .* does not hash to its name")
 
     def test_an_object_edited_in_place_after_this_store_checked_it_is_never_published(self) -> None:
-        record = self.claimed(key("i"), {"mesh.unv": b"UNV"})
-        self.assertIsNotNone(self.store.record(key("i")).record)  # this Store has now checked the object
-        path = self.hw / ".cad" / "cache" / "objects" / record["members"]["mesh.unv"]
-        os.chmod(path, 0o644)
-        path.write_bytes(b"EDITED")  # an honest mistake: a tool writes through the object
-        self.assertRegex(self.store.record(key("i")).reason, r"^stale: mesh\.unv ")
-        destination = self.root / "run" / "mesh"
-        self.assertRegex(self.store.place(record, destination), r"^stale: mesh\.unv ")
-        self.assertFalse(destination.exists())
-        self.assertFalse(self.store.place_object(record["members"]["mesh.unv"], self.root / "run" / "one.unv"))
-        self.assertFalse((self.root / "run" / "one.unv").exists())
+        edits = {"a write of another size": (b"UNV", b"EDITED", False),
+                 "a same-size write whose mtime is put back (#245)": (b"VNU", b"XYZ", True)}
+        for number, (case, (data, edited, mtime_put_back)) in enumerate(edits.items()):
+            with self.subTest(case):
+                record = self.claimed(key(f"i{number}"), {"mesh.unv": data})
+                self.assertIsNotNone(self.store.record(key(f"i{number}")).record)  # this Store has checked the object
+                path = self.hw / ".cad" / "cache" / "objects" / record["members"]["mesh.unv"]
+                os.chmod(path, 0o644)
+                checked = os.stat(path)
+                path.write_bytes(edited)  # an honest mistake: a tool writes through the object
+                if mtime_put_back:  # what a rewrite within one tick of a coarse timestamp clock leaves
+                    os.utime(path, ns=(checked.st_atime_ns, checked.st_mtime_ns))
+                self.assertRegex(self.store.record(key(f"i{number}")).reason, r"^stale: mesh\.unv ")
+                destination = self.root / f"run{number}" / "mesh"
+                self.assertRegex(self.store.place(record, destination), r"^stale: mesh\.unv ")
+                self.assertFalse(destination.exists())
+                self.assertFalse(self.store.place_object(record["members"]["mesh.unv"], destination.with_name("one.unv")))
+                self.assertFalse(destination.with_name("one.unv").exists())
 
     def test_the_first_writer_of_a_key_wins_and_a_different_second_record_is_a_finding(self) -> None:
         first = self.claimed(key("w"), {"mesh.unv": b"ONE"})
@@ -269,6 +280,110 @@ class Records(Fixture):
         for name in ("/abs", "../up", "a/../b", ""):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 self.store.claim(key("p"), {"kind": "test", "members": {name: digest}})
+
+
+class VerifiedCache(Fixture):
+    """`holds` answers from the hashes this Store took before, each kept with the object's stat and the time of
+    the hash. It trusts one only while the stat is unchanged and the object's last change (the newer of mtime and
+    ctime) is at least one tick of the coarsest timestamp clock older than the hash: git's racy-git rule. `record`,
+    `place` and `place_object` hash the bytes again whatever the cache holds (#245)."""
+
+    def object_path(self, digest: str) -> Path:
+        return self.hw / ".cad" / "cache" / "objects" / digest
+
+    def hashed_at(self, digest: str, offset: int) -> Path:
+        """The object `digest`, made writable, once this Store hashed it `offset` ns after its last change."""
+        path = self.object_path(digest)
+        os.chmod(path, 0o644)  # first, so that the hash below keeps the stat each test then starts from
+        found = os.stat(path)
+        with mock.patch.object(store.time, "time_ns", return_value=max(found.st_mtime_ns, found.st_ctime_ns) + offset):
+            self.assertTrue(self.store.holds(digest))
+        return path
+
+    @contextlib.contextmanager
+    def stat_unchanged(self, path: Path, **shown: int) -> Iterator[None]:
+        """While the block runs, os.stat of the file at `path` reports the stat it had when the block began, with
+        the fields in `shown` replaced. It stands for a write that the timestamps do not show: on a coarse clock
+        a rewrite within one tick keeps both mtime and ctime, and ctime cannot be set from user space."""
+        before = os.stat(path)
+        seen = types.SimpleNamespace(**{name: getattr(before, name) for name in dir(before) if name.startswith("st_")})
+        vars(seen).update(shown)
+        real = os.stat
+
+        def reported(target, *args, **kwargs):
+            found = real(target, *args, **kwargs)
+            return seen if (found.st_dev, found.st_ino) == (before.st_dev, before.st_ino) else found
+
+        with mock.patch.object(store.os, "stat", reported):
+            yield
+
+    def test_a_write_within_one_tick_of_the_hash_is_seen_although_the_stat_does_not_show_it(self) -> None:
+        for offset in (0, TICK_NS - 1):
+            with self.subTest(offset=offset):
+                digest = self.store.intern(self.file(f"w{offset}", sha(b"w%d" % offset).encode()))
+                path = self.hashed_at(digest, offset)
+                with self.stat_unchanged(path):
+                    path.write_bytes(b"x" * 64)  # other bytes of the same size
+                    self.assertFalse(self.store.holds(digest))
+
+    def test_a_hash_at_least_one_tick_after_the_last_change_is_reused_without_reading_the_object(self) -> None:
+        for offset in (TICK_NS, 3600 * 10**9):
+            with self.subTest(offset=offset):
+                digest = self.store.intern(self.file(f"s{offset}", sha(b"s%d" % offset).encode()))
+                self.hashed_at(digest, offset)
+                with mock.patch.object(store, "file_sha", wraps=store.file_sha) as hashed:
+                    self.assertTrue(self.store.holds(digest))
+                hashed.assert_not_called()
+
+    def test_a_change_to_any_stat_field_the_cache_keys_on_makes_holds_hash_again(self) -> None:
+        for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns"):
+            with self.subTest(field=field):
+                digest = self.store.intern(self.file(field, sha(field.encode()).encode()))
+                path = self.hashed_at(digest, 10 * TICK_NS)  # settled: only a changed key can make it hash again
+                with self.stat_unchanged(path, **{field: getattr(os.stat(path), field) + 1}):
+                    path.write_bytes(b"x" * 64)
+                    self.assertFalse(self.store.holds(digest))
+
+    def test_an_object_gc_removes_between_the_stat_and_the_read_is_absent_not_an_error(self) -> None:
+        record = self.claimed(key("gone"), {"mesh.unv": b"GONE"})
+        path = self.object_path(record["members"]["mesh.unv"])
+        real = store.file_sha
+
+        def removed_first(read):  # another process's gc, after the store's stat of the object
+            if Path(read) == path:
+                os.chmod(read, 0o644)
+                Path(read).unlink()
+            return real(read)
+
+        with mock.patch.object(store, "file_sha", side_effect=removed_first):
+            self.assertRegex(self.store.record(key("gone")).reason, r"^stale: mesh\.unv ")
+
+    @contextlib.contextmanager
+    def vouched_for(self, name: str) -> Iterator[tuple[dict, str]]:
+        """A claimed one-member record whose object this Store hashed long after its last change, rewritten with
+        other bytes of the same size that the stat does not show: the cache vouches for bytes the object lacks."""
+        record = self.claimed(key(name), {"mesh.unv": sha(name.encode()).encode()})
+        digest = record["members"]["mesh.unv"]
+        path = self.hashed_at(digest, 10 * TICK_NS)
+        with self.stat_unchanged(path):
+            path.write_bytes(b"x" * 64)
+            yield record, digest
+
+    def test_record_hashes_every_member_whatever_the_cache_holds(self) -> None:
+        with self.vouched_for("record"):
+            self.assertRegex(self.store.record(key("record")).reason, r"^stale: mesh\.unv .* does not hash to its name")
+
+    def test_place_object_hashes_what_it_links_whatever_the_cache_holds(self) -> None:
+        target = self.root / "run" / "one.unv"
+        with self.vouched_for("place_object") as (_, digest):
+            self.assertFalse(self.store.place_object(digest, target))
+        self.assertEqual(list(target.parent.iterdir()), [])  # place_object made the folder, and left nothing in it
+
+    def test_place_hashes_what_it_lays_down_whatever_the_cache_holds(self) -> None:
+        destination = self.root / "run" / "mesh"
+        with self.vouched_for("place") as (record, _):
+            self.assertRegex(self.store.place(record, destination), r"^stale: mesh\.unv ")
+        self.assertEqual(list(destination.parent.iterdir()), [])
 
 
 class Place(Fixture):

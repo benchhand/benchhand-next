@@ -184,7 +184,9 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in (self.hw / RECORDS).iterdir()), [f"{key}.json"])
         obj = self.hw / OBJECTS / digest
         os.chmod(obj, 0o644)
+        checked = obj.stat()
         obj.write_bytes(b"geometrX")  # a damaged object: other bytes under its name
+        os.utime(obj, ns=(checked.st_atime_ns, checked.st_mtime_ns))  # as a rewrite within one clock tick leaves it
         self.assertRegex(self.store.record(key).reason, "^stale: step ")  # the Store that checked it before
         target = self.hw / "versions" / ".v2.partial-2" / "parts" / "TST-0001.step"
         self.assertFalse(self.store.place_object(digest, target))
