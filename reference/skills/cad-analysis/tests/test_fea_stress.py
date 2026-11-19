@@ -263,6 +263,7 @@ class MalformedRecordTests(unittest.TestCase):
         self.assertTrue(math.isinf(result.coordinates[1][0]))
         self.assertTrue(math.isnan(result.displacement[1]))
         self.assertFalse(math.isfinite(result.von_mises[1]))
+        self.assertTrue(math.isinf(result.stress[1].sxx))
 
     def test_inf_and_nan_text_in_a_result_gives_unknown_not_a_number(self) -> None:
         f = self.FIELD
@@ -284,6 +285,90 @@ class MalformedRecordTests(unittest.TestCase):
     def test_a_record_marker_without_an_id_is_refused(self) -> None:
         for block, header in self.BLOCKS:
             self.assert_refused(block, header, lambda r: r[:3], "marker only")
+
+    def test_a_component_line_after_a_block_record_is_refused_with_its_block(self) -> None:
+        # A ` -5` line describes a component, so it belongs before the first record; after one it would go unread.
+        late = " -5  SXY         1    4    1    2"
+        for block, header in self.BLOCKS:
+            with self.subTest(block=block):
+                text = self.corrupt(self.good(), header, lambda r: r + "\n" + late)
+                with self.assertRaisesRegex(fs.FrdError, rf"{block} block has a component line after its first record"):
+                    fs.read_frd(text)
+
+
+class StressTensorTests(unittest.TestCase):
+    """`read_frd` keeps each node's six stress components, in the order ccx 2.23 writes them."""
+
+    # The component lines of a STRESS block as ccx 2.23 writes them (copied from the fixtures): the name, then the
+    # tensor indices, so SZX is component (3, 1).
+    CCX_COMPONENTS = (" -5  SXX         1    4    1    1", " -5  SYY         1    4    2    2",
+                      " -5  SZZ         1    4    3    3", " -5  SXY         1    4    1    2",
+                      " -5  SYZ         1    4    2    3", " -5  SZX         1    4    3    1")
+
+    @staticmethod
+    def with_components(text, components):
+        """`text` with `components` as the ` -5` lines after every STRESS header."""
+        out = []
+        for line in text.splitlines():
+            out.append(line)
+            if line.startswith(" -4  STRESS"):
+                out += components
+        return "\n".join(out) + "\n"
+
+    @staticmethod
+    def one_node(stress):
+        return frd_text({1: (0.0, 0.0, 0.0)}, {1: (0.0, 0.0, 0.0)}, {1: stress})
+
+    @staticmethod
+    def von_mises(t):
+        """sqrt(3 J2) from the deviatoric stress: another form of the code's formula."""
+        mean = (t.sxx + t.syy + t.szz) / 3.0
+        deviator = ((t.sxx - mean) ** 2 + (t.syy - mean) ** 2 + (t.szz - mean) ** 2
+                    + 2.0 * (t.sxy ** 2 + t.syz ** 2 + t.szx ** 2))
+        return math.sqrt(1.5 * deviator)
+
+    def test_each_component_is_read_into_the_field_ccx_names_it(self) -> None:
+        # Each value encodes its tensor indices, so a component read into another field shows.
+        text = self.with_components(self.one_node((11.0, 22.0, 33.0, 12.0, 23.0, 31.0)), self.CCX_COMPONENTS)
+        self.assertEqual(fs.read_frd(text).stress[1]._asdict(),
+                         {"sxx": 11.0, "syy": 22.0, "szz": 33.0, "sxy": 12.0, "syz": 23.0, "szx": 31.0})
+
+    def test_the_tensor_of_every_fixture_node_gives_its_von_mises_stress(self) -> None:
+        for path in sorted(FIXTURES.glob("*.frd.gz")):
+            with self.subTest(path.name), gzip.open(path, "rt") as handle:
+                result = fs.read_frd(handle.read())
+                self.assertEqual(set(result.stress), set(result.von_mises))
+                worst = max(abs(self.von_mises(t) - result.von_mises[n]) / max(result.von_mises[n], 1.0)
+                            for n, t in result.stress.items())
+                self.assertLess(worst, 1e-12)
+
+    def test_the_last_stress_block_gives_the_tensor_as_it_gives_von_mises(self) -> None:
+        first = frd_text({1: (0.0, 0.0, 0.0), 2: (1.0, 0.0, 0.0)}, {1: (0.0, 0.0, 0.0), 2: (0.0, 0.0, 0.0)},
+                         {1: (1.0, 0.0, 0.0, 0.0, 0.0, 0.0), 2: (2.0, 0.0, 0.0, 0.0, 0.0, 0.0)})
+        last = ["  100CL  101 1.0", " -4  STRESS      6    1", " -1         1" + f"{7.0:12.5E}" + f"{0.0:12.5E}" * 5, " -3"]
+        result = fs.read_frd(first.replace(" 9999\n", "\n".join(last) + "\n 9999\n"))
+        self.assertEqual(result.stress, {1: (7.0, 0.0, 0.0, 0.0, 0.0, 0.0)})
+
+    def test_a_stress_record_with_more_than_six_values_is_refused_with_its_node(self) -> None:
+        text = frd_text({1: (0.0, 0.0, 0.0), 2: (1.0, 0.0, 0.0)}, {1: (0.0, 0.0, 0.0), 2: (0.0, 0.0, 0.0)},
+                        {1: (1.0, 0.0, 0.0, 0.0, 0.0, 0.0), 2: (1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0)})
+        with self.assertRaisesRegex(fs.FrdError, r"STRESS record of node 2 has 7 values, not 6"):
+            fs.read_frd(text)
+
+    def test_components_named_in_another_order_or_number_are_refused(self) -> None:
+        sxx, syy, szz, sxy, syz, szx = self.CCX_COMPONENTS
+        abaqus = tuple(line.replace(old, new) for line, (old, new) in zip(
+            (sxx, syy, szz, sxy, szx, syz), (("SXX", "S11"), ("SYY", "S22"), ("SZZ", "S33"), ("SXY", "S12"),
+                                             ("SZX", "S13"), ("SYZ", "S23"))))
+        for label, components in (("SYZ and SZX swapped", (sxx, syy, szz, sxy, szx, syz)),
+                                  ("shear first", (sxy, syz, szx, sxx, syy, szz)),
+                                  ("Abaqus names", abaqus),
+                                  ("five components", (sxx, syy, szz, sxy, syz)),
+                                  ("seven components", (*self.CCX_COMPONENTS, szx))):
+            with self.subTest(label):
+                text = self.with_components(self.one_node((1.0, 2.0, 3.0, 4.0, 5.0, 6.0)), components)
+                with self.assertRaisesRegex(fs.FrdError, "STRESS block names its components"):
+                    fs.read_frd(text)
 
 
 class SettleTests(unittest.TestCase):

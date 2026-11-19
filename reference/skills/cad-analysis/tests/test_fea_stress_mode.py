@@ -749,5 +749,92 @@ class StudyWiring(unittest.TestCase):
         self.assertIsNone(study.fallback_level({}))
 
 
+C3D10_NODES = (788, 798, 565, 754, 815, 987, 988, 968, 969, 989)
+C3D10_RECORD = "605, " + ", ".join(map(str, C3D10_NODES))  # element 605 of the cantilever fixture
+# ccx 2.23 manual, Figure 63 (section 6.2.7): C3D10 node 5 sits on edge 1-2, 6 on 2-3, 7 on 3-1, 8 on 1-4, 9 on 2-4
+# and 10 on 3-4. Gmsh's own order swaps the last two.
+C3D10_EDGES = ((0, 1), (1, 2), (2, 0), (0, 3), (1, 3), (2, 3))
+
+
+def frd_elements(frd: str) -> dict[int, Any]:
+    """The element block of a ccx `.frd`: ` -1` gives the element id and its frd type, ` -2` lines its nodes."""
+    kinds = {3: "C3D4", 6: "C3D10"}
+    lines = frd.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("    3C"))
+    elements: dict[int, Any] = {}
+    element, kind, nodes = 0, "", []
+    for line in lines[start + 1:]:
+        if line.startswith((" -1", " -3")) and nodes:
+            elements[element] = study.Element(kind, tuple(nodes))
+        if line.startswith(" -3"):
+            return elements
+        if line.startswith(" -1"):
+            element, kind, nodes = int(line[3:13]), kinds[int(line[13:18])], []
+        else:
+            nodes += [int(line[3 + 10 * i:13 + 10 * i]) for i in range(len(line[3:]) // 10)]
+    raise AssertionError("the element block has no terminator")
+
+
+class ElementConnectivityTests(unittest.TestCase):
+    """`element_connectivity` reads the C3D4 and C3D10 elements of a ccx input, and refuses anything else."""
+
+    def test_a_c3d10_record_gives_its_ten_nodes_in_the_written_order(self) -> None:
+        found = study.element_connectivity("*Element, TYPE=C3D10, ELSET=Evolumes\n" + C3D10_RECORD + "\n")
+        self.assertEqual(found, {605: study.Element("C3D10", C3D10_NODES)})
+
+    def test_c3d4_and_c3d10_blocks_are_read_whatever_the_keyword_case_spacing_and_comments(self) -> None:
+        text = ("** Volume elements\n*element, type=c3d4\n1, 11, 12, 13, 14\n\n** next block\n"
+                "*ELEMENT ,TYPE = C3D10\n" + C3D10_RECORD + "\n*ELSET, ELSET=Eall\nEvolumes\n")
+        self.assertEqual(study.element_connectivity(text),
+                         {1: study.Element("C3D4", (11, 12, 13, 14)), 605: study.Element("C3D10", C3D10_NODES)})
+
+    def test_the_lines_after_other_keywords_are_not_elements(self) -> None:
+        text = ("*Element, TYPE=C3D4\n1, 11, 12, 13, 14\n*ELEMENT OUTPUT\nS\n*EL FILE\nS, E\n*ELSET,ELSET=Eall\n"
+                "Evolumes\n*NODE\n2, 0.0, 0.0, 0.0\n*NODE FILE\nU\n")
+        self.assertEqual(study.element_connectivity(text), {1: study.Element("C3D4", (11, 12, 13, 14))})
+
+    def test_the_elements_of_a_freecad_written_input_are_the_frd_element_block(self) -> None:
+        found = study.element_connectivity((FIXTURES / "cantilever_r1_4.5mm.elements.inp").read_text())
+        self.assertEqual(len(found), 608)
+        self.assertEqual(found, frd_elements(frd_text("cantilever_r1_4.5mm")))
+
+    def test_the_mid_edge_nodes_of_the_fixture_sit_on_the_edges_the_ccx_manual_numbers(self) -> None:
+        found = study.element_connectivity((FIXTURES / "cantilever_r1_4.5mm.elements.inp").read_text())
+        at = fea_stress.read_frd(frd_text("cantilever_r1_4.5mm")).coordinates
+        worst = 0.0
+        for element in found.values():
+            for mid, (a, b) in zip(element.nodes[4:], C3D10_EDGES):
+                p, q = at[element.nodes[a]], at[element.nodes[b]]
+                midpoint = tuple((u + v) / 2 for u, v in zip(p, q))
+                worst = max(worst, math.dist(midpoint, at[mid]) / math.dist(p, q))
+        # The .frd keeps six significant digits; a mid-edge node on another edge would be a large share of an edge off.
+        self.assertLess(worst, 1e-3)
+
+    def test_a_malformed_element_input_is_refused_as_a_connectivity_error(self) -> None:
+        c3d4 = "*Element, TYPE=C3D4\n"
+        for label, text, message in (
+            ("element id not a number", c3d4 + "x1, 11, 12, 13, 14\n", r"'x1, 11, 12, 13, 14' is not a C3D4 element"),
+            ("node id not a number", c3d4 + "1, 11, 12, 13, a\n", "is not a C3D4 element"),
+            ("signed node id", c3d4 + "1, 11, 12, 13, -14\n", "is not a C3D4 element"),
+            ("node id in other digits", c3d4 + "1, 11, 12, 13, \u0661\u0664\n", "is not a C3D4 element"),
+            ("empty field", c3d4 + "1, 11, , 13, 14\n", "is not a C3D4 element"),
+            ("trailing comma", c3d4 + "1, 11, 12, 13, 14,\n", "is not a C3D4 element"),
+            ("more digits than int converts", c3d4 + "1, " + "9" * 5000 + ", 12, 13, 14\n", "is not a C3D4 element"),
+            ("too few nodes", c3d4 + "1, 11, 12, 13\n", r"element 1 has 3 of 4 nodes"),
+            ("too many nodes", c3d4 + "1, 11, 12, 13, 14, 15\n", r"element 1 has 5 of 4 nodes"),
+            ("C3D10 with corners only", "*Element, TYPE=C3D10\n7, 11, 12, 13, 14\n", r"element 7 has 4 of 10 nodes"),
+            ("id repeated in a block", c3d4 + "1, 11, 12, 13, 14\n1, 15, 16, 17, 18\n", r"element 1 is defined twice"),
+            ("id repeated across blocks", c3d4 + "605, 11, 12, 13, 14\n*Element, TYPE=C3D10\n" + C3D10_RECORD + "\n",
+             r"element 605 is defined twice"),
+            ("another element type", "*Element, TYPE=C3D20\n1, 11, 12, 13, 14\n", r"element type C3D20 is not"),
+            ("no element type", "*Element, ELSET=E\n1, 11, 12, 13, 14\n", r"\*ELEMENT block has no TYPE"),
+            ("no element block", "*NODE\n1, 0.0, 0.0, 0.0\n", "no C3D4 or C3D10 elements"),
+            ("an empty element block", "*Element, TYPE=C3D10\n*ELSET, ELSET=Eall\n", "no C3D4 or C3D10 elements"),
+        ):
+            with self.subTest(label):
+                with self.assertRaisesRegex(study.ConnectivityError, message):
+                    study.element_connectivity(text)
+
+
 if __name__ == "__main__":
     unittest.main()
