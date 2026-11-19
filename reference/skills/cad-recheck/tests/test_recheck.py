@@ -52,6 +52,9 @@ class RecheckHookTests(unittest.TestCase):
         self.global_config = Path(self.temporary.name) / "global.gitconfig"
         self.global_config.write_text("", encoding="utf-8")
         self.git("-c", "init.templateDir=", "init", "-q")
+        empty_hooks = Path(self.temporary.name) / "no-hooks"
+        empty_hooks.mkdir()
+        self.git("config", "core.hooksPath", str(empty_hooks))  # no host or global hook runs in this repo
         self.git("config", "user.name", "CAD Recheck Test")
         self.git("config", "user.email", "cad-recheck@example.invalid")
         self.write_product("specify", "layout")
@@ -329,7 +332,7 @@ class RecheckHookTests(unittest.TestCase):
         """HEAD: flow.stage past the layout stamp, with one decision of status `decision`."""
         self.provisional_gate("parts", decision=decision)
         self.assertEqual(self.stamp_gate("layout").returncode, 0)
-        self.git("commit", "-qn", "-m", f"gate with a {decision} decision")
+        self.git("commit", "-qm", f"gate with a {decision} decision")
 
     def restage_decision(self, decision: str) -> None:
         """The index: the decision at status `decision`, stamped again."""
@@ -372,7 +375,7 @@ class RecheckHookTests(unittest.TestCase):
     def test_a_stamp_below_recheck_from_is_refused(self) -> None:
         self.write_product("specify", "parts")
         self.git("add", "hw")
-        self.git("commit", "-qn", "-m", "raise the threshold before the stage is due")
+        self.git("commit", "-qm", "raise the threshold before the stage is due")
         self.provisional_gate("parts", "parts")
         self.assertEqual(self.stamp_gate("layout").returncode, 0)
         result = self.run_python(STAMP, "--verify", cwd=self.root)
@@ -382,10 +385,10 @@ class RecheckHookTests(unittest.TestCase):
     def test_a_fresh_committed_stamp_below_recheck_from_is_refused_in_committed_mode(self) -> None:
         self.write_product("specify", "parts")
         self.git("add", "hw")
-        self.git("commit", "-qn", "-m", "raise the threshold before the stage is due")
+        self.git("commit", "-qm", "raise the threshold before the stage is due")
         self.provisional_gate("parts", "parts")
         self.assertEqual(self.stamp_gate("layout").returncode, 0)  # the writer does not enforce the threshold
-        self.git("commit", "-qn", "-m", "stage, stamp and threshold together")  # tree and record hashes now match
+        self.git("commit", "-qm", "stage, stamp and threshold together")  # tree and record hashes now match
         result = self.run_python(STAMP, "--verify", "--committed", cwd=self.root)
         self.assertEqual(result.returncode, 2, result.stdout)
         self.assertIn("is below flow.recheck_from parts", result.stderr)
@@ -590,7 +593,7 @@ class RecheckHookTests(unittest.TestCase):
 
     def test_verify_passes_a_commit_that_stages_no_hw_change_and_checks_one_that_does(self) -> None:
         self.stage_product("release")
-        self.git("commit", "-qm", "release stage", "--no-verify")
+        self.git("commit", "-qm", "release stage")
         (self.root / "notes.md").write_text("notes\n", encoding="utf-8")
         self.git("add", "notes.md")
         verified = self.run_python(STAMP, "--verify", cwd=self.root)
@@ -616,7 +619,7 @@ class RecheckHookTests(unittest.TestCase):
         project = self.root / subdirectory
         project.mkdir(parents=True)
         self.git("mv", "hw", f"{subdirectory}/hw")
-        self.git("commit", "-qm", "move the project", "--no-verify")
+        self.git("commit", "-qm", "move the project")
         return project
 
     def stage_subdirectory_stamp(self, subdirectory: str) -> Path:
