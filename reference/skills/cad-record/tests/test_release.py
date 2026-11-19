@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
+import fcntl
 import hashlib
 import importlib.util
 import io
@@ -18,9 +20,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import tomllib
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 from unittest import mock
@@ -432,6 +435,16 @@ class Pruning(ReleaseCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("64-character digest", result.stderr)
 
+    def test_prune_on_a_stale_package_refuses_and_deletes_nothing(self) -> None:
+        hw = self.released()
+        write(hw / "releases" / "A" / "bom.csv", "edited\n")
+        before = tree(hw)
+        code, report = self.cli(hw)
+        self.assertEqual((code, report["status"], report["findings"][0]["code"]), (1, "refused", "release.stale"))
+        self.assertIn("release.py without --prune repairs it", report["findings"][0]["message"])
+        self.assertNotIn("pruning", report)
+        self.assertEqual(tree(hw), before)
+
     def test_an_existing_package_of_another_approval_is_refused_not_pruned_against(self) -> None:
         hw = self.released()
         before = tree(hw)
@@ -624,6 +637,19 @@ class Documents(ReleaseCase):
         self.assertEqual({key: okh[key] for key in ("version", "release", "release_date")},
                          {"version": "v1", "release": "A", "release_date": "2026-11-02"})
 
+    def test_a_next_day_repair_keeps_the_release_date(self) -> None:
+        sealing = datetime(2026, 11, 2, 23, 59, 59, tzinfo=timezone.utc)
+        hw = self.project()
+        self.guide(hw, "--rev", "A", "--date", "2026-11-02")
+        self.assertEqual(self.release(hw, now=sealing)[0], 0)
+        write(hw / "releases" / "A" / "bom.csv", "edited\n")
+        code, report = self.release(hw, now=sealing + timedelta(days=1))
+        self.assertEqual(code, 0, report.get("findings"))
+        okh = tomllib.loads((hw / "releases" / "A" / "docs" / "okh.toml").read_text(encoding="utf-8"))["okhv"]
+        manifest = json.loads((hw / "releases" / "A" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual((manifest["released_at"], okh["release_date"]), ("2026-11-02T23:59:59Z", "2026-11-02"))
+        self.guide(hw, "--rev", "A", "--date", "2026-11-02")  # build_guide.py refuses any date but the sealed one
+
 
 class Refusal(ReleaseCase):
     """Each gap refuses with a finding that names it, and hw/ is byte-identical afterwards."""
@@ -736,12 +762,12 @@ class Refusal(ReleaseCase):
         self.assertEqual((code, report["status"], report["manifest_sha256"]), (0, "released", first["manifest_sha256"]))
         self.assertEqual(tree(hw), before, "the rerun leaves the package byte-identical")
 
-    def test_a_stale_package_of_the_same_frozen_manifest_is_refused_and_left_alone(self) -> None:
+    def test_a_stale_package_of_another_approval_needs_a_new_revision(self) -> None:
         hw = self.project()
         self.assertEqual(self.release(hw)[0], 0)
         write(hw / "releases" / "A" / "bom.csv", "edited\n")
-        self.refused(hw, "hw/releases/A", "stale", "stale: bom.csv changed after it was sealed")
-        self.refused(hw, "hw/releases/A", "stale", "automatic repair is not supported; use a new revision")
+        self.refused(hw, "hw/releases/A", "stale", "automatic repair is not supported; use a new revision",
+                     decision="DR-004")
 
     def test_a_stale_package_of_another_frozen_manifest_needs_a_new_revision(self) -> None:
         hw = self.project()
@@ -847,6 +873,221 @@ class Refusal(ReleaseCase):
         self.assertIn("REV 'I' does not match", json.loads(result.stdout)["message"])
 
 
+DAMAGE: dict[str, Callable[[Path], Any]] = {  # ways a sealed package fails its seal, each applied to hw/releases/A
+    "a changed file": lambda package: write(package / "bom.csv", "edited\n"),
+    "a missing file": lambda package: (package / "verification.csv").unlink(),
+    "an extra file": lambda package: write(package / "stray.txt"),
+}
+
+
+class Repair(ReleaseCase):
+    """A stale hw/releases/<REV>/ of the same version, approval and frozen manifest is sealed again from that
+    frozen manifest, under the revision's lock, and a failed attempt leaves the stale package where it was."""
+
+    def released(self) -> tuple[Path, dict[str, str]]:
+        hw = self.project()
+        code, report = self.release(hw)
+        self.assertEqual(code, 0, report.get("findings"))
+        return hw, tree(hw / "releases" / "A")
+
+    def lock_held(self, hw: Path) -> bool:
+        """Whether a writer holds the lock of hw/releases/A: a second open file cannot take it."""
+        lock = layout._lock_path(hw, "hw/releases/A")
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        with lock.open("a") as probe:
+            try:
+                fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+            fcntl.flock(probe, fcntl.LOCK_UN)
+            return False
+
+    def replaced(self, hw: Path) -> list[Path]:
+        """The packages a run moved aside, under .cad-work/replaced/."""
+        root = hw.parent / ".cad-work" / "replaced" / "hw" / "releases" / "A"
+        return sorted(root.iterdir()) if root.is_dir() else []
+
+    def test_a_stale_package_of_the_same_frozen_manifest_is_sealed_again_byte_identically(self) -> None:
+        for damage, spoil in DAMAGE.items():
+            with self.subTest(damage):
+                hw, sealed = self.released()
+                spoil(hw / "releases" / "A")
+                stale = tree(hw / "releases" / "A")
+                code, report = self.release(hw)
+                self.assertEqual((code, report["status"]), (0, "released"), report.get("findings"))
+                self.assertEqual(tree(hw / "releases" / "A"), sealed, "the repair seals the same package again")
+                self.assertEqual([tree(path) for path in self.replaced(hw)], [stale], "the stale package is kept aside")
+
+    def test_seal_findings_outside_the_repaired_package_still_refuse(self) -> None:
+        for damage, code in (("a missing file", "layout.missing"), ("an extra file", "layout.unlisted")):
+            with self.subTest(damage):
+                hw, _ = self.released()
+                shutil.copytree(hw / "releases" / "A", hw / "releases" / "B")  # another sealed package
+                DAMAGE[damage](hw / "releases" / "B")
+                DAMAGE["a changed file"](hw / "releases" / "A")
+                before = tree(hw)
+                result, report = self.release(hw)
+                self.assertEqual((result, report["status"]), (1, "refused"))
+                other = hw.resolve() / "releases" / "B"
+                self.assertTrue(any(item.get("code") == code and Path(item["path"]).is_relative_to(other)
+                                    for item in report["findings"]), json.dumps(report["findings"], indent=1))
+                self.assertEqual(tree(hw), before)
+
+    def overlap(self, hw: Path, at: tuple[Any, str], b_work: Callable[[], Any] | None = None,
+                then: Callable[[], Any] = lambda: None, a_decision: str = "DR-005") -> Overlap:
+        """Overlap.run on hw/releases/A: writer A releases, approved by `a_decision`, and writer B runs
+        `b_work` (a release by default). B's first lock attempt finds the revision's lock taken, and B
+        inspects, validates and stages nothing before it."""
+        race = Overlap(self, hw, at, then)
+        race.run(lambda: self.release(hw, decision=a_decision), b_work or (lambda: self.release(hw)))
+        self.assertTrue(race.blocked, "B's first lock attempt finds the revision's lock taken")
+        self.assertEqual(race.before_lock, [], "B inspects, validates and stages nothing before it holds the lock")
+        return race
+
+    def assert_repaired_once(self, hw: Path, sealed: dict[str, str], race: Overlap) -> None:
+        """A repaired the stale package; B then found it sealed and was a no-op that left nothing behind."""
+        a, b = race.outcome["a"], race.outcome["b"]
+        self.assertEqual(a[0], 0, a)
+        self.assertEqual((b[0], b[1].get("already_sealed")), (0, True), b)
+        self.assertNotIn("stage", race.calls, "B found the package sealed and staged nothing")
+        self.assertEqual(tree(hw / "releases" / "A"), sealed, "A's repair is in place")
+        moved = self.replaced(hw)
+        self.assertEqual(len(moved), 1, "only A moved a package aside")
+        self.assertTrue(all(layout.verify(path) for path in moved), "no sound package was moved aside")
+        self.assertEqual(sorted((hw.parent / ".cad-work" / "release-A").glob("stage-*")), [], "no stage is left")
+
+    def test_a_slower_writer_never_moves_a_repaired_package_aside(self) -> None:
+        hw, sealed = self.released()
+        DAMAGE["a changed file"](hw / "releases" / "A")
+        held: list[bool] = []
+        probe = on_thread("writer-a", release.layout.claim, lambda: held.append(self.lock_held(hw)))
+        with mock.patch.object(release.layout, "claim", probe):
+            race = self.overlap(hw, (release, "stage"))  # A pauses once it has staged its repair
+        self.assert_repaired_once(hw, sealed, race)
+        self.assertTrue(held and all(held), "every claim ran under the revision's lock")
+
+    def test_a_repair_judges_a_waiver_on_the_release_date(self) -> None:
+        sealing, later = (datetime(2026, 2, 27, 12, tzinfo=timezone.utc), datetime(2026, 4, 1, 12, tzinfo=timezone.utc))
+        with fixed_today(sealing.date()):  # the waivers hold until 2026-03-01
+            hw = self.project(service_class="fit_assembly", ledger=waive_fdm_trials_until("2026-03-01"))
+            code, report = self.release(hw, now=sealing)
+        self.assertEqual(code, 0, report.get("findings"))
+        sealed = tree(hw / "releases" / "A")
+        DAMAGE["a changed file"](hw / "releases" / "A")
+        with fixed_today(later.date()):
+            self.assertIn("waiver.expired", json.dumps(validate.validate_project(hw)), "the waivers expired by today")
+            code, report = self.release(hw, now=later)
+        self.assertEqual(code, 0, report.get("findings"))
+        self.assertEqual(tree(hw / "releases" / "A"), sealed, "the repair seals the package of the release date again")
+
+    def test_a_writer_that_finds_another_package_under_the_lock_leaves_no_stage(self) -> None:
+        cases = {  # the revision when B starts, A's approval, and B's outcome once A has sealed the revision
+            "a repair, then A's repair": ("stale", "DR-005", (0, "released")),
+            "a fresh release, then A's release": ("absent", "DR-005", (0, "released")),
+            "a fresh release, then A's release of another approval": ("absent", "DR-004", (1, "refused")),
+        }
+        for case, (revision, a_decision, expected) in cases.items():
+            with self.subTest(case):
+                if revision == "stale":
+                    hw, _ = self.released()
+                    DAMAGE["a changed file"](hw / "releases" / "A")
+                else:
+                    hw = self.project()
+                race = self.overlap(hw, (release, "stage"), a_decision=a_decision)
+                code, report = race.outcome["b"]
+                self.assertEqual(((code, report["status"]), report.get("stage")), (expected, None), report)
+                stages = sorted((hw.parent / ".cad-work" / "release-A").glob("stage-*"))
+                self.assertEqual(stages, [], "the losing writer left no stage")
+
+    def test_a_writer_that_starts_during_a_repair_waits_for_it_and_finds_it_sealed(self) -> None:
+        hw, sealed = self.released()
+        DAMAGE["a changed file"](hw / "releases" / "A")
+        race = self.overlap(hw, (release.layout, "claim"))  # A has moved the stale package aside, not claimed yet
+        self.assert_repaired_once(hw, sealed, race)
+
+    def test_a_writer_that_starts_during_a_repairs_validation_waits_for_it(self) -> None:
+        hw, sealed = self.released()
+        DAMAGE["a changed file"](hw / "releases" / "A")
+        race = self.overlap(hw, (release.validate, "validate_project"))  # A is in assemble's project validation
+        self.assert_repaired_once(hw, sealed, race)
+
+    def test_prune_during_a_repair_whose_claim_fails_refuses_and_repairs_nothing(self) -> None:
+        hw, _ = self.released()
+        DAMAGE["a changed file"](hw / "releases" / "A")
+        before = tree(hw)
+
+        def claim_fails() -> None:
+            raise PermissionError(13, "Permission denied")
+
+        race = self.overlap(hw, (release.layout, "claim"), b_work=lambda: cli(hw, "--prune"), then=claim_fails)
+        self.assertIsInstance(race.outcome["a"], layout.LayoutError, "A's claim failed and A put the package back")
+        code, report = race.outcome["b"]
+        self.assertEqual((code, report["status"]), (1, "refused"), report)
+        self.assertEqual(report["findings"][0]["code"], "release.stale")
+        self.assertEqual(tree(hw), before, "prune repaired nothing and deleted nothing")
+
+    def test_a_run_takes_the_revisions_lock_once(self) -> None:
+        for case in ("a fresh release", "a repair", "--prune on a stale package"):
+            with self.subTest(case):
+                if case == "a fresh release":
+                    hw = self.project()
+                else:
+                    hw, _ = self.released()
+                    DAMAGE["a changed file"](hw / "releases" / "A")
+                taken: list[str] = []
+                counted = on_thread(threading.current_thread().name, release.layout.target_lock,
+                                    lambda: taken.append("lock"))
+                with mock.patch.object(release.layout, "target_lock", counted):
+                    cli(hw, "--prune") if case.startswith("--prune") else self.release(hw)
+                self.assertEqual(taken, ["lock"], "one run takes the revision's lock exactly once")
+
+    def test_a_failed_repair_puts_the_stale_package_back(self) -> None:
+        failures = {  # the os call that fails inside the claim, and how it fails
+            "an OSError from the claim's mkdir": ("mkdir", PermissionError(13, "Permission denied")),
+            "a failed rename onto the claim": ("rename", OSError(18, "Cross-device link")),
+        }
+        for name, (call, failure) in failures.items():
+            with self.subTest(name):
+                hw, _ = self.released()
+                DAMAGE["a changed file"](hw / "releases" / "A")
+                before = tree(hw)
+                real_claim, claims = release.layout.claim, []
+
+                def failing_claim(staged: Path, target: Path, target_rel: str) -> None:
+                    claims.append(staged)
+                    if len(claims) > 1:  # putting the stale package back
+                        return real_claim(staged, target, target_rel)
+                    with mock.patch.object(layout.os, call, side_effect=failure):
+                        return real_claim(staged, target, target_rel)
+
+                with mock.patch.object(release.layout, "claim", failing_claim):
+                    with self.assertRaises(layout.LayoutError) as caught:  # an infrastructure error: exit 2
+                        self.release(hw)
+                self.assertIn(failure.strerror, str(caught.exception))
+                self.assertIn("the stale package it replaced is back in place", str(caught.exception))
+                self.assertEqual(tree(hw), before, "the stale package is back where it was")
+
+    def test_a_failed_repair_never_replaces_another_writers_package(self) -> None:
+        hw, _ = self.released()
+        DAMAGE["a changed file"](hw / "releases" / "A")
+        real_claim = release.layout.claim
+        package = hw / "releases" / "A"
+
+        def rival_first(staged: Path, target: Path, target_rel: str) -> None:
+            if not (target / "rival.txt").exists():  # another writer lands at the revision before this claim
+                write(target / "rival.txt", "another writer\n")
+            real_claim(staged, target, target_rel)
+
+        with mock.patch.object(release.layout, "claim", rival_first):
+            code, report = self.release(hw)
+        self.assertEqual((code, report["status"]), (1, "refused"))
+        self.assertEqual(sorted(path.name for path in package.iterdir()), ["rival.txt"], "the other writer's package stays")
+        moved = self.replaced(hw)
+        self.assertEqual(len(moved), 1)
+        self.assertEqual((moved[0] / "bom.csv").read_text(encoding="utf-8"), "edited\n", "the stale package is kept")
+        self.assertIn(layout.relative(hw, moved[0]), json.dumps(report["findings"]))
+
+
 def waive_fdm_trials(hw: Path, record: Any, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """The accepted entries plus an approved, scoped trial waiver (DR-006) for every FDM part's print trial, and
     accepted joint evidence (a TST retention test) for every assembly.joint obligation: a fit-assembly release
@@ -865,6 +1106,103 @@ def waive_fdm_trials(hw: Path, record: Any, entries: list[dict[str, Any]]) -> li
                                             manifest_sha256=configuration["manifest_sha256"],
                                             geometry=impact.current_geometry(hw), artifacts=["hw/docs/inspection.md"], hw=hw))
     return entries
+
+
+def on_thread(name: str, real: Callable[..., Any], before: Callable[[], Any]) -> Callable[..., Any]:
+    """`real`, calling `before` first when the thread named `name` calls it."""
+    def call(*arguments: Any, **options: Any) -> Any:
+        if threading.current_thread().name == name:
+            before()
+        return real(*arguments, **options)
+    return call
+
+
+def cli(hw: Path, *extra: str) -> tuple[int, dict[str, Any]]:
+    """release.py's main for revision A of v1, approved by DR-005, in this process: its exit code and report."""
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        code = release.main([str(hw), "--rev", "A", "--version", "v1", "--decision", "DR-005", *extra])
+    return code, json.loads(out.getvalue())
+
+
+class Overlap:
+    """Two writers of one revision in threads, steered by events and never by timing. Writer A runs first
+    and pauses at its first call of `at` (an object and an attribute name), then calls `then` (which may
+    raise) before the real call. Writer B starts while A is paused. At B's first lock attempt, `blocked`
+    records whether the revision's lock was taken, and `before_lock` the watched calls B had made by then.
+    A goes on from there. `outcome` holds each writer's result or exception, `calls` all of B's watched calls."""
+
+    GUARD = 30  # seconds: only a hang guard, never part of the logic
+    WATCHED = ((release, "existing"), (release, "stage"), (release.validate, "validate_project"))
+
+    def __init__(self, case: Any, hw: Path, at: tuple[Any, str], then: Callable[[], Any]) -> None:
+        self.case, self.hw, self.at, self.then = case, hw, at, then
+        self.paused, self.go, self.settled = threading.Event(), threading.Event(), threading.Event()
+        self.outcome: dict[str, Any] = {}
+        self.calls: list[str] = []
+        self.blocked: bool | None = None
+        self.before_lock: list[str] | None = None
+
+    def pause(self) -> None:
+        if not self.paused.is_set():
+            self.paused.set()
+            self.go.wait(self.GUARD)
+            self.then()
+
+    def b_locks(self) -> None:
+        if self.blocked is None:
+            self.blocked, self.before_lock = self.case.lock_held(self.hw), list(self.calls)
+            self.settled.set()
+
+    def writer(self, name: str, work: Callable[[], Any]) -> threading.Thread:
+        def body() -> None:
+            try:
+                self.outcome[name] = work()
+            except BaseException as error:  # the test reads it
+                self.outcome[name] = error
+            self.settled.set()  # a writer that ends without a lock attempt settles the wait too
+        return threading.Thread(target=body, name=f"writer-{name}", daemon=True)
+
+    def run(self, a_work: Callable[[], Any], b_work: Callable[[], Any]) -> None:
+        target, name = self.at
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(target, name, on_thread("writer-a", getattr(target, name), self.pause)))
+            stack.enter_context(mock.patch.object(release.layout, "target_lock",
+                                                  on_thread("writer-b", release.layout.target_lock, self.b_locks)))
+            for owner, attribute in self.WATCHED:
+                stack.enter_context(mock.patch.object(owner, attribute, on_thread(
+                    "writer-b", getattr(owner, attribute), lambda attribute=attribute: self.calls.append(attribute))))
+            a, b = self.writer("a", a_work), self.writer("b", b_work)
+            a.start()
+            try:
+                self.case.assertTrue(self.paused.wait(self.GUARD), f"writer A never reached its pause: {self.outcome}")
+                b.start()
+                self.case.assertTrue(self.settled.wait(self.GUARD), "writer B never reached the lock")
+            finally:
+                self.go.set()
+                a.join(self.GUARD)
+            b.join(self.GUARD)
+        self.case.assertFalse(a.is_alive() or b.is_alive(), "a writer hung")
+
+
+def waive_fdm_trials_until(expires: str) -> Callable[[Path, Any, list[dict[str, Any]]], list[dict[str, Any]]]:
+    """waive_fdm_trials, each waiver expiring on `expires` (YYYY-MM-DD)."""
+    def ledger(hw: Path, record: Any, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        entries = waive_fdm_trials(hw, record, entries)
+        for entry in entries:
+            if entry.get("result") == "waived":
+                entry["waiver"]["expires"] = expires
+        return entries
+    return ledger
+
+
+def fixed_today(day: date) -> Any:
+    """A patch of evidence.py's clock: date.today() is `day` while it is active."""
+    class Fixed(date):
+        @classmethod
+        def today(cls) -> Fixed:
+            return cls(day.year, day.month, day.day)
+    return mock.patch.object(release.evidence, "date", Fixed)
 
 
 def open_selection(hw: Path) -> None:
