@@ -280,7 +280,8 @@ class Release(ReleaseCase):
         refused: list[tuple[str, str, str]] = []
         fake = SimpleNamespace(hw=hw, version="v1", checks={}, refuse=lambda path, kind, message: refused.append((path, kind, message)))
         release.check_record(fake, record, manifest)
-        self.assertEqual([(r[0], r[1]) for r in refused], [("hw/manufacturing/guidelines/shipped--pa.yaml", "tampered")])
+        self.assertEqual([(r[0], r[1]) for r in refused], [("hw/manufacturing/guidelines/shipped--pa.yaml", "stale")])
+        self.assertTrue(refused[0][2].endswith("; produce it again"), refused[0][2])
 
     def test_a_complete_frozen_record_releases_a_verified_package(self) -> None:
         hw = self.project()

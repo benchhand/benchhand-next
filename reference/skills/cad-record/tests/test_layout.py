@@ -420,7 +420,7 @@ class Publication(TempProject):
         self.assertFalse(rerun.reused)
         self.assertEqual(layout.verify(target), [])
 
-    def test_a_sealed_v2_release_verifies_and_a_tampered_copy_is_reported(self) -> None:
+    def test_a_sealed_v2_release_verifies_and_an_edited_copy_is_reported(self) -> None:
         release = self.hw / "releases" / "A"
         write(release / "bom.csv", "level,PN\n")
         write(release / "manufacturing" / "LMP-0001" / "part.step", "step\n")
