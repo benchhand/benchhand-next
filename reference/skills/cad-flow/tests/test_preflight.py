@@ -116,6 +116,18 @@ class RuntimeProbeTests(unittest.TestCase):
         self.assertIn("import cadquery", calls[0][-1])
         self.assertIn(f"{self.SITE} (environment shared by dependency set)", check.detail)
 
+    def test_the_cad_model_probe_imports_jsonschema_because_guideline_discovery_needs_it(self) -> None:
+        calls = []
+
+        def run(args, **kwargs):
+            calls.append(args)
+            return completed(args, 'CAD_PREFLIGHT:{"version": "8.0", "file": "%s/OCP/__init__.py"}\n' % self.SITE)
+
+        with patch.object(preflight.subprocess, "run", side_effect=run):
+            preflight._runtime_check("uv", runtime("cad-model"))
+        self.assertIn("jsonschema", runtime("cad-model").imports)
+        self.assertIn("jsonschema", calls[0][-1])
+
     def test_heavy_scripts_probe_the_environment_shared_by_dependency_set(self) -> None:
         for identifier in ("cad-model", "ocp-viewer", "playwright-chromium"):
             with self.subTest(identifier=identifier):

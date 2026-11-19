@@ -130,8 +130,9 @@ class JointTests(unittest.TestCase):
     """Joint evidence, one assembly.joint outcome per joining operation: retention, thread engagement and
     torque, edge distance against its criterion, and the host's temperature limit."""
 
-    def record(self, *, temperature=None, limit: float | None = 60.0, retention=None, sourced: bool = True) -> tuple:
-        """The TST record and its operations; the host's limit is a datasheet value unless not `sourced` (an estimate)."""
+    def record(self, *, temperature=None, limit: float | None = 60.0, retention=None, sourced: bool = True,
+               limit_source: dict | None = None) -> tuple:
+        """The TST record and its operations; the host's limit is a datasheet value (or `limit_source`) unless not `sourced` (an estimate)."""
         documents = fx.tst_record()
         operation = documents["assembly.yaml"]["operations"][0]
         if retention is not None:
@@ -141,7 +142,7 @@ class JointTests(unittest.TestCase):
         if limit is not None:
             profile = next(p for p in documents["manufacturing/materials.yaml"]["profiles"]
                            if p["id"] == "tst_polymer_printed")
-            datasheet = {"basis": "supplier_typical", "sources": [fx.source("datasheet", "TST polymer datasheet")]}
+            datasheet = {"basis": "supplier_typical", "sources": [limit_source or fx.source("datasheet", "TST polymer datasheet")]}
             profile["properties"].append(fx.material_property("max_service_temperature", limit, "deg_C",
                                                               orientation=fx.known("XY"), **(datasheet if sourced else {})))
         with tempfile.TemporaryDirectory() as directory:
@@ -221,6 +222,14 @@ class JointTests(unittest.TestCase):
         above = ops.check_joints(operations, record, intent.resolve_property)
         self.assertEqual(self.codes(above), {"assembly.joint_temperature": "fail"})
         self.assertEqual(above.outcome("assembly.joint@op:fit_bearing")["outcome"], "fail")
+
+    def test_a_guideline_sourced_host_limit_never_passes_a_joint(self) -> None:
+        retention = fx.known("TST pull-out test", "measured", sources=[fx.source("test", "TST pull-out")])
+        record, operations = self.record(temperature=fx.known(fx.quantity(lower=10, upper=40, units="deg_C")), retention=retention,
+                                         limit_source=fx.source("guideline", "fdm.generic", revision="1", sha256="a" * 64))
+        within = ops.check_joints(operations, record, intent.resolve_property)
+        self.assertEqual(self.codes(within), {"assembly.joint_temperature_unknown": "unknown"})
+        self.assertEqual(within.outcome("assembly.joint@op:fit_bearing")["outcome"], "unknown")
 
     def test_a_fastener_needs_sourced_engagement_torque_and_edge_distance(self) -> None:
         record, _ = self.record(limit=None)

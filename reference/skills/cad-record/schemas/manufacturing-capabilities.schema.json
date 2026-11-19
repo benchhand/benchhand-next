@@ -73,6 +73,10 @@
         "workholding": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
         "constraints": {"$ref": "manufacturing.schema.json#/$defs/texts"},
         "calibrations": {"type": "array", "items": {"$ref": "#/$defs/calibration"}},
+        "guidelines": {
+          "description": "The manufacturing guideline sets (id@revision) that this profile's machine layer names. They rank above every set that scope selects, and a calibration ranks above them. Sets of the generic, material and nozzle layers resolve by their scope and need no pin. It has no default",
+          "type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/guideline_ref"}
+        },
         "source": {"$ref": "manufacturing.schema.json#/$defs/source"}
       },
       "if": {"required": ["template"]},

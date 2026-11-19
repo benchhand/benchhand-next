@@ -720,6 +720,14 @@ class DispatchByProcessTests(Checks):
                          capabilities=[FX.capability_profile("tst_printer", "fdm", envelope=ENVELOPE), mill_profile()],
                          materials=materials())
 
+    def test_a_guideline_source_does_not_trace_a_purchased_specification(self) -> None:
+        documents = self.documents()
+        route = documents["parts/TST-0603/part.yaml"]["intent"]["route"][0]
+        route["purchase"]["specification"]["sources"] = [FX.source("guideline", "fdm.generic", revision="1", sha256="a" * 64)]
+        result = self.assess(documents, {**geometry("TST-0601", POCKET), **geometry("TST-0602", POCKET), **geometry("TST-0604", POCKET)})
+        self.assertEqual(self.outcome(result, "purchase.dimensions@TST-0603/buy"), "unknown")
+        self.assertIn("purchase.dimensions_untraceable", self.codes(result, "purchase.dimensions@TST-0603/buy"))
+
     def test_each_part_gets_only_its_own_process_checks(self) -> None:
         shape = {**geometry("TST-0601", POCKET), **geometry("TST-0602", POCKET), **geometry("TST-0604", POCKET)}
         result = self.assess(self.documents(), shape)

@@ -107,6 +107,21 @@ class RecheckHookTests(unittest.TestCase):
         if not assembly.exists():
             assembly.write_text("operations: []\n", encoding="utf-8")
 
+    def test_the_staged_record_carries_the_digests_of_its_guideline_sets(self) -> None:
+        (self.root / "hw" / "manufacturing" / "guidelines").mkdir(parents=True)
+        profile = fx.capability_profile("tst_printer", "fdm")
+        (self.root / "hw" / "manufacturing" / "capabilities.yaml").write_text(
+            json.dumps({"profiles": [profile]}), encoding="utf-8")
+        guideline = {"schema_version": 1, "id": "fdm.generic", "revision": 1, "title": "TST", "scope": {"process": "fdm"},
+                     "limits": [{"characteristic": "min_wall", "operator": ">=", "quantity": fx.quantity(0.8),
+                                 "citations": [fx.source("datasheet", "TST guide")]}]}
+        path = self.root / "hw" / "manufacturing" / "guidelines" / "generic.yaml"
+        path.write_text(json.dumps(guideline), encoding="utf-8")
+        self.git("add", "hw")
+        staged = stamp_module.staged_record(self.root)
+        self.assertEqual(list(staged.record.guideline_digests.get("tst_printer", {})), ["fdm.generic@1"])
+        self.assertEqual(staged.record.guideline_digests["tst_printer"]["fdm.generic@1"], hashlib.sha256(path.read_bytes()).hexdigest())
+
     def stage_product(self, stage: str, threshold: str = "layout") -> None:
         self.write_product(stage, threshold)
         self.git("add", "hw/product.yaml")

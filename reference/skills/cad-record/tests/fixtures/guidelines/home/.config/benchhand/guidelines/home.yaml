@@ -1,0 +1,12 @@
+schema_version: 1
+id: fdm.home
+revision: 1
+title: A valid set in a home-like directory that discovery must never read
+scope:
+  process: fdm
+limits:
+  - characteristic: min_wall
+    operator: ">="
+    quantity: {value: 9, units: mm}
+    citations:
+      - {kind: datasheet, reference: Synthetic fixture, url: "https://example.invalid/guide", accessed: "2026-01-01"}

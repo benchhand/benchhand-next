@@ -228,6 +228,8 @@ class Normalization(unittest.TestCase):
             "template used as a capability": (lambda d: capability(d, 0).update(template=True, guidance=["x"], calibrations=[]), "intent.profile"),
             "laser profile on a print": (lambda d: route(d)[0].update(capability="tst_laser"), "intent.profile"),
             "calibration from an estimate": (lambda d: capability(d, 0)["calibrations"][0].update(source=fx.source("estimate")), "intent.profile"),
+            "calibration from a guideline": (lambda d: capability(d, 0)["calibrations"][0].update(
+                source=fx.source("guideline", "fdm.generic", revision="1", sha256="a" * 64)), "intent.profile"),
             "unknown route kind": (lambda d: route(d).append(fx.operation("sinter", "sintering")), "intent.coverage"),
             "part without intent": (lambda d: part(d).pop("intent"), "record.incomplete"),
             "interface without functional": (lambda d: d["interfaces.yaml"]["interfaces"][0].pop("functional"), "record.incomplete"),

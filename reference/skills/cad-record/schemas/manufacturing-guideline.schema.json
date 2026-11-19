@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://srobroek.com/cad/schemas/manufacturing-guideline.schema.json",
+  "title": "Manufacturing guideline set (hw/manufacturing/guidelines/*.yaml and the shipped assets/manufacturing/guidelines/*.yaml)",
+  "description": "One file of published design-for-manufacturing guidance for a process. A guideline is never a calibration: the grade of a resolved limit is the kind of the source it cites, and a resolved criterion cites a source of kind guideline (id, revision and sha256 of this file), never the inner citations. Scope is declarative selectors, never expressions; which layer a limit sits at follows from how specific its scope is. A machine is reached only through the capability profile's guidelines pin. A guideline may only tighten the limit of a less specific one; a limit that relaxes needs `relaxes` with a reason and a citation. A value a source does not publish is left out, never defaulted. Layer height, shrinkage and Z strength are not guideline limits: they are a capability parameter and material-profile properties",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "id", "revision", "title", "scope", "limits"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "manufacturing.schema.json#/$defs/guideline_id"},
+    "revision": {"type": "integer", "minimum": 1},
+    "title": {"$ref": "manufacturing.schema.json#/$defs/text"},
+    "extends": {"description": "parent guideline ids, in order; a later parent is read after an earlier one", "type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/guideline_id"}},
+    "abstract": {"description": "an abstract set is reached through extends; it is matched on its own only when the capability profile's pin names it", "type": "boolean"},
+    "scope": {"$ref": "#/$defs/scope"},
+    "limits": {"type": "array", "items": {"$ref": "#/$defs/limit"}}
+  },
+  "$defs": {
+    "names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"}},
+    "scope": {
+      "description": "What the set applies to. Every selector present must match; a set with more selectors is more specific. nozzle_diameter is the interval of nozzle diameters it covers",
+      "type": "object", "additionalProperties": false, "required": ["process"],
+      "properties": {
+        "process": {"$ref": "manufacturing.schema.json#/$defs/route_kind"},
+        "material_family": {"$ref": "#/$defs/names"},
+        "filler": {"$ref": "#/$defs/names"},
+        "shore": {"$ref": "#/$defs/names"},
+        "nozzle_diameter": {
+          "allOf": [{"$ref": "manufacturing.schema.json#/$defs/quantity"}, {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"}],
+          "required": ["lower", "upper"]
+        },
+        "nozzle_material": {"$ref": "#/$defs/names"}
+      }
+    },
+    "applies_to": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": {
+        "orientation": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+        "feature": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"}
+      }
+    },
+    "relative": {
+      "description": "factor times the profile's line width (or nozzle diameter), never below floor",
+      "type": "object", "additionalProperties": false, "required": ["relative_to", "factor", "floor"],
+      "properties": {
+        "relative_to": {"enum": ["nozzle_diameter", "line_width"]},
+        "factor": {"type": "number", "exclusiveMinimum": 0},
+        "floor": {"allOf": [{"$ref": "manufacturing.schema.json#/$defs/quantity"}], "required": ["value"]}
+      }
+    },
+    "relaxes": {
+      "description": "a limit less strict than the less specific one it overrides needs the reason and the source",
+      "type": "object", "additionalProperties": false, "required": ["reason", "citation"],
+      "properties": {
+        "reason": {"$ref": "manufacturing.schema.json#/$defs/text"},
+        "citation": {"$ref": "manufacturing.schema.json#/$defs/source"}
+      }
+    },
+    "limit": {
+      "type": "object", "additionalProperties": false, "required": ["characteristic", "operator", "citations"],
+      "properties": {
+        "characteristic": {"description": "only a characteristic whose quantity the capability schema bounds, so no limit holds an unbounded value", "enum": ["bridge_span", "overhang_angle", "min_wall", "min_feature", "min_hole", "nozzle_diameter", "hole_diameter_deviation", "dimensional_deviation", "profile_deviation", "enclosure", "nozzle_material"]},
+        "operator": {"enum": [">=", "<=", ">", "<", "between", "equals", "one_of"]},
+        "quantity": {"description": "the limit as a value (>=, <=) or an interval (between), in one unit", "$ref": "manufacturing.schema.json#/$defs/quantity"},
+        "relative": {"$ref": "#/$defs/relative"},
+        "value": {"description": "the categorical requirement of equals and one_of, such as enclosure true or nozzle_material hardened_steel; no default", "type": ["string", "boolean", "array"], "minItems": 1, "uniqueItems": true, "items": {"type": ["string", "boolean"], "minLength": 1}},
+        "applies_to": {"$ref": "#/$defs/applies_to"},
+        "disputed": {"description": "true when the cited sources disagree; the stricter value applies", "type": "boolean"},
+        "relaxes": {"$ref": "#/$defs/relaxes"},
+        "citations": {"$ref": "manufacturing.schema.json#/$defs/sources"}
+      },
+      "allOf": [
+        {"if": {"properties": {"operator": {"enum": [">=", "<=", ">", "<"]}}},
+         "then": {"oneOf": [{"required": ["quantity"], "properties": {"quantity": {"required": ["value"]}}, "not": {"required": ["relative"]}},
+                            {"required": ["relative"], "not": {"required": ["quantity"]}}],
+                  "not": {"required": ["value"]}}},
+        {"if": {"properties": {"operator": {"const": "between"}}},
+         "then": {"required": ["quantity"], "properties": {"quantity": {"required": ["lower", "upper"]}}, "not": {"anyOf": [{"required": ["relative"]}, {"required": ["value"]}]}}},
+        {"if": {"properties": {"operator": {"enum": ["equals", "one_of"]}}},
+         "then": {"required": ["value"], "properties": {"characteristic": {"enum": ["enclosure", "nozzle_material"]}},
+                  "not": {"anyOf": [{"required": ["quantity"]}, {"required": ["relative"]}]}}},
+        {"if": {"properties": {"operator": {"const": "equals"}}}, "then": {"properties": {"value": {"type": ["string", "boolean"]}}}},
+        {"if": {"properties": {"operator": {"const": "one_of"}}}, "then": {"properties": {"value": {"type": "array"}}}},
+        {"if": {"properties": {"characteristic": {"const": "bridge_span"}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_bridge_span"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_bridge_span"}}}}}},
+        {"if": {"properties": {"characteristic": {"const": "overhang_angle"}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_overhang_angle"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_overhang_angle"}}}}}},
+        {"if": {"properties": {"characteristic": {"const": "min_wall"}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_min_wall"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_min_wall"}}}}}},
+        {"if": {"properties": {"characteristic": {"const": "nozzle_diameter"}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"}}}}}},
+        {"if": {"properties": {"characteristic": {"const": "min_feature"}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_min_feature"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_min_feature"}}}}}},
+        {"if": {"properties": {"characteristic": {"const": "min_hole"}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_min_hole"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_min_hole"}}}}}},
+        {"if": {"properties": {"characteristic": {"enum": ["hole_diameter_deviation", "dimensional_deviation", "profile_deviation"]}}, "required": ["characteristic"]},
+         "then": {"properties": {"quantity": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_deviation"}, "relative": {"properties": {"floor": {"$ref": "manufacturing-capabilities.schema.json#/$defs/qty_deviation"}}}}}},
+        {"if": {"properties": {"characteristic": {"enum": ["enclosure", "nozzle_material"]}}, "required": ["characteristic"]},
+         "then": {"properties": {"operator": {"enum": ["equals", "one_of"]}}}},
+        {"if": {"properties": {"characteristic": {"const": "enclosure"}}, "required": ["characteristic"]},
+         "then": {"properties": {"value": {"description": "a boolean fact: the requirement is true or false", "anyOf": [{"type": "boolean"}, {"type": "array", "items": {"type": "boolean"}}]}}}},
+        {"if": {"properties": {"characteristic": {"const": "nozzle_material"}}, "required": ["characteristic"]},
+         "then": {"properties": {"value": {"description": "lowercase, like the scope names and the material facts", "anyOf": [{"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"}, {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]*$"}}]}}}}
+      ]
+    }
+  }
+}

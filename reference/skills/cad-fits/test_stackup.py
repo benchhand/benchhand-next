@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 import yaml
 
@@ -279,6 +280,14 @@ class IntentStackContractTests(unittest.TestCase):
         spacer["source"] = fx.source("user", "drawing tolerance")
         self.assertEqual(stackup.compute(stack)["outcome"], "unknown")
 
+    def test_a_guideline_source_does_not_qualify_manufacturing_variation(self) -> None:
+        stack = fixture("closing_gap.yaml")
+        spacer = contributor(stack, "S")
+        spacer["source"] = fx.source("guideline", "fdm.generic", revision="1", sha256="a" * 64)
+        result = stackup.compute(stack)
+        self.assertEqual(result["outcome"], "unknown")
+        self.assertIn("stack.limits_unqualified", codes(result))
+
     def test_as_manufactured_size_of_a_reamed_feature_is_a_state_mismatch(self) -> None:
         stack = fixture("closing_gap.yaml")
         housing = contributor(stack, "H")
@@ -477,6 +486,41 @@ class StackPacketTests(unittest.TestCase):
                                      packets=packets)
         self.assertNotIn("packet.invalid", [f.code for f in assessment.findings])
         return assessment.statuses[self.OBLIGATION]
+
+    def test_the_stack_up_reads_the_frozen_guideline_copies_not_the_live_install(self) -> None:
+        guidelines = intent._sibling("cad_record_guidelines", "guidelines.py")
+        shipped = self.hw.parent / "shipped"
+
+        def shipped_set(minimum: float) -> str:
+            return yaml.safe_dump({
+                "schema_version": 1, "id": "fdm.material.pa", "revision": 1, "title": "TST", "scope": {"process": "fdm"},
+                "limits": [{"characteristic": "min_wall", "operator": ">=", "quantity": fx.quantity(minimum),
+                            "citations": [fx.source("datasheet", "TST guide")]}]}, sort_keys=False)
+
+        self.build(closing_gap_documents(), fixture("closing_gap.yaml"))
+        shipped.mkdir()
+        with unittest.mock.patch.object(guidelines, "SHIPPED", shipped):
+            (shipped / "pa.yaml").write_text(shipped_set(1.5), encoding="utf-8")
+            for name, data in guidelines.snapshot_files(self.hw).items():  # what a build copies into the version
+                target = self.hw / "versions" / "v1" / "record" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            frozen = dict(intent.load_record(self.hw).guideline_digests["tst_printer"])
+            (self.hw / "versions" / "v1" / "manifest.json").unlink()
+            snapshot_version(self.hw)  # seal the manifest over the copies
+            (shipped / "pa.yaml").write_text(shipped_set(2.5), encoding="utf-8")  # the live install changes
+            self.assertNotEqual(dict(intent.load_record(self.hw).guideline_digests["tst_printer"]), frozen)
+            seen: list = []
+            real = intent.load_record
+
+            def spy(hw, **kwargs):
+                seen.append(real(hw, **kwargs))
+                return seen[-1]
+
+            with unittest.mock.patch.object(intent, "load_record", spy):
+                self.run_stack()
+        self.assertEqual([p.message for p in seen[0].problems if p.code == "intent.guideline"], [], "a shipped copy is accepted")
+        self.assertEqual(dict(seen[0].guideline_digests.get("tst_printer", {})), frozen, "the digests are those of the snapshot")
 
     def test_a_failed_worst_case_is_the_stack_outcome_evidence_reads_and_a_rerun_reuses_it(self) -> None:
         self.build(closing_gap_documents(), fixture("closing_gap.yaml"))

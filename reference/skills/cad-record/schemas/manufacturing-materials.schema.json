@@ -54,6 +54,9 @@
         "title": {"$ref": "manufacturing.schema.json#/$defs/text"},
         "level": {"enum": ["family", "grade"]},
         "family": {"$ref": "manufacturing.schema.json#/$defs/text"},
+        "material_family": {"description": "the structured family a guideline scope matches on, such as pla, petg, pa or tpu; unknown when not stated. It has no default", "$ref": "#/$defs/scope_fact"},
+        "filler": {"description": "the fill a guideline scope matches on, such as cf or gf; not applicable for an unfilled material. It has no default", "$ref": "#/$defs/scope_fact"},
+        "shore": {"description": "the Shore hardness a guideline scope matches on, such as 95A or 85A. It has no default", "$ref": "#/$defs/scope_fact"},
         "grade": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
         "manufacturer": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
         "specification": {"description": "the standard or datasheet designation the grade conforms to", "$ref": "manufacturing.schema.json#/$defs/text_fact"},
@@ -80,6 +83,14 @@
          "then": {"properties": {"grade": {"$ref": "manufacturing.schema.json#/$defs/fact_open"}}}},
         {"if": {"properties": {"level": {"const": "grade"}}},
          "then": {"properties": {"grade": {"$ref": "manufacturing.schema.json#/$defs/fact_known"}}}}
+      ]
+    },
+    "scope_fact": {
+      "description": "A fact a guideline scope matches on: a known value is lowercase, as scope names are, so 'PLA' is refused",
+      "allOf": [
+        {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
+        {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}},
+         "then": {"properties": {"value": {"pattern": "^[a-z0-9][a-z0-9_.-]*$"}}}}
       ]
     },
     "property": {

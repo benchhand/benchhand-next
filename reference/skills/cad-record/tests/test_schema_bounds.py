@@ -255,6 +255,7 @@ CASES: tuple[Case, ...] = (
     number(0, "hold_frames", PLAN, "/properties/segments/items/properties/hold_frames", "[1, 10000]", None, shape="int"),
     number(0, "interface.margin_mm", "interfaces.schema.json", "/properties/interfaces/items/properties/margin_mm", "[0, 1]",
            {"max": 0.5}),
+    number(0, "guideline.factor", "manufacturing-guideline.schema.json", "/$defs/relative/properties/factor", "(0, )", None),
 )
 BY_NAME = {case.name: case for case in CASES}
 # Rows of the audit table that live only in the product.yaml `flow.profile` schema, which flow PR 1 owns
@@ -271,7 +272,7 @@ FACTS = {
     "calibration.min_bed_contact_area", "clearance_per_side", "interference_per_side", "nozzle_diameter", "layer_height",
     "hotend_max_temperature", "bed_max_temperature", "max_speed", "travel_x", "travel_y", "travel_z", "spindle_max_speed",
     "power", "pump_pressure", "press_brake_force", "modulus", "density", "temperature", "poisson_ratio", "min_clearance_mm",
-    "tol", "tol_plus", "tol_minus", "confidence", "weight", "crank_radius_mm", "rod_length_mm",
+    "tol", "tol_plus", "tol_minus", "confidence", "weight", "crank_radius_mm", "rod_length_mm", "guideline.factor",
     "period_deg", "mass_target", "bom.mass",
 }
 # An explicit override that has no default of its own: mesh_size_extent_ratio carries the default and mesh_size wins when set
@@ -297,6 +298,7 @@ NOT_IN_AUDIT = {
     ("finding.schema.json", "/properties/location/properties/line"): "a 1-based source line number in a finding, an index and not a setting",
     ("fea-case.schema.json", "/properties/solid_index"): "a 1-based index",
     ("manufacturing-capabilities.schema.json", "/$defs/profile/properties/revision"): "a revision counter",
+    ("manufacturing-guideline.schema.json", "/properties/revision"): "a revision counter",
     ("manufacturing-materials.schema.json", "/$defs/profile/properties/revision"): "a revision counter",
     ("manufacturing.schema.json", "/$defs/money/properties/amount"): "sign-only; a plausibility band is tracked in #141",
     ("part.schema.json", "/$defs/component/properties/multiplicity"): "an instance count",
