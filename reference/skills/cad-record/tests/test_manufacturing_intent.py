@@ -285,6 +285,25 @@ class Normalization(unittest.TestCase):
                 record = mi.load_record(fx.write_record(temp_hw(self), documents))
                 self.assertEqual([p.finding() for p in record.problems], [])
 
+    def test_a_load_that_names_an_application_is_hashable_and_keeps_it(self) -> None:
+        documents = fx.tst_record()
+        documents["product.yaml"]["use_case"]["loads"][0]["application"] = {"PN": "TST-0001"}
+        record = mi.load_record(fx.write_record(temp_hw(self), documents))
+        load = record.use_case.loads[0]
+        self.assertEqual(dict(load.application), {"PN": "TST-0001"})
+        self.assertEqual(hash(load), hash(load))
+
+    def test_a_load_keeps_an_omitted_application_apart_from_an_invalid_one(self) -> None:
+        """Omitted is None. A present application that is empty or not a mapping reads as an empty subject, never None,
+        so a reader cannot take invalid input for the assembly frame."""
+        for application, expected in ((None, None), ({}, {}), ("bracket", {}), ([], {}), ({"PN": "TST-0001"}, {"PN": "TST-0001"})):
+            with self.subTest(application=application):
+                documents = fx.tst_record()
+                if application is not None:
+                    documents["product.yaml"]["use_case"]["loads"][0]["application"] = application
+                loaded = mi.load_record(fx.write_record(temp_hw(self), documents)).use_case.loads[0].application
+                self.assertEqual(None if loaded is None else dict(loaded), expected)
+
     def test_a_non_unit_load_direction_names_its_load(self) -> None:
         documents = fx.tst_record()
         documents["product.yaml"]["use_case"]["loads"][0]["direction"] = [0, 0, 0]

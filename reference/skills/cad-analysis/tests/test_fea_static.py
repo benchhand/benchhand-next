@@ -1484,6 +1484,22 @@ class VersionedPublicationTests(unittest.TestCase):
         self.assertEqual(status, 2)
         self.assertIn("--replace", report["error"]["message"])
 
+    def test_a_changed_frame_dependency_changes_the_recipe(self) -> None:
+        """The rotation code behind a load direction's frame (cad-motion pose and its imports, cad-record's occurrence
+        inventory) can change a verdict, so a bundle sealed with the old bytes is not reused."""
+        self.assertEqual(self.call()[0], 0)
+        read_bytes = Path.read_bytes
+        for name in ("pose.py", "coupling.py", "layout.py", "assembly_data.py"):
+            with self.subTest(name):
+                def changed(path: Path, name: str = name) -> bytes:
+                    data = read_bytes(path)
+                    return data + b"\n# changed\n" if path.name == name else data
+
+                with patch.object(Path, "read_bytes", changed):
+                    status, report = self.call()
+                self.assertEqual(status, 2)
+                self.assertIn("--replace", report["error"]["message"])
+
     def test_a_cheaper_first_high_order_level_changes_the_recipe(self) -> None:
         self.assertEqual(self.call()[0], 0)
         manifest = json.loads((self.hw / "analysis" / "v1" / "cantilever" / "manifest.json").read_text(encoding="utf-8"))
