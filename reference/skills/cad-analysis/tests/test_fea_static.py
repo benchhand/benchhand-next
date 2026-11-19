@@ -749,7 +749,6 @@ mesh_size: 5
 
     @unittest.skipUnless(FREECAD_PRESENT, "FreeCAD 1.1.4 freecadcmd is not installed (shared lookup)")
     def test_identical_case_repeats_mesh_and_stress_results(self) -> None:
-        import math
         with tempfile.TemporaryDirectory(prefix="cad-fea-repeat-") as directory:
             root = Path(directory)
             step = root / "beam.step"
