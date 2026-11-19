@@ -367,6 +367,19 @@ class VersionTests(unittest.TestCase):
         reclassified = incremental.compare_versions(self.hw, "v3").select(pairs_of(PARTS))
         self.assertEqual(reclassified.selected, {("TST-0001", "TST-0002"): ("policy",)})
 
+    def test_reordering_heat_set_declarations_selects_no_pair(self) -> None:
+        """A heat set's place in its interface's list names its declared-dimension obligation, but it is not pair
+        policy: swapping two declarations leaves every pair's policy as it was, so a changed-only check measures none."""
+        def heat_sets(*hosts: str) -> dict:
+            return {"interfaces": [{"id": "IF-001", "type": "mounting", "from": "TST-0001", "to": "TST-0002",
+                                    "description": "Two inserts", "limits": {"heat_set": [
+                                        {"pair": [host, "TST-0001"], "hole_d": 4.0, "insert": "M3 x 5.7",
+                                         "source": "https://example.com/insert"} for host in hosts]}}]}
+
+        seal(self.hw, "v1", data=PARTS, interfaces=heat_sets("TST-0002", "TST-0003"))
+        seal(self.hw, "v2", data=PARTS, interfaces=heat_sets("TST-0003", "TST-0002"))
+        self.assertEqual(incremental.compare_versions(self.hw, "v2").select(pairs_of(PARTS)).selected, {})
+
     def test_the_first_version_selects_every_pair_with_the_reason(self) -> None:
         seal(self.hw, "v1", data=PARTS)
         changes = incremental.compare_versions(self.hw, "v1")

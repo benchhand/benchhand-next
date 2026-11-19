@@ -48,13 +48,6 @@ def main(argv: list[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({"format": 1, "families": rows}, indent=2) + "\n", encoding="utf-8")
     print(corpus.table(rows))
-    total = corpus.packet_level_total(rows)
-    unit = "family" if total["families"] == 1 else "families"
-    print(f"packet-level total ({total['families']} {unit}, the oracle families not included): "
-          f"detect {total['detected']}/{total['ran']}, false+ {total['false_positives']}/{total['ran']}")
-    if any(row["family"] in corpus.ORACLES_EXEMPTION_174 for row in rows):
-        print(f"{corpus.NOT_AT_THE_PACKET}: the oracle families' rates measure whether the oracle tells the mutant "
-              "from its twin, not whether a release blocks the mutant")
     for row in rows:
         for item in row["results"]:
             if item["known_gap"]:

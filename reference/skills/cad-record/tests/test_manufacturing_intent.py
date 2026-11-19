@@ -530,12 +530,16 @@ class Capabilities(unittest.TestCase):
 
 
 # The obligations of fx.tst_record(), a record with no loaded structural interface, as origin/main a7d007e3 enumerates them
-# without engineering.stop_reaction. 88be42e5 added assembly.order@product to the 54 of 43ad4409, making 55.
+# without engineering.stop_reaction. 88be42e5 added assembly.order@product to the 54 of 43ad4409, making 55. Issue #174
+# added cad.glb_step_agreement for each of the three made parts, making 58.
 TST_RECORD_OBLIGATIONS = (
     'assembly.access@op:fit_bearing',
     'assembly.joint@op:fit_bearing',
     'assembly.order@op:fit_bearing',
     'assembly.order@product',
+    'cad.glb_step_agreement@TST-0001',
+    'cad.glb_step_agreement@TST-0002',
+    'cad.glb_step_agreement@TST-0004',
     'cad.readback@TST-0001',
     'cad.readback@TST-0002',
     'cad.readback@TST-0004',
@@ -622,6 +626,35 @@ class RequiredChecks(unittest.TestCase):
         owed = found["export.3mf@TST-0001"]
         self.assertEqual((owed.family, dict(owed.subject), owed.level), ("export.3mf", {"PN": "TST-0001"}, "cad_valid"))
         self.assertEqual(sorted(i for i in found if i.startswith("export.3mf")), ["export.3mf@TST-0001"])
+
+    def test_each_made_part_is_owed_one_glb_step_agreement_obligation_and_a_bought_part_none(self) -> None:
+        """cad-model check judges each occurrence's GLB node against the STEP; the release sees it per made part.
+        The bearing TST-0003 is bought: a catalogue item gets purchase checks only."""
+        found = self.obligations(fx.tst_record())
+        owed = sorted(i for i in found if i.startswith("cad.glb_step_agreement"))
+        self.assertEqual(owed, ["cad.glb_step_agreement@TST-0001", "cad.glb_step_agreement@TST-0002",
+                                "cad.glb_step_agreement@TST-0004"])
+        first = found["cad.glb_step_agreement@TST-0001"]
+        self.assertEqual((first.family, dict(first.subject), first.level, first.stage),
+                         ("cad.glb_step_agreement", {"PN": "TST-0001"}, "cad_valid", "layout"))
+
+    def test_each_declared_heat_set_is_owed_a_declared_dimensions_obligation_whatever_its_interface_criticality(self) -> None:
+        """IF-002's criticality is unknown, so it owes no fit or stack checks, but its two heat-set declarations each owe
+        the check that the host has a bore of the declared size. The obligation is named after the entry's place."""
+        documents = fx.tst_record()
+        entry = {"pair": ["TST-0001", "TST-0004"], "hole_d": 4.0, "insert": "M3 x 5.7", "source": "https://example.com/insert"}
+        documents["interfaces.yaml"]["interfaces"].append(
+            fx.interface("IF-002", "TST-0001", "TST-0004", limits={"heat_set": [entry, {**entry, "hole_d": 5.6}]}))
+        found = self.obligations(documents)
+        owed = sorted(i for i in found if i.startswith("cad.declared_dimensions"))
+        self.assertEqual(owed, ["cad.declared_dimensions@IF-002#heat_set_1", "cad.declared_dimensions@IF-002#heat_set_2"])
+        second = found["cad.declared_dimensions@IF-002#heat_set_2"]
+        self.assertEqual((second.family, dict(second.subject), second.level, second.stage),
+                         ("cad.declared_dimensions", {"interface": "IF-002", "feature": "heat_set_2"}, "cad_valid", "layout"))
+        schema = fx.ref_validator("https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/obligation")
+        self.assertEqual([e.message for ident in owed for e in schema.iter_errors(found[ident].as_dict())], [])
+        self.assertEqual([i for i in found if i.startswith(("interface.", "intent.interface")) and "IF-002" in i],
+                         ["intent.interface@IF-002"], "IF-002 owes nothing else: its criticality is unknown")
 
     def test_purchased_items_get_purchase_checks_only(self) -> None:
         found = self.obligations(fx.tst_record())

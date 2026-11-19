@@ -27,14 +27,6 @@ FAMILIES_DIR = HERE / "families"
 FIXTURES_DIR = HERE / "fixtures"
 BASELINE_DIR = HERE / "baseline"
 
-# The families that judge the `cad_model check` report because the `cad.readback` packet has no obligation for
-# glb_step_agreement or declared_dimensions yet. Remove this line with issue #174, which moves them to the packet.
-# The corpus guard (tests/test_mfg_corpus.py) lets exactly these families import the runner `_oracles`, and the rates
-# command labels them and leaves them out of the packet-level total.
-ORACLES_EXEMPTION_174 = frozenset({"semantic_changed_only_scope", "semantic_equal_volume_substitution",
-                                   "semantic_misplaced_feature", "semantic_step_glb_disagreement",
-                                   "semantic_wrong_placement"})
-NOT_AT_THE_PACKET = "not at the packet (#174)"
 
 
 class Skip(Exception):
@@ -170,22 +162,12 @@ def table(rows: list[dict[str, Any]]) -> str:
     def pct(value: float | None) -> str:
         return "n/a" if value is None else f"{value * 100:.0f}%"
 
-    head = ("family", "ran/pairs", "detect", "abstain", "false+", "note")
+    head = ("family", "ran/pairs", "detect", "abstain", "false+")
     body = [(r["family"], f"{r['ran']}/{r['pairs']}", pct(r["detection_rate"]), pct(r["abstention_rate"]),
-             pct(r["false_positive_rate"]), NOT_AT_THE_PACKET if r["family"] in ORACLES_EXEMPTION_174 else "")
-            for r in rows]
+             pct(r["false_positive_rate"])) for r in rows]
     widths = [max(len(str(x[i])) for x in (head, *body)) for i in range(len(head))]
     lines = ["  ".join(str(x[i]).ljust(widths[i]) for i in range(len(head))).rstrip() for x in (head, *body)]
     return "\n".join(lines)
-
-
-def packet_level_total(rows: list[dict[str, Any]]) -> dict[str, int]:
-    """Mutants detected and twins judged FAIL over the packet-level families. The total skips the families in
-    ORACLES_EXEMPTION_174: their rates measure whether the oracle tells the mutant from its twin, not whether a release
-    blocks it."""
-    counted = [r for r in rows if r["family"] not in ORACLES_EXEMPTION_174]
-    return {"families": len(counted), "ran": sum(r["ran"] for r in counted),
-            "detected": sum(r["detected"] for r in counted), "false_positives": sum(r["false_positives"] for r in counted)}
 
 
 def check_baseline(rows: list[dict[str, Any]], baseline_dir: Path, *, whole_registry: bool = True) -> list[str]:

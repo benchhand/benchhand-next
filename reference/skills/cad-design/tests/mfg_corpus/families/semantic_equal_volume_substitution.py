@@ -4,12 +4,8 @@
 
 """A shape swapped for another of the same volume, so no volume read-back can tell them apart."""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _oracles import case  # noqa: E402
-from corpus import Family, Pair  # noqa: E402
+from corpus import Family, Pair
+from support import AGREEMENT, DIMENSIONS, oracle_case
 
 # The base block is 40 x 40 x 20 with a 7.77 mm bore. Its twin in the mesh is a cylinder of the same plan
 # area, height and bore: the same volume to the last digit.
@@ -20,13 +16,13 @@ ROUND = {"base": {"shape": "round"}}
 WIDE_BORE = {"base": {"bore": 8.6, "height": 20.1384}, "insert": {"diameter": 8.82}, "plate": {"z0": 20.1384}}
 
 FAMILY = Family(
-    id="semantic_equal_volume_substitution", check="cad_model.py check: GLB<->STEP agreement, declared dimensions",
-    owner="package D",
+    id="semantic_equal_volume_substitution",
+    check="cad_model.py check: cad.glb_step_agreement and cad.declared_dimensions", owner="package D",
     pairs=(
         Pair("mesh_is_an_equal_volume_cylinder", "the GLB shows the base as a round block of the STEP block's volume",
-             case(fault={"kind": "stale", "variant": ROUND})),
+             oracle_case(fault={"kind": "stale", "variant": ROUND}, prefixes=AGREEMENT + DIMENSIONS)),
         Pair("bore_diameter_traded_for_height", "the base bore is 8.6 mm where the heat-set declaration says 7.77, "
-             "and the height absorbs the volume", case(model=WIDE_BORE)),
+             "and the height absorbs the volume", oracle_case(model=WIDE_BORE, prefixes=AGREEMENT + DIMENSIONS)),
     ),
     notes="The second pair is a model error that the record's own dimension exposes; the first is an output error.",
 )

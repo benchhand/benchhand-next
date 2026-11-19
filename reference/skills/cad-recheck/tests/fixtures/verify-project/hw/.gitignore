@@ -9,3 +9,8 @@
 /concept/screenshots/
 /releases/
 # <<< cad storage
+# versions/v1 is the dev-built version EV-001 (manufacturing/evidence.yaml) cites, committed whole; it is rebuilt only
+# when the model changes. The rest of versions/ stays ignored.
+!/versions/
+/versions/*
+!/versions/v1/

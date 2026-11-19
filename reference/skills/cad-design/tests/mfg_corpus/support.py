@@ -10,7 +10,7 @@ Heavy imports (yaml, OCP, the check modules) happen inside the functions, so imp
 from __future__ import annotations
 
 import sys
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -316,3 +316,83 @@ def readback_verdict(model_source: str, *, refusal_is_a_verdict: bool) -> Outcom
         if findings:
             raise Rejected("evidence: " + "; ".join(f.message for f in findings))
         return state_verdict(record, found, "v1", sha, ("cad.readback@",))
+
+
+# --- semantic output oracles (cad-model check: the agreement and declared-dimension outcomes of cad.readback) ------
+
+ORACLE_BUILD = HERE / "fixtures" / "oracles" / "build_case.py"
+AGREEMENT = ("cad.glb_step_agreement@",)  # the GLB<->STEP agreement of every made part
+DIMENSIONS = ("cad.declared_dimensions@",)  # every declared heat-set hole diameter
+_ORACLE_CACHE: dict[str, tuple[Any, list[Any], str, str]] = {}
+
+
+def oracle_verdict(model: Mapping[str, Any] | None, fault: Mapping[str, Any] | None, prefixes: tuple[str, ...],
+                   changed_only: bool = False) -> Outcome:
+    """What a release concludes about the obligations whose id starts with one of `prefixes` (cad.glb_step_agreement@,
+    cad.declared_dimensions@) for the three-part oracle project of fixtures/oracles/build_case.py with the `model`
+    overrides and the one exporter `fault`. The build script builds the version, `cad_model check` (`--changed-only`
+    with `changed_only`) publishes its packet to hw/checks/<V>/cad/, and evidence.collect_packets reads it back sealed,
+    as the release gate does. A case is built and checked once per process, so pairs that share a clean twin build it once."""
+    import json
+
+    key = json.dumps({"model": model, "fault": fault, "changed_only": changed_only}, sort_keys=True)
+    if key not in _ORACLE_CACHE:
+        _ORACLE_CACHE[key] = _oracle_packets(model, fault, changed_only)
+    record, found, label, sha = _ORACLE_CACHE[key]
+    return state_verdict(record, found, label, sha, prefixes)
+
+
+def _oracle_packets(model: Mapping[str, Any] | None, fault: Mapping[str, Any] | None,
+                    changed_only: bool) -> tuple[Any, list[Any], str, str]:
+    """(the record, the version's sealed producer packets, the version label, its manifest sha256) of one oracle case."""
+    import hashlib
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+
+    uv = shutil.which("uv")
+    if uv is None:
+        raise Skip("uv is not on PATH: the cad-model runtime cannot be created")
+    with tempfile.TemporaryDirectory(prefix="mfg-oracle-") as work:
+        case_file = Path(work) / "case.json"
+        case_file.write_text(json.dumps({"model": model, "fault": fault, "changed_only": changed_only}), encoding="utf-8")
+        built = subprocess.run([uv, "run", "--quiet", "--script", str(ORACLE_BUILD), str(case_file), work],
+                               capture_output=True, text=True, check=False)  # no timeout: cold imports take minutes
+        if built.returncode != 0:
+            raise command_failed("build_case.py", built.args, built.returncode, built.stderr)
+        lines = built.stdout.strip().splitlines()
+        if not lines:
+            raise RuntimeError(f"build_case.py exited 0 but printed no version: {built.stderr[-1500:]}")
+        version = json.loads(lines[-1])
+        hw, label = Path(version["hw"]), version["label"]
+        options = ["--changed-only"] if changed_only else []
+        run = subprocess.run([uv, "run", "--quiet", "--script", str(SKILLS / "cad-model" / "scripts" / "cad_model.py"),
+                              "check", label, "--hw", str(hw), *options], capture_output=True, text=True, check=False)
+        if run.returncode not in (0, 1):
+            raise command_failed("cad_model check", run.args, run.returncode, run.stdout + run.stderr)
+        if not (hw / "checks" / label / "cad" / "result.json").is_file():
+            raise RuntimeError(f"cad_model check exited {run.returncode} (`{' '.join(run.args)}`) but left no packet at "
+                               f"hw/checks/{label}/cad/result.json: {(run.stdout + run.stderr)[-1500:]}")
+        intent = load("cad_record_manufacturing_intent", SKILLS / "cad-record" / "scripts" / "manufacturing_intent.py")
+        record, problems = intent.check_record(hw)
+        errors = [f"{p.code} {p.path}: {p.message}" for p in problems if p.severity == "error"]
+        if errors:
+            raise ValueError(f"the oracle record is invalid: {errors}")
+        sha = hashlib.sha256((hw / "versions" / label / "manifest.json").read_bytes()).hexdigest()
+        found, findings = _evidence().collect_packets(hw, label, sha)
+        if findings:
+            raise Rejected("evidence: " + "; ".join(f.message for f in findings))
+        return record, list(found), label, sha
+
+
+def oracle_case(model: Mapping[str, Any] | None = None, fault: Mapping[str, Any] | None = None, *,
+                prefixes: tuple[str, ...], changed_only: bool = False) -> Callable[[bool], Outcome]:
+    """The `run` of a Pair: run(True) builds the oracle project with the `model` overrides and the one exporter `fault`,
+    run(False) the unmodified project, and each takes oracle_verdict for `prefixes`. With `changed_only`, `model` is
+    the change under test (v2 against a clean v1), so the twin keeps it and differs from the mutant by the fault alone."""
+    def run(mutant: bool) -> Outcome:
+        if mutant:
+            return oracle_verdict(model, fault, prefixes, changed_only)
+        return oracle_verdict(model, None, prefixes, True) if changed_only else oracle_verdict(None, None, prefixes)
+    return run

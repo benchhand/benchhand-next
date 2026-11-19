@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "glb": "assembly.glb",
+  "match": "a node belongs to the occurrence whose instance name it carries: `<PN> <title>` for a part placed once without an id, `<PN> <title> [@id]` for an explicit occurrence",
+  "parts": {
+    "FXT-0001": {
+      "product": "FXT-0001 Test block",
+      "occurrences": [
+        "block"
+      ],
+      "nodes": [
+        "FXT-0001 Test block [@block]"
+      ],
+      "node_indices": [
+        1
+      ],
+      "meshes": [
+        "FXT-0001 Test block"
+      ]
+    }
+  },
+  "occurrences": {
+    "block": {
+      "PN": "FXT-0001",
+      "ref": "@block",
+      "nodes": [
+        "FXT-0001 Test block [@block]"
+      ],
+      "node_indices": [
+        1
+      ],
+      "meshes": [
+        "FXT-0001 Test block"
+      ]
+    }
+  }
+}

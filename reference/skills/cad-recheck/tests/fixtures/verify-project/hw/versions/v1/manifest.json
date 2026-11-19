@@ -1,0 +1,374 @@
+{
+  "schema_version": 2,
+  "record_version": 2,
+  "label": "v1",
+  "number": 1,
+  "product_id": "verify-fixture",
+  "top_product": "verify-fixture v1",
+  "kernel_option": "cadquery",
+  "assembly_yaml_sha256": "d94714a4eb2b926efe5e1607568a83234348f298d17ffcd8a3bd2575044d7171",
+  "attach": [],
+  "occurrences": {
+    "block": {
+      "PN": "FXT-0001",
+      "ref": "@block",
+      "explicit": true,
+      "group": "main",
+      "rest": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ]
+    }
+  },
+  "pose": {
+    "values": {},
+    "transforms": {
+      "block": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ]
+    },
+    "motions": {
+      "block": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ]
+    }
+  },
+  "joints": [],
+  "joint_pairs": [],
+  "ground": "block",
+  "glb": {
+    "format": "glb",
+    "units": "m",
+    "up": "+Y",
+    "source": "assembly.step",
+    "linear_deflection_mm": 0.015,
+    "angular_deflection_rad": 0.25
+  },
+  "tools": {
+    "orchestrator": {
+      "python": "3.14.8",
+      "cadquery-ocp-novtk": "8.0.1.1.0",
+      "trimesh": "4.12.2",
+      "numpy": "2.5.5",
+      "pyyaml": "6.0.3"
+    },
+    "cadquery": {
+      "python": "3.12.14",
+      "cadquery": "2.8.0",
+      "cadquery-ocp": "7.9.3.1.1",
+      "vtk": "9.6.2"
+    }
+  },
+  "parts": {
+    "FXT-0001": {
+      "title": "Test block",
+      "product": "FXT-0001 Test block",
+      "model_frame": "assembly_zero",
+      "occurrences": [
+        "block"
+      ],
+      "kernel": "cadquery",
+      "model": "parts/FXT-0001/model.py",
+      "source_sha256": "cdda71fb311fab18190e46c1d74c529ac60e9aa21224302ee7f59be783a64fa9",
+      "record_sha256": "2d45448ab64e8bb40b85c3686e80c616a90ef60b3c5689a919dfa06b1b6b38eb",
+      "params": {
+        "length": 20.0,
+        "width": 20.0,
+        "height": 10.0
+      },
+      "kernel_volume_mm3": 3999.999999999999,
+      "kernel_solids": 1,
+      "kernel_valid": true,
+      "kernel_errors": [],
+      "step": "parts/FXT-0001.step"
+    }
+  },
+  "record": {
+    "record/assembly.yaml": "d94714a4eb2b926efe5e1607568a83234348f298d17ffcd8a3bd2575044d7171",
+    "record/interfaces.yaml": "ffeeffbcb231b45b5556da033a6f2d4529a52331b596b7364f51105e10e4bd11",
+    "record/manufacturing/capabilities.yaml": "62fec0804bab93f6fe6668e928438726d0efcf12d0514585aaba74152dd350bf",
+    "record/manufacturing/materials.yaml": "8fba60b65e9c8154155d29547be834b230b88b94d17579feec2550899ff90898",
+    "record/manufacturing/selection.yaml": "9a13fca2b49d05743eb8e9fbdff9dee6bff2348342121619cd4cd75af3ae4311",
+    "record/manufacturing/sources/block-bbox-v1.json": "46c129209c729bb5dfa15cd1e30fa531475365fd775d601284f50c343b642c55",
+    "record/parts/FXT-0001/part.yaml": "2d45448ab64e8bb40b85c3686e80c616a90ef60b3c5689a919dfa06b1b6b38eb",
+    "record/product.yaml": "8faa033dc118ef79bd909123e5e85cb7892f94c73bc80387537a28416a04abbb",
+    "record/requirements.yaml": "eee45ecb0d6b9f1fd4e1ca274962db3442ade2098dc7a2d70f4f2c6517c6d0ff"
+  },
+  "manufacturing": {
+    "FXT-0001": {
+      "schema_version": 2,
+      "PN": "FXT-0001",
+      "rev": "X1",
+      "title": "Test block",
+      "product": "FXT-0001 Test block",
+      "material": "Aluminum 6061-T6",
+      "color": null,
+      "process": "cnc",
+      "finish": "As machined",
+      "eligibility": {
+        "make_buy": "make",
+        "procurement_mode": null
+      },
+      "state": {
+        "relationship": "same",
+        "name": null,
+        "reason": null,
+        "decision": null,
+        "source": "installed definition"
+      },
+      "tolerance": {
+        "volume_rel": 1e-09,
+        "volume_abs_mm3": 0.0,
+        "allowed_mm3": 3.999999999999999e-06
+      },
+      "installed": {
+        "step": "parts/FXT-0001.step",
+        "sha256": "b341bcf6c41594859d1b87cc522ed95b2b40e098f438dfe37762234cd1b13c0d",
+        "kernel_volume_mm3": 3999.999999999999,
+        "kernel_solids": 1
+      },
+      "native": {
+        "kernel_volume_mm3": 3999.999999999999,
+        "kernel_solids": 1,
+        "kernel_valid": true,
+        "kernel_errors": []
+      },
+      "units": {
+        "length": "mm"
+      },
+      "up": "+Z",
+      "intent": {
+        "record_version": 2,
+        "material_profile": {
+          "status": "unknown",
+          "reason": "no material is chosen for the verify fixture"
+        },
+        "route": [
+          {
+            "id": "mill",
+            "kind": "cnc",
+            "capability": {
+              "status": "unknown",
+              "reason": "no capability profile is recorded"
+            },
+            "provider": null,
+            "components": [],
+            "depends_on": [],
+            "known_kind": true
+          }
+        ],
+        "profiles": {
+          "materials": {},
+          "capabilities": {}
+        },
+        "sources": {},
+        "inputs_sha256": "575e3258566a38b2748bbfecfd512ee8cbcf0aece2ac802f126a8ac89102fbe6"
+      },
+      "build_volume": null,
+      "mesh": null,
+      "path": "manufacturing/FXT-0001",
+      "outputs": [
+        "part.step",
+        "manufacturing.json"
+      ],
+      "placement": {
+        "method": "identity",
+        "orientation": "identity",
+        "bed": null,
+        "frame": "model",
+        "transform": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ]
+        ],
+        "determinant": 1.0,
+        "pose": "model_frame",
+        "approved": false,
+        "operation": null,
+        "decision": null,
+        "reason": null,
+        "build_volume": null
+      },
+      "components": {
+        "main": {
+          "binding": "implicit",
+          "points_mm": [],
+          "locator": null,
+          "multiplicity": 1,
+          "material_profile": {
+            "status": "unknown",
+            "reason": "no material is chosen for the verify fixture"
+          },
+          "operations": [
+            "mill"
+          ],
+          "planned": true,
+          "files": [
+            "part.step"
+          ],
+          "placement": {
+            "method": "identity",
+            "orientation": "identity",
+            "bed": null,
+            "frame": "model",
+            "transform": [
+              [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                1.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                1.0,
+                0.0
+              ]
+            ],
+            "determinant": 1.0,
+            "pose": "model_frame",
+            "approved": false,
+            "operation": null,
+            "decision": null,
+            "reason": null,
+            "build_volume": null
+          },
+          "volume_mm3": 3999.999999999999,
+          "members": [
+            {
+              "volume_mm3": 3999.999999999999,
+              "area_mm2": 1599.9999999999998,
+              "centre_of_volume_mm": [
+                -1.1356932185013036e-16,
+                6.217248937900869e-17,
+                5.0
+              ],
+              "bbox_mm": {
+                "min": [
+                  -10.0,
+                  -10.0,
+                  0.0
+                ],
+                "max": [
+                  10.0,
+                  10.0,
+                  10.0
+                ],
+                "size": [
+                  20.0,
+                  20.0,
+                  10.0
+                ]
+              },
+              "principal_moments_mm5": [
+                166666.66666666666,
+                166666.66666666666,
+                266666.66666666674
+              ]
+            }
+          ]
+        }
+      },
+      "component_outputs": [],
+      "component_identity": {
+        "status": "bound"
+      },
+      "files": {
+        "part.step": "85a5056a80104fef66c0db07fc5eb66428cc584f1381c20e2725ef66750382e2",
+        "manufacturing.json": "7f4ff9c96b57910be4a6c0fb542753fb06ea522ada88a047d810dcf80909c773"
+      },
+      "status": "pass",
+      "complete": true,
+      "blocking_failures": []
+    }
+  },
+  "files": {
+    "assembly.glb": "982f4a5d54145e166a60c75f682794b230b418bcf46b021b70d406b47e5d282c",
+    "assembly.step": "05d56f90724498cf89742d68697107fd416b43bc694222026641e75c490b4783",
+    "manufacturing/FXT-0001/manufacturing.json": "7f4ff9c96b57910be4a6c0fb542753fb06ea522ada88a047d810dcf80909c773",
+    "manufacturing/FXT-0001/part.step": "85a5056a80104fef66c0db07fc5eb66428cc584f1381c20e2725ef66750382e2",
+    "metrics.json": "40618a9c6db7f214d27676403594061366303d1301c0566e12c90c1f3dfedf51",
+    "part-map.json": "8b50730b0be2ff13a5897e1e2203d17b587c9f862a383d99c199534c8a0b3ccb",
+    "parts/FXT-0001.step": "b341bcf6c41594859d1b87cc522ed95b2b40e098f438dfe37762234cd1b13c0d",
+    "record/assembly.yaml": "d94714a4eb2b926efe5e1607568a83234348f298d17ffcd8a3bd2575044d7171",
+    "record/interfaces.yaml": "ffeeffbcb231b45b5556da033a6f2d4529a52331b596b7364f51105e10e4bd11",
+    "record/manufacturing/capabilities.yaml": "62fec0804bab93f6fe6668e928438726d0efcf12d0514585aaba74152dd350bf",
+    "record/manufacturing/materials.yaml": "8fba60b65e9c8154155d29547be834b230b88b94d17579feec2550899ff90898",
+    "record/manufacturing/selection.yaml": "9a13fca2b49d05743eb8e9fbdff9dee6bff2348342121619cd4cd75af3ae4311",
+    "record/manufacturing/sources/block-bbox-v1.json": "46c129209c729bb5dfa15cd1e30fa531475365fd775d601284f50c343b642c55",
+    "record/parts/FXT-0001/part.yaml": "2d45448ab64e8bb40b85c3686e80c616a90ef60b3c5689a919dfa06b1b6b38eb",
+    "record/product.yaml": "8faa033dc118ef79bd909123e5e85cb7892f94c73bc80387537a28416a04abbb",
+    "record/requirements.yaml": "eee45ecb0d6b9f1fd4e1ca274962db3442ade2098dc7a2d70f4f2c6517c6d0ff"
+  }
+}

@@ -68,6 +68,7 @@ real build passes.
 | `printed_verdict(shape, prefix)` | `form_check.probe` (with the bed build axis) -> `process_checks.assess(...).packet()` -> packet schema -> `evidence.assess` | `process.fdm.*@` |
 | `assembly_verdict(items, *prefixes)` | the `access.py` command's packet (order check over the chain's inventory, then path planning) -> schema -> `evidence.assess` | `assembly.order@`, `intent.assembly_operations@`, `assembly.access@` |
 | `readback_verdict(model_source, refusal_is_a_verdict=...)` | `cad_model run`, `cad_model check` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.readback@` |
+| `oracle_case(model, fault, prefixes=..., changed_only=...)` | `fixtures/oracles/build_case.py` (the three-part project with one exporter fault), `cad_model check [--changed-only]` -> the sealed `hw/checks/<V>/cad` bundle -> `evidence.collect_packets` -> `evidence.assess` | `cad.glb_step_agreement@`, `cad.declared_dimensions@` |
 | `purchase_verdict(record, *prefixes)` | `process_checks.assess(record, {})` (no geometry) -> packet -> schema -> `evidence.assess` | `purchase.`, `route.`, `process.*` |
 
 An evidence state maps to a verdict: `fail` is fail, `pass` and `not_applicable` are pass, anything else (unknown, stale,
@@ -88,19 +89,17 @@ and the reason is in its `error`.
 The pair counts in `ran` and as a miss whatever the mutant returned, its twin's false positive still counts, and the
 rate command prints `known gap: <family>/<pair>: <why>`. Remove the field when the check is fixed.
 
-## Families not at the packet
+## Semantic output oracle families
 
-Five families judge the `cad_model check` report instead of the packet, because the `cad.readback` packet has no
-obligation for `glb_step_agreement` or `declared_dimensions` yet: `semantic_changed_only_scope`,
-`semantic_equal_volume_substitution`, `semantic_misplaced_feature`, `semantic_step_glb_disagreement` and
-`semantic_wrong_placement`. They run through `families/_oracles.py`. The rates command marks them `not at the packet (#174)`
-and leaves them out of its packet-level total. Their rates measure whether the oracle tells the mutant from its twin,
-not whether a release blocks the mutant. Quote them apart from the packet-level rates.
+The five `semantic_*` families build the three-part project of `fixtures/oracles/build_case.py`. Each case carries one
+exporter fault in its `assembly.glb` or one model change. The families take their verdict at the `cad.readback` packet
+through `support.oracle_case`, from these obligations:
 
-`ORACLES_EXEMPTION_174` in `corpus.py` names them. The guard in `../test_mfg_corpus.py` lets exactly these families import
-`_oracles`, and it fails when any other family imports it, directly or through a helper module. It also pins that
-`_oracles` runs one command, the check driver, and that the driver calls only `check.check`. Issue #174 moves the
-families to the packet and deletes `ORACLES_EXEMPTION_174` with its guard lines.
+- `cad.glb_step_agreement@<PN>`: the GLB<->STEP agreement of each made part.
+- `cad.declared_dimensions@<IF>#heat_set_<n>`: each declared heat-set hole.
+
+A changed-only check does not judge the parts that the version did not change, and their agreement reads unknown. So
+`semantic_changed_only_scope` takes the verdict of the changed plate's obligation alone.
 
 ## Baseline and ratchet
 

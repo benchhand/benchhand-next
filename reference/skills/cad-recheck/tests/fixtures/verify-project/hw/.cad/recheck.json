@@ -1,17 +1,17 @@
 {
-  "tree_hash": "af7391659fd7d2bcee5d2ddbce93b1c55a3461d22eb21b488a74abf6d83719ac",
+  "tree_hash": "331e951ee29e51be8160baaf70e4d81a0efc12456b4969d7e9f2017e4645ca95",
   "stage": "layout",
-  "record_sha256": "e7a5b6e1ba430e9b7309f58f22fd1d90f061d68f9b39a4f9406f6c18d2e30105",
-  "expected_sha256": "ee60cc5872f48ae4dea826a4b6a7eeba00daf131f51b502ada4fa4af35b5aa5f",
+  "record_sha256": "2de44aa7b7dcde3ef555f3cf3fe41517e153734738442251645f951257d5907a",
+  "expected_sha256": "91718b971f391db1b88d4d33926069abb74d3009f8dcee18fbbaba9b866dcd29",
   "version": "v1",
   "checks": {
     "kind": "cad-evidence-packet",
     "schema_version": 1,
     "record_version": 2,
     "version": "v1",
-    "version_manifest_sha256": "229646f6bf882360de35a7b8ac8cfe1620c98a7d47e44bf8a4f34b4ddda6ff82",
-    "record_sha256": "e7a5b6e1ba430e9b7309f58f22fd1d90f061d68f9b39a4f9406f6c18d2e30105",
-    "expected_sha256": "ee60cc5872f48ae4dea826a4b6a7eeba00daf131f51b502ada4fa4af35b5aa5f",
+    "version_manifest_sha256": "8dbf15c1b19eefb13a28916e81fd70eb2d7bf3d18b211b528be8c4311e66bc09",
+    "record_sha256": "2de44aa7b7dcde3ef555f3cf3fe41517e153734738442251645f951257d5907a",
+    "expected_sha256": "91718b971f391db1b88d4d33926069abb74d3009f8dcee18fbbaba9b866dcd29",
     "stage": "layout",
     "expected": [
       {
@@ -23,6 +23,16 @@
         "level": "process_planned",
         "stage": "detail",
         "basis": "every assembly occurrence is installed by an operation, apart from the assembly's one base"
+      },
+      {
+        "id": "cad.glb_step_agreement@FXT-0001",
+        "family": "cad.glb_step_agreement",
+        "subject": {
+          "PN": "FXT-0001"
+        },
+        "level": "cad_valid",
+        "stage": "layout",
+        "basis": "FXT-0001: each occurrence's assembly.glb node shows its assembly.step shape and placement"
       },
       {
         "id": "cad.readback@FXT-0001",
@@ -152,6 +162,17 @@
         "stage": "detail",
         "sources": [],
         "reasons": []
+      },
+      "cad.glb_step_agreement@FXT-0001": {
+        "result": "pass",
+        "level": "cad_valid",
+        "stage": "layout",
+        "sources": [
+          "hw/checks/v1/cad"
+        ],
+        "reasons": [
+          "cad-model check of the sealed assembly.glb: each occurrence's GLB node, read without the manifest, against the shape and placement of its component in the sealed assembly.step (cadmodel.agreement)"
+        ]
       },
       "cad.readback@FXT-0001": {
         "result": "pass",
@@ -343,10 +364,11 @@
     }
   },
   "passed": true,
-  "timestamp": "2026-11-18T19:21:14Z",
+  "timestamp": "2026-11-19T00:15:05Z",
   "tool_versions": {
-    "python": "3.12.16",
-    "git": "git version 2.56.1",
-    "uv": "uv 0.13.7 (316c827e0 2026-11-03 aarch64-apple-darwin)"
+    "python": "3.14.8",
+    "git": "git version 2.50.1",
+    "uv": "uv 0.13.8 (aarch64-unknown-linux-gnu)",
+    "freecad": "FreeCAD 1.1.4 Revision: 20260928 (Git shallow)"
   }
 }

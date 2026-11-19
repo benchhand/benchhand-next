@@ -8,10 +8,11 @@
 # requires-python = ">=3.12,<3.15"
 # dependencies = ["cadquery-ocp-novtk==8.0.1.1.0", "jsonschema>=4.23", "pyyaml>=6.0", "trimesh==4.*", "numpy==2.5.5", "python-fcl==0.7.0.11"]
 # ///
-"""Build one corpus case with cad-model and run `cad_model.py check`'s function on it; print the verdict as JSON.
+"""Build one oracle corpus case with cad-model and print where it built the version, as JSON. The corpus then checks it
+with `cad_model.py check` and takes its verdict at the cad.readback packet (support.oracle_verdict).
 
 A case is `{"model": {...}, "fault": {...} | null, "changed_only": bool}`; with `changed_only` the clean default
-project is built as v1 first, then `model` as v2, and v2 gets a changed-only check against v1. `model` sets the
+project is built as v1 first, then `model` as v2, which a changed-only check compares with v1. `model` sets the
 parameters of the three fixture parts
 (base, plate, insert) and the heat-set declaration; `fault` is the one honest exporter slip the sealed
 assembly.glb carries instead of the mesh of the sealed assembly.step (the GLB is the only output that
@@ -22,8 +23,8 @@ differs; the STEP, the manifest and the metrics are the kernel's own). Fault kin
   offset   the `occurrence`'s node moved by `metres` along glTF [x, y, z]
   rotate   the `occurrence`'s node turned by `degrees` about the glTF vertical axis through the scene origin
 
-Verdict: fail when `check` fails, unknown when no check fails and one abstains, else pass. Usage:
-  _oracle_driver.py CASE.json WORKDIR
+Output: {"hw": the project's hw directory, "label": the version to check}. A build that fails exits 2. Usage:
+  build_case.py CASE.json WORKDIR
 """
 
 from __future__ import annotations
@@ -40,16 +41,10 @@ from unittest import mock
 
 import yaml
 
-HERE = Path(__file__).resolve().parent
-CORPUS = HERE.parent
-SKILLS = CORPUS.parents[2]
+FIXTURES = Path(__file__).resolve().parent
+SKILLS = FIXTURES.parents[4]
 sys.path.insert(0, str(SKILLS / "cad-model" / "scripts"))
-sys.path.insert(0, str(CORPUS))
-from cadmodel import build, check, mesh  # noqa: E402
-from corpus import OUTCOMES  # noqa: E402
-from support import verdict as shared_verdict  # noqa: E402
-
-FIXTURES = CORPUS / "fixtures" / "oracles"
+from cadmodel import build, mesh  # noqa: E402
 PARTS = {"TST-0001": ("Base block", "base", "block.py"), "TST-0002": ("Mounting plate", "plate", "plate.py"),
          "TST-0003": ("Heat-set insert", "insert", "insert.py")}
 DEFAULT = {"base": {}, "plate": {}, "insert": {}, "hole_d": 7.77}
@@ -78,12 +73,14 @@ INTERFACES = """interfaces:
     description: "Heat-set insert pressed into the base bore."
     limits:
       heat_set:
-        - {{pair: [TST-0001, TST-0003], hole_d: {hole_d}, hole_tol: [-0.04, 0.04], insert: "M4 x 8", source: "corpus", feature: seat}}
+        - {{pair: [TST-0001, TST-0003], hole_d: {hole_d}, hole_tol: [-0.04, 0.04], insert: "M4 x 8", source: "https://example.com/corpus-insert", feature: seat}}
     functional:
       critical: {{status: unknown, reason: not recorded in the oracle corpus}}
       functions: {{status: unknown, reason: not recorded in the oracle corpus}}
 """
-ASSEMBLY = """joints:
+ASSEMBLY = """subassemblies:
+  - {id: main, title: Oracle assembly, parts: [TST-0001, TST-0002, TST-0003]}
+joints:
   - {id: J-001, type: fixed, parent: TST-0001, child: TST-0002, axis: [0, 0, 1], origin: [0, 0, 0], min: 0, max: 0, nominal: 0}
   - {id: J-002, type: fixed, parent: TST-0001, child: TST-0003, axis: [0, 0, 1], origin: [0, 0, 0], min: 0, max: 0, nominal: 0}
 operations: {status: unknown, reason: not recorded in the oracle corpus}
@@ -91,11 +88,12 @@ operations: {status: unknown, reason: not recorded in the oracle corpus}
 
 
 def product_record() -> dict[str, Any]:
-    use_case: dict[str, Any] = {**UNKNOWN, "service_class": UNKNOWN, "purpose": UNKNOWN, "users": UNKNOWN}
+    use_case: dict[str, Any] = {"status": "unknown", "service_class": UNKNOWN, "purpose": UNKNOWN, "users": UNKNOWN}
     for group, names in USE_CASE_GROUPS.items():
         use_case[group] = {name: UNKNOWN for name in names} if names else UNKNOWN
     use_case["evidence_policy"] = UNKNOWN
-    return {"id": "oracles", "record_version": 2, "use_case": use_case}
+    return {"id": "oracles", "record_version": 2, "units": "mm", "regime": "iso", "general_tolerance": "ISO 2768-m",
+            "flow": {"stage": "layout", "recheck_from": "layout"}, "use_case": use_case}
 
 
 def write_project(hw: Path, model: dict[str, Any]) -> None:
@@ -208,11 +206,6 @@ def apply(fault: dict[str, Any], glb: Path, variant_glb: Path | None) -> None:
     write_glb(glb, gltf, binary)
 
 
-def verdict(result: dict[str, Any]) -> str:
-    """The check's rows as one corpus verdict (support.verdict): a warn or skipped row says nothing either way."""
-    return shared_verdict(c["status"] if c["status"] in OUTCOMES else "pass" for c in result["checks"].values())
-
-
 def main(case_path: Path, work: Path) -> int:
     case = json.loads(case_path.read_text(encoding="utf-8"))
     fault = case.get("fault")
@@ -227,7 +220,7 @@ def main(case_path: Path, work: Path) -> int:
     changed_only = bool(case.get("changed_only"))
     label = "v2" if changed_only else "v1"
     write_project(hw, with_defaults(None) if changed_only else model)
-    if changed_only:  # v1 is the clean default project. v2 comes from `model`, and the check compares it with v1
+    if changed_only:  # v1 is the clean default project. v2 comes from `model`, and a changed-only check compares it with v1
         build.run(hw, "v1", "auto", [])
         write_models(hw, model)
     real = mesh.write_glb
@@ -243,10 +236,7 @@ def main(case_path: Path, work: Path) -> int:
     if code != 0:
         print(json.dumps({"error": "build failed", "build": built}), file=sys.stderr)
         return 2
-    _code, result = check.check(hw, label, None, [], {}, changed_only=changed_only)
-    flagged = sorted(n for n, c in result["checks"].items() if c["status"] in ("fail", "unknown"))
-    print(json.dumps({"outcome": verdict(result), "blocking": result["blocking_failures"],
-                      "flagged": {n: result["checks"][n]["status"] for n in flagged}}))
+    print(json.dumps({"hw": str(hw), "label": label}))
     return 0
 
 

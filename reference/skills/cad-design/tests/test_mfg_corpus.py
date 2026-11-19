@@ -261,11 +261,10 @@ INNER_CHECKS = frozenset({"check_order", "check_joints", "check_version", "check
 ALLOWED_IMPORTS = frozenset({"corpus", "support", "doc_support", "OCP"})
 
 
-def inner_check_uses(directory: Path, exempt: frozenset[str] = frozenset()) -> list[str]:
+def inner_check_uses(directory: Path) -> list[str]:
     """Where a family module imports or calls a check below the packet: a check function by name, subprocess (a check script
     run for its own report), or any module that is neither the standard library nor the corpus helpers. Families take
-    their verdicts from support.py / doc_support.py, which run the real path to the packet and evidence. A family named
-    in `exempt` (corpus.ORACLES_EXEMPTION_174) may also import the oracle runner `_oracles`, and nothing else."""
+    their verdicts from support.py / doc_support.py, which run the real path to the packet and evidence."""
     import ast
 
     found = []
@@ -282,8 +281,7 @@ def inner_check_uses(directory: Path, exempt: frozenset[str] = frozenset()) -> l
                 roots = [node.module.split(".")[0]]
                 found += [f"{path.name}:{node.lineno} imports {alias.name}" for alias in node.names if alias.name in INNER_CHECKS]
             found += [f"{path.name}:{node.lineno} imports {root}" for root in roots
-                      if root == "subprocess" or (root not in sys.stdlib_module_names and root not in ALLOWED_IMPORTS
-                                                  and not (root == "_oracles" and path.stem in exempt))]
+                      if root == "subprocess" or (root not in sys.stdlib_module_names and root not in ALLOWED_IMPORTS)]
             if isinstance(node, ast.Call):
                 callee = node.func
                 name = callee.id if isinstance(callee, ast.Name) else callee.attr if isinstance(callee, ast.Attribute) else ""
@@ -296,7 +294,7 @@ class PacketVerdictGuardTests(unittest.TestCase):
     """A verdict is what the packet and evidence conclude, so a family may not run an inner check itself."""
 
     def test_no_shipped_family_imports_or_calls_a_check_below_the_packet(self) -> None:
-        self.assertEqual(inner_check_uses(corpus.FAMILIES_DIR, corpus.ORACLES_EXEMPTION_174), [])
+        self.assertEqual(inner_check_uses(corpus.FAMILIES_DIR), [])
 
     def test_the_guard_names_a_family_that_calls_the_check_directly(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -305,183 +303,6 @@ class PacketVerdictGuardTests(unittest.TestCase):
                 "def run(mutant):\n    return verdict(check_order([]).values())\n", encoding="utf-8")
             self.assertEqual(inner_check_uses(Path(tmp)), ["bad.py:1 imports subprocess", "bad.py:2 imports check_order",
                                                           "bad.py:5 calls check_order"])
-
-
-ORACLE_FAMILIES = frozenset({"semantic_changed_only_scope", "semantic_equal_volume_substitution",
-                             "semantic_misplaced_feature", "semantic_step_glb_disagreement", "semantic_wrong_placement"})
-
-
-def oracle_reach(families_dir: Path, module_dirs: list[Path]) -> list[str]:
-    """Where a family reaches the oracle runner `_oracles` through at least one other module, following imports
-    transitively through the modules found in `families_dir` and `module_dirs` (the corpus helpers). A direct import is
-    `inner_check_uses`'s business. Each entry reads `<family>.py reaches _oracles via a -> b`."""
-    import ast
-
-    def imported(path: Path) -> list[str]:
-        roots = []
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if isinstance(node, ast.Import):
-                roots += [alias.name.split(".")[0] for alias in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                roots.append(node.module.split(".")[0])
-        return roots
-
-    def find(name: str) -> Path | None:
-        return next((d / f"{name}.py" for d in (families_dir, *module_dirs) if (d / f"{name}.py").is_file()), None)
-
-    found = []
-    for family in sorted(families_dir.glob("*.py")):
-        if family.name.startswith("_"):
-            continue
-        queue = [([family.stem], family)]
-        seen = {family.stem}
-        while queue:
-            chain, path = queue.pop(0)
-            for root in imported(path):
-                if root == "_oracles":
-                    if len(chain) > 1:
-                        found.append(f"{family.name} reaches _oracles via {' -> '.join(chain[1:])}")
-                    continue
-                target = find(root)
-                if target is not None and root not in seen:
-                    seen.add(root)
-                    queue.append(([*chain, root], target))
-    return found
-
-
-def subprocess_calls(path: Path) -> list[tuple[str, tuple[str, ...], frozenset[str]]]:
-    """Each `subprocess.<function>(...)` call in a module: (function, the string constants of its arguments, the names)."""
-    import ast
-
-    found = []
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "subprocess"):
-            nodes = [n for arg in node.args for n in ast.walk(arg)]
-            found.append((node.func.attr, tuple(n.value for n in nodes if isinstance(n, ast.Constant) and isinstance(n.value, str)),
-                          frozenset(n.id for n in nodes if isinstance(n, ast.Name))))
-    return found
-
-
-def check_module_calls(path: Path) -> set[str]:
-    """The functions of the `check` module that a module calls: `check.<name>(...)`."""
-    import ast
-
-    return {node.func.attr for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-            and isinstance(node.func.value, ast.Name) and node.func.value.id == "check"}
-
-
-class OraclesExemptionTests(unittest.TestCase):
-    """The five semantic-output families judge the `cad_model check` report, because the `cad.readback` packet has no
-    obligation for glb_step_agreement or declared_dimensions yet. Issue #174 removes the exemption. These tests keep it
-    exactly that narrow."""
-
-    def test_the_exemption_is_the_five_oracle_families_and_the_allowlist_is_the_original_four_modules(self) -> None:
-        self.assertEqual(corpus.ORACLES_EXEMPTION_174, ORACLE_FAMILIES)
-        self.assertEqual(ALLOWED_IMPORTS, frozenset({"corpus", "support", "doc_support", "OCP"}))
-        self.assertLessEqual(ORACLE_FAMILIES, {family.id for family in corpus.load_families()})
-
-    def test_only_the_five_families_may_import_the_runner(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            for stem in ("sixth", "semantic_wrong_placement"):
-                (Path(tmp) / f"{stem}.py").write_text("from _oracles import case\n", encoding="utf-8")
-            self.assertEqual(inner_check_uses(Path(tmp), corpus.ORACLES_EXEMPTION_174), ["sixth.py:1 imports _oracles"])
-            self.assertEqual(inner_check_uses(Path(tmp)), ["semantic_wrong_placement.py:1 imports _oracles",
-                                                         "sixth.py:1 imports _oracles"])
-
-    def test_no_family_reaches_the_runner_through_a_helper_module(self) -> None:
-        self.assertEqual(oracle_reach(corpus.FAMILIES_DIR, [CORPUS]), [])
-
-    def test_the_reach_walk_follows_helper_imports_to_any_depth(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            families, helpers = Path(tmp) / "families", Path(tmp) / "helpers"
-            families.mkdir()
-            helpers.mkdir()
-            (families / "_oracles.py").write_text("", encoding="utf-8")
-            (families / "direct.py").write_text("import _oracles\n", encoding="utf-8")
-            (families / "one.py").write_text("import support\n", encoding="utf-8")
-            (families / "two.py").write_text("def run():\n    from deep import x\n", encoding="utf-8")
-            (families / "clean.py").write_text("import json\nimport corpus\n", encoding="utf-8")
-            (helpers / "support.py").write_text("import _oracles\n", encoding="utf-8")
-            (helpers / "deep.py").write_text("import mid\n", encoding="utf-8")
-            (helpers / "mid.py").write_text("from support import verdict\n", encoding="utf-8")
-            (helpers / "corpus.py").write_text("", encoding="utf-8")
-            self.assertEqual(oracle_reach(families, [helpers]),
-                             ["one.py reaches _oracles via support", "two.py reaches _oracles via deep -> mid -> support"])
-
-    def test_the_runner_runs_one_command_the_check_driver_and_the_driver_calls_only_check(self) -> None:
-        runner, driver = corpus.FAMILIES_DIR / "_oracles.py", corpus.FAMILIES_DIR / "_oracle_driver.py"
-        self.assertEqual(subprocess_calls(runner), [("run", ("run", "--quiet", "--script"),
-                                                     frozenset({"uv", "str", "DRIVER", "case_file", "work"}))])
-        self.assertIn('DRIVER = FAMILIES_DIR / "_oracle_driver.py"', runner.read_text(encoding="utf-8"))
-        self.assertEqual(subprocess_calls(driver), [])  # only the runner starts a command
-        self.assertEqual(check_module_calls(driver), {"check"})  # the report of `cad_model check`, no inner check
-
-    def test_the_pin_sees_a_second_command_in_the_runner(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            runner = Path(tmp) / "_oracles.py"
-            runner.write_text(runner_source := (corpus.FAMILIES_DIR / "_oracles.py").read_text(encoding="utf-8"), encoding="utf-8")
-            self.assertEqual(len(subprocess_calls(runner)), 1)
-            runner.write_text(runner_source + "\nsubprocess.run(['git', 'status'])\n", encoding="utf-8")
-            self.assertEqual(len(subprocess_calls(runner)), 2)
-
-
-class NotAtThePacketTests(unittest.TestCase):
-    """Package E's condition for the exemption: each of the five families carries a label, and no combined figure counts them."""
-
-    LABEL = "not at the packet"
-
-    def rows(self) -> list[dict]:
-        families = [corpus.Family("plain_family", "chk", (pair("a", "fail"), pair("b", "fail"))),
-                    *[corpus.Family(ident, "chk", (pair("a", "pass"), pair("b", "pass"), pair("c", "pass"), pair("d", "pass")))
-                      for ident in sorted(corpus.ORACLES_EXEMPTION_174)]]
-        return corpus.evaluate(families)
-
-    def test_the_table_labels_each_oracle_family_and_only_those(self) -> None:
-        lines = {line.split()[0]: line for line in corpus.table(self.rows()).splitlines()[1:]}
-        for ident in ORACLE_FAMILIES:
-            with self.subTest(family=ident):
-                self.assertIn(f"{self.LABEL} (#174)", lines[ident])
-        self.assertNotIn(self.LABEL, lines["plain_family"])
-
-    def test_the_packet_level_total_leaves_the_oracle_families_out(self) -> None:
-        total = corpus.packet_level_total(self.rows())
-        self.assertEqual((total["families"], total["ran"], total["detected"], total["false_positives"]), (1, 2, 2, 0))
-
-    def test_the_rates_command_prints_the_label_the_total_and_what_the_rates_measure(self) -> None:
-        import contextlib
-        import io
-
-        import rates
-
-        with tempfile.TemporaryDirectory() as tmp:
-            families = Path(tmp) / "families"
-            families.mkdir()
-            for ident in ("plain_family", "semantic_wrong_placement"):
-                (families / f"{ident}.py").write_text(
-                    "from corpus import Family, Pair\n"
-                    f"FAMILY = Family(id={ident!r}, check='chk', pairs=(Pair('a', 'd', lambda mutant: 'fail' if mutant else 'pass'),))\n",
-                    encoding="utf-8")
-            out = io.StringIO()
-            with contextlib.redirect_stdout(out):
-                code = rates.main(["--families-dir", str(families), "--out", str(Path(tmp) / "out.json")])
-        text = out.getvalue()
-        self.assertEqual(code, 0)
-        lines = {line.split()[0]: line for line in text.splitlines() if line.strip()}
-        self.assertIn(f"{self.LABEL} (#174)", lines["semantic_wrong_placement"])
-        self.assertNotIn(self.LABEL, lines["plain_family"])
-        self.assertIn("packet-level total (1 family, the oracle families not included): detect 1/1, false+ 0/1", text)
-        self.assertIn("measure whether the oracle tells the mutant from its twin, not whether a release blocks the mutant", text)
-
-    def test_the_readme_marks_the_five_families_and_says_what_their_rates_measure(self) -> None:
-        readme = (CORPUS / "README.md").read_text(encoding="utf-8")
-        self.assertIn(self.LABEL, readme)
-        self.assertIn("#174", readme)
-        self.assertIn("not whether a release blocks the mutant", readme)
-        for ident in ORACLE_FAMILIES:
-            with self.subTest(family=ident):
-                self.assertIn(ident, readme)
 
 
 @unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
@@ -526,7 +347,7 @@ class PacketRefusalTests(unittest.TestCase):
 class CaseErrorTests(unittest.TestCase):
     """A case whose run errors is an error: never a miss, never an abstention, never in a rate, and it fails rates.py
     whatever the baseline tolerates (issue #187). Packet-level cases fail through their `run`. Oracle cases fail through
-    the `_oracles` runner, and these tests replace its subprocess with a fake."""
+    support.oracle_verdict, and these tests replace its build and check commands with fakes."""
 
     STDERR = "Traceback ...\nRecordError: v1 records are refused"
 
@@ -555,17 +376,19 @@ class CaseErrorTests(unittest.TestCase):
                 code = rates.main([*argv, "--check-baseline"] if check_baseline else argv)
         return code, out.getvalue()
 
-    def oracle_pair(self, ident: str, returncode: int, stdout: str = "", mutant_ok: bool = False) -> corpus.Pair:
-        sys.path.insert(0, str(CORPUS / "families"))
-        import _oracles
+    def oracle_pair(self, ident: str, build_returncode: int, build_stdout: str = "", check_returncode: int = 0) -> corpus.Pair:
+        """A pair through support.oracle_verdict whose build script and `cad_model check` are fakes with these results."""
+        import support
 
         def fake(argv: list[str], *args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
-            return subprocess.CompletedProcess(argv, returncode, stdout, self.STDERR)
+            if str(support.ORACLE_BUILD) in argv:
+                return subprocess.CompletedProcess(argv, build_returncode, build_stdout, self.STDERR)
+            return subprocess.CompletedProcess(argv, check_returncode, "", self.STDERR)
 
         def run(is_mutant: bool) -> str:
             with mock.patch("shutil.which", return_value="/bin/uv"), mock.patch("subprocess.run", fake):
-                _oracles._CACHE.clear()
-                return _oracles.verdict({"id": ident, "mutant": is_mutant}, None)
+                support._ORACLE_CACHE.clear()
+                return support.oracle_verdict({"id": ident, "mutant": is_mutant}, None, support.AGREEMENT)
 
         return corpus.Pair(ident, "d", run)
 
@@ -625,25 +448,31 @@ class CaseErrorTests(unittest.TestCase):
         self.assertEqual(code, 1, text)
         self.assertIn("error: fam/setup: ValueError: the corpus record is invalid", text)
 
-    def test_an_oracle_case_whose_driver_exits_non_zero_is_an_error_with_command_and_stderr(self) -> None:
+    def test_an_oracle_case_whose_build_exits_non_zero_is_an_error_with_command_and_stderr(self) -> None:
         for check_baseline in (False, True):
             with self.subTest(check_baseline=check_baseline):
                 code, text = self.rates(self.oracle_pair("build", 2), check_baseline=check_baseline, tolerance=True)
                 self.assertEqual(code, 1, text)
                 self.assertIn("error: fam/build:", text)
-                self.assertIn("_oracle_driver.py", text)
+                self.assertIn("build_case.py", text)
                 self.assertIn("exited 2", text)
                 self.assertIn("RecordError: v1 records are refused", text)
 
-    def test_an_oracle_case_whose_driver_prints_no_verdict_is_an_error(self) -> None:
+    def test_an_oracle_case_whose_build_prints_no_version_is_an_error(self) -> None:
         code, text = self.rates(self.oracle_pair("silent", 0), tolerance=True)
         self.assertEqual(code, 1, text)
         self.assertIn("error: fam/silent:", text)
 
-    def test_an_oracle_case_that_runs_clean_and_does_not_flag_is_a_miss(self) -> None:
-        code, text = self.rates(self.oracle_pair("clean", 0, stdout='{"outcome": "pass"}\n'), check_baseline=True, tolerance=True)
-        self.assertEqual(code, 0, text)
-        self.assertNotIn("error:", text)
+    def test_an_oracle_case_whose_check_crashes_or_leaves_no_packet_is_an_error_naming_cad_model_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            built = json.dumps({"hw": tmp, "label": "v1"}) + "\n"
+            for returncode, says in ((3, "exited 3"), (1, "left no packet at hw/checks/v1/cad/result.json")):
+                with self.subTest(returncode=returncode):
+                    code, text = self.rates(self.oracle_pair("check", 0, built, returncode), tolerance=True)
+                    self.assertEqual(code, 1, text)
+                    self.assertIn("error: fam/check:", text)
+                    self.assertIn("cad_model check", text)
+                    self.assertIn(says, text)
 
     @unittest.skipUnless(DEPS and shutil.which("uv"), "pyyaml, jsonschema and uv are required")
     def test_a_packet_level_command_failure_names_the_command_and_the_stderr_tail(self) -> None:
