@@ -922,10 +922,7 @@ class Cli(unittest.TestCase):
     def build(self, label: str) -> None:
         folder = self.hw / "versions" / label
         pns = sorted(p.parent.name for p in (self.hw / "parts").glob("*/part.yaml"))
-        for name in acceptance.layout.snapshot_names(self.hw, pns):
-            target = folder / "record" / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes((self.hw / name).read_bytes())
+        acceptance.write_version_record(self.hw, folder, pns)
         files = {p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                  for p in sorted(folder.rglob("*")) if p.is_file()}
         parts = {path.parent.name: {"source_sha256": hashlib.sha256(path.read_bytes()).hexdigest()}

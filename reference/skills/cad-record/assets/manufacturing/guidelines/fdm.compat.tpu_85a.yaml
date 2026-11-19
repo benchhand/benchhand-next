@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.compat.tpu_85a
+revision: 1
+title: FDM TPU 85A nozzle compatibility
+scope:
+  process: fdm
+  material_family:
+  - tpu
+  shore:
+  - 85a
+limits:
+- characteristic: nozzle_diameter
+  operator: '>='
+  quantity:
+    value: 0.6
+    units: mm
+  citations:
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 2, nozzle table, TPU 85A row: 0.4 mm nozzle Not Compatible, 0.6 mm and 0.8 mm Compatible'

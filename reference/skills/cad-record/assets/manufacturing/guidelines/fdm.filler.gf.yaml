@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.filler.gf
+revision: 1
+title: FDM glass fiber filled filament
+scope:
+  process: fdm
+  filler:
+  - gf
+limits:
+- characteristic: nozzle_material
+  operator: one_of
+  value:
+  - hardened_steel
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Composite materials
+    url: https://help.prusa3d.com/article/composites_167387
+    accessed: '2026-11-18'
+    locator: 'Tips for successful printing: carbon, glass and kevlar fibers are abrasive, use a hardened nozzle'
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 2, nozzle guidelines: always use a hardened steel nozzle, never stainless steel or brass'
+- characteristic: nozzle_diameter
+  operator: '>='
+  quantity:
+    value: 0.4
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Composite materials
+    url: https://help.prusa3d.com/article/composites_167387
+    accessed: '2026-11-18'
+    locator: 'Tips for successful printing: the lowest optimal values are 0.4 mm nozzle diameter'
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 2, nozzle guidelines: do not use a 0.2 mm nozzle'

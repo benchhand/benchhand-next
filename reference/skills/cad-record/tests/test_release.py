@@ -113,15 +113,9 @@ def build_version(hw: Path, omit: tuple[tuple[str, str], ...] = (), failed: dict
     `--attach REF=PARENT_REF` options."""
     folder = hw / "versions" / label
     pns = [p.parent.name for p in sorted((hw / "parts").glob("*/part.yaml"))]
-    for name in layout.snapshot_names(hw, pns):
-        target = folder / "record" / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes((hw / name).read_bytes())
-    for name, data in fx.intent_module()._sibling("cad_record_guidelines", "guidelines.py").snapshot_files(hw).items():
-        target = folder / "record" / name  # the winning shipped guideline sets, as cadmodel.record.snapshot copies them
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(data)
-    for name in ("assembly.step", "assembly.glb", "part-map.json", "metrics.json"):        write(folder / name, f"{name}\n")
+    acceptance.write_version_record(hw, folder, pns)
+    for name in ("assembly.step", "assembly.glb", "part-map.json", "metrics.json"):
+        write(folder / name, f"{name}\n")
     parts, made = {}, {}
     for model in sorted((hw / "parts").glob("*/model.py")):
         pn = model.parent.name

@@ -87,8 +87,8 @@ class Project(unittest.TestCase):
         return paths_module.entry_problems(self.paths, entry)
 
     def assessed(self, entry: dict[str, Any]) -> Any:
-        record = mi.normalize_record({**{rel: doc for rel, doc in fx.tst_record().items() if not rel.startswith("_")},
-                                      "manufacturing/evidence.yaml": {"entries": [entry]}})
+        record = mi.with_guidelines(mi.normalize_record({**{rel: doc for rel, doc in fx.tst_record().items() if not rel.startswith("_")},
+                                      "manufacturing/evidence.yaml": {"entries": [entry]}}), self.hw)
         return evidence.assess(record, version="v1", manifest_sha256=V1, today=TODAY, paths=self.paths,
                                approved=lambda decision: True)
 
@@ -207,8 +207,8 @@ class DependentEvidence(Project):
     """EV-004 and EV-005 of the bench fixture rest on "EV-003 method", so a refused EV-003 must not leave them accepted."""
 
     def results(self, entries: list[dict[str, Any]]) -> tuple[dict[str, str], list[Any]]:
-        record = mi.normalize_record({**{rel: doc for rel, doc in fx.tst_record().items() if not rel.startswith("_")},
-                                      "manufacturing/evidence.yaml": {"entries": entries}})
+        record = mi.with_guidelines(mi.normalize_record({**{rel: doc for rel, doc in fx.tst_record().items() if not rel.startswith("_")},
+                                      "manufacturing/evidence.yaml": {"entries": entries}}), self.hw)
         rows = evidence._rows(self.hw / "verification.csv")
         result = evidence.assess(record, version="v1", manifest_sha256=V1, today=TODAY, paths=self.paths,
                                  approved=lambda decision: True, verification=rows)
@@ -519,10 +519,10 @@ class ScratchStore(Project):
                          ({"evidence.scratch_path"}, {"evidence.scratch_path"}, True))
 
     def test_an_entry_that_rests_on_the_refused_store_entry_is_unknown(self) -> None:
-        record = mi.normalize_record({**{rel: doc for rel, doc in fx.tst_record().items() if not rel.startswith("_")},
+        record = mi.with_guidelines(mi.normalize_record({**{rel: doc for rel, doc in fx.tst_record().items() if not rel.startswith("_")},
                                       "manufacturing/evidence.yaml": {"entries": [
                                           self.entry("EV-003", method=f"geometry in hw/.cad/parts/{self.sha}"),
-                                          self.entry("EV-004", method="Same measurement as EV-003.")]}})
+                                          self.entry("EV-004", method="Same measurement as EV-003.")]}}), self.hw)
         rows = evidence._rows(self.hw / "verification.csv")
         result = evidence.assess(record, version="v1", manifest_sha256=V1, today=TODAY, paths=self.paths,
                                  approved=lambda decision: True, verification=rows)

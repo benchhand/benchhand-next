@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.asa
+revision: 1
+title: FDM ASA
+scope:
+  process: fdm
+  material_family:
+  - asa
+limits:
+- characteristic: enclosure
+  operator: equals
+  value: true
+  citations:
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 1, Printer: ABS, ASA, PC, PA and their CF/GF reinforced materials require an enclosed printer'

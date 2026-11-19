@@ -32,6 +32,7 @@ mi = fx.intent_module()
 evidence = _load("cad_record_evidence", SCRIPTS / "evidence.py")
 impact = sys.modules["cad_record_impact"]
 layout = sys.modules["cad_record_layout"]
+guidelines = _load("cad_record_guidelines", SCRIPTS / "guidelines.py")
 
 NA = "not applicable to this synthetic test fixture"
 DECISION = "DR-001"
@@ -224,6 +225,18 @@ def entry(record: Any, ident: str, subject: dict[str, Any], level: str, result: 
             data["physical"] = dict(PHYSICAL)
     data.update(extra)
     return data
+
+
+def write_version_record(hw: Path, folder: Path, pns: list[str]) -> None:
+    """The record snapshot of a version at `folder`, as cad-model's record.snapshot writes it: the files the layout's
+    version.record entry names for `pns`, and the winning shipped guideline sets as manufacturing/guidelines/shipped--<name>,
+    both read from `hw`."""
+    files = {name: (hw / name).read_bytes() for name in layout.snapshot_names(hw, pns)}
+    files.update(guidelines.snapshot_files(hw))
+    for name, data in files.items():
+        target = folder / "record" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
 
 def write_ledger(hw: Path, entries: list[dict[str, Any]], dispositions: list[dict[str, Any]] | None = None) -> None:

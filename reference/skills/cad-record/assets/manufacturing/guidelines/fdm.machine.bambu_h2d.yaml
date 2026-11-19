@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.machine.bambu_h2d
+revision: 1
+abstract: true
+title: 'Bambu Lab H2D (SAMPLE, reached only through a profile pin): Bambu publishes no overhang, bridge, wall, feature or hole figure. Its supported nozzle diameters (0.2, 0.4, 0.6 and 0.8 mm) come with bead benchhand-tw6.5, which adds a discrete nozzle-diameter set to the schema'
+scope:
+  process: fdm
+limits: []

@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.tpu_95a
+revision: 1
+title: FDM TPU 95A
+scope:
+  process: fdm
+  material_family:
+  - tpu
+  shore:
+  - 95a
+limits:
+- characteristic: nozzle_diameter
+  operator: '>='
+  quantity:
+    value: 0.4
+    units: mm
+  citations:
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 2, nozzle table, TPU 95A HF row, 0.2 mm nozzle: Not Recommended'

@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.abs
+revision: 1
+title: FDM ABS
+scope:
+  process: fdm
+  material_family:
+  - abs
+limits:
+- characteristic: enclosure
+  operator: equals
+  value: true
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, ABS
+    url: https://help.prusa3d.com/article/abs_2058
+    accessed: '2026-11-18'
+    locator: 'Pros and cons: significant warping, requires printer enclosure'
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 1, Printer: ABS, ASA, PC, PA and their CF/GF reinforced materials require an enclosed printer'

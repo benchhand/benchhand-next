@@ -119,8 +119,9 @@ class RecheckHookTests(unittest.TestCase):
         path.write_text(json.dumps(guideline), encoding="utf-8")
         self.git("add", "hw")
         staged = stamp_module.staged_record(self.root)
-        self.assertEqual(list(staged.record.guideline_digests.get("tst_printer", {})), ["fdm.generic@1"])
-        self.assertEqual(staged.record.guideline_digests["tst_printer"]["fdm.generic@1"], hashlib.sha256(path.read_bytes()).hexdigest())
+        digests = staged.record.guideline_digests.get("tst_printer", {})
+        self.assertEqual(digests.get("fdm.generic@1"), hashlib.sha256(path.read_bytes()).hexdigest(), "the project set shadows the shipped one")
+        self.assertIn("fdm.nozzle.d0_4@1", digests, "the shipped sets that apply to an FDM profile are listed too")
 
     def stage_product(self, stage: str, threshold: str = "layout") -> None:
         self.write_product(stage, threshold)

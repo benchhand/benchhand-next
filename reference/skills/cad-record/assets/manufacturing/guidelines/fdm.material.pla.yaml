@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.pla
+revision: 1
+title: 'FDM PLA: no sourced guideline limit the schema can express'
+scope:
+  process: fdm
+  material_family:
+  - pla
+limits: []

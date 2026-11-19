@@ -48,6 +48,7 @@ FREECAD_PRESENT = FREECADCMD is not None and FREECADCMD.is_file() and os.access(
 FIXTURES = HERE / "fixtures"
 SCRIPTS = HERE.parent / "scripts"
 CLI = SCRIPTS / "cad_model.py"
+GUIDELINES_SCRIPT = HERE.parents[1] / "cad-record" / "scripts" / "guidelines.py"
 LIFECYCLE_SCRIPT = HERE.parents[1] / "cad-flow" / "scripts" / "process_lifecycle.py"
 BOM_SCRIPT = HERE.parents[1] / "cad-bom" / "scripts" / "bom.py"
 KERNELS = ("cadquery", "build123d")
@@ -56,7 +57,15 @@ FINDING_KEYS = {"pn", "check", "type", "message", "where"}
 sys.path.insert(0, str(SCRIPTS))
 from cadmodel import build, check, diff, fonts, manufacture, mesh, occ, orientation, runner, threemf  # noqa: E402 - stdlib-only imports; OCP loads on first use
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import result_payload  # noqa: E402
+from modload import load_module, result_payload  # noqa: E402
+
+
+
+def shipped_copies(hw: Path) -> list[str]:
+    """The shipped guideline sets a build of `hw` copies into a version's record/, named below it: whatever
+    cad-record's snapshot_files returns, so the expected lists follow the shipped files."""
+    return sorted(load_module("cad_record_guidelines", GUIDELINES_SCRIPT).snapshot_files(hw))
+
 
 AP242 = "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING"
 SCHEMA = re.compile(r"FILE_SCHEMA\s*\(\s*\(\s*'([^']+)'\s*\)\s*\)")
@@ -536,10 +545,11 @@ class KernelChecks:
         hw = self.runs["hw"]
         v2 = hw / "versions" / "v2"
         manifest = json.loads((v2 / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(sorted(manifest["record"]), [
+        self.assertEqual(sorted(manifest["record"]), sorted([
             "record/assembly.yaml", "record/interfaces.yaml", "record/manufacturing/capabilities.yaml",
             "record/manufacturing/materials.yaml", "record/manufacturing/selection.yaml", "record/parts/TST-0001/part.yaml",
-            "record/parts/TST-0002/part.yaml", "record/product.yaml", "record/requirements.yaml"])
+            "record/parts/TST-0002/part.yaml", "record/product.yaml", "record/requirements.yaml",
+            *(f"record/{name}" for name in shipped_copies(hw))]))
         for name, sha in manifest["record"].items():
             self.assertEqual(manifest["files"][name], sha)
         # v2's arm was made; the current record buys it (v4), and the snapshot keeps the old state
@@ -2205,9 +2215,10 @@ class ManufacturingIntentRuleTests(unittest.TestCase):
         for ledger in ("findings.yaml", "evidence.yaml"):
             (self.hw / "manufacturing" / ledger).write_text("entries: []\n", encoding="utf-8")
         files = build.record.snapshot(self.hw, [mp.PN])
-        self.assertEqual(sorted(files), ["assembly.yaml", "interfaces.yaml", "manufacturing/capabilities.yaml",
-                                         "manufacturing/materials.yaml", "manufacturing/selection.yaml", mp.SOURCE,
-                                         f"parts/{mp.PN}/part.yaml", "product.yaml", "requirements.yaml"])
+        self.assertEqual(sorted(files), sorted(["assembly.yaml", "interfaces.yaml", "manufacturing/capabilities.yaml",
+                                                "manufacturing/materials.yaml", "manufacturing/selection.yaml", mp.SOURCE,
+                                                f"parts/{mp.PN}/part.yaml", "product.yaml", "requirements.yaml",
+                                                *shipped_copies(self.hw)]))
         self.assertEqual(files[mp.SOURCE], mp.SOURCE_BYTES)
         self.assertEqual(build.record.read_snapshot(files).version, 2)
 

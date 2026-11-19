@@ -902,10 +902,7 @@ class BuiltRecord(unittest.TestCase):
             (self.hw / "parts" / pn / "model.py").write_text(f"# {pn}\n", encoding="utf-8")
         folder = self.hw / "versions" / "v1"
         pns = sorted(p.parent.name for p in (self.hw / "parts").glob("*/part.yaml"))
-        for name in acceptance.layout.snapshot_names(self.hw, pns):
-            target = folder / "record" / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes((self.hw / name).read_bytes())
+        acceptance.write_version_record(self.hw, folder, pns)
         files = {p.relative_to(folder).as_posix(): acceptance.sha(p.read_bytes()) for p in sorted(folder.rglob("*")) if p.is_file()}
         parts = {p.parent.name: {"source_sha256": acceptance.sha(p.read_bytes())} for p in sorted(self.hw.glob("parts/*/model.py"))}
         (folder / "manifest.json").write_text(json.dumps({"label": "v1", "parts": parts, "joints": [], "files": files}),
