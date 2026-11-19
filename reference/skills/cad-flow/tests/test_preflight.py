@@ -185,6 +185,15 @@ class RuntimeProbeTests(unittest.TestCase):
                        "playwright", "install", "chromium"], calls)
         self.assertIn("p.chromium.launch(headless=True)", calls[-1][-1])
 
+    def test_chromium_passes_with_any_playwright_version_and_reports_the_one_imported(self) -> None:
+        def run(args, **kwargs):
+            return completed(args, 'CAD_PREFLIGHT:{"version": "1.65.2", "chromium": "150.0", "path": "/c/chrome"}\n')
+
+        with patch.object(preflight.subprocess, "run", side_effect=run):
+            check = preflight._chromium_check("uv")
+        self.assertEqual(check.status, "pass", check.detail)
+        self.assertIn("Playwright 1.65.2 launches Chromium 150.0", check.detail)
+
     def test_cold_chromium_reports_the_missing_browser_not_playwrights_banner(self) -> None:
         # Before the warm-up installs Chromium, Playwright's launch error ends in a boxed banner;
         # the report must carry the exception line that names the missing executable.
