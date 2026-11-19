@@ -66,12 +66,12 @@ class Staleness(unittest.TestCase):
     def test_a_loaded_record_carries_the_digest_of_each_applicable_set_by_profile(self) -> None:
         path = put(self.project, "generic", guideline("fdm.generic"))
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        self.assertEqual(self.record().guideline_digests["tst_printer"], {"fdm.generic@1": digest})
+        self.assertEqual(self.record().guideline_digests["tst_printer"]["tst_polymer_printed"], {"fdm.generic@1": digest})
 
     def test_checking_a_record_carries_the_same_digests(self) -> None:
         put(self.project, "generic", guideline("fdm.generic"))
         record, _problems = mi.check_record(self.hw)
-        self.assertEqual(list(record.guideline_digests["tst_printer"]), ["fdm.generic@1"])
+        self.assertEqual(list(record.guideline_digests["tst_printer"]["tst_polymer_printed"]), ["fdm.generic@1"])
 
     def test_a_record_normalized_without_a_project_directory_carries_no_digests(self) -> None:
         put(self.project, "generic", guideline("fdm.generic"))

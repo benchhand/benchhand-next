@@ -505,11 +505,11 @@ class StackPacketTests(unittest.TestCase):
                 target = self.hw / "versions" / "v1" / "record" / name
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(data)
-            frozen = dict(intent.load_record(self.hw).guideline_digests["tst_printer"])
+            frozen = dict(intent.load_record(self.hw).guideline_digests["tst_printer"]["tst_polymer_printed"])
             (self.hw / "versions" / "v1" / "manifest.json").unlink()
             snapshot_version(self.hw)  # seal the manifest over the copies
             (shipped / "pa.yaml").write_text(shipped_set(2.5), encoding="utf-8")  # the live install changes
-            self.assertNotEqual(dict(intent.load_record(self.hw).guideline_digests["tst_printer"]), frozen)
+            self.assertNotEqual(dict(intent.load_record(self.hw).guideline_digests["tst_printer"]["tst_polymer_printed"]), frozen)
             seen: list = []
             real = intent.load_record
 
@@ -520,7 +520,7 @@ class StackPacketTests(unittest.TestCase):
             with unittest.mock.patch.object(intent, "load_record", spy):
                 self.run_stack()
         self.assertEqual([p.message for p in seen[0].problems if p.code == "intent.guideline"], [], "a shipped copy is accepted")
-        self.assertEqual(dict(seen[0].guideline_digests.get("tst_printer", {})), frozen, "the digests are those of the snapshot")
+        self.assertEqual(dict(seen[0].guideline_digests.get("tst_printer", {}).get("tst_polymer_printed", {})), frozen, "the digests are those of the snapshot")
 
     def test_a_failed_worst_case_is_the_stack_outcome_evidence_reads_and_a_rerun_reuses_it(self) -> None:
         self.build(closing_gap_documents(), fixture("closing_gap.yaml"))

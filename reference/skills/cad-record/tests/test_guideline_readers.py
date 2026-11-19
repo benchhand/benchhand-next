@@ -87,7 +87,7 @@ class ProductionReaders(Base):
     def test_the_evidence_reader_carries_the_guideline_digests(self) -> None:
         self.write(0.8)
         _documents, record = impact.read_inputs(self.hw)
-        self.assertEqual(list(record.guideline_digests["tst_printer"]), ["fdm.generic@1"])
+        self.assertEqual(list(record.guideline_digests["tst_printer"]["tst_polymer_printed"]), ["fdm.generic@1"])
 
 
 class VersionSnapshots(Base):
@@ -109,7 +109,7 @@ class VersionSnapshots(Base):
         _documents, built = impact.read_inputs(folder, ledgers_from=self.hw)
         _documents, current = impact.read_inputs(self.hw)
         self.assertEqual(self.source_of(built), self.source_of(current))
-        self.assertEqual(dict(built.guideline_digests["tst_printer"]), dict(current.guideline_digests["tst_printer"]))
+        self.assertEqual(dict(built.guideline_digests["tst_printer"]["tst_polymer_printed"]), dict(current.guideline_digests["tst_printer"]["tst_polymer_printed"]))
 
     def test_editing_a_project_set_after_the_build_stales_the_part(self) -> None:
         self.write(0.8)
@@ -149,25 +149,25 @@ class VersionSnapshots(Base):
     def test_load_record_in_snapshot_mode_reads_the_copies_and_accepts_the_shipped_ones(self) -> None:
         self.ship(1.5)
         folder = self.version()
-        digests = dict(mi.load_record(folder, snapshot=True).guideline_digests["tst_printer"])
+        digests = dict(mi.load_record(folder, snapshot=True).guideline_digests["tst_printer"]["tst_polymer_printed"])
         self.assertEqual(sorted(digests), ["fdm.material.pa@1"])
         self.ship(1.6)  # the live install changes after the build
         again = mi.load_record(folder, snapshot=True)
-        self.assertEqual(dict(again.guideline_digests["tst_printer"]), digests, "the digests come from the snapshot")
+        self.assertEqual(dict(again.guideline_digests["tst_printer"]["tst_polymer_printed"]), digests, "the digests come from the snapshot")
         self.assertEqual([p for p in again.problems if p.code == "intent.guideline"], [], "a shipped copy is accepted")
 
     def test_check_record_in_snapshot_mode_accepts_the_shipped_copies(self) -> None:
         self.ship(1.5)
         record, problems = mi.check_record(self.version(), snapshot=True)
         self.assertEqual([p for p in problems if p.code == "intent.guideline"], [])
-        self.assertEqual(sorted(record.guideline_digests["tst_printer"]), ["fdm.material.pa@1"])
+        self.assertEqual(sorted(record.guideline_digests["tst_printer"]["tst_polymer_printed"]), ["fdm.material.pa@1"])
 
     def test_the_cad_model_snapshot_reader_carries_the_digests_of_the_copies(self) -> None:
         self.write(0.8)
         self.ship(1.5)
         pns = sorted(path.parent.name for path in (self.hw / "parts").glob("*/part.yaml"))
         snapshot = build.read_snapshot(build.snapshot(self.hw, pns))
-        self.assertEqual(sorted(snapshot.intent.guideline_digests["tst_printer"]), ["fdm.generic@1", "fdm.material.pa@1"])
+        self.assertEqual(sorted(snapshot.intent.guideline_digests["tst_printer"]["tst_polymer_printed"]), ["fdm.generic@1", "fdm.material.pa@1"])
 
     def test_the_cad_model_snapshot_reader_reads_only_its_own_copies(self) -> None:
         pns = sorted(path.parent.name for path in (self.hw / "parts").glob("*/part.yaml"))

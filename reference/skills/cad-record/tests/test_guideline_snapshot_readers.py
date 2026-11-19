@@ -68,7 +68,7 @@ class FrozenVersion(unittest.TestCase):
         pns = sorted(path.parent.name for path in (self.hw / "parts").glob("*/part.yaml"))
         self.record_dir = self.hw / "versions" / "v1" / "record"
         build.write_snapshot(self.record_dir, build.snapshot(self.hw, pns))
-        self.frozen = dict(mi.load_record(self.hw).guideline_digests.get("tst_printer", {}))
+        self.frozen = dict(mi.load_record(self.hw).guideline_digests.get("tst_printer", {}).get("tst_polymer_printed", {}))
         self.assertEqual(sorted(self.frozen), ["fdm.material.pa@1"], "the frozen version holds the shipped set")
         (self.shipped / "pa.yaml").write_text(shipped_set(2.5), encoding="utf-8")  # the live install changes
         live = gl.discover(self.hw).guidelines["fdm.material.pa"].sha256
@@ -89,7 +89,7 @@ class FrozenVersion(unittest.TestCase):
 
     def assert_frozen(self, record: Any) -> None:
         self.assertEqual([p.message for p in record.problems if p.code == "intent.guideline"], [], "a shipped copy is accepted")
-        self.assertEqual(dict(record.guideline_digests.get("tst_printer", {})), self.frozen, "the digests are those of the snapshot")
+        self.assertEqual(dict(record.guideline_digests.get("tst_printer", {}).get("tst_polymer_printed", {})), self.frozen, "the digests are those of the snapshot")
 
 
 class SnapshotReaders(FrozenVersion):
@@ -105,7 +105,7 @@ class SnapshotReaders(FrozenVersion):
                 args = argparse.Namespace(version=None, hw=self.hw, version_dir=None, record_hw=self.hw)
                 record = self.loaded(lambda: module.assess(args, None, self.hw))
                 live = gl.discover(self.hw).guidelines["fdm.material.pa"].sha256
-                self.assertEqual(dict(record.guideline_digests["tst_printer"]), {"fdm.material.pa@1": live})
+                self.assertEqual(dict(record.guideline_digests["tst_printer"]["tst_polymer_printed"]), {"fdm.material.pa@1": live})
 
 
 if __name__ == "__main__":
