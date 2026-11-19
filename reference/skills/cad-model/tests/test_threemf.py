@@ -218,6 +218,37 @@ class ReadTests(unittest.TestCase):
                 threemf.read(data)
 
 
+class ResourceIdTests(unittest.TestCase):
+    """A basematerials group and an object share one resource-id space, so no id may repeat across them."""
+
+    def setUp(self) -> None:
+        self.package = cube("PETG", "#FF0000")
+        self.model = entries(self.package)["3D/3dmodel.model"].decode("utf-8")
+
+    def read_with(self, model: str) -> threemf.Model:
+        return threemf.read(repack(self.package, **{"3D/3dmodel.model": model.encode()}))
+
+    def test_a_group_that_reuses_an_object_id_is_refused(self) -> None:
+        collided = self.model.replace('<basematerials id="1"', '<basematerials id="2"').replace('pid="1"', 'pid="2"')
+        with self.assertRaises(threemf.ThreeMFError):
+            self.read_with(collided)
+
+    def test_two_groups_with_the_same_id_are_refused(self) -> None:
+        group = self.model[self.model.index("<basematerials "):self.model.index("</basematerials>") + len("</basematerials>")]
+        with self.assertRaises(threemf.ThreeMFError):
+            self.read_with(self.model.replace(group, group + group))
+
+    def test_a_group_id_outside_the_resource_range_is_refused(self) -> None:
+        for bad in ("0", "2147483648"):
+            with self.subTest(bad), self.assertRaises(threemf.ThreeMFError):
+                self.read_with(self.model.replace('<basematerials id="1"', f'<basematerials id="{bad}"')
+                               .replace('pid="1"', f'pid="{bad}"'))
+
+    def test_a_coloured_package_with_distinct_ids_still_reads(self) -> None:
+        (obj,) = self.read_with(self.model).objects
+        self.assertEqual((obj.id, obj.color), (2, "#FF0000FF"))
+
+
 def _with_extra(data: bytes) -> bytes:
     out = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(data)) as source, zipfile.ZipFile(out, "w") as target:
