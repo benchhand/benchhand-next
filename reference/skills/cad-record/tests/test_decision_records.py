@@ -258,6 +258,51 @@ class ReadTests(Base):
                                                            r"DR-001-unhashable\.md.*YAML front matter is invalid"):
                 dr.read_decision(path)
 
+    def test_a_front_matter_the_yaml_constructors_cannot_convert_is_refused_naming_the_file(self) -> None:
+        base = "status: accepted\ndate: 2026-10-26\n"
+        cases = {
+            "tagged boolean": "status: !!bool maybe\ndate: 2026-10-26\n",
+            "tagged timestamp": base + "x: !!timestamp not-a-time\n",
+            "empty tagged int": base + 'x: !!int ""\n',
+            "empty tagged float": base + 'x: !!float ""\n',
+            "sequence tagged as a map": base + "x: !!map [a]\n",
+            "sequence tagged as a set": base + "x: !!set [a]\n",
+            "excessive nesting": base + "x: " + "[" * 5000 + "]" * 5000 + "\n",
+            "long sexagesimal float": base + "x: !!float " + ":".join(["1"] * 6000) + "\n",
+        }
+        for label, front in cases.items():
+            path = self.put("DR-001-yaml.md", document(front))
+            with self.subTest(label), self.assertRaisesRegex(dr.DecisionRecordError,
+                                                             r"DR-001-yaml\.md.*YAML front matter is invalid"):
+                dr.read_decision(path)
+
+    def test_a_huge_integer_key_or_status_is_refused_with_a_bounded_message(self) -> None:
+        huge = "0x" + "f" * 4000
+        for label, front in (("key", f"status: accepted\ndate: 2026-10-26\n? {huge}\n: x\n"),
+                             ("status", f"status: {huge}\ndate: 2026-10-26\n"),
+                             ("long text status", f"status: {'z' * 5000}\ndate: 2026-10-26\n")):
+            path = self.put("DR-001-huge.md", document(front))
+            with self.subTest(label), self.assertRaises(dr.DecisionRecordError) as caught:
+                dr.read_decision(path)
+            self.assertIn("DR-001-huge.md", str(caught.exception))
+            self.assertLess(len(str(caught.exception)), 1000)
+
+    def test_an_oversized_diagnostic_value_is_cut_in_the_message_naming_the_file(self) -> None:
+        keys = "".join(f"unknown-key-{index}-{'k' * 100}: x\n" for index in range(200))
+        cases = {
+            "superseded-by": ("status: accepted\ndate: 2026-10-26\nsuperseded-by: [" + "d" * 5000 + "]\n", "d" * 61),
+            "tagged boolean": ("status: !!bool " + "b" * 5000 + "\ndate: 2026-10-26\n", "b" * 201),
+            "unknown keys": ("status: accepted\ndate: 2026-10-26\n" + keys, "unknown-key-11-"),
+        }
+        for label, (front, leaked) in cases.items():
+            path = self.put("DR-001-long.md", document(front))
+            with self.subTest(label), self.assertRaises(dr.DecisionRecordError) as caught:
+                dr.read_decision(path)
+            message = str(caught.exception)
+            self.assertIn("DR-001-long.md", message)
+            self.assertLess(len(message), 1500)
+            self.assertNotIn(leaked, message)
+
     def test_an_impossible_calendar_date_is_refused_naming_the_file(self) -> None:
         path = self.put("DR-001-date.md", document("status: accepted\ndate: 2026-13-45\n"))
         with self.assertRaisesRegex(dr.DecisionRecordError, r"DR-001-date\.md.*YAML front matter is invalid"):

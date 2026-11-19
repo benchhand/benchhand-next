@@ -449,6 +449,51 @@ class ValidateProject(unittest.TestCase):
         self.assertTrue(message.startswith("flow/frozen/decision DR-009 is not a valid MADR record: "), message)
         self.assertIn(record.name, message)
 
+    def front_matter_finding(self, front: str) -> str:
+        """The one finding for record DR-009 whose status line is replaced by `front`; it must name the file."""
+        record = write_test_decision(self.hw, "DR-009")
+        record.write_text(record.read_text(encoding="utf-8").replace("status: accepted", front, 1), encoding="utf-8")
+        [message] = self.anchor_on("DR-009", None)
+        self.assertTrue(message.startswith("flow/frozen/decision DR-009 is not a valid MADR record: "), message)
+        self.assertIn(record.name, message)
+        self.assertLess(len(message), 1000, "a diagnostic stays bounded")
+        return message
+
+    def test_a_malformed_tagged_boolean_or_timestamp_is_a_finding_not_a_crash(self) -> None:
+        for front in ("status: !!bool maybe", "status: accepted\nx: !!timestamp not-a-time"):
+            with self.subTest(front):
+                self.front_matter_finding(front)
+
+    def test_an_empty_tagged_number_is_a_finding_not_a_crash(self) -> None:
+        for front in ('status: accepted\nx: !!int ""', 'status: accepted\nx: !!float ""'):
+            with self.subTest(front):
+                self.front_matter_finding(front)
+
+    def test_a_sequence_tagged_as_a_mapping_is_a_finding_not_a_crash(self) -> None:
+        for front in ("status: accepted\nx: !!map [a]", "status: accepted\nx: !!set [a]"):
+            with self.subTest(front):
+                self.front_matter_finding(front)
+
+    def test_excessive_front_matter_nesting_is_a_finding_not_a_crash(self) -> None:
+        self.front_matter_finding("status: accepted\nx: " + "[" * 5000 + "]" * 5000)
+
+    def test_a_very_long_sexagesimal_float_is_a_finding_not_a_crash(self) -> None:
+        self.front_matter_finding("status: accepted\nx: !!float " + ":".join(["1"] * 6000))
+
+    def test_oversized_diagnostic_values_stay_bounded_in_the_finding(self) -> None:
+        unknown = "".join(f"unknown-key-{index}-{'k' * 100}: x\n" for index in range(200))
+        for front in ("status: accepted\nsuperseded-by: [" + "d" * 5000 + "]",
+                      "status: !!bool " + "b" * 5000,
+                      "status: accepted\n" + unknown.rstrip("\n")):
+            with self.subTest(front[:30]):
+                self.front_matter_finding(front)
+
+    def test_a_huge_integer_key_or_status_is_a_bounded_finding_not_a_crash(self) -> None:
+        huge = "0x" + "f" * 4000
+        for front in (f"status: accepted\n? {huge}\n: x", f"status: {huge}"):
+            with self.subTest(front[:20]):
+                self.front_matter_finding(front)
+
     def test_an_old_form_decision_file_is_no_record(self) -> None:
         (self.hw / "decisions" / "DR-009.md").write_text("Status: APPROVED\n\n# DR-009 Gate\n", encoding="utf-8")
         self.assertEqual(self.anchor_on("DR-009", None),
