@@ -26,7 +26,9 @@ Raise a budget only with a reason in the commit message: each byte is read by an
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import io
 import json
 import os
 import shutil
@@ -35,9 +37,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
-from modload import result_payload  # noqa: E402
+from modload import load_module, result_payload  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parents[1]
@@ -47,12 +50,133 @@ LAMP_HW = SKILLS.parent / "examples" / "lamp-arm" / "hw"
 CAD_MODEL = SCRIPTS / "cad_model.py"
 FORM_CHECK = SKILLS / "cad-design" / "scripts" / "form_check.py"
 VALIDATE = SKILLS / "cad-record" / "scripts" / "validate.py"
+emit = load_module("cad_record_emit", SKILLS / "cad-record" / "scripts" / "emit.py")
 
 PLAIN_ENV = {**os.environ, "CAD_OUTPUT": "json"}
 AGENT_ENV = {**os.environ, "CAD_OUTPUT": "compact"}
 
 # Compact-mode stdout bytes per command on the lamp-arm example; see the table in the module docstring.
 BUDGETS = {"run": 400, "check": 400, "latest": 250, "form_check": 800, "validate": 700}
+
+
+ROOT_MARK = "<tmp>"
+SHORT_ROOT = "/tmp"  # the clip-position roots are built under a short base, whatever TMPDIR is
+
+
+def _forms(path: Path | str) -> set[str]:
+    return {str(path), str(Path(path).resolve())}
+
+
+def measured(stdout: str, *roots: Path | str, paths: tuple[Path | str, ...] = ()) -> int:
+    """Bytes of `stdout` with each temp root (as given and resolved) replaced by a fixed mark.
+
+    The tools print absolute paths under the test's temp dir, whose length depends on the machine's TMPDIR
+    and on symlinks such as macOS /var -> /private/var. The budget counts the tool's own output, not that prefix.
+
+    The emitter clips a fact line to `emit.MAX_LINE` characters, ending it with "…", so a long root also cuts the
+    path's tail or the root itself. `paths` names the files a tool may print under the roots: a clipped line
+    whose path fragment is a prefix of one of them is first restored to that full path, so the count does not
+    depend on where the clip fell. Text after the path on a clipped line is not recoverable and is not counted.
+    """
+    known = sorted({form for path in paths for form in _forms(path)}, key=len, reverse=True)
+    lines = []
+    for line in stdout.split("\n"):
+        start = line.find("/")
+        if len(line) == emit.MAX_LINE and line.endswith("…") and start >= 0:
+            fragment = line[start:-1]
+            full = next((path for path in known if path.startswith(fragment)), None)
+            if full is not None:
+                line = line[:start] + full
+        lines.append(line)
+    stdout = "\n".join(lines)
+    for form in sorted({form for root in roots for form in _forms(root)}, key=len, reverse=True):
+        stdout = stdout.replace(form, ROOT_MARK)
+    return len(stdout.encode())
+
+
+def assert_within_budget(case: unittest.TestCase, stdout: str, budget: int, *roots: Path | str,
+                         paths: tuple[Path | str, ...] = ()) -> None:
+    """Fail `case` when `stdout`, counted by `measured`, is over `budget` bytes."""
+    case.assertLessEqual(measured(stdout, *roots, paths=paths), budget, stdout)
+
+
+class MeasuredTests(unittest.TestCase):
+    """`measured` counts the tool's own bytes whatever the temp root's length."""
+
+    SAMPLE = "packet: {root}/.cad-work/p.json\nfull JSON: {root}/.cad-work/agent-output/x-1234.json\n3 findings\n"
+
+    def test_the_same_output_counts_equal_under_temp_roots_of_different_length(self) -> None:
+        with tempfile.TemporaryDirectory() as base:
+            short, long = Path(base) / "a", Path(base) / ("d" * 60)
+            short.mkdir()
+            long.mkdir()
+            counts = {measured(self.SAMPLE.format(root=r), r) for r in (short, long)}
+        self.assertEqual(len(counts), 1)
+
+    def test_a_symlinked_root_counts_like_its_resolved_form(self) -> None:
+        with tempfile.TemporaryDirectory() as base:
+            real = Path(base).resolve() / "real"
+            real.mkdir()
+            link = Path(base).resolve() / "link"
+            link.symlink_to(real)
+            self.assertEqual(measured(self.SAMPLE.format(root=real), link), measured(self.SAMPLE.format(root=link), link))
+
+    @staticmethod
+    def emitted(packet: Path, out: Path) -> str:
+        """Compact stdout of the real emitter, as form_check calls it: the packet path is a fact, which it clips."""
+        out.parent.mkdir(parents=True, exist_ok=True)
+        stream = io.StringIO()
+        with mock.patch.dict(os.environ, {"CAD_OUTPUT": "compact"}):
+            emit.emit({"blob": "x" * 5000}, tool="form_check", name="form_check", code=0, out=out,
+                      facts={"version": "v1", "packet": str(packet)}, stream=stream)
+        return stream.getvalue()
+
+    def short_base(self) -> Path:
+        """A fresh directory on a short fixed root, so the clip-position roots fit whatever TMPDIR is."""
+        if not Path(SHORT_ROOT).is_dir():
+            self.skipTest(f"{SHORT_ROOT} does not exist: no short base for the clip-position roots")
+        base = Path(tempfile.mkdtemp(dir=SHORT_ROOT)).resolve()
+        self.addCleanup(shutil.rmtree, base, True)
+        self.assertLess(len(str(base)), emit.MAX_LINE - len("packet: ") - len("/.cad-work/p.json") - 40, base)
+        return base
+
+    def test_the_emitters_clipped_packet_path_counts_equal_whatever_the_root_length(self) -> None:
+        # the packet line is "packet: " + root + "/.cad-work/p.json", clipped to emit.MAX_LINE characters
+        suffix = len("/.cad-work/p.json")
+        base = self.short_base()
+        roots = {"short": len(str(base)) + 3,
+                 "just under the clip": emit.MAX_LINE - len("packet: ") - suffix - 5,
+                 "clip inside the suffix": emit.MAX_LINE - len("packet: ") - 4,
+                 "clip inside the root": emit.MAX_LINE + 40}
+        counts = {}
+        for label, length in roots.items():
+            root = base / ("d" * (length - len(str(base)) - 1))
+            self.assertEqual(len(str(root)), length)
+            packet = root / ".cad-work" / "p.json"
+            counts[label] = measured(self.emitted(packet, root / ".cad-work" / "o.json"), root, paths=(packet,))
+        deep = base / ("e" * (emit.MAX_LINE + 40 - len(str(base)) - 1))
+        deep.mkdir()
+        link = base / "l"
+        link.symlink_to(deep)
+        for label, shown in (("symlink, packet as given", link), ("symlink, packet resolved", deep)):
+            packet = shown / ".cad-work" / "p.json"
+            counts[label] = measured(self.emitted(packet, link / ".cad-work" / "o.json"), link,
+                                     paths=(link / ".cad-work" / "p.json",))
+        self.assertEqual(len(set(counts.values())), 1, counts)
+
+    def test_the_budget_accepts_its_limit_and_rejects_one_byte_more(self) -> None:
+        with tempfile.TemporaryDirectory() as base:
+            head = f"packet: {base}/p.json\n"
+            at_limit = head + "x" * (800 - measured(head, base) - 1) + "\n"
+            assert_within_budget(self, at_limit, 800, base)
+            with self.assertRaises(AssertionError):
+                assert_within_budget(self, at_limit + "x", 800, base)
+
+    def test_growth_in_the_tools_own_lines_still_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as base:
+            text = self.SAMPLE.format(root=base)
+            extra = "finding: x\n"
+            self.assertEqual(measured(text + extra, base) - measured(text, base), len(extra))
 
 
 def without_timings(value: object) -> object:
@@ -93,6 +217,10 @@ class LampArmTests(unittest.TestCase):
                 "form_check": (FORM_CHECK, ("--hw", hw, "--version", "v1", "--out", str(self.hw.parent / ".cad-work" / "p.json"))),
                 "validate": (VALIDATE, (hw,))}
 
+    def printed_paths(self) -> tuple[Path, ...]:
+        """The files a producer prints as facts, which the emitter may clip."""
+        return (self.hw.parent / ".cad-work" / "p.json",)
+
     def both(self, name: str) -> tuple[subprocess.CompletedProcess[str], subprocess.CompletedProcess[str]]:
         script, args = self.commands()[name]
         return self.tool(script, *args, env=PLAIN_ENV), self.tool(script, *args, env=AGENT_ENV)
@@ -107,7 +235,7 @@ class LampArmTests(unittest.TestCase):
                 full = (Path(last.removeprefix("full JSON: ")).read_text(encoding="utf-8")
                         if last.startswith("full JSON: ") else agent.stdout)
                 self.assertEqual(without_timings(json.loads(full)), without_timings(json.loads(plain.stdout)))
-                self.assertLessEqual(len(agent.stdout.encode()), BUDGETS[name], agent.stdout)
+                assert_within_budget(self, agent.stdout, BUDGETS[name], self.tmp.name, paths=self.printed_paths())
                 self.assertLessEqual(len(agent.stdout), len(plain.stdout) + 1)
 
     def test_the_json_flag_prints_full_json_though_the_environment_says_compact(self) -> None:
@@ -134,7 +262,7 @@ class LampArmTests(unittest.TestCase):
         shutil.copytree(LAMP_HW, other / "hw")
         agent = self.tool(CAD_MODEL, "run", str(other / "hw"), "--label", "v1", env=AGENT_ENV)
         self.assertEqual(agent.returncode, 0, agent.stderr[-2000:])
-        self.assertLessEqual(len(agent.stdout.encode()), BUDGETS["run"], agent.stdout)
+        assert_within_budget(self, agent.stdout, BUDGETS["run"], self.tmp.name)
         path = Path(agent.stdout.rstrip("\n").splitlines()[-1].removeprefix("full JSON: "))
         self.assertEqual(result_payload(path.read_text(encoding="utf-8"))["label"], "v1")
         sealed = self.sealed(self.hw)
