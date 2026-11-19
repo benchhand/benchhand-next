@@ -210,6 +210,42 @@ class MalformedRecordTests(unittest.TestCase):
                 with self.assertRaisesRegex(fs.FrdError, rf"{block} record of node 1 "):
                     fs.read_frd(text)
 
+    def three(self):
+        return frd_text({1: (0.0, 0.0, 0.0), 2: (1.0, 2.0, 3.0), 3: (4.0, 5.0, 6.0)},
+                        {1: (1.0, 2.0, 2.0), 2: (0.0, 0.0, 0.0), 3: (3.0, 0.0, 4.0)},
+                        {1: (5.0, 0.0, 0.0, 0.0, 0.0, 0.0), 2: (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+                         3: (2.0, 0.0, 0.0, 0.0, 0.0, 0.0)})
+
+    @staticmethod
+    def reid(text, header, which, node):
+        """`text` with the `which`-th record (0-based) of the block opened by `header` renumbered to `node`."""
+        lines = text.splitlines()
+        start = next(i for i, line in enumerate(lines) if line.startswith(header))
+        record = [i for i in range(start, len(lines)) if lines[i].startswith(" -1")][which]
+        lines[record] = lines[record][:3] + f"{node:>10}" + lines[record][13:]
+        return "\n".join(lines) + "\n"
+
+    def test_a_node_id_repeated_inside_one_block_is_refused_with_its_block_and_id(self) -> None:
+        for block, header in self.BLOCKS:
+            for label, which, node in (("adjacent", 1, 1), ("non-adjacent", 2, 1), ("last two", 2, 2)):
+                with self.subTest(block=block, repeat=label):
+                    text = self.reid(self.three(), header, which, node)
+                    with self.assertRaisesRegex(fs.FrdError, rf"{block} block repeats node {node}\b"):
+                        fs.read_frd(text)
+
+    def test_the_same_node_ids_in_different_blocks_are_accepted(self) -> None:
+        result = fs.read_frd(self.three())
+        self.assertEqual(set(result.coordinates), {1, 2, 3})
+        self.assertEqual(set(result.displacement), {1, 2, 3})
+        self.assertEqual(set(result.von_mises), {1, 2, 3})
+
+    def test_the_checked_in_fixtures_parse(self) -> None:
+        for path in sorted(FIXTURES.glob("*.frd.gz")):
+            with self.subTest(path.name), gzip.open(path, "rt") as handle:
+                result = fs.read_frd(handle.read())
+                self.assertTrue(result.coordinates)
+                self.assertEqual(set(result.von_mises), set(result.coordinates))
+
     def test_a_node_id_of_ten_digits_is_accepted_and_a_longer_or_infinite_one_is_not(self) -> None:
         widest = self.corrupt(self.good(), "    2C", lambda r: r[:3] + "9999999999" + r[13:])
         self.assertIn(9_999_999_999, fs.read_frd(widest).coordinates)
