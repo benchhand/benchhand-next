@@ -274,6 +274,18 @@ def record(*, parts: list[dict[str, Any]] | None = None, interfaces: list[dict[s
     return documents
 
 
+def with_subject_occurrences(documents: dict[str, Any], subject: dict[str, Any]) -> dict[str, Any]:
+    """`documents` with TST-0003 placed twice (@left, @right; the other parts stay singletons) and REQ-001 about `subject`."""
+    out = copy.deepcopy(documents)
+    out["parts/TST-0003/part.yaml"]["model_frame"] = "part_local"
+    out["assembly.yaml"]["occurrences"] = [{"id": "left", "PN": "TST-0003"}, {"id": "right", "PN": "TST-0003"}]
+    group = out["assembly.yaml"]["subassemblies"][0]
+    group["parts"] = [pn for pn in group["parts"] if pn != "TST-0003"]
+    group["occurrences"] = ["@left", "@right"]
+    out["requirements.yaml"]["requirements"][0]["subjects"] = [subject]
+    return out
+
+
 def current_documents(documents: dict[str, Any]) -> dict[str, Any]:
     """A hand-written test fixture without the record version 2 blocks ({path below hw/: document}) as record version 2:
     every manufacturing-intent field an explicit unknown, drawing.operations moved to operations.

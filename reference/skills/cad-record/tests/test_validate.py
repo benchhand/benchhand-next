@@ -842,5 +842,33 @@ class AssemblyInventory(unittest.TestCase):
                          [("hw/assembly.yaml", "error", "subassemblies/0 must be a mapping")])
 
 
+class SubjectOccurrences(unittest.TestCase):
+    """validate_project reports a subject occurrence that is unknown or belongs to another part."""
+
+    def findings(self, subject: dict[str, object]) -> list[dict[str, object]]:
+        from modload import load_module  # noqa: PLC0415 - used by this class alone
+
+        validate = load_module("cad_record_validate", SKILL / "scripts" / "validate.py")
+        temporary = tempfile.TemporaryDirectory(prefix="cad-record-occurrence-")
+        self.addCleanup(temporary.cleanup)
+        hw = Path(temporary.name) / "project" / "hw"
+        fx.write_record(hw, fx.with_subject_occurrences(fx.tst_record(), subject))
+        return [f for f in validate.validate_project(hw.parent) if f.get("code") == "intent.reference"]
+
+    def test_an_occurrence_of_another_part_is_a_finding(self) -> None:
+        [item] = self.findings({"PN": "TST-0001", "occurrence": "@left"})
+        self.assertIn("@left is an occurrence of TST-0003, not TST-0001", str(item["message"]))
+
+    def test_an_unknown_occurrence_is_a_finding(self) -> None:
+        [item] = self.findings({"PN": "TST-0003", "occurrence": "@ghost"})
+        self.assertIn("@ghost names no occurrence", str(item["message"]))
+
+    def test_the_part_own_occurrence_is_clean(self) -> None:
+        self.assertEqual(self.findings({"PN": "TST-0003", "occurrence": "@left"}), [])
+
+    def test_an_omitted_occurrence_of_a_single_occurrence_part_is_clean(self) -> None:
+        self.assertEqual(self.findings({"PN": "TST-0001"}), [])
+
+
 if __name__ == "__main__":
     unittest.main()

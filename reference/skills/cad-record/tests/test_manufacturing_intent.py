@@ -746,6 +746,58 @@ class ProfileDocuments(unittest.TestCase):
             mi.profile_document(materials, "selection", "x.yaml")
 
 
+class SubjectOccurrences(unittest.TestCase):
+    """A subject's `occurrence` must be an occurrence of its PN; an omitted one needs a single occurrence."""
+
+    def problems(self, subject: dict[str, Any]) -> list[Any]:
+        documents = fx.with_subject_occurrences(fx.tst_record(), subject)
+        return mi.check_record(fx.write_record(temp_hw(self), documents))[1]
+
+    def test_an_occurrence_of_another_part_is_a_reference_problem(self) -> None:
+        [problem] = self.problems({"PN": "TST-0001", "occurrence": "@left"})
+        self.assertEqual((problem.code, problem.path, problem.pointer),
+                         ("intent.reference", "hw/requirements.yaml", "requirements/0/subjects/0"))
+        self.assertIn("@left is an occurrence of TST-0003, not TST-0001", problem.message)
+
+    def test_an_unknown_occurrence_is_a_reference_problem(self) -> None:
+        [problem] = self.problems({"PN": "TST-0003", "occurrence": "@ghost"})
+        self.assertEqual((problem.code, problem.pointer), ("intent.reference", "requirements/0/subjects/0"))
+        self.assertIn("@ghost names no occurrence", problem.message)
+
+    def test_the_part_own_occurrence_is_clean(self) -> None:
+        self.assertEqual(self.problems({"PN": "TST-0003", "occurrence": "@right"}), [])
+
+    def test_an_omitted_occurrence_of_a_single_occurrence_part_is_clean(self) -> None:
+        self.assertEqual(self.problems({"PN": "TST-0001"}), [])
+
+
+class CheckDocuments(unittest.TestCase):
+    """check_documents: schema and record problems of the documents named by `paths` (hw/-prefixed) only."""
+
+    def codes(self, paths: set[str]) -> list[tuple[str, str]]:
+        # requirements.yaml holds a schema problem (priority) and a record problem (wrong-owner occurrence);
+        # assembly.yaml holds a schema problem (title) only.
+        documents = fx.with_subject_occurrences(fx.tst_record(), {"PN": "TST-0001", "occurrence": "@left"})
+        documents["requirements.yaml"]["requirements"][0]["priority"] = "urgent"
+        documents["assembly.yaml"]["subassemblies"][0]["title"] = 7
+        return sorted((p.code, p.path) for p in mi.check_documents(documents, paths))
+
+    def test_a_path_includes_its_schema_and_record_problems(self) -> None:
+        self.assertEqual(self.codes({"hw/requirements.yaml"}),
+                         [("intent.reference", "hw/requirements.yaml"), ("intent.schema", "hw/requirements.yaml")])
+
+    def test_another_path_excludes_them(self) -> None:
+        self.assertEqual(self.codes({"hw/assembly.yaml"}), [("intent.schema", "hw/assembly.yaml")])
+
+    def test_no_paths_report_nothing(self) -> None:
+        self.assertEqual(self.codes(set()), [])
+
+    def test_two_paths_report_the_union(self) -> None:
+        self.assertEqual(self.codes({"hw/requirements.yaml", "hw/assembly.yaml"}),
+                         [("intent.reference", "hw/requirements.yaml"), ("intent.schema", "hw/assembly.yaml"),
+                          ("intent.schema", "hw/requirements.yaml")])
+
+
 class StrictBoundTests(unittest.TestCase):
     """`<` and `>` beside `<=` and `>=`: which of two one-sided bounds is tighter, and when a worst case breaks one."""
 
