@@ -522,5 +522,47 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(tree_digest(hw), before)
 
 
+class StrictMaterialCriteria(unittest.TestCase):
+    """The printed polymer's max_service_temperature is 60 deg_C. A strict `<` or `>` criterion at that limit fails
+    where the non-strict one passes, judged through the public assessment."""
+
+    def outcome(self, operator: str, limit: float, *, interval: tuple[float, float] | None = None) -> str:
+        documents = scenarios.qualified_polymer_cover()
+        documents["requirements.yaml"]["requirements"][1]["acceptance"] = [
+            fx.criterion("max_service_temperature", operator, limit, "deg_C")]
+        if interval is not None:
+            temperature = next(p for p in profile(documents, "materials", "tst_polymer_c_printed")["properties"]
+                               if p["name"] == "max_service_temperature")
+            temperature["value"]["value"] = fx.quantity(lower=interval[0], upper=interval[1], units="deg_C")
+        report = assess(self, documents)
+        (entry,) = evaluations(candidate(report, "printed_cover"), "REQ-002")
+        return str(entry["outcome"])
+
+    def test_the_limit_itself_fails_a_strict_bound_and_meets_a_non_strict_one(self) -> None:
+        cases = [  # (operator, limit, outcome) for a value of exactly 60
+            ("<", 60, "fail"), ("<=", 60, "pass"), ("<", 60.001, "pass"), ("<=", 60.001, "pass"), ("<", 59.999, "fail"),
+            (">", 60, "fail"), (">=", 60, "pass"), (">", 59.999, "pass"), (">=", 59.999, "pass"), (">", 60.001, "fail"),
+        ]
+        for operator, limit, outcome in cases:
+            with self.subTest(operator=operator, limit=limit):
+                self.assertEqual(self.outcome(operator, limit), outcome)
+
+    def test_an_interval_straddling_a_strict_limit_is_unknown(self) -> None:
+        for operator in ("<", ">"):
+            with self.subTest(operator=operator):
+                self.assertEqual(self.outcome(operator, 60, interval=(55, 65)), "unknown")
+
+
+class StrictOperatorsAreNotInterchangeable(unittest.TestCase):
+    def test_an_authored_pass_at_a_non_strict_bound_does_not_satisfy_a_strict_requirement(self) -> None:
+        """The vendor's authored pass states `yield_strength >= 100`; a requirement of `> 100` is a different criterion,
+        so the claim is a mismatch and never credited."""
+        documents = scenarios.mandatory_vs_score()
+        documents["requirements.yaml"]["requirements"][0]["acceptance"][0]["operator"] = ">"
+        report = assess(self, documents)
+        texts = [f["measured"]["text"] for f in findings(report, "selection.evaluation_mismatch")]
+        self.assertTrue(any("yield_strength >= 100 MPa" in text for text in texts), texts)
+
+
 if __name__ == "__main__":
     unittest.main()

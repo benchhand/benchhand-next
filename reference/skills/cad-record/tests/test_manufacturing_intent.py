@@ -727,5 +727,53 @@ class ProfileDocuments(unittest.TestCase):
             mi.profile_document(materials, "selection", "x.yaml")
 
 
+class StrictBoundTests(unittest.TestCase):
+    """`<` and `>` beside `<=` and `>=`: which of two one-sided bounds is tighter, and when a worst case breaks one."""
+
+    def test_an_upper_bound_tightens_by_value_and_then_by_strictness(self) -> None:
+        cases = [  # (old, new, expected), worked out by hand: a smaller limit is tighter; at one limit `<` beats `<=`
+            (("<=", 5), ("<=", 4), True), (("<=", 5), ("<=", 5), True), (("<=", 5), ("<=", 6), False),
+            (("<=", 5), ("<", 5), True), (("<=", 5), ("<", 4), True), (("<=", 5), ("<", 6), False),
+            (("<", 5), ("<=", 5), False), (("<", 5), ("<=", 4.999), True), (("<", 5), ("<=", 6), False),
+            (("<", 5), ("<", 5), True), (("<", 5), ("<", 4), True), (("<", 5), ("<", 6), False),
+        ]
+        for old, new, expected in cases:
+            with self.subTest(old=old, new=new):
+                self.assertIs(mi.tightens(old, new), expected)
+
+    def test_a_lower_bound_tightens_by_value_and_then_by_strictness(self) -> None:
+        cases = [  # a larger limit is tighter; at one limit `>` beats `>=`
+            ((">=", 5), (">=", 6), True), ((">=", 5), (">=", 5), True), ((">=", 5), (">=", 4), False),
+            ((">=", 5), (">", 5), True), ((">=", 5), (">", 6), True), ((">=", 5), (">", 4), False),
+            ((">", 5), (">=", 5), False), ((">", 5), (">=", 5.001), True), ((">", 5), (">=", 4), False),
+            ((">", 5), (">", 5), True), ((">", 5), (">", 6), True), ((">", 5), (">", 4), False),
+        ]
+        for old, new, expected in cases:
+            with self.subTest(old=old, new=new):
+                self.assertIs(mi.tightens(old, new), expected)
+
+    def test_bounds_on_opposite_sides_or_not_one_sided_cannot_be_compared(self) -> None:
+        for old, new in ((("<=", 5), (">=", 3)), ((">", 3), ("<", 5)), (("<", 5), (">", 5)),
+                         (("between", [1, 2]), ("<=", 5)), (("<=", 5), ("equals", 5)), (("~", 1), ("<=", 5))):
+            with self.subTest(old=old, new=new), self.assertRaises(ValueError):
+                mi.tightens(old, new)
+
+    def test_a_worst_case_at_the_limit_breaks_a_strict_upper_bound_only(self) -> None:
+        cases = [  # (operator, limit, worst, tolerance, expected)
+            ("<=", 5, 5, 0.0, False), ("<", 5, 5, 0.0, True),
+            ("<=", 5, 4.999, 0.0, False), ("<", 5, 4.999, 0.0, False),
+            ("<=", 5, 5.001, 0.0, True), ("<", 5, 5.001, 0.0, True),
+            ("<=", 5, 5 + 1e-10, 1e-9, False), ("<", 5, 5 - 1e-10, 1e-9, True),
+        ]
+        for operator, limit, worst, tolerance, expected in cases:
+            with self.subTest(operator=operator, worst=worst):
+                self.assertIs(mi.exceeds_upper_bound(worst, operator, limit, tolerance), expected)
+
+    def test_only_an_upper_bound_operator_can_be_exceeded(self) -> None:
+        for operator in (">=", ">", "between", "equals"):
+            with self.subTest(operator=operator), self.assertRaises(ValueError):
+                mi.exceeds_upper_bound(1, operator, 5)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -104,7 +104,8 @@ def bracket(profile: Any = "tst_alloy_rod", route: list[dict[str, Any]] | None =
 
 
 def documents(*, profiles: list[dict[str, Any]] | None = None, part: dict[str, Any] | None = None,
-              service_class: str = "working_prototype", direction: Any = (0, 0, -1)) -> dict[str, Any]:
+              service_class: str = "working_prototype", direction: Any = (0, 0, -1),
+              operators: tuple[str, str] = (">=", "<="), extra_strength: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """`direction` is the unit vector of the force head_load stands for: the required [x, y, z] list of the load
     schema. Any other value is written as given, to test what the record and the reader refuse; None leaves it out."""
     load = {"id": "head_load", "kind": "static", "magnitude": fx.known(fx.quantity(50, "N")), "requirements": ["REQ-001"]}
@@ -114,8 +115,8 @@ def documents(*, profiles: list[dict[str, Any]] | None = None, part: dict[str, A
     use["environment"]["temperature"] = fx.known(fx.quantity(lower=15, upper=30, units="deg_C"))
     requirements = fx.requirements([
         fx.requirement("REQ-001", "Carry the head load",
-                       acceptance=[fx.criterion("yield_safety_factor", ">=", 2, "dimensionless")]),
-        fx.requirement("REQ-002", "Stay stiff", acceptance=[fx.criterion("max_displacement", "<=", 0.5, "mm")])])
+                       acceptance=[fx.criterion("yield_safety_factor", operators[0], 2, "dimensionless"), *(extra_strength or [])]),
+        fx.requirement("REQ-002", "Stay stiff", acceptance=[fx.criterion("max_displacement", operators[1], 0.5, "mm")])])
     return fx.record(product_data=fx.product(use, stage="analysis"), requirements_data=requirements,
                      parts=[part or bracket()], materials=profiles if profiles is not None else [alloy()],
                      decisions=("DR-001", "DR-002", "DR-003"))
@@ -336,6 +337,22 @@ class QualifiedProfile(SourcedFEACase):
         status, again = self.call(path)
         self.assertEqual((status, again["reused"], again["check_bundle"]), (0, True, "hw/checks/v1/fea-bracket"))
         self.assertEqual(self.solved[1:], [], "a reused case is not solved again")
+
+    def test_a_strict_acceptance_criterion_is_refused_before_the_solve(self) -> None:
+        """The checks evaluate `>=` for strength and `<=` for stiffness only; `>` and `<` are never read as those."""
+        for operators, refusals in (((">", "<="), 1), ((">=", "<"), 1), ((">", "<"), 2)):
+            with self.subTest(operators=operators):
+                self.solved.clear()
+                self.build(documents(operators=operators))
+                path = self.case({"conditions": DRY_23C}, acceptance={"strength": "REQ-001", "stiffness": "REQ-002"})
+                self.assertEqual(self.refused(path), ["analysis.criterion"] * refusals)
+
+    def test_a_second_strength_criterion_is_never_dropped(self) -> None:
+        """A strict criterion beside the `>=` one is not skipped: the requirement then names two criteria and is refused."""
+        extra = [fx.criterion("yield_safety_factor", ">", 5, "dimensionless")]
+        self.build(documents(extra_strength=extra))
+        path = self.case({"conditions": DRY_23C}, acceptance={"strength": "REQ-001"})
+        self.assertEqual(self.refused(path), ["analysis.criterion"])
 
     def test_a_missed_criterion_fails_with_a_critical_finding(self) -> None:
         self.build(documents())

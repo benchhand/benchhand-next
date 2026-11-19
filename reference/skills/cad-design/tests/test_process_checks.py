@@ -29,6 +29,7 @@ import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
@@ -520,13 +521,15 @@ def cut(pn: str, *, stock: Any = ACRYLIC, thickness: dict[str, Any] | None = Non
     return part(pn, route, process="laser", material=material)
 
 
-def tab_slot(*, tab_thickness: dict[str, Any], coating: dict[str, Any] | None, calibrations: list) -> dict[str, Any]:
+def tab_slot(*, tab_thickness: dict[str, Any], coating: dict[str, Any] | None, calibrations: list,
+             clearances: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     interface = FX.interface("IF-002", "TST-0301", "TST-0302", "mounting", {
         "critical": known(True), "functions": [{"function": "locating"}],
         "surfaces": [{"PN": "TST-0301", "feature": "slot", "role": "locating", "dimension_state": "assembled"},
                      {"PN": "TST-0302", "feature": "tab", "role": "locating", "dimension_state": "assembled"}],
-        "acceptance": [{"criterion": FX.criterion("clearance", "between", [0.0, 0.3], "mm", id="tab_fit"),
-                        "verification": {"method": "T", "evidence_required": ["physically_validated"], "stage": "release"}}]})
+        "acceptance": [{"criterion": criterion,
+                        "verification": {"method": "T", "evidence_required": ["physically_validated"], "stage": "release"}}
+                       for criterion in clearances or [FX.criterion("clearance", "between", [0.0, 0.3], "mm", id="tab_fit")]]})
     coater = FX.capability_profile("tst_coater", "coating", parameters={"coating_type": known("TST paint"), "method": known("spray")})
     return FX.record(parts=[cut("TST-0301", coat="slot" if coating else None, coating=coating),
                             cut("TST-0302", thickness=tab_thickness, coat="tab" if coating else None, coating=coating)],
@@ -1191,6 +1194,193 @@ class OtherRouteKindTests(Checks):
                 result = self.assess(documents)
                 self.assertEqual(self.outcome(result, "process.laser.thermal@TST-0902/cut"), outcome)
                 self.assertEqual(outcome == "fail", "process.laser.flatness" in self.codes(result))
+
+
+# --- strict criteria: `<` and `>` beside `<=` and `>=` ----------------------------------------------------------------
+
+@unittest.skipUnless(DEPS, "pyyaml and jsonschema are required")
+class StrictCriterionTests(Checks):
+    """A strict criterion is evaluated strictly or refused as UNKNOWN; it is never read as its non-strict neighbour."""
+
+    def test_a_calibration_states_its_criterion_with_the_operator_it_was_asked_for(self) -> None:
+        calibrated = pc.core.Calibrated("calibrated", "wall", MI.quantity(mm(lower=2, upper=3)), (), SimpleNamespace(
+            id="cal_1", scope={}, samples=3, date="2026-06-01", source=FX.source("calibration")))
+        for operator, value in ((">", 3), (">=", 3), ("<", 2), ("<=", 2), ("between", [2, 3])):
+            with self.subTest(operator=operator):
+                found = calibrated.criterion("wall", operator)
+                self.assertEqual((found["operator"], found["value"]), (operator, value))
+        with self.assertRaises(ValueError):
+            calibrated.criterion("wall", "equals")
+
+    def test_a_calibrated_waterjet_edge_at_a_strict_roughness_limit_fails_it(self) -> None:
+        taper = calibration("taper_study", "taper", ALU, 0.0, 0.05)
+        finish = calibration("finish_study", "edge_finish", ALU, 1.6, 3.2, "um")
+        for operator, limit, outcome in (("<=", 3.2, "pass"), ("<", 3.2, "fail"), ("<", 3.3, "pass"), ("<=", 3.1, "fail")):
+            with self.subTest(operator=operator, limit=limit):
+                edge = [surface("cut_edge", "seal", criteria=[FX.criterion("surface_roughness", operator, limit, "um")])]
+                result = self.assess(shaped("waterjet", [taper, finish], critical=edge))
+                self.assertEqual(self.outcome(result, "process.waterjet.edge@TST-0902/form"), outcome)
+                self.assertEqual(outcome == "fail", "process.waterjet.edge_finish" in self.codes(result))
+
+    def test_calibrated_laser_flatness_at_a_strict_limit_fails_it(self) -> None:
+        thermal = [calibration("flat_study", "flatness", ACRYLIC, 0.0, 0.3),
+                   calibration("haz_study", "heat_affected_zone", ACRYLIC, 0.0, 0.2)]
+        documents = FX.record(parts=[cut("TST-0902")], materials=materials(),
+                              capabilities=[laser_profile(ACRYLIC_APPROVAL, calibrations=[KERF, *thermal])])
+        made = documents["parts/TST-0902/part.yaml"]["intent"]
+        for operator, limit, outcome in (("<=", 0.3, "pass"), ("<", 0.3, "fail"), ("<", 0.31, "pass")):
+            with self.subTest(operator=operator, limit=limit):
+                made["critical_surfaces"] = [surface("datum_a", "datum", criteria=[FX.criterion("flatness", operator, limit, "mm")])]
+                result = self.assess(documents)
+                self.assertEqual(self.outcome(result, "process.laser.thermal@TST-0902/cut"), outcome)
+                self.assertEqual(outcome == "fail", "process.laser.flatness" in self.codes(result))
+
+    def test_calibrated_print_warp_at_a_strict_flatness_limit_fails_it(self) -> None:
+        warp = calibration("warp_coupon", "warp", POLYMER, 0.1, 0.3, size=mm(15))
+        for operator, limit, expected in (("<=", 0.3, []), ("<", 0.3, ["process.fdm.warp"]), ("<", 0.31, [])):
+            with self.subTest(operator=operator, limit=limit):
+                datum = [surface("datum_a", "datum", criteria=[FX.criterion("flatness", operator, limit, "mm")])]
+                documents = printed("TST-0101", {"strategy": "none"}, calibrations=[CONTACT, warp], critical=datum)
+                result = self.assess(documents, geometry("TST-0101", stable([2.0, 2.0], [[0, 0], [10, 0], [10, 12], [0, 12]])))
+                self.assertEqual([c for c in self.codes(result) if c == "process.fdm.warp"], expected)
+
+    def test_a_calibrated_milled_finish_at_a_strict_roughness_limit_fails_it_and_a_strict_lower_bound_is_refused(self) -> None:
+        profile = FX.capability_profile("tst_mill", "cnc", parameters={"axes": known(mm(3, units="count"))},
+                                        materials=[approval(ALU, operations=["machine"])],
+                                        calibrations=[calibration("finish_study", "surface_roughness", ALU, 0.8, 3.2, "um")])
+        obligation = "process.cnc.precision@TST-0201/mill"
+        for operator, limit, outcome, finding in (("<=", 3.2, "pass", False), ("<", 3.2, "fail", True), ("<", 3.3, "pass", False),
+                                                  (">", 1.0, "unknown", False), (">=", 1.0, "unknown", False)):
+            with self.subTest(operator=operator, limit=limit):
+                critical = [surface("pocket_floor", "seal", criteria=[FX.criterion("surface_roughness", operator, limit, "um")])]
+                documents = FX.record(parts=[milled("TST-0201", [end_mill(4.0, 25.0)], critical=critical)],
+                                      capabilities=[profile], materials=materials())
+                result = self.assess(documents, geometry("TST-0201", POCKET))
+                self.assertEqual(self.outcome(result, obligation), outcome)
+                self.assertEqual("process.cnc.finish" in self.codes(result), finding)
+
+    def test_a_strict_tab_slot_clearance_is_refused_never_read_as_a_minimum(self) -> None:
+        # the worst case is 0.00..0.18 mm; each list is refused whole, so a supported criterion never hides a refused one
+        for criteria in (["> -1"], ["< 1"], ["between -1 1", "> -1"], ["> -1", "between -1 1"], [">= -1", "< 1"]):
+            with self.subTest(criteria=criteria):
+                clearances = [_criterion("clearance", c, "mm") for c in criteria]
+                documents = tab_slot(tab_thickness=mm(lower=2.95, upper=3.05), coating=None, calibrations=[KERF], clearances=clearances)
+                result = self.assess(documents, geometry("TST-0301", SLOT))
+                self.assertEqual(self.outcome(result, "process.laser.kerf@TST-0301/cut"), "unknown")
+                self.assertNotIn("process.laser.tab_slot_fit", self.codes(result))
+
+    def test_a_tab_slot_miss_on_a_supported_clearance_fails_beside_a_refused_one(self) -> None:
+        clearances = [_criterion("clearance", "between 0 0.3", "mm"), _criterion("clearance", "> -1", "mm")]
+        documents = tab_slot(tab_thickness=mm(lower=2.9, upper=3.1), coating=None, calibrations=[KERF], clearances=clearances)
+        result = self.assess(documents, geometry("TST-0301", SLOT))
+        self.assertEqual(self.outcome(result, "process.laser.kerf@TST-0301/cut"), "fail")
+
+    def test_a_criterion_this_check_cannot_judge_never_lets_a_surface_pass(self) -> None:
+        """Waterjet roughness and laser flatness: a calibration whose upper end is 3.2 um (0.3 mm) against `>` alone, a
+        supported `<=` beside it, or `equals` is UNKNOWN, never PASS; a miss on a supported criterion still FAILs."""
+        taper = calibration("taper_study", "taper", ALU, 0.0, 0.05)
+        finish = calibration("finish_study", "edge_finish", ALU, 1.6, 3.2, "um")
+        cases = {
+            "only a strict lower bound": (["> 1.0"], "unknown"),
+            "a lower bound": ([">= 1.0"], "unknown"),
+            "met upper bound beside a strict lower bound": (["<= 5.0", "> 1.0"], "unknown"),
+            "strict lower bound before a met upper bound": (["> 1.0", "<= 5.0"], "unknown"),
+            "met upper bound beside equals": (["<= 5.0", "equals 3.2"], "unknown"),
+            "missed strict upper bound beside a strict lower bound": (["> 1.0", "< 3.2"], "fail"),
+            "met upper bound only": (["<= 5.0"], "pass"),
+        }
+        for name, (criteria, outcome) in cases.items():
+            with self.subTest(name):
+                edge = [surface("cut_edge", "seal", criteria=[_roughness(c) for c in criteria])]
+                result = self.assess(shaped("waterjet", [taper, finish], critical=edge))
+                self.assertEqual(self.outcome(result, "process.waterjet.edge@TST-0902/form"), outcome)
+                self.assertEqual(outcome == "fail", "process.waterjet.edge_finish" in self.codes(result))
+        flat = [calibration("flat_study", "flatness", ACRYLIC, 0.0, 0.3), calibration("haz_study", "heat_affected_zone", ACRYLIC, 0.0, 0.2)]
+        documents = FX.record(parts=[cut("TST-0902")], materials=materials(),
+                              capabilities=[laser_profile(ACRYLIC_APPROVAL, calibrations=[KERF, *flat])])
+        made = documents["parts/TST-0902/part.yaml"]["intent"]
+        for name, (criteria, outcome) in {"strict lower bound": (["> 0.1"], "unknown"), "met upper beside strict lower": (["<= 0.5", "> 0.1"], "unknown"),
+                                          "missed strict upper beside strict lower": (["> 0.1", "< 0.3"], "fail")}.items():
+            with self.subTest(f"laser {name}"):
+                made["critical_surfaces"] = [surface("datum_a", "datum", criteria=[_flatness_criterion(c) for c in criteria])]
+                result = self.assess(documents)
+                self.assertEqual(self.outcome(result, "process.laser.thermal@TST-0902/cut"), outcome)
+                self.assertEqual(outcome == "fail", "process.laser.flatness" in self.codes(result))
+
+    def test_a_flatness_criterion_this_check_cannot_judge_never_lets_a_print_pass(self) -> None:
+        warp = calibration("warp_coupon", "warp", POLYMER, 0.1, 0.3, size=mm(15))
+        hull = [[0, 0], [10, 0], [10, 12], [0, 12]]
+        cases = {"strict lower bound": (["> 0.1"], "unknown"), "met upper beside strict lower": (["<= 0.5", "> 0.1"], "unknown"),
+                 "strict lower beside met upper": (["> 0.1", "<= 0.5"], "unknown"),
+                 "missed strict upper beside strict lower": (["> 0.1", "< 0.3"], "fail"), "met upper only": (["<= 0.5"], "pass")}
+        for name, (criteria, outcome) in cases.items():
+            with self.subTest(name):
+                datum = [surface("datum_a", "datum", criteria=[_flatness_criterion(c) for c in criteria])]
+                documents = printed("TST-0101", {"strategy": "none"}, calibrations=[CONTACT, warp], critical=datum)
+                result = self.assess(documents, geometry("TST-0101", stable([2.0, 2.0], hull)))
+                self.assertEqual(self.outcome(result, "process.fdm.thermal_distortion@TST-0101/print"), outcome)
+
+    def test_a_bore_is_judged_against_every_diameter_criterion(self) -> None:
+        """A 6 mm bore, calibrated to print +0.0..+0.0 mm, against a diameter band and a strict bound in one list."""
+        deviation = calibration("hole_study", "hole_diameter_deviation", POLYMER, 0.0, 0.0, orientation="XY")
+        wall = calibration("wall_study", "min_wall", POLYMER, 0.8, 1.2)  # with a 3 mm wall, so only the bore can open the result
+        cases = {
+            "strict lower bound at the diameter": (["> 6"], "fail"),
+            "non-strict lower bound at the diameter": ([">= 6"], "pass"),
+            "band that holds beside a strict lower bound at the diameter": (["between 5.9 6.1", "> 6"], "fail"),
+            "strict lower bound at the diameter before a band that holds": (["> 6", "between 5.9 6.1"], "fail"),
+            "strict upper bound at the diameter": (["< 6"], "fail"),
+            "non-strict upper bound at the diameter": (["<= 6"], "pass"),
+            "band that holds only": (["between 5.9 6.1"], "pass"),
+            "band that holds beside equals": (["between 5.9 6.1", "equals 6"], "unknown"),
+            "equals only": (["equals 6"], "unknown"),
+        }
+        for name, (criteria, outcome) in cases.items():
+            with self.subTest(name):
+                bore = [surface("bore", "locating", criteria=[_diameter_criterion(c) for c in criteria])]
+                documents = printed("TST-0101", {"strategy": "none"}, calibrations=[CONTACT, deviation, wall], critical=bore)
+                result = self.assess(documents, geometry("TST-0101", facts(holes=(hole("bore", 6.0),), walls={"thickness_mm": 3.0})))
+                codes = self.codes(result)
+                self.assertEqual("process.fdm.hole_fit" in codes, outcome == "fail", codes)
+                self.assertEqual(self.outcome(result, "process.fdm.geometry@TST-0101/print"), outcome)
+
+    def test_a_tapped_bore_is_judged_against_every_engagement_criterion(self) -> None:
+        """An 8 mm deep thread against an engagement minimum: `>` is strict, and every criterion of the list counts."""
+        cases = {
+            "met minimum": ([">= 8"], "pass"), "strict minimum at the depth": (["> 8"], "fail"), "strict minimum below": (["> 7"], "pass"),
+            "missed minimum": ([">= 9"], "fail"), "met beside a missed strict one": ([">= 5", "> 8"], "fail"),
+            "a missed strict one before a met one": (["> 8", ">= 5"], "fail"),
+            "met beside a maximum": ([">= 5", "< 20"], "unknown"), "only a maximum": (["<= 20"], "unknown"),
+            "missed beside a maximum": ([">= 9", "< 20"], "fail"),
+        }
+        for name, (criteria, outcome) in cases.items():
+            with self.subTest(name):
+                tap = FX.operation("tap", "tapping", "tst_tap", targets=[{"feature": "thread"}],
+                                   criteria=[_criterion("thread_engagement", c, "mm") for c in criteria])
+                documents = FX.record(parts=[part("TST-0902", [tap], process="cnc", material=ALU)],
+                                      capabilities=[FX.capability_profile("tst_tap", "tapping")], materials=materials())
+                result = self.assess(documents, geometry("TST-0902", facts(holes=(hole("thread", 6.0, depth=8.0),))))
+                self.assertEqual(self.outcome(result, "process.tapping.engagement@TST-0902/tap"), outcome)
+                self.assertEqual(outcome == "fail", "process.tapping.engagement" in self.codes(result))
+
+
+def _criterion(prop: str, text: str, units: str) -> dict[str, Any]:
+    """`"> 6"`, `"between 5.9 6.1"` or `"equals 6"` as a criterion on `prop`."""
+    operator, *numbers = text.split()
+    values = [float(n) for n in numbers]
+    return FX.criterion(prop, operator, values if operator == "between" else values[0], units)
+
+
+def _roughness(text: str) -> dict[str, Any]:
+    return _criterion("surface_roughness", text, "um")
+
+
+def _flatness_criterion(text: str) -> dict[str, Any]:
+    return _criterion("flatness", text, "mm")
+
+
+def _diameter_criterion(text: str) -> dict[str, Any]:
+    return _criterion("diameter", text, "mm")
 
 
 # --- contract -------------------------------------------------------------------------------------------------------

@@ -254,6 +254,16 @@ class JointTests(unittest.TestCase):
                                 record, intent.resolve_property)
         self.assertEqual(self.codes(wide), {"assembly.edge_distance": "fail"}, "a between criterion bounds the upper end too")
 
+    def test_a_strict_edge_distance_criterion_is_refused_never_read_as_a_minimum(self) -> None:
+        record, _ = self.record(limit=None)
+        for operator in (">", "<", "<="):
+            with self.subTest(operator=operator):
+                criterion = fx.criterion("edge_distance", operator, 4.5, "mm")
+                report = ops.check_joints(self.fasten(edge_distance={"criterion": criterion, "distance": fx.known(fx.quantity(9))}),
+                                          record, intent.resolve_property)
+                self.assertEqual(self.codes(report), {"assembly.edge_distance_unknown": "unknown"})
+                self.assertEqual(report.outcome("assembly.joint@op:screw")["outcome"], "unknown")
+
 
 class NeverInstalledTests(unittest.TestCase):
     """An occurrence no operation installs, other than the one base, is a missing installing operation."""

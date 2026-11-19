@@ -179,7 +179,7 @@
       "properties": {
         "id": {"$ref": "#/$defs/semantic_id"},
         "property": {"description": "what is measured or judged, such as service_temperature or clearance", "$ref": "#/$defs/semantic_id"},
-        "operator": {"enum": [">=", "<=", "between", "equals", "one_of"]},
+        "operator": {"description": "> and < are strict: a value equal to the limit does not meet them", "enum": [">=", "<=", ">", "<", "between", "equals", "one_of"]},
         "value": true,
         "units": {"$ref": "#/$defs/units"},
         "state": {"$ref": "#/$defs/dimension_state"},
@@ -188,7 +188,7 @@
         "note": {"$ref": "#/$defs/text"}
       },
       "allOf": [
-        {"if": {"properties": {"operator": {"enum": [">=", "<="]}}},
+        {"if": {"properties": {"operator": {"enum": [">=", "<=", ">", "<"]}}},
          "then": {"required": ["units"], "properties": {"value": {"type": "number"}}}},
         {"if": {"properties": {"operator": {"const": "between"}}},
          "then": {"required": ["units"], "properties": {"value": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}}}},

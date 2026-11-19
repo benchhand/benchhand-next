@@ -174,11 +174,16 @@ class SharedDefinitions(SchemaCase):
             "between": fx.criterion("clearance", "between", [0.01, 0.05], "mm"),
             "categorical": fx.criterion("material_identity", "equals", "TST grade"),
             "one of": fx.criterion("finish", "one_of", ["anodized", "passivated"]),
+            "strictly under": fx.criterion("bridge_span", "<", 5, "mm"),
+            "strictly over": fx.criterion("wall_thickness", ">", 0.8, "mm"),
         }, {
             "no source": {"property": "x", "operator": ">=", "value": 1, "units": "mm"},
             "number without units": fx.criterion("x", ">=", 1),
             "between one number": fx.criterion("x", "between", [1], "mm"),
             "unknown operator": fx.criterion("x", "~", 1, "mm"),
+            "strictly under without units": fx.criterion("x", "<", 1),
+            "strictly over a text": fx.criterion("x", ">", "wide", "mm"),
+            "strictly over an interval": fx.criterion("x", ">", [1, 2], "mm"),
         })
         finding = {"id": "overhang_1", "code": "process.fdm.overhang", "subject": {"PN": "TST-0001", "operation": "print"},
                    "severity": "major", "outcome": "fail", "measured": fx.quantity(62, "deg"),
