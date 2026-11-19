@@ -53,15 +53,15 @@ def _volume(a: Point, b: Point, c: Point, d: Point) -> float:
             + u[2] * (v[0] * w[1] - v[1] * w[0]))
 
 
-def plate(kind: str = "C3D10", cells: tuple[int, int, int] = (2, 2, 4)
+def plate(kind: str = "C3D10", cells: tuple[int, int, int] = (2, 2, 4), size: Point = SIZE
           ) -> tuple[dict[int, Point], dict[int, study.Element]]:
-    """A SIZE plate of `cells` hexahedra, each split into the six tetrahedra along its main diagonal.
+    """A `size` plate (SIZE by default) of `cells` hexahedra, each split into the six tetrahedra along its main diagonal.
 
     Every hexahedron splits the same way, so the faces of neighbouring tetrahedra match. Each tetrahedron is
     ordered to a positive volume, as ccx needs, and a C3D10 shares each mid-edge node with its neighbours."""
     counts = [n + 1 for n in cells]
     grid = {ijk: i + 1 for i, ijk in enumerate(product(*(range(n) for n in counts)))}
-    coordinates = {node: tuple(SIZE[k] * ijk[k] / cells[k] for k in range(3)) for ijk, node in grid.items()}
+    coordinates = {node: tuple(size[k] * ijk[k] / cells[k] for k in range(3)) for ijk, node in grid.items()}
     middles: dict[frozenset[int], int] = {}
     elements: dict[int, study.Element] = {}
     for cell in product(*(range(n) for n in cells)):

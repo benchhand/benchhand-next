@@ -1516,6 +1516,23 @@ class VersionedPublicationTests(unittest.TestCase):
                 self.assertEqual(status, 2)
                 self.assertIn("--replace", report["error"]["message"])
 
+    def test_a_changed_stress_study_module_changes_the_recipe(self) -> None:
+        """The linearisation and the study code decide a stress verdict, so a bundle sealed with the old bytes of any
+        of them is not reused. fea_near_support and fea_linearise were added to the seal with #209; the other two
+        had no test."""
+        self.assertEqual(self.call()[0], 0)
+        read_bytes = Path.read_bytes
+        for name in ("fea_near_support.py", "fea_linearise.py", "fea_stress.py", "fea_stress_study.py"):
+            with self.subTest(name):
+                def changed(path: Path, name: str = name) -> bytes:
+                    data = read_bytes(path)
+                    return data + b"\n# changed\n" if path.name == name else data
+
+                with patch.object(Path, "read_bytes", changed):
+                    status, report = self.call()
+                self.assertEqual(status, 2)
+                self.assertIn("--replace", report["error"]["message"])
+
     def test_a_cheaper_first_high_order_level_changes_the_recipe(self) -> None:
         self.assertEqual(self.call()[0], 0)
         manifest = json.loads((self.hw / "analysis" / "v1" / "cantilever" / "manifest.json").read_text(encoding="utf-8"))
