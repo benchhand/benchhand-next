@@ -9,10 +9,13 @@
 from __future__ import annotations
 
 import contextlib
+import errno
+import fcntl
 import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -467,6 +470,441 @@ class Place(Fixture):
         self.assertRegex(reason, r"^stale: b ")
         self.assertFalse(destination.exists())
         self.assertEqual(list((self.root / "run").iterdir()), [])
+
+
+def rewrite(path: Path, data: bytes) -> None:
+    """An honest mistake: a tool makes the read-only file at `path` writable, writes through it and restores it."""
+    os.chmod(path, 0o644)
+    path.write_bytes(data)
+    os.chmod(path, 0o444)
+
+
+RENAME = os.rename  # a writer outside the store, unaffected by the patches below
+
+
+class FailingClose:
+    """A stream whose context exit closes it, then fails, like a close on a disk that went away."""
+
+    def __init__(self, stream) -> None:
+        self._stream = stream
+
+    def __getattr__(self, name: str):
+        return getattr(self._stream, name)
+
+    def __enter__(self) -> "FailingClose":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self._stream.close()
+        raise OSError(errno.EIO, "Input/output error")
+
+
+def contents(folder: Path) -> dict[str, bytes]:
+    """Each file in `folder` and its bytes."""
+    return {name: data for name, (data, _) in snapshot(folder).items()}
+
+
+def snapshot(folder: Path) -> dict[str, tuple[bytes, int]]:
+    """Each file in `folder`: its bytes and its inode."""
+    return {path.name: (path.read_bytes(), path.stat().st_ino) for path in folder.iterdir()}
+
+
+class PlaceObject(Fixture):
+    """`place_object` swaps a link to the object onto the target, then hashes the inode it renamed through a
+    descriptor it opened before (#250). The link shares the object's inode, so a write through the object reaches
+    the target, and only a hash after the rename sees one. A failed or interrupted hash puts the old target back
+    while a lock on the target's folder keeps every other `place_object` out. A file it cannot put back moves to
+    the store's recovery folder, and cache.findings names it there."""
+
+    TARGETS = {"no target yet": None, "an old target": b"OLD"}
+
+    def stored(self, data: bytes) -> tuple[str, Path]:
+        digest = self.store.intern(self.file(sha(data), data))
+        return digest, self.hw / ".cad" / "cache" / "objects" / digest
+
+    def target(self, folder: str, old: bytes | None) -> Path:
+        """A target in a folder of its own, holding the bytes `old` unless they are None."""
+        target = self.root / folder.replace(" ", "-") / "one.unv"
+        target.parent.mkdir(parents=True)
+        if old is not None:
+            target.write_bytes(old)
+        return target
+
+    @property
+    def recovery(self) -> Path:
+        return self.hw / ".cad" / "cache" / "recovery"
+
+    def kept(self, target: Path) -> list[Path]:
+        """The files that cache.findings names as kept by a place_object onto `target`."""
+        log = self.hw / ".cad" / "cache" / "findings.jsonl"
+        lines = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+        found = [re.match(r"kept: (.+?) holds .* onto (.+?) failed", json.loads(line)["finding"]) for line in lines]
+        return sorted(Path(m.group(1)) for m in found if m and Path(m.group(2)) == target)
+
+    def assert_left(self, target: Path, placed: bytes, kept: list[bytes], where: Path | None = None) -> None:
+        """`target` holds `placed` with nothing beside it. The files cache.findings names for it hold `kept`, in
+        the store's recovery folder, or in `where`."""
+        paths = self.kept(target)
+        self.assertEqual(target.read_bytes(), placed)
+        self.assertEqual(sorted(path for path in target.parent.iterdir() if path != target),
+                         [path for path in paths if path.parent == target.parent])
+        self.assertEqual({path.parent for path in paths}, {where or self.recovery} if kept else set())
+        self.assertEqual(sorted(path.read_bytes() for path in paths), sorted(kept))
+
+    @staticmethod
+    def foreign(target: Path):
+        """A writer that takes no lock, such as an older store.py: each call renames a new file onto `target`,
+        holding FOREIGN, then FOREIGN2 and so on."""
+        made = []
+
+        def overwrite() -> None:
+            made.append(target.with_name(f"foreign{len(made)}.tmp"))
+            made[-1].write_bytes(b"FOREIGN" + (str(len(made)).encode() if len(made) > 1 else b""))
+            RENAME(made[-1], target)
+
+        return overwrite
+
+    def failing_hash(self, stored: Path):
+        """A `before` for at_the_rename: a write through the object `stored`, so that the hash fails."""
+        return lambda: rewrite(stored, b"x" * len(stored.read_bytes()))
+
+    @contextlib.contextmanager
+    def at_the_rename(self, before=lambda: None, after=lambda: None) -> Iterator[None]:
+        """While the block runs, `before` runs once just before place_object first renames its staged link onto
+        the target, and `after` once just after such a rename succeeds."""
+        pending = {"before": before, "after": after}
+
+        def wrapping(real):
+            def rename(source, target, *args, **kwargs):
+                staged = Path(source).name.endswith(".link")
+                if staged:
+                    pending.pop("before", lambda: None)()
+                result = real(source, target, *args, **kwargs)
+                if staged:
+                    pending.pop("after", lambda: None)()
+                return result
+            return rename
+
+        with mock.patch.object(store.os, "replace", wrapping(os.replace)), \
+                mock.patch.object(store, "_rename2", wrapping(getattr(store, "_rename2", None)), create=True):
+            yield
+
+    @contextlib.contextmanager
+    def at_the_undo(self, target: Path, *acts) -> Iterator[list]:
+        """While the block runs, once place_object has hashed its staged link, each call that renames or removes
+        `target` first runs the next of `acts`. The yielded list collects the acts that ran."""
+        pending, ran, hashed = list(acts), [], []
+        real_digest = hashlib.file_digest
+
+        def digest(stream, *args, **kwargs):
+            found = real_digest(stream, *args, **kwargs)
+            hashed.append(str(getattr(stream, "name", "")).endswith(".link"))
+            return found
+
+        def touching(real):
+            def call(*args, **kwargs):
+                if any(hashed) and pending and target in [Path(a) for a in args[:2] if isinstance(a, (str, Path))]:
+                    ran.append(pending.pop(0))
+                    ran[-1]()
+                return real(*args, **kwargs)
+            return call
+
+        with mock.patch.object(store.hashlib, "file_digest", digest), \
+                mock.patch.object(store.os, "rename", touching(os.rename)), \
+                mock.patch.object(store.os, "replace", touching(os.replace)), \
+                mock.patch.object(Path, "unlink", touching(Path.unlink)), \
+                mock.patch.object(store, "_rename2", touching(getattr(store, "_rename2", None)), create=True):
+            yield ran
+
+    def test_a_verified_placement_replaces_the_target_and_leaves_nothing_beside_it(self) -> None:
+        for links in ("hard links", "no hard links"):
+            for case, old in self.TARGETS.items():
+                with self.subTest(case, links=links):
+                    digest, stored = self.stored(f"{case} {links}".encode())
+                    target = self.target(f"{case} {links}", old)
+                    failing = mock.patch.object(store.os, "link", side_effect=OSError(1, "Operation not permitted"))
+                    with failing if links == "no hard links" else contextlib.nullcontext():
+                        self.assertTrue(self.store.place_object(digest, target))
+                    self.assertEqual(list(snapshot(target.parent)), ["one.unv"])
+                    self.assertEqual(target.read_bytes(), f"{case} {links}".encode())
+                    self.assertEqual(os.path.samefile(target, stored), links == "hard links")
+
+    def test_a_write_through_the_object_just_before_the_rename_is_refused_and_the_target_left_as_it_was(
+            self) -> None:
+        for case in self.TARGETS:
+            with self.subTest(case):
+                digest, stored = self.stored(case.encode())
+                target = self.target(case, self.TARGETS[case])
+                before = snapshot(target.parent)
+                with self.at_the_rename(before=lambda: rewrite(stored, b"x" * len(case))):
+                    self.assertFalse(self.store.place_object(digest, target))
+                self.assertEqual(snapshot(target.parent), before)
+
+    def test_an_error_while_the_target_is_hashed_leaves_the_target_as_it_was(self) -> None:
+        real = hashlib.file_digest
+        for error in (OSError(errno.EIO, "Input/output error"), KeyboardInterrupt()):
+            for case in self.TARGETS:
+                with self.subTest(case, error=type(error).__name__):
+                    digest, _ = self.stored(f"{case} {error!r}".encode())
+                    target = self.target(f"{case} {type(error).__name__}", self.TARGETS[case])
+                    before = snapshot(target.parent)
+
+                    def failing(stream, *args, error=error, **kwargs):
+                        if str(getattr(stream, "name", "")).endswith(".link"):  # the staged link, not the object
+                            raise error
+                        return real(stream, *args, **kwargs)
+
+                    with mock.patch.object(store.hashlib, "file_digest", side_effect=failing), \
+                            self.assertRaises(type(error)):
+                        self.store.place_object(digest, target)
+                    self.assertEqual(snapshot(target.parent), before)
+
+    def test_a_second_writer_waits_until_the_first_has_put_its_target_back(self) -> None:
+        mine, stored = self.stored(b"MINE")
+        theirs, _ = self.stored(b"THEIRS")
+        target = self.target("run", b"OLD")
+        results: dict[str, object] = {}
+        parked = threading.Event()  # the second writer waits on the lock, or (without one) has finished
+        real = fcntl.flock
+
+        def flock(fd, operation):
+            if threading.current_thread() is second and operation == fcntl.LOCK_EX:
+                try:
+                    return real(fd, operation | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    parked.set()
+            return real(fd, operation)
+
+        def place_theirs() -> None:
+            try:
+                results["theirs"] = store.Store(self.hw).place_object(theirs, target)  # another build, one store
+            except Exception as exc:  # noqa: BLE001 - the outcome under test
+                results["theirs"] = exc
+            finally:
+                parked.set()
+
+        second = threading.Thread(target=place_theirs)
+
+        def interleave() -> None:
+            rewrite(stored, b"XXXX")  # the first placement's hash will fail
+            second.start()
+            self.assertTrue(parked.wait(30))
+
+        with mock.patch.object(store.fcntl, "flock", side_effect=flock), self.at_the_rename(before=interleave):
+            results["mine"] = self.store.place_object(mine, target)
+        second.join(30)
+        self.assertEqual(results, {"mine": False, "theirs": True})
+        self.assertEqual({name: data for name, (data, _) in snapshot(target.parent).items()}, {"one.unv": b"THEIRS"})
+
+    def test_a_file_another_writer_renames_onto_the_target_after_this_one_or_during_its_hash_stands(self) -> None:
+        real = hashlib.file_digest
+        for moment in ("just after the rename", "when the hash starts"):
+            for case, old in self.TARGETS.items():
+                with self.subTest(case, moment=moment):
+                    digest, _ = self.stored(f"{case} {moment}".encode())
+                    target = self.target(f"{case} {moment}", old)
+                    overwrite = self.foreign(target)
+
+                    def hashing(stream, *args, overwrite=overwrite, **kwargs):
+                        if str(getattr(stream, "name", "")).endswith(".link"):
+                            overwrite()
+                        return real(stream, *args, **kwargs)
+
+                    seam = (self.at_the_rename(after=overwrite) if moment == "just after the rename" else
+                            mock.patch.object(store.hashlib, "file_digest", hashing))
+                    with seam:
+                        self.assertFalse(self.store.place_object(digest, target))
+                    self.assertEqual(target.read_bytes(), b"FOREIGN")
+                    self.assert_left(target, b"FOREIGN", [old] if old else [])
+
+    def test_a_file_another_writer_renames_onto_the_target_during_the_undo_stands_and_nothing_is_lost(self) -> None:
+        """A failed hash undoes the placement. A writer that takes no lock renames its file onto the target just
+        before the undo, between the undo's two steps, or both. The newest file stands at the target. Each file
+        that cannot go back stays beside it, at a name that cache.findings reports."""
+        moments = {"just before the undo": ("F", {"no target yet": [], "an old target": [b"OLD"]}),
+                   "between the undo's two steps": ("-F", {"an old target": [b"OLD"]}),
+                   "before the undo and between its steps": ("FF", {"no target yet": [b"FOREIGN"],
+                                                                     "an old target": [b"FOREIGN", b"OLD"]})}
+        for moment, (steps, cases) in moments.items():
+            for case, kept in cases.items():
+                with self.subTest(case, moment=moment):
+                    digest, stored = self.stored(f"{case} {moment}".encode())
+                    target = self.target(f"{case} {moment}", self.TARGETS[case])
+                    overwrite = self.foreign(target)
+                    acts = [overwrite if step == "F" else (lambda: None) for step in steps]
+                    with self.at_the_rename(before=self.failing_hash(stored)), \
+                            self.at_the_undo(target, *acts) as ran:
+                        self.assertFalse(self.store.place_object(digest, target))
+                    self.assertEqual(len(ran), len(steps))  # the seam was reached
+                    self.assert_left(target, b"FOREIGN2" if steps == "FF" else b"FOREIGN", kept)
+
+    def test_a_file_kept_by_an_earlier_failed_placement_survives_the_next_failed_one(self) -> None:
+        real = getattr(store, "_fresh", None)
+        for names in ("fresh names", "the next names taken by the kept file"):
+            with self.subTest(names):
+                first, stored = self.stored(f"first {names}".encode())
+                target = self.target(f"kept {names}", b"OLD")
+                with self.at_the_rename(before=self.failing_hash(stored)), \
+                        self.at_the_undo(target, lambda: None, self.foreign(target)):
+                    self.assertFalse(self.store.place_object(first, target))
+                [kept] = self.kept(target)
+                taken: set[str] = set()
+
+                def colliding(near, kind):  # each kind of name once at the kept file's, then fresh
+                    if kind in taken:
+                        return real(near, kind)
+                    taken.add(kind)
+                    return kept
+
+                second, stored = self.stored(f"second {names}".encode())
+                seam = (mock.patch.object(store, "_fresh", colliding, create=True) if names != "fresh names" else
+                        contextlib.nullcontext())
+                with seam, self.at_the_rename(before=self.failing_hash(stored)):
+                    self.assertFalse(self.store.place_object(second, target))
+                self.assert_left(target, b"FOREIGN", [b"OLD"])
+                self.assertEqual(self.kept(target), [kept])
+
+    @contextlib.contextmanager
+    def across_filesystems(self) -> Iterator[None]:
+        """While the block runs, a rename into the recovery folder fails as it does across filesystems (EXDEV)."""
+        real = store._rename2
+
+        def rename2(source, onto, *args, **kwargs):
+            if Path(onto).parent == self.recovery:
+                raise OSError(errno.EXDEV, "Cross-device link")
+            return real(source, onto, *args, **kwargs)
+
+        with mock.patch.object(store, "_rename2", rename2):
+            yield
+
+    def test_a_kept_file_on_another_filesystem_than_the_store_is_copied_to_the_recovery_folder(self) -> None:
+        digest, stored = self.stored(b"cross-device")
+        target = self.target("cross-device", b"OLD")
+        with self.across_filesystems(), self.at_the_rename(before=self.failing_hash(stored)), \
+                self.at_the_undo(target, lambda: None, self.foreign(target)):
+            self.assertFalse(self.store.place_object(digest, target))
+        self.assert_left(target, b"FOREIGN", [b"OLD"])
+
+    def test_a_copy_whose_source_cannot_be_read_never_removes_a_kept_file_at_the_chosen_name(self) -> None:
+        """Across filesystems the recovery copy picks a name that an earlier kept file holds, and the old target
+        cannot be opened. The earlier kept file keeps its bytes, and the new one stays in place, reported."""
+        first, stored = self.stored(b"earlier")
+        target = self.target("collision", b"EARLIER")
+        with self.at_the_rename(before=self.failing_hash(stored)), \
+                self.at_the_undo(target, lambda: None, self.foreign(target)):
+            self.assertFalse(self.store.place_object(first, target))
+        [earlier] = self.kept(target)
+        real_fresh, real_open = store._fresh, open
+        rewrite(target, b"OLD")  # the target the second placement swaps out
+
+        def colliding(near, kind):  # the recovery name of the copy is the earlier kept file's
+            return earlier if kind == "old" else real_fresh(near, kind)
+
+        def opening(path, mode="r", *args, **kwargs):
+            if "r" in mode and Path(path).parent == target.parent:
+                raise PermissionError(errno.EACCES, "Permission denied", str(path))
+            return real_open(path, mode, *args, **kwargs)
+
+        second, stored = self.stored(b"later")
+        with self.across_filesystems(), mock.patch.object(store, "_fresh", colliding), \
+                mock.patch.object(store, "open", opening, create=True), \
+                self.at_the_rename(before=self.failing_hash(stored)), \
+                self.at_the_undo(target, lambda: None, self.foreign(target)):
+            self.assertFalse(self.store.place_object(second, target))
+        self.assertEqual(earlier.read_bytes(), b"EARLIER")
+        [later] = [path for path in self.kept(target) if path != earlier]
+        self.assertEqual((later.parent, later.read_bytes()), (target.parent, b"OLD"))
+
+    def test_a_kept_file_whose_copy_fails_stays_in_place_and_the_stores_cleanup_spares_it(self) -> None:
+        """The copy into the recovery folder cannot be synced, so the kept file stays beside its target, named
+        there in cache.findings. Store.remove_tree, the cleanup that cad-model runs, removes everything else."""
+        digest, stored = self.stored(b"copy fails")
+        target = self.target("copy fails", b"OLD")
+        with self.across_filesystems(), self.at_the_rename(before=self.failing_hash(stored)), \
+                self.at_the_undo(target, lambda: None, self.foreign(target)), \
+                mock.patch.object(store.os, "fsync", side_effect=OSError(errno.EIO, "Input/output error")):
+            self.assertFalse(self.store.place_object(digest, target))
+        self.assert_left(target, b"FOREIGN", [b"OLD"], where=target.parent)
+        self.assertEqual([path.read_bytes() for path in self.recovery.iterdir()] if self.recovery.exists() else [],
+                         [])  # no partial copy
+        (target.parent / "sub").mkdir()
+        (target.parent / "sub" / "other").write_bytes(b"OTHER")
+        [kept] = self.kept(target)
+        self.store.remove_tree(target.parent)
+        self.assertEqual(sorted(path.name for path in target.parent.iterdir()), [kept.name])
+        self.assertEqual(kept.read_bytes(), b"OLD")
+
+    def test_a_recovery_log_that_cannot_be_written_changes_no_outcome_and_loses_no_file(self) -> None:
+        """findings.jsonl is a folder, so the `kept:` line cannot be written. place_object still returns False,
+        or raises the error that was in flight, and the old file is still in the recovery folder."""
+        real = Path.open
+
+        def opening(path, *args, **kwargs):
+            stream = real(path, *args, **kwargs)
+            return FailingClose(stream) if path.name.endswith(".link") else stream
+
+        (self.hw / ".cad" / "cache" / "findings.jsonl").mkdir(parents=True)
+        for outcome in ("a refusal", "a failed close"):
+            with self.subTest(outcome):
+                digest, stored = self.stored(f"log {outcome}".encode())
+                old = f"OLD {outcome}".encode()
+                target = self.target(f"log {outcome}", old)
+                closing = (mock.patch.object(Path, "open", opening) if outcome == "a failed close" else
+                           contextlib.nullcontext())
+                with self.at_the_rename(before=self.failing_hash(stored)), closing, \
+                        self.at_the_undo(target, lambda: None, self.foreign(target)):
+                    if outcome == "a refusal":
+                        self.assertFalse(self.store.place_object(digest, target))
+                    else:
+                        with self.assertRaises(OSError) as raised:
+                            self.store.place_object(digest, target)
+                        self.assertEqual(raised.exception.errno, errno.EIO)  # the close's error, not the log's
+                self.assertEqual(target.read_bytes(), b"FOREIGN")
+                self.assertEqual([path.read_bytes() for path in self.recovery.iterdir()].count(old), 1)
+
+    def test_a_close_that_fails_after_a_mismatch_still_leaves_the_target_as_it_was(self) -> None:
+        real = Path.open
+
+        def opening(path, *args, **kwargs):
+            stream = real(path, *args, **kwargs)
+            return FailingClose(stream) if path.name.endswith(".link") else stream
+
+        for case, old in self.TARGETS.items():
+            with self.subTest(case):
+                digest, stored = self.stored(f"{case} close".encode())
+                target = self.target(f"{case} close", old)
+                before = snapshot(target.parent)
+                with self.at_the_rename(before=self.failing_hash(stored)), \
+                        mock.patch.object(Path, "open", opening), self.assertRaises(OSError):
+                    self.store.place_object(digest, target)
+                self.assertEqual(snapshot(target.parent), before)
+
+    def test_a_close_that_fails_after_a_matching_hash_undoes_the_placement(self) -> None:
+        real = Path.open
+
+        def opening(path, *args, **kwargs):
+            stream = real(path, *args, **kwargs)
+            return FailingClose(stream) if path.name.endswith(".link") else stream
+
+        for case, old in self.TARGETS.items():
+            with self.subTest(case):
+                digest, _ = self.stored(f"{case} matching close".encode())
+                target = self.target(f"{case} matching close", old)
+                before = snapshot(target.parent)
+                with mock.patch.object(Path, "open", opening), self.assertRaises(OSError):
+                    self.store.place_object(digest, target)
+                self.assertEqual(snapshot(target.parent), before)
+
+    def test_without_an_atomic_swap_the_object_is_not_placed_and_the_target_left_as_it_was(self) -> None:
+        unsupported = OSError(errno.EINVAL, "Invalid argument")  # renameat2 on a filesystem without the flags
+        for case, old in self.TARGETS.items():
+            with self.subTest(case):
+                digest, _ = self.stored(f"{case} unsupported".encode())
+                target = self.target(f"{case} unsupported", old)
+                before = snapshot(target.parent)
+                with mock.patch.object(store, "_rename2", side_effect=unsupported, create=True):
+                    self.assertFalse(self.store.place_object(digest, target))
+                self.assertEqual(snapshot(target.parent), before)
 
 
 class Locks(Fixture):

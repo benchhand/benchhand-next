@@ -3495,5 +3495,80 @@ class CrossFilesystemTests(unittest.TestCase):
                 self.assertEqual(build.record.load_layout().verify(hw / "versions" / label), [], label)
 
 
+class KeptFileRecoveryTests(unittest.TestCase):
+    """A reuse whose place_object cannot put a file back (#250). The store keeps that file in its recovery
+    folder, so neither the run's fallback for a failed reuse nor its cleanup removes it. Across filesystems it
+    copies the file there, and when that copy fails, the file stays and the run's cleanup spares it.
+    fixtures/store_seam/sitecustomize.py interleaves a writer that takes no lock into the first placement of a
+    part (build), a manufacturing file (manufacture) or a state in build's states folder."""
+
+    SEAMS = {"same filesystem": {"folders": ["parts", "manufacturing"]},
+             "states, copied across filesystems": {"folders": ["states"], "exdev": True},
+             "states, whose copy fails": {"folders": ["states"], "exdev": True, "fsync_fails": True}}
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory()
+        hw = flat_project(Path(cls.tmp.name), "cadquery")
+        cls.v1 = cls.run_label(hw, "v1", {})
+        cls.hws = {case: hw if case == "same filesystem" else Path(shutil.copytree(hw, hw.with_name(f"hw-{i}")))
+                   for i, case in enumerate(cls.SEAMS)}
+        path = os.pathsep.join(filter(None, (str(FIXTURES / "store_seam"), os.environ.get("PYTHONPATH"))))
+        cls.runs = {case: cls.run_label(cls.hws[case], "v2", {"PYTHONPATH": path,
+                                                              "CAD_TEST_STORE_SEAM": json.dumps(seam)})
+                    for case, seam in cls.SEAMS.items()}
+
+    @staticmethod
+    def run_label(hw: Path, label: str, env: dict[str, str]) -> tuple[subprocess.CompletedProcess[str], dict]:
+        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(CLI), "run", str(hw), "--label", label],
+                              capture_output=True, text=True, check=False, env={**os.environ, **env})
+        return proc, (result_payload(proc.stdout) if proc.stdout.strip() else {})
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        for hw in cls.hws.values():  # a states folder whose kept file the run's cleanup spared
+            for path in cls.kept(hw).values():
+                if path.parent.name.startswith("cad-model-states-"):
+                    shutil.rmtree(path.parent, ignore_errors=True)
+        cls.tmp.cleanup()
+
+    @staticmethod
+    def kept(hw: Path) -> dict[str, Path]:
+        """Each `kept:` line of cache.findings: the folder of its target (parts, manufacturing or states), and
+        its path."""
+        log = hw / ".cad" / "cache" / "findings.jsonl"
+        lines = [json.loads(line)["finding"] for line in log.read_text(encoding="utf-8").splitlines()]
+        found = [re.match(r"kept: (.+?) holds .* onto (.+?) failed", line) for line in lines]
+
+        def folder(target: Path) -> str:
+            if any(part.startswith("cad-model-states-") for part in target.parts):
+                return "states"
+            return "manufacturing" if "manufacturing" in target.parts else "parts"
+
+        return {folder(Path(m.group(2))): Path(m.group(1)) for m in found if m}
+
+    def test_a_file_kept_by_a_failed_reuse_survives_the_fallback_and_the_cleanup_at_its_reported_path(self) -> None:
+        for case, seam in self.SEAMS.items():
+            with self.subTest(case):
+                hw, (proc, result) = self.hws[case], self.runs[case]
+                kept = self.kept(hw)
+                self.assertEqual(sorted(kept), sorted(seam["folders"]))
+                for folder, path in kept.items():
+                    self.assertTrue(path.is_file(), path)  # after the run's fallback and its cleanup
+                    self.assertEqual(path.read_bytes(), f"FOREIGN1 {folder}".encode())
+                    if seam.get("fsync_fails"):  # left where it was, in build's states folder
+                        self.assertTrue(path.parent.name.startswith("cad-model-states-"), path)
+                        self.assertEqual(sorted(p.name for p in path.parent.iterdir()), [path.name])
+                    else:
+                        self.assertEqual(path.parent, hw.resolve() / ".cad" / "cache" / "recovery")
+                self.assertEqual(proc.returncode, 0, proc.stdout[-2000:] + proc.stderr[-3000:])
+                self.assertEqual(result["cache"]["parts"]["built"], 1)  # the part whose reuse failed, built again
+                self.assertEqual(result["cache"]["manufacturing"]["built"],
+                                 1 if "manufacturing" in seam["folders"] else 0)
+                self.assertEqual(sorted(p.name for p in (hw / "versions").iterdir()), ["latest.json", "v1", "v2"])
+                self.assertEqual(build.record.load_layout().verify(hw / "versions" / "v2"), [])
+        self.assertEqual(self.v1[0].returncode, 0, self.v1[0].stderr[-3000:])
+
+
 if __name__ == "__main__":
     unittest.main()
