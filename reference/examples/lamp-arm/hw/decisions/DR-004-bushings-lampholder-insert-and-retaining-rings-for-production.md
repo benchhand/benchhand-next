@@ -1,9 +1,11 @@
-# DR-004: Bushings, lampholder insert and retaining rings for production
+---
+status: accepted
+date: 2026-10-27
+---
 
-- Date: 2026-10-27
-- Status: decided by the user on 2026-10-27. Items without a basis stay open; see Open items.
+# Bushings, lampholder insert and retaining rings for production
 
-## Context
+## Context and Problem Statement
 
 The user decided on 2026-10-27 that the PETG pivot bores in LMP-0001 and LMP-0004 take
 heat-set bushings with toleranced bores instead of printed fits. The pins LMP-0005 to
@@ -29,7 +31,34 @@ The user then reviewed the proposals below and decided, on 2026-10-27:
 3. Keep the scale policy.
 4. Never commit the vendor PDFs to this repository; keep the url, revision and sha256 references.
 
-## Decision
+## Considered Options
+
+* Printed 5.2 mm pivot bores
+* ISO 2795 sintered-bronze sleeve 5 x 8 x 8
+* Heat-set brass bushings, a heat-set lampholder insert and DIN 471 retaining rings
+
+## Decision Outcome
+
+Chosen option: "Heat-set brass bushings, a heat-set lampholder insert and DIN 471 retaining rings", because the user decided on 2026-10-27 that the PETG pivot bores take heat-set bushings with toleranced bores instead of printed fits.
+
+### Consequences
+
+The new seats leave LMP-0001 at 313 g, and the larger socket boss raises LMP-0004 from 58
+to 62 g. The catalogue masses are the modelled envelopes: 2.0 g, 1.9 g and
+6.7 g for LMP-0008 to LMP-0010, since the vendors publish none. The rings use Beneri's
+0.081 g. Each bushing and insert needs a first-article check, because SPIROL's flyer gives
+press-in and mould-in data only. Heat-set three of each into coupons. Then measure the bore,
+the pull-out force and the torque retention. Removing a ring needs external circlip pliers.
+The bushings and the insert cannot be replaced in the field; REQ-007 should say so.
+
+LF646's OD limits widen the insert's diametral embedment in the 11.9/12.0 hole from the
+0.60/0.70 of the nominal OD to 0.48/0.82; the coupon test covers both ends. The pins' general
+Ra 1.6 also applies to the hexagon socket; a broached or eroded socket may not reach it, so the
+first-article report should state the socket's measured roughness.
+
+## Pros and Cons of the Options
+
+### Heat-set brass bushings, a heat-set lampholder insert and DIN 471 retaining rings
 
 **Bushings.** Both PETG pivots take SPIROL knurled brass compression limiters, M4 size, as
 plain bushings. CMPL 4 X 8 EK CL8000 (LMP-0008) goes in the base boss. The headed
@@ -86,7 +115,13 @@ Boolean faces. Fixed joints J-007 to J-012 carry each new part with its host; J-
 carry the three ring occurrences. The three heat-set overlaps are declared in
 `interfaces.yaml` under `limits.heat_set`.
 
-## Procurement records
+## More Information
+
+### Status note
+
+The record's original status line read: decided by the user on 2026-10-27. Items without a basis stay open; see Open items.
+
+### Procurement records
 
 Each `part.yaml` holds the full `procurement` record (drawing architecture §5.4). Each
 specification is cited by `url`, `revision` and `sha256`; the frozen copies are sourcing inputs
@@ -100,7 +135,7 @@ kept outside this repository.
 | LMP-0010 | catalogue | In-saiL QT-M10x12.7-OD12.6 with an M10x1-6H thread; manufacturer part number OPEN until In-saiL confirms the special | In-saiL drawing LF646 rev A, 2013-05-04 |
 | LMP-0011 | standard part | DIN 471 - 5x0.6, spring steel C60S, phosphated and oiled | Beneri DIN 471 datasheet, undated, retrieved 2026-10-27 |
 
-## Tolerances and selections
+### Tolerances and selections
 
 Fits and stack-ups come from `cad-fits` (`fits.py`, `stackup.py`, worst case). Shop
 capability assumed: CNC ±0.05 on size and position ⌀0.1, FDM bureau ±0.2. The user accepted every
@@ -141,7 +176,7 @@ row on 2026-10-27; the last column names where the record applies it.
 | Finishes | Links as machined and deburred, pins passivated, rings phosphated and oiled. The bushings are plain and the insert cleaned | User decision 5; vendor standard finishes | finish notes |
 | Scale | Unchanged: the largest standard scale that fits the smallest allowed sheet | User, 2026-10-27 | sheet policy |
 
-## Edges
+### Edges
 
 The edges follow ISO 13715:2017, which EN ISO 13715:2019 adopts. ISO 13715 §4.2 signs an edge
 size: + permits excess material, a burr on an external edge or a passing on an internal one;
@@ -159,12 +194,12 @@ NO UNDERCUT`.
 | Pin groove, LMP-0005 to LMP-0007 (exception) | −0.02 | +0.06 | DIN 471:2011 §10.3 caps the loaded-side groove radius at 0.1 s, 0.06 for s = 0.6. The groove is only 0.1 deep (d2 4.8 on d1 5), so the general −0.3 would remove the ring's bearing flank; −0.02 keeps its mouth sharp and burr-free. 0.02 is the smallest size in the ISO 13715:2000 Annex B table, which was informative and is not in the 2017 edition |
 | Bought: LMP-0008 to LMP-0011 | as supplied | as supplied | The vendor sheet states that edges are as supplied to the specification; In-saiL LF646 note 5 requires its insert free of burrs and sharp edges |
 
-## Surface texture
+### Surface texture
 
 Each value is an upper limit of Ra to ISO 21920-1:2021. Under ISO 21920 the default
 acceptance rule is that no measured value exceeds the limit; the 16 % rule applies only where
 the indication asks for it. The general indication beside the title block covers every surface without its own
-symbol (§9.1.2), and the basic symbol in parentheses after it marks that some surfaces carry
+symbol (§9.1.2). The basic symbol in parentheses after it marks that some surfaces carry
 their own. A feature's own symbol is indicated together with its size callout. In the ASME
 regime the symbol is ASME Y14.36-2018's, with the same value in micrometres.
 
@@ -178,7 +213,7 @@ regime the symbol is ASME Y14.36-2018's, with the same value in micrometres.
 | PETG bushing seats and insert hole | no own requirement | Retention comes from knurl embedment in the recommended hole (STK-102, STK-103). The SPIROL flyer 01/24 and In-saiL LF646 state no hole finish, so the seats fall under the open general texture |
 | Bought: LMP-0008 to LMP-0011 | as supplied | The vendor sheet states that texture is as supplied to the specification; LF646 gives its insert Ra 1.6 |
 
-## Standard parts
+### Standard parts
 
 A catalogue item whose `procurement.standard` names a product standard of a recognised body (ISO,
 IEC, EN, DIN, BS, JIS, ANSI, ASME, SAE, NAS or MS) is ordered by that standard's designation. Any
@@ -187,22 +222,7 @@ source that conforms to the standard can supply it, so the orderability check
 checks that `designation` states the standard's designation, here `DIN 471 - 5x0.6`. LMP-0011 is
 such a part. LMP-0010 stays a vendor item: its M10x1 thread is a special only In-saiL can confirm.
 
-## Consequences
-
-The new seats leave LMP-0001 at 313 g, and the larger socket boss raises LMP-0004 from 58
-to 62 g. The catalogue masses are the modelled envelopes: 2.0 g, 1.9 g and
-6.7 g for LMP-0008 to LMP-0010, since the vendors publish none. The rings use Beneri's
-0.081 g. Each bushing and insert needs a first-article check, because SPIROL's flyer gives
-press-in and mould-in data only. Heat-set three of each into coupons. Then measure the bore,
-the pull-out force and the torque retention. Removing a ring needs external circlip pliers.
-The bushings and the insert cannot be replaced in the field; REQ-007 should say so.
-
-LF646's OD limits widen the insert's diametral embedment in the 11.9/12.0 hole from the
-0.60/0.70 of the nominal OD to 0.48/0.82; the coupon test covers both ends. The pins' general
-Ra 1.6 also applies to the hexagon socket; a broached or eroded socket may not reach it, so the
-first-article report should state the socket's measured roughness.
-
-## Open items
+### Open items
 
 - LMP-0010 manufacturer part number: In-saiL must confirm the M10x1-6H special
   (`procurement.open`, a release blocker).

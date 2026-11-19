@@ -1,9 +1,13 @@
-# DR-003: Press-fit pivot pins
+---
+status: accepted
+date: 2026-10-26
+superseded-by:
+- DR-004
+---
 
-- Date: 2026-10-26
-- Status: accepted; the J-004 and J-006 running fits in printed 5.2 mm bores are superseded by DR-004
+# Press-fit pivot pins
 
-## Context
+## Context and Problem Statement
 
 Fixed joints J-004, J-005 and J-006 each weld an M5 pin to one part, and the
 `cad-model` connection check requires the two parts of a fixed joint to touch.
@@ -12,7 +16,30 @@ pin had clearance to every part: 0.0125 mm radial in the links and 0.108 mm in
 the PETG parts. J-004 fixed LMP-0005 to the base, which had the largest gap. The
 pivot interfaces gave no fit class.
 
-## Decision
+## Considered Options
+
+* Keep 5 f7 pins in clearance bores
+* Press each pin into the aluminium link on its head side
+
+## Decision Outcome
+
+Chosen option: "Press each pin into the aluminium link on its head side", because each pin had clearance to every part, and the connection check needs the two parts of a fixed joint to touch.
+
+### Consequences
+
+Catalogue shoulder pins no longer fit. Buy the pins made to drawing. The press
+bands raise the LMP-0005 mass to 5.9 g and the LMP-0006 mass to 5.1 g (DR-002).
+Fitting or removing a pin needs an arbor press or a pin punch, so the REQ-007
+demonstration must include one. The circlips stay. At J-002 and J-003 they back
+up the press fit axially. At J-001 the circlip stops the lower link from lifting
+off the base. At its limits, H7/p6 runs from 0 to 0.020 mm interference. The
+press force, the hoop stress in the hub and cheeks, and pin retention under the
+REQ-004 load are not yet analysed. Revisit this decision if that analysis shows
+pin creep or link yield at maximum interference.
+
+## Pros and Cons of the Options
+
+### Press each pin into the aluminium link on its head side
 
 Press each pin into the aluminium link on its head side. The next part turns on
 the pin:
@@ -35,14 +62,8 @@ The three press pairs are declared in `interfaces.yaml` as `press_fit` entries;
 `cad_model.py check` reads them and automatically allows measured interference.
 `LMP-0003:LMP-0006` is a running fit, not a press pair.
 
-## Consequences
+## More Information
 
-Catalogue shoulder pins no longer fit. Buy the pins made to drawing. The press
-bands raise the LMP-0005 mass to 5.9 g and the LMP-0006 mass to 5.1 g (DR-002).
-Fitting or removing a pin needs an arbor press or a pin punch, so the REQ-007
-demonstration must include one. The circlips stay. At J-002 and J-003 they back
-up the press fit axially. At J-001 the circlip stops the lower link from lifting
-off the base. At its limits, H7/p6 runs from 0 to 0.020 mm interference. The
-press force, the hoop stress in the hub and cheeks, and pin retention under the
-REQ-004 load are not yet analysed. Revisit this decision if that analysis shows
-pin creep or link yield at maximum interference.
+### Status note
+
+The record's original status line read: accepted; the J-004 and J-006 running fits in printed 5.2 mm bores are superseded by DR-004

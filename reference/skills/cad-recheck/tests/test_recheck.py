@@ -32,6 +32,7 @@ ACCEPTANCE = SKILL.parent / "cad-record" / "tests" / "fixtures" / "acceptance.py
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import load_module as load  # noqa: E402
+from decision_fixture import write_test_decision  # noqa: E402
 
 
 stamp_module = load("cad_recheck_stamp", STAMP)
@@ -179,11 +180,10 @@ class RecheckHookTests(unittest.TestCase):
         return checks
 
     def provisional_gate(self, flow_stage: str, recheck_from: str = "ground") -> None:
-        """The state after a provisional gate: a PROVISIONAL decision and flow.stage advanced to `flow_stage`."""
+        """The state after a provisional gate: a proposed (provisional) decision and flow.stage advanced to `flow_stage`."""
         self.stage_product(flow_stage, recheck_from)
-        decision = self.root / "hw" / "decisions" / "DR-001.md"
-        decision.parent.mkdir(parents=True, exist_ok=True)
-        decision.write_text("Status: PROVISIONAL\n\nTemporary until the full check: v1 passed fast checks 1-4.\n", encoding="utf-8")
+        write_test_decision(self.root / "hw", "DR-001", status="proposed",
+                            context="Temporary until the full check: v1 passed fast checks 1-4.")
         self.git("add", "hw")
 
     def stamp_gate(self, stage: str, *, outcome: str = "pass", passed: bool = True) -> subprocess.CompletedProcess[str]:

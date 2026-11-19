@@ -25,6 +25,9 @@ from typing import Any
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "scripts"))
+from decision_fixture import write_test_decision  # noqa: E402
+
 SKILL = Path(__file__).resolve().parents[2]
 SCRIPTS = SKILL / "scripts"
 LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
@@ -321,9 +324,7 @@ def write_record(hw: Path, documents: dict[str, Any]) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(yaml.safe_dump(document, sort_keys=False, allow_unicode=True), encoding="utf-8")
     for ident in decisions:
-        path = hw / "decisions" / f"{ident}.md"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"# {ident}\n\nTST fixture decision, approved.\n", encoding="utf-8")
+        write_test_decision(hw, ident, context="TST fixture decision, approved.")
     for rel, data in sources.items():
         path = hw / rel
         path.parent.mkdir(parents=True, exist_ok=True)

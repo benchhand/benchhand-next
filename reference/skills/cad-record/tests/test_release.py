@@ -27,6 +27,9 @@ from unittest import mock
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from decision_fixture import decision_path, write_test_decision  # noqa: E402
+
 SKILL = Path(__file__).resolve().parents[1]
 SCRIPTS = SKILL / "scripts"
 RELEASE = SCRIPTS / "release.py"
@@ -183,7 +186,7 @@ def frozen_lamp(hw: Path, *, before_build: Callable[[Path], None] | None = None,
     if anchor:
         frozen["evidence_sha256"] = acceptance.freeze_anchor(hw, label)
     edit_yaml(hw / "product.yaml", lambda data: data["flow"].update(stage="release", frozen=frozen))
-    write(hw / "decisions" / "DR-005.md", f"# DR-005 Release A\n\nApproved: release {label} as revision A.\n")
+    write_test_decision(hw, "DR-005", context=f"Approved: release {label} as revision A.")
     for part in sorted((hw / "versions" / label / "record" / "parts").glob("*/part.yaml")):
         pn = part.parent.name
         if "drawing" in yaml.safe_load(part.read_text(encoding="utf-8")) and pn not in skip_bundles:
@@ -417,7 +420,7 @@ class Pruning(ReleaseCase):
     def test_yes_refuses_a_digest_that_a_fresh_plan_no_longer_has(self) -> None:
         hw = self.released()
         digest = prune.plan(hw, "A", "v3")["digest"]
-        write(hw / "decisions" / "DR-006.md", "# DR-006 Cost-down baseline\n\nKeep v2 as the baseline.\n")
+        write_test_decision(hw, "DR-006", context="Keep v2 as the baseline.")
         before = tree(hw)
         code, report = self.cli(hw, "--yes", digest)
         self.assertEqual((code, report["status"], report["pruning"]["status"]), (1, "prune_refused", "refused"))
@@ -507,7 +510,7 @@ class Pruning(ReleaseCase):
         digest = prune.plan(hw, "A", "v3")["digest"]
         self.interrupt_after(3, hw, digest)  # every v1 folder has left hw/
         self.assertGone(hw, SUPERSEDED[:3])
-        write(hw / "decisions" / "DR-006.md", "# DR-006 Gate\n\nThe PARTS gate approved v1.\n")
+        write_test_decision(hw, "DR-006", context="The PARTS gate approved v1.")
         result = prune.after_release(hw, "A", "v3", digest)
         self.assertEqual((result["status"], sorted(result["restored"])), ("refused", sorted(SUPERSEDED[:3])))
         self.assertEqual(result["plan"]["keep"]["v1"], ["named by DR-006"])
@@ -541,7 +544,7 @@ class Pruning(ReleaseCase):
 
     def test_plan_keeps_frozen_change_baseline_and_decision_milestones(self) -> None:
         hw = self.released(seal=False)
-        write(hw / "decisions" / "DR-006.md", "# DR-006 Gate\n\nThe PARTS gate approved v1.\n")
+        write_test_decision(hw, "DR-006", context="The PARTS gate approved v1.")
         edit_yaml(hw / "product.yaml", lambda data: data["flow"].update(
             change={"decision": "DR-006", "baseline_version": "v2", "affected_parts": ["LMP-0001"]}))
         plan = prune.plan(hw, "A", "v3")
@@ -550,6 +553,19 @@ class Pruning(ReleaseCase):
         self.assertEqual(plan["keep"]["v2"], ["baseline of product.yaml flow.change"])
         for reason in ("frozen in product.yaml flow.frozen", "named by DR-005", "latest: versions/latest.json names it"):
             self.assertIn(reason, plan["keep"]["v3"])
+
+    def test_a_stray_decision_file_that_names_a_version_still_keeps_it(self) -> None:
+        hw = self.released(seal=False)
+        removable = prune.plan(hw, "A", "v3")["prune"]
+        self.assertIn("v1", removable, "v1 is removable before the stray file")
+        for name in ("DR-007-Bad_Name.md", "DR-007.md"):
+            with self.subTest(name):
+                stray = hw / "decisions" / name
+                write(stray, "Status: APPROVED\n\nThe PARTS gate approved v1.\n")
+                plan = prune.plan(hw, "A", "v3")
+                self.assertEqual(plan["prune"], [v for v in removable if v != "v1"])
+                self.assertEqual(plan["keep"]["v1"], ["named by DR-007"])
+                stray.unlink()
 
     def test_evidence_only_the_ledger_cites_keeps_its_version(self) -> None:
         hw = self.released()
@@ -718,29 +734,39 @@ class Refusal(ReleaseCase):
 
     def test_a_missing_decision_refuses(self) -> None:
         hw = self.project()
-        self.refused(hw, "hw/decisions/DR-099.md", "decision", "DR-099 does not exist", decision="DR-099")
+        self.refused(hw, "hw/decisions", "decision", "DR-099 has no record: expected hw/decisions/DR-099-<slug>.md",
+                     decision="DR-099")
 
-    def test_a_provisional_or_void_decision_never_approves_a_release(self) -> None:
+    def test_only_an_accepted_decision_approves_a_release(self) -> None:
         hw = self.project()
-        for status in ("PROVISIONAL", "VOID"):
+        for status in ("proposed", "rejected", "deprecated"):
             with self.subTest(status=status):
-                write(hw / "decisions" / "DR-006.md", f"Status: {status}\n\n# DR-006 Release A\n")
-                self.refused(hw, "hw/decisions/DR-006.md", "decision", f"DR-006 is {status}, not the user's approval",
-                             decision="DR-006")
-        write(hw / "decisions" / "DR-006.md", "Status: approved\n\n# DR-006 Release A\n")
-        self.refused(hw, "hw/decisions/DR-006.md", "decision", "unknown gate status 'approved'", decision="DR-006")
-        write(hw / "decisions" / "DR-006.md", "Status: APPROVED\n\n# DR-006 Release A\n\nThe user approved v1 as A.\n")
+                write_test_decision(hw, "DR-006", status=status)
+                self.refused(hw, "hw/decisions/DR-006-test-decision-dr-006.md", "decision",
+                             f"DR-006 has status {status}, not the user's approval (accepted)", decision="DR-006")
+        write_test_decision(hw, "DR-006", context="The user approved v1 as A.")
         result, report = self.release(hw, decision="DR-006")
         self.assertEqual((result, report["status"]), (0, "released"), report.get("findings"))
 
-    def test_a_freeze_on_a_provisional_decision_refuses_the_release(self) -> None:
+    def test_a_release_decision_the_reader_refuses_or_in_the_old_form_is_no_approval(self) -> None:
         hw = self.project()
-        record = hw / "decisions" / "DR-004.md"
-        write(record, "Status: PROVISIONAL\n\n" + record.read_text(encoding="utf-8"))
+        record = write_test_decision(hw, "DR-006")  # complete in every section but the status below
+        record.write_text(record.read_text(encoding="utf-8").replace("status: accepted", "status: approved", 1),
+                          encoding="utf-8")
+        self.refused(hw, f"hw/decisions/{record.name}", "decision", "status 'approved'", decision="DR-006")
+        record.unlink()
+        write(hw / "decisions" / "DR-006.md", "Status: APPROVED\n\n# DR-006 Release A\n")
+        self.refused(hw, "hw/decisions", "decision", "DR-006 has no record: expected hw/decisions/DR-006-<slug>.md",
+                     decision="DR-006")
+
+    def test_a_freeze_on_a_proposed_decision_refuses_the_release(self) -> None:
+        hw = self.project()
+        record = decision_path(hw, "DR-004")
+        write(record, record.read_text(encoding="utf-8").replace("status: accepted", "status: proposed", 1))
         before = tree(hw)
         result, report = self.release(hw)
         self.assertEqual((result, report["status"]), (1, "refused"))
-        self.assertTrue(any("flow/frozen/decision DR-004 is PROVISIONAL" in item["message"]
+        self.assertTrue(any("flow/frozen/decision DR-004 has status proposed" in item["message"]
                             for item in report["findings"]), json.dumps(report["findings"], indent=1))
         self.assertEqual(tree(hw), before)
 

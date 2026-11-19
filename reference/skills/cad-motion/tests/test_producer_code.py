@@ -95,6 +95,11 @@ class EditTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.tmp = tempfile.TemporaryDirectory()
         tree = Path(shutil.copytree(SKILLS, Path(cls.tmp.name) / "skills", ignore=shutil.ignore_patterns("__pycache__")))
+        # the cad-record fixture the probe loads imports the repository's test helpers from scripts/ beside skills/
+        helpers = Path(cls.tmp.name) / "scripts"
+        helpers.mkdir()
+        for name in ("modload.py", "decision_fixture.py"):
+            shutil.copyfile(SKILLS.parent / "scripts" / name, helpers / name)
         cls.before, cls.again = probe(tree), probe(tree)
         cls.after: dict[str, dict[str, str]] = {}
         for label, (how, relative, _) in EDITS.items():

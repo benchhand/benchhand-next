@@ -26,6 +26,7 @@ SKILL = HERE.parent
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from decision_fixture import decision_path, write_test_decision  # noqa: E402
 from modload import load_module as load  # noqa: E402
 
 
@@ -261,6 +262,20 @@ class Normalization(unittest.TestCase):
                 self.assertIn(code, codes, [p.message for p in record.problems])
                 severity = {p.code: p.severity for p in record.problems}[code]
                 self.assertEqual(severity, "warning" if code == "intent.coverage" else "error")
+
+    def test_a_decision_the_layout_cannot_resolve_is_a_reference_problem_not_a_crash(self) -> None:
+        for label, ident, extra in (("two files with one id", "DR-009", "DR-009-second.md"),
+                                    ("an id that is not DR-###", "DR-9", None)):
+            with self.subTest(label):
+                documents = fx.tst_record()
+                documents["parts/TST-0001/part.yaml"]["intent"]["route"][0]["orientation"].update(decision=ident)
+                hw = fx.write_record(temp_hw(self), documents)
+                if extra is not None:
+                    write_test_decision(hw, "DR-009")
+                    shutil.copyfile(decision_path(hw, "DR-009"), hw / "decisions" / extra)
+                record = mi.load_record(hw)
+                messages = [p.message for p in record.problems if p.code == "intent.reference"]
+                self.assertTrue(any(ident in message for message in messages), messages)
 
     def test_a_load_direction_within_the_unit_tolerance_is_accepted(self) -> None:
         for direction in ([0, 0, -1], [0.6, 0.0, -0.8], [1 + 5e-7, 0, 0]):

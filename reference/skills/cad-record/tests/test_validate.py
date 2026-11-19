@@ -21,6 +21,7 @@ import yaml
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import result_payload  # noqa: E402
+from decision_fixture import decision_path, write_test_decision  # noqa: E402
 
 SKILL = Path(__file__).resolve().parents[1]
 CONCEPT = SKILL.parent / "cad-concept"
@@ -126,8 +127,7 @@ class ValidateProject(unittest.TestCase):
         product.write_text(product.read_text(encoding="utf-8").replace("stage: layout", "stage: design_freeze")
                             .replace("  recheck_from: ground", "  recheck_from: ground\n  frozen:\n    version: v1\n    manifest_sha256: '" + "0" * 64 + "'\n    decision: DR-001"),
                             encoding="utf-8")
-        (project / "hw" / "decisions").mkdir()
-        (project / "hw" / "decisions" / "DR-001.md").write_text("# DR-001\n", encoding="utf-8")
+        write_test_decision(project / "hw", "DR-001")
         result = subprocess.run([sys.executable, str(VALIDATOR), str(project)], capture_output=True,
                                 text=True, timeout=60)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
@@ -344,7 +344,7 @@ class ValidateProject(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         result, report = self.validate()
         self.assertEqual(result.returncode, 1)
-        self.assertIn("decision DR-999 does not exist", json.dumps(report["findings"]))
+        self.assertIn("decision DR-999 has no record", json.dumps(report["findings"]))
 
     def test_validates_optional_concept_handoff(self) -> None:
         source = CONCEPT / "assets" / "examples" / "lamp-arm.scene.json"
@@ -374,7 +374,7 @@ class ValidateProject(unittest.TestCase):
         shutil.copy2(VALIDATOR, validator_copy)
         for sibling in ("assembly_data.py", "assembly_operations.py", "design_rules.py", "layout.py",
                         "manufacturing_intent.py", "evidence.py", "evidence_paths.py", "impact.py", "selection.py",
-                        "schema_registry.py", "yaml_loader.py", "emit.py"):
+                        "schema_registry.py", "yaml_loader.py", "emit.py", "decision_records.py"):
             shutil.copy2(VALIDATOR.with_name(sibling), validator_copy.with_name(sibling))
         shutil.copytree(SKILL / "schemas", self.project / "skill" / "schemas")
         shutil.copy2(SKILL / "layout.json", self.project / "skill" / "layout.json")
@@ -396,9 +396,9 @@ class ValidateProject(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         return [item["message"] for item in report["findings"]]
 
-    def anchor_on(self, decision: str, text: str, change: bool = False) -> list[str]:
+    def anchor_on(self, decision: str, status: str | None, change: bool = False) -> list[str]:
         """The flow decision messages for the example frozen at an unbuilt v1 by `decision` (or with an
-        open change it approves), its record written as `text`."""
+        open change it approves), its record written with MADR `status` (None: the record stays as it is)."""
         path = self.hw / "product.yaml"
         product = yaml.safe_load(path.read_text(encoding="utf-8"))
         product["flow"].update(stage="design_freeze", frozen={"version": "v1", "manifest_sha256": "0" * 64,
@@ -408,26 +408,56 @@ class ValidateProject(unittest.TestCase):
         else:
             product["flow"]["frozen"]["decision"] = decision
         path.write_text(yaml.safe_dump(product, sort_keys=False), encoding="utf-8")
-        (self.hw / "decisions" / f"{decision}.md").write_text(text, encoding="utf-8")
+        if status is not None:
+            write_test_decision(self.hw, decision, status=status)
         return [message for message in self.messages() if message.startswith("flow/") and "/decision " in message]
 
     def test_only_the_users_approval_freezes_a_version_through_a_provisional_and_void_cycle(self) -> None:
-        self.assertEqual(self.anchor_on("DR-005", "Status: PROVISIONAL\n\n# DR-005 LAYOUT freeze, provisional\n"),
-                         ["flow/frozen/decision DR-005 is PROVISIONAL, not the user's approval; only the user's "
-                          "approval freezes a version"])
-        self.assertEqual(self.anchor_on("DR-006", "Status: VOID\n\n# DR-006 VOID: v1 full sweep failed\n\n"
-                                                  "Supersedes DR-005.\n"),
-                         ["flow/frozen/decision DR-006 is VOID, not the user's approval; only the user's approval "
-                          "freezes a version"])
-        self.assertIn("unknown gate status 'approved'", self.anchor_on("DR-007", "Status: approved\n")[0])
-        self.assertEqual(self.anchor_on("DR-008", "Status: APPROVED\n\n# DR-008 LAYOUT freeze\n\nThe user approved v1.\n"), [])
-        plain = (self.hw / "decisions" / "DR-004.md").read_text(encoding="utf-8")
-        self.assertEqual(self.anchor_on("DR-004", plain), [], "a decision without a status line is a plain decision")
+        for ident, status in (("DR-005", "proposed"), ("DR-006", "rejected"), ("DR-007", "deprecated")):
+            with self.subTest(status):
+                self.assertEqual(self.anchor_on(ident, status),
+                                 [f"flow/frozen/decision {ident} has status {status}, not the user's approval "
+                                  "(accepted); only the user's approval freezes a version"])
+        self.assertEqual(self.anchor_on("DR-008", "accepted"), [])
+        self.assertEqual(self.anchor_on("DR-004", None), [], "the example's own record is accepted")
+
+    def test_a_decision_the_reader_refuses_never_approves_and_names_why(self) -> None:
+        record = write_test_decision(self.hw, "DR-009")  # complete in every section but the status below
+        record.write_text(record.read_text(encoding="utf-8").replace("status: accepted", "status: approved", 1),
+                          encoding="utf-8")
+        [message] = self.anchor_on("DR-009", None)
+        self.assertTrue(message.startswith("flow/frozen/decision DR-009 is not a valid MADR record: "), message)
+        self.assertIn(record.name, message)
+        self.assertIn("status 'approved'", message)
+
+    def test_conflicting_statuses_in_one_record_never_approve(self) -> None:
+        record = write_test_decision(self.hw, "DR-009")
+        record.write_text(record.read_text(encoding="utf-8").replace("status: accepted", "status: rejected\nstatus: accepted", 1),
+                          encoding="utf-8")
+        [message] = self.anchor_on("DR-009", None)
+        self.assertTrue(message.startswith("flow/frozen/decision DR-009 is not a valid MADR record: "), message)
+        self.assertIn("status", message)
+        from modload import load_module  # noqa: PLC0415 - used by this test alone
+        validate = load_module("cad_record_validate", SKILL / "scripts" / "validate.py")
+        self.assertFalse(validate.decision_approves(self.hw, "DR-009"))
+
+    def test_a_collection_as_a_front_matter_key_is_a_finding_not_a_crash(self) -> None:
+        record = write_test_decision(self.hw, "DR-009")
+        record.write_text(record.read_text(encoding="utf-8").replace("status: accepted", "status: accepted\n? [a, b]\n: x", 1),
+                          encoding="utf-8")
+        [message] = self.anchor_on("DR-009", None)
+        self.assertTrue(message.startswith("flow/frozen/decision DR-009 is not a valid MADR record: "), message)
+        self.assertIn(record.name, message)
+
+    def test_an_old_form_decision_file_is_no_record(self) -> None:
+        (self.hw / "decisions" / "DR-009.md").write_text("Status: APPROVED\n\n# DR-009 Gate\n", encoding="utf-8")
+        self.assertEqual(self.anchor_on("DR-009", None),
+                         ["flow/frozen/decision DR-009 has no record: expected hw/decisions/DR-009-<slug>.md"])
 
     def test_a_provisional_decision_never_opens_an_engineering_change(self) -> None:
-        self.assertEqual(self.anchor_on("DR-005", "Status: PROVISIONAL\n\n# DR-005 Cost-down change\n", change=True),
-                         ["flow/change/decision DR-005 is PROVISIONAL, not the user's approval; only the user's "
-                          "approval opens an engineering change"])
+        self.assertEqual(self.anchor_on("DR-005", "proposed", change=True),
+                         ["flow/change/decision DR-005 has status proposed, not the user's approval (accepted); "
+                          "only the user's approval opens an engineering change"])
 
     def test_a_bare_pn_placed_three_times_is_an_ambiguous_joint_endpoint(self) -> None:
         self.edit_assembly('child: "@ring-elbow"', "child: LMP-0011")
@@ -698,7 +728,7 @@ class RecordVersion(unittest.TestCase):
         code, findings = self.validate()
         messages = json.dumps(findings)
         self.assertIn("record.version_unsupported", messages)
-        self.assertIn("decision DR-999 does not exist", messages)
+        self.assertIn("decision DR-999 has no record", messages)
 
 
 class LedgerEvidence(unittest.TestCase):

@@ -40,6 +40,7 @@ HERE = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import load_module as load  # noqa: E402
+from decision_fixture import write_test_decision  # noqa: E402
 
 
 acceptance = load("cad_record_acceptance_fixtures", HERE / "fixtures" / "acceptance.py")
@@ -655,7 +656,7 @@ class AcceptanceDigest(unittest.TestCase):
         inventory = self.inventory()
         self.assertEqual(set(inventory), {"hw/verification.csv", "hw/manufacturing/sources/tst-sheet.pdf"})
         digest = evidence.acceptance_digest(inventory)
-        (self.hw / "decisions" / "DR-001.md").write_text("Status: APPROVED\n\n# changed\n", encoding="utf-8")
+        write_test_decision(self.hw, "DR-001", context="changed")
         product = self.hw / "product.yaml"
         product.write_text(product.read_text(encoding="utf-8").replace("stage: parts", "stage: detail"), encoding="utf-8")
         self.assertEqual(evidence.acceptance_digest(self.inventory()), digest)

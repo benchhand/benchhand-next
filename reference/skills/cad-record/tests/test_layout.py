@@ -141,6 +141,37 @@ class LayoutData(TempProject):
             with self.subTest(path=path):
                 self.assertIsNone(layout.classify(path))
 
+    def test_decision_files_are_slugged_madr_records_and_the_index(self) -> None:
+        for rel in ("DR-004-bushings-and-rings.md", "index.md"):
+            with self.subTest(rel):
+                match = layout.classify(f"hw/decisions/{rel}")
+                self.assertIsNotNone(match)
+                self.assertEqual(match.entry.id, "record.decision_index" if rel == "index.md" else "record.decision")
+        for rel in ("DR-001.md", "DR-001-Upper.md", "DR-001-.md", "DR-1-x.md", "DR-1000-x.md", "DR-001-x/y.md",
+                    "notes.md"):
+            with self.subTest(rel):
+                self.assertIsNone(layout.classify(f"hw/decisions/{rel}"))
+
+    def test_decision_file_finds_the_slugged_file_of_an_id(self) -> None:
+        decisions = self.hw / "decisions"
+        write(decisions / "DR-001.md")
+        write(decisions / "DR-002-press-fit-pins.md")
+        write(decisions / "DR-0021-other.md")
+        self.assertEqual(layout.decision_file(self.hw, "DR-002"), decisions / "DR-002-press-fit-pins.md")
+        for ident in ("DR-001", "DR-003"):
+            with self.subTest(ident):
+                self.assertIsNone(layout.decision_file(self.hw, ident))
+        self.assertEqual(layout.decision_files(self.hw), [decisions / "DR-002-press-fit-pins.md"])
+
+    def test_decision_file_refuses_a_bad_id_and_two_files_with_one_id(self) -> None:
+        write(self.hw / "decisions" / "DR-001-one.md")
+        write(self.hw / "decisions" / "DR-001-also.md")
+        for ident in ("DR-1", "dr-001", "DR-001-also", "../DR-001"):
+            with self.subTest(ident), self.assertRaises(layout.LayoutError):
+                layout.decision_file(self.hw, ident)
+        with self.assertRaisesRegex(layout.LayoutError, "DR-001"):
+            layout.decision_file(self.hw, "DR-001")
+
     def test_resolvers_build_paths_and_refuse_bad_tokens(self) -> None:
         self.assertEqual(layout.version_dir(self.hw, "v3"), self.hw / "versions" / "v3")
         self.assertEqual(layout.manufacturing_dir(self.hw, "v3", "LMP-0001"),
@@ -713,7 +744,8 @@ class ValidatorLayout(TempProject):
         messages = [item["message"] for item in report["findings"]]
         self.assertEqual(code, 1)
         for expected in ("flow/frozen/manifest_sha256 is not the sha256 of versions/v1/manifest.json",
-                         "flow/change/decision DR-009 does not exist", "flow/change/baseline_version v2 is not the frozen",
+                         "flow/change/decision DR-009 has no record: expected hw/decisions/DR-009-<slug>.md",
+                         "flow/change/baseline_version v2 is not the frozen",
                          "flow/change/affected_parts: LMP-0099 has no parts/LMP-0099/part.yaml"):
             self.assertTrue(any(expected in m for m in messages), (expected, messages))
 

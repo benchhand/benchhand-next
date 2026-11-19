@@ -85,7 +85,7 @@ PIN = {
                     "specification": {"reference": "Acme DP datasheet", "revision": "C", "artifact": "parts/TST-0002/sources/dp.pdf",
                                       "sha256": hashlib.sha256(DATASHEET).hexdigest()},
                     "approved_sources": [{"name": "Acme", "part_number": "DP-5-20"}],
-                    "qualification_evidence": "decisions/DR-001.md", "certificates": ["EN 10204 3.1"]},
+                    "qualification_evidence": "decisions/DR-001-test-decision-dr-001.md", "certificates": ["EN 10204 3.1"]},
     "drawing": {"type": "vendor_specification"},
 }
 INTERFACES = {"interfaces": [{
@@ -108,6 +108,7 @@ REQUIREMENTS = {"requirements": [{"id": "REQ-001", "text": "Pin fits", "rational
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import load_module as _load, result_payload  # noqa: E402
+from decision_fixture import write_test_decision  # noqa: E402
 
 
 fx = _load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures" / "manufacturing_intent.py")
@@ -144,8 +145,7 @@ class DrawingRecordAdditions(unittest.TestCase):
         self.bom_edit: Callable[[list[dict[str, str]]], None] = lambda rows: None
 
     def write(self) -> None:
-        (self.hw / "decisions").mkdir(parents=True, exist_ok=True)
-        (self.hw / "decisions" / "DR-001.md").write_text("# DR-001\n", encoding="utf-8")
+        write_test_decision(self.hw, "DR-001")
         (self.hw / "parts" / "TST-0002" / "sources").mkdir(parents=True, exist_ok=True)
         (self.hw / "parts" / "TST-0002" / "sources" / "dp.pdf").write_bytes(DATASHEET)
         # Record version 2 (fx.current_documents): the drawing, procurement and fit additions read the same in both

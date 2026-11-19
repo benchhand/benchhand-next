@@ -190,9 +190,10 @@ class Retention(LampRecord):
         self.joint("J-004", torque="transmitted", torque_path={"type": "press_fit", "decision": "DR-099"})
         self.fit(0, "press_fit", axial_retainer={"type": "press_fit", "decision": "DR-098"})
         messages = [item["message"] for item in validate.blocking(self.findings())]
-        self.assertIn("J-004 torque_path/decision DR-099 does not exist at decisions/DR-099.md", messages)
-        self.assertIn("interfaces/0/limits/press_fit/axial_retainer/decision DR-098 does not exist at "
-                      "decisions/DR-098.md", messages)
+        self.assertIn("J-004 torque_path/decision DR-099 has no record: expected hw/decisions/DR-099-<slug>.md",
+                      messages)
+        self.assertIn("interfaces/0/limits/press_fit/axial_retainer/decision DR-098 has no record: expected "
+                      "hw/decisions/DR-098-<slug>.md", messages)
 
     def test_a_revolute_declared_transmitted_starts_a_drive_train(self) -> None:
         self.stage("parts")

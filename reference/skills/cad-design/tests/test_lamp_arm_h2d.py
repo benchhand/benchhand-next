@@ -118,7 +118,8 @@ class H2dProfileTests(unittest.TestCase):
         self.assertEqual(approvals["petg"]["status"], "approved")
         decision = approvals["petg"]["source"]["decision"]
         self.assertEqual(decision, "DR-005")
-        self.assertIn(decision, {path.stem for path in (HW / "decisions").iterdir()})
+        records = [path for path in (HW / "decisions").iterdir() if path.name.startswith(f"{decision}-")]
+        self.assertEqual(len(records), 1, f"{decision} is one MADR record file")
         self.assertIn("petg", self.record.materials)
 
     def test_the_printed_parts_name_petg_as_their_material_profile(self) -> None:

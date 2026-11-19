@@ -24,6 +24,7 @@ SCRIPTS = HERE.parents[1] / "scripts"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "scripts"))
 from modload import load_module as _load  # noqa: E402
+from decision_fixture import write_test_decision  # noqa: E402
 
 
 fx = _load("cad_record_mi_fixtures", HERE / "manufacturing_intent.py")
@@ -233,11 +234,9 @@ def write_ledger(hw: Path, entries: list[dict[str, Any]], dispositions: list[dic
                                                            encoding="utf-8")
 
 
-def decision(hw: Path, ident: str, status: str | None = None) -> None:
-    path = hw / "decisions" / f"{ident}.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    head = f"Status: {status}\n\n" if status else ""
-    path.write_text(f"{head}# {ident} TST fixture decision\n\nApproved by the TST user.\n", encoding="utf-8")
+def decision(hw: Path, ident: str, status: str = "accepted") -> None:
+    write_test_decision(hw, ident, status=status, title=f"{ident} TST fixture decision",
+                        context="Approved by the TST user.")
 
 
 def freeze_anchor(hw: Path, version: str) -> str:

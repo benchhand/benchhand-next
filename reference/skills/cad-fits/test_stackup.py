@@ -25,6 +25,9 @@ import unittest
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+from decision_fixture import decision_path  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 SCRIPT = HERE / "scripts" / "stackup.py"
 SPEC = importlib.util.spec_from_file_location("cad_stackup", SCRIPT)
@@ -523,7 +526,7 @@ class StackPacketTests(unittest.TestCase):
         stack = IntentStackContractTests.justified(fixture("closing_gap.yaml"))
         stack["consequence"] = "performance"
         self.build(closing_gap_documents(method="justified_rss"), stack)
-        decision = self.hw / "decisions" / "DR-001.md"
+        decision = decision_path(self.hw, "DR-001")
         status, output = self.run_stack()
         self.assertEqual((status, output["check_bundle"]), (0, self.PACKET))
         packet, detail = self.packet()

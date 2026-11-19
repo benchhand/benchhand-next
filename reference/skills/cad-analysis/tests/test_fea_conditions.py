@@ -28,8 +28,10 @@ import yaml
 SKILLS = Path(__file__).resolve().parents[2]
 SCRIPTS = SKILLS / "cad-analysis" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(SKILLS.parent / "scripts"))
 
 import fea_conditions  # noqa: E402
+from decision_fixture import decision_path, write_test_decision  # noqa: E402
 import fea_static  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("cad_record_mi_fixtures",
@@ -207,12 +209,12 @@ class SourcedFEACase(unittest.TestCase):
         study.update(override)
         return study
 
-    def approve(self, study: dict[str, Any] | None, *, status: str | None = "Status: APPROVED", ref: str = "DR-002") -> None:
-        """Write the convergence decision: a status line, then the study block."""
-        text = (f"{status}\n\n" if status is not None else "") + f"# {ref}: mesh convergence study\n\n"
+    def approve(self, study: dict[str, Any] | None, *, status: str = "accepted", ref: str = "DR-002") -> None:
+        """Write the convergence decision as a MADR record with `status`. Its context holds the study block."""
+        context = "The mesh convergence study."
         if study is not None:
-            text += "```mesh-convergence\n" + yaml.safe_dump(study, sort_keys=False) + "```\n"
-        (self.hw / "decisions" / f"{ref}.md").write_text(text, encoding="utf-8")
+            context += "\n\n```mesh-convergence\n" + yaml.safe_dump(study, sort_keys=False) + "```"
+        write_test_decision(self.hw, ref, status=status, title=f"{ref}: mesh convergence study", context=context)
 
     def convergent_case(self, **extra: Any) -> Path:
         """A case with a sourced criterion and an approved, bound convergence study."""
@@ -312,7 +314,7 @@ class QualifiedProfile(SourcedFEACase):
         self.assertEqual(self.outcomes(report), {f"engineering.stiffness@{PN}": "pass", f"engineering.strength@{PN}": "pass"})
         self.assertEqual({row["level"] for row in report["engineering"]["outcomes"]}, {"simulation_supported"})
         self.assertEqual(report["engineering"]["dependencies"]["decision_dr_002"],
-                         hashlib.sha256((self.hw / "decisions" / "DR-002.md").read_bytes()).hexdigest())
+                         hashlib.sha256(decision_path(self.hw, "DR-002").read_bytes()).hexdigest())
         self.validate_packet(report["engineering"])
 
     def test_the_engineering_packet_is_sealed_where_evidence_reads_producer_packets(self) -> None:
@@ -355,23 +357,35 @@ class QualifiedProfile(SourcedFEACase):
         self.assertEqual(self.outcomes(report)[f"engineering.strength@{PN}"], "unknown")
         self.assertIn("reaches 50 N", report["engineering"]["outcomes"][1]["uncertainty"])
 
-    def test_an_effective_isotropic_decision_needs_status_approved(self) -> None:
-        """The same rule as for a convergence decision: a provisional or void decision is not evidence."""
+    def test_an_effective_isotropic_decision_needs_status_accepted(self) -> None:
+        """The same rule as for a convergence decision: a proposed, rejected or deprecated decision is not evidence."""
         part = bracket("tst_polymer_fdm", [fx.operation("print", "fdm", fx.unknown("no capability in this fixture"))])
         self.build(documents(profiles=[printed()], part=part))
         model = {"decision": "DR-003", "justification": "TST: Z-direction values bound the layer-normal load path"}
         path = self.case({"conditions": {**DRY_23C, "orientation": "Z"}, "effective_isotropic": model})
-        for status in (None, "Status: PROVISIONAL", "Status: VOID", "Status: DRAFT", "Status: approved", "Status: APPROVED "):
+        for status in ("proposed", "rejected", "deprecated"):
             with self.subTest(status=status):
                 self.solved.clear()
-                text = (f"{status}\n\n" if status is not None else "") + "# DR-003: effective isotropic model\n"
-                (self.hw / "decisions" / "DR-003.md").write_text(text, encoding="utf-8")
+                write_test_decision(self.hw, "DR-003", status=status, title="DR-003: effective isotropic model")
                 self.assertEqual(self.refused(path), ["material.anisotropy"])
+
+    def test_an_effective_isotropic_decision_the_reader_refuses_or_in_the_old_form_is_no_evidence(self) -> None:
+        part = bracket("tst_polymer_fdm", [fx.operation("print", "fdm", fx.unknown("no capability in this fixture"))])
+        self.build(documents(profiles=[printed()], part=part))
+        model = {"decision": "DR-003", "justification": "TST: Z-direction values bound the layer-normal load path"}
+        path = self.case({"conditions": {**DRY_23C, "orientation": "Z"}, "effective_isotropic": model})
+        decisions = self.hw / "decisions"
+        (decisions / "DR-003.md").write_text("Status: APPROVED\n\n# DR-003: effective isotropic model\n", encoding="utf-8")
+        self.assertEqual(self.refused(path), ["material.anisotropy"])
+        (decisions / "DR-003.md").unlink()
+        (decisions / "DR-003-model.md").write_text(
+            "---\nstatus: approved\ndate: 2026-01-01\n---\n\n# DR-003 model\n", encoding="utf-8")
+        self.assertEqual(self.refused(path), ["material.anisotropy"])
 
     def test_an_approved_effective_isotropic_model_analyses_printed_material_at_its_orientation(self) -> None:
         part = bracket("tst_polymer_fdm", [fx.operation("print", "fdm", fx.unknown("no capability in this fixture"))])
         self.build(documents(profiles=[printed()], part=part))
-        (self.hw / "decisions" / "DR-003.md").write_text("Status: APPROVED\n\n# DR-003: effective isotropic model\n", encoding="utf-8")
+        write_test_decision(self.hw, "DR-003", title="DR-003: effective isotropic model")
         model = {"decision": "DR-003", "justification": "TST: Z-direction values bound the layer-normal load path"}
         status, report = self.call(self.case({"conditions": {**DRY_23C, "orientation": "Z"}, "effective_isotropic": model}))
         self.assertEqual(status, 0, report)
@@ -395,7 +409,7 @@ class QualifiedProfile(SourcedFEACase):
         self.build(documents())
         path = self.case({"conditions": DRY_23C}, mesh_convergence={"decision": "DR-002"})
         self.assertEqual(self.call(path)[0], 0)
-        (self.hw / "decisions" / "DR-002.md").write_text("# DR-002\n\nRevised mesh study.\n", encoding="utf-8")
+        write_test_decision(self.hw, "DR-002", context="Revised mesh study.")
         status, report = self.call(path)
         self.assertEqual(status, 2)
         self.assertIn("--replace", report["error"]["message"])
@@ -543,18 +557,31 @@ class QualificationBypasses(SourcedFEACase):
 
     # -- a convergence decision counts only as an approved, bound, converged study ---------------------------------
 
-    def test_only_a_first_line_of_exactly_status_approved_counts(self) -> None:
+    def test_only_a_valid_accepted_madr_record_counts(self) -> None:
         self.build(documents())
         path = self.convergent_case()
         study = self.study(path)
-        statuses = [None, "Status: PROVISIONAL", "Status: VOID", "Status: DRAFT", "Status: approved", "Status: APPROVED ",
-                    "Status:APPROVED", "status: APPROVED", "Status: NOT APPROVED"]
-        for status in statuses:
+        for status in ("proposed", "rejected", "deprecated"):
             with self.subTest(status=status):
                 self.approve(study, status=status)
                 self.assert_unproven(self.fresh(path), convergence=True)
-        self.approve(study, status="# DR-002\n\nStatus: APPROVED")  # approved only on a later line
-        self.assert_unproven(self.fresh(path), convergence=True)
+        self.approve(study)
+        record = decision_path(self.hw, "DR-002")
+        text = record.read_text(encoding="utf-8")
+        refused = {"unknown status": text.replace("status: accepted", "status: approved"),
+                   "no front matter": "Status: APPROVED\n\n" + text.split("---\n", 2)[2]}
+        for label, refused_text in refused.items():
+            with self.subTest(label):
+                self.solved.clear()
+                record.write_text(refused_text, encoding="utf-8")
+                self.assertEqual(self.refused(path), ["analysis.convergence"])
+        record.unlink()
+        old_form = self.hw / "decisions" / "DR-002.md"  # holds the study under the old `Status: APPROVED` line
+        old_form.write_text("Status: APPROVED\n\n# DR-002\n\n```mesh-convergence\n"
+                            + yaml.safe_dump(study, sort_keys=False) + "```\n", encoding="utf-8")
+        self.solved.clear()
+        self.assertEqual(self.refused(path), ["analysis.convergence"])
+        old_form.unlink()
         self.approve(study)
         self.assertEqual(self.verdicts(self.fresh(path)), ("pass", "pass"))
 
@@ -683,7 +710,7 @@ class QualificationBypasses(SourcedFEACase):
         self.assertEqual(gap["mesh"]["convergence"]["status"], "demonstrated")
         self.solved.clear()
         path = self.loads_case(([2], [0, 0, -50]))
-        self.approve(self.study(path), status="Status: PROVISIONAL")
+        self.approve(self.study(path), status="proposed")
         unproven = self.fresh(path)
         self.assertFalse(unproven["evidence"]["service_evidence"])
         self.assertTrue(any("mesh convergence" in text for text in unproven["evidence"]["gaps"]))

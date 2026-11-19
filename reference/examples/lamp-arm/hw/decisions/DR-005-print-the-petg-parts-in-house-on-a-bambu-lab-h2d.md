@@ -1,15 +1,39 @@
-# DR-005: Print the PETG parts in-house on a Bambu Lab H2D
+---
+status: accepted
+date: 2026-11-18
+decision-makers:
+- the user
+---
 
-- Date: 2026-11-18
-- Status: decided by the user on 2026-11-18
+# Print the PETG parts in-house on a Bambu Lab H2D
 
-## Context
+## Context and Problem Statement
 
 LMP-0001 and LMP-0004 are the two FDM parts. Until now their print operations named no capability, so every
 printability check stayed unknown (Q-010). The user prints them in-house on their own Bambu Lab H2D and accepts PETG
-on it.
+on it. The user decided this on 2026-11-18.
 
-## Decision
+## Considered Options
+
+* Leave the print operations without a capability
+* Print both parts in-house on the Bambu Lab H2D with PETG
+
+## Decision Outcome
+
+Chosen option: "Print both parts in-house on the Bambu Lab H2D with PETG", because the user owns the machine and accepts PETG on it. Without a named capability the printability checks stay unknown.
+
+### Consequences
+
+- The capability-unknown findings of the two print operations are gone. The checks now ask for geometry, an
+  approved print orientation and calibrations.
+- The drilling or reaming of the bushing seats keeps no capability (Q-010 stays open for it, and for the CNC, coating
+  and pin operations).
+- The maximum flows sit in the tool descriptions, because the FDM parameter vocabulary has no flow parameter.
+- The print orientation stays proposed; approving it is a separate decision.
+
+## More Information
+
+### Decision details
 
 1. The print operations of LMP-0001 and LMP-0004 use the capability profile `h2d` (provider local, process fdm).
 2. PETG is approved on `h2d`, and `petg` is the material profile of both parts. It is a family profile, not a
@@ -33,12 +57,3 @@ on it.
 4. Bambu Lab publishes no layer height, minimum wall or feature, overhang angle, bridge span, or hole and fit
    tolerance. They stay unknown, and no calibration is recorded. The checks that need them report them as
    uncalibrated until a calibration print measures them on this machine.
-
-## Consequences
-
-- The capability-unknown findings of the two print operations are gone. The checks now ask for geometry, an
-  approved print orientation and calibrations.
-- The drilling or reaming of the bushing seats keeps no capability (Q-010 stays open for it, and for the CNC, coating
-  and pin operations).
-- The maximum flows sit in the tool descriptions, because the FDM parameter vocabulary has no flow parameter.
-- The print orientation stays proposed; approving it is a separate decision.
