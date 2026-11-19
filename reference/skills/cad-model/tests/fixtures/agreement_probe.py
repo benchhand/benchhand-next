@@ -266,14 +266,19 @@ def worst_distance(points: np.ndarray, target: Any, sample: int | None = 600) ->
     return worst
 
 
-def reference_torus_error() -> dict[str, float]:
-    """The reference mesh of the filleted disc at the reference budget: the largest exact distance of a triangle
-    center to the B-rep, over an even sample of the centers."""
-    shape, _ = filleted_disc()
+def reference_torus_error(sag: float = 0.0) -> dict[str, float]:
+    """The reference mesh of the filleted disc's torus face at the reference budget: the largest exact distance of a
+    triangle center to that face, over an even sample of the centers. `sag` moves every vertex that far inward along
+    the fillet's normal: a reference that sags into the solid."""
+    _, torus = filleted_disc()
     budget = agreement.REFERENCE_FACTOR * LARGE_LINEAR
-    reference = agreement.reference(shape, budget)
-    centres = reference.points[reference.triangles].mean(axis=1)
-    return {"budget_mm": budget, "worst_mm": worst_distance(centres, shape), "triangles": float(len(centres))}
+    reference = agreement.reference(torus, budget)
+    points = reference.points.copy()
+    radial = np.hypot(points[:, 0], points[:, 1])
+    tube = np.stack([points[:, 0] / radial * 44.85, points[:, 1] / radial * 44.85, np.full(len(points), 10.0 - 1.2)], axis=1)
+    normals = (points - tube) / np.linalg.norm(points - tube, axis=1)[:, None]
+    centres = (points - sag * normals)[reference.triangles].mean(axis=1)
+    return {"budget_mm": budget, "worst_mm": worst_distance(centres, torus), "triangles": float(len(centres))}
 
 
 def glb_torus_error(folder: Path) -> dict[str, float]:
@@ -334,4 +339,5 @@ if __name__ == "__main__":
     glb = glb_case(folder)
     print(json.dumps({"cases": cases(), "glb": glb, "abstentions": abstentions(folder),
                       "reference": reference_checks(folder), "exporter_deflection_mm": exporter_deflections(),
-                      "reference_torus": reference_torus_error(), "glb_torus": glb_torus_error(folder)}))
+                      "reference_torus": reference_torus_error(), "sagging_torus": reference_torus_error(0.1),
+                      "glb_torus": glb_torus_error(folder)}))

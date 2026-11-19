@@ -76,6 +76,13 @@ class AgreementTests(unittest.TestCase):
         self.assertAlmostEqual(torus["budget_mm"], 0.025, places=9)
         self.assertLessEqual(torus["worst_mm"], 1.25 * torus["budget_mm"], torus)
 
+    def test_a_reference_that_sags_into_the_solid_is_measured_against_the_torus_face(self) -> None:
+        """The reference of a torus fillet that sags 0.1 mm inward lies inside the solid, where the distance to the
+        whole solid reads 0. The test measures it against the torus face, so the sag shows: 0.1 mm is 4 x the 0.025 mm
+        budget."""
+        torus = self.probe["sagging_torus"]
+        self.assertGreater(torus["worst_mm"], 1.25 * torus["budget_mm"], torus)
+
     def test_the_exported_glb_of_a_torus_fillet_stays_within_its_deflection_of_the_face(self) -> None:
         """The exporter records a linear deflection and the floor trusts it: the GLB must lie that close to the
         B-rep. Without the control-surface deflection on for all surfaces the exported torus fillet strayed about 3 x
