@@ -336,6 +336,14 @@ class StrengthFromTheStudy(StressCase):
         assert finding is not None
         self.assertEqual(finding["measured"], {"value": 2.5, "units": "dimensionless"})
 
+    def test_a_record_that_fails_its_schema_turns_a_stress_strength_fail_into_unknown(self) -> None:
+        docs = conditions_tests.documents()
+        docs["requirements.yaml"]["bogus"] = 1
+        report = self.solve(interior_plan(130.0, 131.0), docs=docs)  # 250 / 131 = 1.908 would fail REQ-001's 2
+        self.assertEqual(self.outcomes(report), {STRENGTH: "unknown", STIFFNESS: "unknown"})
+        row, _finding = self.strength(report)
+        self.assertTrue(row["uncertainty"].startswith("hw/requirements.yaml: Additional properties"), row["uncertainty"])
+
     def test_an_open_basis_gap_keeps_a_factor_that_meets_the_criterion_unknown(self) -> None:
         # Analysed at 23 deg_C against a 15 to 30 deg_C service range: a basis gap, with head_load fully covered.
         report = self.solve(interior_plan(), conditions=conditions_tests.DRY_23C)  # 250 / 100 = 2.5

@@ -143,9 +143,11 @@ def framed_documents(application: Any, occurrences: list[tuple[str, str, dict[st
     docs[f"parts/{OTHER}/part.yaml"] = {**fx.part(OTHER, "Neighbour"), "model_frame": other_frame}
     docs["interfaces.yaml"] = {"interfaces": [fx.interface("IF-001", PN, OTHER)]}
     placed = [{"id": oid, "PN": pn, **({"placement": placement} if placement else {})} for oid, pn, placement in occurrences]
+    mount = {"id": "mount-bracket", "kind": "inspect", "part": f"@{placed[0]['id']}",
+             "acceptance": {"kind": "inspected", "features": ["mount_face"]}}
     docs["assembly.yaml"] = {"occurrences": placed, "subassemblies": [{"id": "main", "title": "Main",
                                                                       "occurrences": [f"@{o['id']}" for o in placed]}],
-                             "joints": [], "operations": [{"id": "mount-bracket"}]}
+                             "joints": [], "operations": [mount]}
     if tweak is not None:
         tweak(docs)
     return docs
@@ -171,6 +173,11 @@ class SourcedFEACase(unittest.TestCase):
             if not rel.startswith("_") and (self.hw / rel).is_file():
                 (record / rel).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(self.hw / rel, record / rel)
+        self.seal(version)
+
+    def seal(self, version: str) -> None:
+        """Write the version's manifest over the files its folder holds now."""
+        folder = self.hw / "versions" / version
         (folder / "manifest.json").unlink(missing_ok=True)   # a rebuild in one test hashes the record, never the old manifest
         files = {p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                  for p in folder.rglob("*") if p.is_file()}
@@ -301,6 +308,18 @@ class Refusals(SourcedFEACase):
     def test_production_service_needs_a_yield_allowable(self) -> None:
         self.build(documents(service_class="production"))
         self.assertIn("material.allowable", self.refused(self.case({"conditions": DRY_23C})))
+
+    def test_a_materials_document_that_fails_its_schema_is_refused_before_the_solve(self) -> None:
+        docs = documents()
+        docs["manufacturing/materials.yaml"]["profiles"][0]["bogus"] = 1
+        self.build(docs)
+        self.assertIn("material.profile", self.refused(self.case({"conditions": SERVICE})))
+
+    def test_a_record_document_that_is_not_yaml_is_refused_before_the_solve(self) -> None:
+        self.build(documents())
+        (self.hw / "versions" / "v1" / "record" / "requirements.yaml").write_text("requirements: [\n", encoding="utf-8")
+        self.seal("v1")
+        self.assertEqual(self.refused(self.case({"conditions": SERVICE})), ["record.unreadable"])
 
     def test_a_standalone_case_cannot_name_profile_conditions(self) -> None:
         self.build(documents())
@@ -706,14 +725,16 @@ class QualificationBypasses(SourcedFEACase):
             with self.subTest(application=application):
                 self.assert_frame_unconfirmed(application, self.BOTH, [30, 0, -40], "application", tweak=tweak)
 
-    def test_an_assembly_operation_whose_id_is_a_mapping_does_not_stop_a_same_part_load_from_reporting(self) -> None:
+    def test_an_assembly_operation_whose_id_is_a_mapping_leaves_the_case_unknown_and_names_the_gap(self) -> None:
+        """assembly.yaml is a document the assessment reads, so its schema problem keeps every outcome unknown. The
+        run still completes: a malformed sibling entry never aborts it."""
         def operation(docs: dict[str, Any]) -> None:
             docs["assembly.yaml"]["operations"].append({"id": {"not": "a name"}})
 
-        report = self.frame_report({"PN": PN}, self.BOTH, [0, 30, -40], tweak=operation)
-        self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
-        report = self.frame_report({"assembly_operation": "mount-bracket"}, self.BOTH, [30, 0, -40], tweak=operation)
-        self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
+        for application, force in (({"PN": PN}, [0, 30, -40]), ({"assembly_operation": "mount-bracket"}, [30, 0, -40])):
+            with self.subTest(application=application):
+                report = self.frame_report(application, self.BOTH, force, tweak=operation)
+                self.assert_record_gaps(report, ["hw/assembly.yaml#operations: "])
 
     def test_an_assembly_zero_part_with_an_occurrence_it_does_not_own_leaves_the_load_unknown(self) -> None:
         """The neighbour's model frame is the assembly frame, so a bare reference to it confirms with no placement. An
@@ -721,7 +742,7 @@ class QualificationBypasses(SourcedFEACase):
         placed = [("bracket", PN, R_BRACKET), ("other", OTHER, None)]
         for application, why in (({"PN": OTHER, "occurrence": "@bracket"}, "not " + OTHER),
                                  ({"PN": OTHER, "occurrence": "@gone"}, "names no occurrence"),
-                                 ({"PN": OTHER, "occurrence": OTHER}, "not an @id reference")):
+                                 ({"PN": OTHER, "occurrence": OTHER}, "hw/product.yaml#use_case/loads")):
             with self.subTest(application=application):
                 self.solved.clear()
                 self.build(framed_documents(application, placed, other_frame="assembly_zero"))
@@ -786,6 +807,62 @@ class QualificationBypasses(SourcedFEACase):
             with self.subTest(application=application):
                 report = self.frame_report(application, self.BOTH, [0, 30, -40], pose={"J1": 30.0})
                 self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
+
+    # -- the documents the assessment reads must pass cad-record's checks -------------------------------------------
+
+    def assert_record_gaps(self, report: dict[str, Any], expected: list[str]) -> None:
+        """Both outcomes unknown, never service evidence, and the gaps that name a record document are exactly one
+        per `expected` prefix, so a problem reported twice shows."""
+        self.assertEqual(self.verdicts(report), ("unknown", "unknown"), report["engineering"]["outcomes"])
+        self.assertEqual(report["engineering"]["result"], "unknown")
+        self.assertFalse(report["evidence"]["service_evidence"])
+        named = sorted(gap for gap in report["evidence"]["gaps"] if gap.startswith("hw/"))
+        self.assertEqual(len(named), len(expected), named)
+        for gap, prefix in zip(named, sorted(expected)):
+            self.assertTrue(gap.startswith(prefix), (gap, prefix))
+
+    def test_an_application_that_fails_the_record_checks_leaves_the_case_unknown_and_names_the_gap(self) -> None:
+        """Read as the assembly frame, the (30, 0, -40) N force would cover head_load. The subject schema rejects the
+        first five (manufacturing.schema.json's subject); the reader rejects a reference that names nothing and an
+        occurrence of another part. A schema failure inside the loads array is reported at use_case/loads."""
+        schema = "hw/product.yaml#use_case/loads: "
+        reference = "hw/product.yaml#use_case/loads/0/application: "
+        cases = (({"interface": None}, [schema]),
+                 ({"PN": ""}, [schema, reference + "part  is not declared"]),
+                 ({"PN": OTHER, "occurrence": OTHER}, [schema]),
+                 ({"interface": "IF-999"}, [reference + "interface IF-999 is not declared"]),
+                 ({"PN": OTHER, "occurrence": "@bracket"}, [reference + f"@bracket is an occurrence of {PN}, not {OTHER}"]),
+                 ({"foo": 1}, [schema]),
+                 ({"product": False}, [schema]))
+        for application, expected in cases:
+            with self.subTest(application=application):
+                self.assert_record_gaps(self.frame_report(application, self.BOTH, [30, 0, -40]), expected)
+
+    def test_a_subject_part_that_fails_its_schema_leaves_a_covered_case_unknown(self) -> None:
+        docs = documents()
+        docs[f"parts/{PN}/part.yaml"]["bogus"] = 1
+        self.build(docs)
+        report = self.solve(self.loads_case(([2], [0, 0, -50])))
+        self.assert_record_gaps(report, [f"hw/parts/{PN}/part.yaml: Additional properties"])
+
+    def test_a_record_that_fails_its_schema_turns_a_fail_into_unknown(self) -> None:
+        """A 1.0 safety factor misses REQ-001's 2 and 0.9 mm misses REQ-002's 0.5 mm: both would fail. The run's own
+        status stays the solver's, so only the engineering packet is read here."""
+        self.solution.update(safety_factor_yield=1.0, max_displacement_mm=0.9)
+        docs = documents()
+        docs["requirements.yaml"]["bogus"] = 1
+        self.build(docs)
+        _status, report = self.call(self.loads_case(([2], [0, 0, -50])))
+        self.assert_record_gaps(report, ["hw/requirements.yaml: Additional properties"])
+        self.assertEqual([f["code"] for f in report["engineering"]["findings"] if f["outcome"] == "fail"], [])
+
+    def test_a_schema_problem_in_a_document_the_assessment_does_not_read_leaves_the_verdicts(self) -> None:
+        docs = documents()
+        docs["manufacturing/selection.yaml"]["bogus"] = 1
+        self.build(docs)
+        report = self.solve(self.loads_case(([2], [0, 0, -50])))
+        self.assertEqual(self.verdicts(report), self.COVERED, report["evidence"]["gaps"])
+        self.assertEqual([gap for gap in report["evidence"]["gaps"] if gap.startswith("hw/")], [])
 
     # -- a convergence decision counts only as an approved, bound, converged study ---------------------------------
 
