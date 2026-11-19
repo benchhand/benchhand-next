@@ -47,6 +47,16 @@ def limit(characteristic: str, operator: str, value: float | None = None, units:
     return data
 
 
+def discrete(*sizes: float, units: str = "mm", **extra: Any) -> dict[str, Any]:
+    """A one_of limit on nozzle_diameter: the discrete sizes a printer publishes."""
+    return {"characteristic": "nozzle_diameter", "operator": "one_of", "quantities": [fx.quantity(size, units) for size in sizes],
+            "citations": cite(), **extra}
+
+
+def microns(*sizes: int) -> list[Any]:
+    return [mi.Quantity("um", value=float(size)) for size in sizes]
+
+
 def per_line(characteristic: str, factor: float, floor: float, base: str = "line_width", **extra: Any) -> dict[str, Any]:
     return limit(characteristic, ">=", relative={"relative_to": base, "factor": factor, "floor": fx.quantity(floor)}, **extra)
 
@@ -592,6 +602,139 @@ class Unknowns(Directories):
         found = resolve(record(), self.catalog(), "enclosure")
         self.assertEqual(found.status, "unknown")
         self.assertIn("share no value", found.reasons[0])
+
+
+class DiscreteNozzleDiameters(Directories):
+    """A one_of limit on nozzle_diameter holds a set of sizes, compared as whole micrometres (benchhand-tw6.5)."""
+
+    PARENT = (0.2, 0.4, 0.6, 0.8)
+
+    def setUp(self) -> None:
+        super().setUp()
+        put(self.shipped, "generic", guideline("fdm.generic", [discrete(*self.PARENT)]))
+
+    def child(self, limits: list[dict[str, Any]]) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", limits, material_family=["pa"]))
+
+    def test_a_set_resolves_to_its_sizes_in_whole_micrometres(self) -> None:
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual((found.status, found.operator, found.value, found.warnings),
+                         ("guideline", "one_of", microns(200, 400, 600, 800), ()))
+
+    def test_a_set_in_millimetres_and_one_in_micrometres_meet_without_float_noise(self) -> None:
+        # 0.563 mm converts to 562.9999999999999 um in floating point; as whole micrometres it is 563 um
+        put(self.shipped, "generic", guideline("fdm.generic", [discrete(0.563, 0.8, 1.0)]))
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(563, 800, 1000, units="um")], material_family=["pa"]))
+        put(self.shipped, "pb", guideline("fdm.material.pb", [discrete(0.563, 0.8)], material_family=["pa"]))
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(563, 800))
+
+    def test_a_duplicate_after_conversion_is_an_invalid_file_refused_by_name(self) -> None:
+        cases = {"mm and um": discrete(0.4), "same size twice": discrete(0.40, 0.4), "not whole micrometres": discrete(0.4005)}
+        cases["mm and um"]["quantities"] = [fx.quantity(0.4), fx.quantity(400, "um")]
+        for name, limit_ in cases.items():
+            put(self.project, name.replace(" ", "_"), guideline(f"fdm.{name.replace(' ', '_')}", [limit_]))
+        catalog = self.catalog()
+        self.assertEqual(sorted(r.path for r in catalog.refused), sorted(f"manufacturing/guidelines/{n.replace(' ', '_')}.yaml" for n in cases))
+        self.assertEqual(sorted(catalog.guidelines), ["fdm.generic"])
+        self.assertIn("duplicate", " ".join(" ".join(r.problems) for r in catalog.refused if "mm_and_um" in r.path))
+        self.assertIn("whole number of micrometres", " ".join(" ".join(r.problems) for r in catalog.refused if "not_whole" in r.path))
+
+    def test_a_subset_of_the_parent_set_tightens_without_relaxes(self) -> None:
+        self.child([discrete(0.4, 0.6)])
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual((found.value, found.warnings), (microns(400, 600), ()))
+
+    def test_a_superset_of_the_parent_set_without_relaxes_is_ignored_with_a_warning(self) -> None:
+        self.child([discrete(0.2, 0.4, 0.6, 0.8, 1.0)])
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(200, 400, 600, 800))
+        self.assertTrue(any("without `relaxes`" in w and "fdm.material.pa@1" in w for w in found.warnings), found.warnings)
+
+    def test_a_superset_with_relaxes_is_taken_with_a_warning(self) -> None:
+        relaxes = {"reason": "this printer also ships a 1.0 mm nozzle", "citation": cite()[0]}
+        self.child([discrete(0.2, 0.4, 0.6, 0.8, 1.0, relaxes=relaxes)])
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(200, 400, 600, 800, 1000))
+        self.assertTrue(any("relaxed to" in w and "this printer also ships" in w for w in found.warnings), found.warnings)
+
+    def test_a_set_wholly_inside_a_parent_interval_tightens_without_relaxes(self) -> None:
+        for operator, quantity in (("between", fx.quantity(lower=0.2, upper=0.8)), (">=", fx.quantity(0.2)), ("<=", fx.quantity(0.8))):
+            with self.subTest(operator):
+                put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", operator, quantity=quantity)]))
+                self.child([discrete(0.4, 0.6)])
+                found = resolve(record(), self.catalog(), "nozzle_diameter")
+                self.assertEqual((found.value, found.warnings), (microns(400, 600), ()))
+
+    def test_a_set_partly_outside_a_parent_interval_needs_relaxes(self) -> None:
+        put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", "between", quantity=fx.quantity(lower=0.3, upper=0.7))]))
+        self.child([discrete(0.2, 0.4)])
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual((found.operator, found.value), ("between", mi.Quantity("mm", lower=0.3, upper=0.7)))
+        self.assertTrue(any("without `relaxes`" in w for w in found.warnings), found.warnings)
+        relaxes = {"reason": "the vendor ships a 0.2 mm nozzle", "citation": cite()[0]}
+        self.child([discrete(0.2, 0.4, relaxes=relaxes)])
+        self.assertEqual(resolve(record(), self.catalog(), "nozzle_diameter").value, microns(200, 400))
+
+    def test_equally_specific_sets_that_share_no_size_are_unknown(self) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(0.2, 0.4)], material_family=["pa"]))
+        put(self.shipped, "pb", guideline("fdm.material.pb", [discrete(0.6, 0.8)], material_family=["pa"]))
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("share no value", found.reasons[0])
+
+    def test_equally_specific_set_and_interval_keep_the_sizes_inside_the_interval(self) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(0.2, 0.4, 0.6)], material_family=["pa"]))
+        put(self.shipped, "pb", guideline("fdm.material.pb", [limit("nozzle_diameter", ">=", quantity=fx.quantity(0.4))], material_family=["pa"]))
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(400, 600))
+        shown = {p.guideline: (p.value, p.units) for p in found.provenance}
+        sizes = [{"value": float(size), "units": "um"} for size in (200, 400, 600)]
+        self.assertEqual(shown, {"fdm.material.pa@1": (sizes, "um"), "fdm.material.pb@1": ({"value": 0.4, "units": "mm"}, "mm")})
+
+    def test_a_strict_parent_bound_rejects_a_child_set_that_contains_its_boundary_size(self) -> None:
+        for operator, sizes in (("<", (0.4, 0.8)), (">", (0.2, 0.4))):
+            with self.subTest(operator):
+                boundary = 0.8 if operator == "<" else 0.2
+                put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", operator, quantity=fx.quantity(boundary))]))
+                self.child([discrete(*sizes)])
+                found = resolve(record(), self.catalog(), "nozzle_diameter")
+                self.assertEqual((found.operator, found.value), (operator, mi.Quantity("mm", value=boundary)))
+                self.assertTrue(any("without `relaxes`" in w and "fdm.material.pa@1" in w for w in found.warnings), found.warnings)
+
+    def test_a_strict_parent_bound_accepts_a_child_set_clear_of_its_boundary_size(self) -> None:
+        put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", "<", quantity=fx.quantity(0.8))]))
+        self.child([discrete(0.4, 0.6)])
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual((found.value, found.warnings), (microns(400, 600), ()))
+
+    def test_an_equally_specific_strict_interval_excludes_its_boundary_size(self) -> None:
+        for operator, sizes in (("<", (0.4, 0.6, 0.8)), (">", (0.2, 0.4, 0.6))):
+            with self.subTest(operator):
+                boundary = 0.8 if operator == "<" else 0.2
+                put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(*sizes)], material_family=["pa"]))
+                put(self.shipped, "pb", guideline("fdm.material.pb", [limit("nozzle_diameter", operator, quantity=fx.quantity(boundary))],
+                                                  material_family=["pa"]))
+                self.assertEqual(resolve(record(), self.catalog(), "nozzle_diameter").value, microns(400, 600))
+
+    def test_a_set_under_an_unknown_scope_fact_stays_unknown_and_does_not_fall_through(self) -> None:
+        self.child([discrete(0.4)])
+        found = resolve(record(family=None), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("scope fact is unknown", found.reasons[0])
+
+    def test_a_set_scoped_to_a_nozzle_interval_is_unknown_for_a_profile_without_a_nozzle(self) -> None:
+        put(self.shipped, "narrow", guideline("fdm.nozzle.narrow", [discrete(0.2, 0.4)], nozzle_diameter=fx.quantity(lower=0.2, upper=0.4)))
+        found = resolve(record(nozzle=None), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("nozzle_diameter", found.reasons[0])
+
+    def test_a_set_reaches_the_trace_as_plain_json(self) -> None:
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        document = gl.trace_document([found])
+        self.assertEqual(document["resolutions"][0]["value"], [{"value": float(v), "units": "um"} for v in (200, 400, 600, 800)])
+        json.dumps(document, allow_nan=False)
+        self.assertEqual(document["resolutions"][0]["provenance"][0]["value"], document["resolutions"][0]["value"])
 
 
 class Pin(Directories):

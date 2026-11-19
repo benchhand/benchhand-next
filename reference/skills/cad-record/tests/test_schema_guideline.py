@@ -130,6 +130,43 @@ class GuidelineFile(unittest.TestCase):
             "bridge_span one_of": (guideline(limits=[{**numeric, "characteristic": "bridge_span", "operator": "one_of", "value": ["a"]}]), False),
         })
 
+    def test_a_discrete_nozzle_diameter_set_is_a_quantities_list_of_one_of_on_nozzle_diameter_only(self) -> None:
+        def sizes(*millimetres: float, units: str = "mm") -> list[dict[str, Any]]:
+            return [fx.quantity(size, units) for size in millimetres]
+
+        discrete = {"characteristic": "nozzle_diameter", "operator": "one_of", "quantities": sizes(0.2, 0.4, 0.6, 0.8),
+                    "citations": [datasheet()]}
+        enclosure = {"characteristic": "enclosure", "operator": "equals", "value": True, "citations": [datasheet()]}
+        material = {"characteristic": "nozzle_material", "operator": "one_of", "value": ["hardened_steel"], "citations": [datasheet()]}
+        self.assert_cases({
+            "one_of with quantities": (guideline(limits=[discrete]), True),
+            "quantities in micrometres": (guideline(limits=[{**discrete, "quantities": sizes(200, 400, units="um")}]), True),
+            "a single size": (guideline(limits=[{**discrete, "quantities": sizes(0.4)}]), True),
+            "an empty list": (guideline(limits=[{**discrete, "quantities": []}]), False),
+            "beside a value": (guideline(limits=[{**discrete, "value": ["0.4"]}]), False),
+            "beside a quantity": (guideline(limits=[{**discrete, "quantity": fx.quantity(0.4)}]), False),
+            "one_of without quantities": (guideline(limits=[{k: v for k, v in discrete.items() if k != "quantities"}]), False),
+            "one_of with only a value": (guideline(limits=[{k: v for k, v in {**discrete, "value": ["0.4"]}.items() if k != "quantities"}]), False),
+            "equals with quantities": (guideline(limits=[{**discrete, "operator": "equals"}]), False),
+            "between with quantities": (guideline(limits=[{**discrete, "operator": "between"}]), False),
+            "min_wall one_of with quantities": (guideline(limits=[{**discrete, "characteristic": "min_wall"}]), False),
+            "enclosure one_of with quantities": (guideline(limits=[{**discrete, "characteristic": "enclosure"}]), False),
+            "nozzle_material one_of with quantities": (guideline(limits=[{**discrete, "characteristic": "nozzle_material"}]), False),
+            "an interval item": (guideline(limits=[{**discrete, "quantities": [fx.quantity(lower=0.2, upper=0.4)]}]), False),
+            "an item beyond the nozzle bound": (guideline(limits=[{**discrete, "quantities": sizes(50)}]), False),
+            "an item in degrees": (guideline(limits=[{**discrete, "quantities": [fx.quantity(0.4, "deg")]}]), False),
+            "an item that is a number": (guideline(limits=[{**discrete, "quantities": [0.4]}]), False),
+            "valid enclosure limit plus quantities": (guideline(limits=[{**enclosure, "quantities": sizes(0.4)}]), False),
+            "valid nozzle_material limit plus quantities": (guideline(limits=[{**material, "quantities": sizes(0.4)}]), False),
+            "valid min_wall limit plus quantities": (guideline(limits=[{**limit(), "quantities": sizes(0.4)}]), False),
+            "valid between limit plus quantities": (guideline(limits=[{**limit(characteristic="nozzle_diameter", operator="between",
+                                                                           quantity=fx.quantity(lower=0.2, upper=0.8)),
+                                                                     "quantities": sizes(0.4)}]), False),
+            "valid nozzle_diameter >= limit plus quantities": (guideline(limits=[{**limit(characteristic="nozzle_diameter",
+                                                                                          quantity=fx.quantity(0.2)),
+                                                                                "quantities": sizes(0.4)}]), False),
+        })
+
     def test_a_relative_limit_names_its_base_factor_and_floor(self) -> None:
         relative = {"relative_to": "line_width", "factor": 3, "floor": fx.quantity(0.8)}
         base = {k: v for k, v in limit().items() if k != "quantity"}
