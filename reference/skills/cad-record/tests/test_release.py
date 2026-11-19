@@ -727,10 +727,57 @@ class Refusal(ReleaseCase):
         hw = self.project()
         self.refused(hw, "hw/product.yaml", "frozen", "flow.frozen names v1, not v2", version="v2")
 
-    def test_an_existing_revision_is_never_overwritten(self) -> None:
+    def test_the_same_revision_with_an_equal_frozen_manifest_is_rewritten_byte_identically(self) -> None:
+        hw = self.project()
+        first_code, first = self.release(hw, now=datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc))
+        self.assertEqual(first_code, 0)
+        before = tree(hw)
+        code, report = self.release(hw, now=datetime(2026, 6, 7, 8, 9, 10, tzinfo=timezone.utc))
+        self.assertEqual((code, report["status"], report["manifest_sha256"]), (0, "released", first["manifest_sha256"]))
+        self.assertEqual(tree(hw), before, "the rerun leaves the package byte-identical")
+
+    def test_a_stale_package_of_the_same_frozen_manifest_is_refused_and_left_alone(self) -> None:
         hw = self.project()
         self.assertEqual(self.release(hw)[0], 0)
-        self.refused(hw, "hw/releases/A", "exists", "a used revision is never overwritten")
+        write(hw / "releases" / "A" / "bom.csv", "edited\n")
+        self.refused(hw, "hw/releases/A", "stale", "stale: bom.csv changed after it was sealed")
+        self.refused(hw, "hw/releases/A", "stale", "automatic repair is not supported; use a new revision")
+
+    def test_a_stale_package_of_another_frozen_manifest_needs_a_new_revision(self) -> None:
+        hw = self.project()
+        self.assertEqual(self.release(hw)[0], 0)
+        write(hw / "releases" / "A" / "bom.csv", "edited\n")
+        manifest = hw / "versions" / "v1" / "manifest.json"
+        manifest.write_text(manifest.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        self.refused(hw, "hw/releases/A", "stale", "stale: bom.csv changed after it was sealed")
+        self.refused(hw, "hw/releases/A", "stale", "automatic repair is not supported; use a new revision")
+
+    def test_a_changed_frozen_manifest_under_the_same_revision_needs_a_new_revision(self) -> None:
+        hw = self.project()
+        self.assertEqual(self.release(hw)[0], 0)
+        manifest = hw / "versions" / "v1" / "manifest.json"
+        manifest.write_text(manifest.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+        self.refused(hw, "hw/releases/A", "exists", "automatic repair is not supported; use a new revision")
+
+    def test_a_rerun_from_a_version_that_fails_its_manifest_is_refused_and_changes_nothing(self) -> None:
+        hw = self.project()
+        self.assertEqual(self.release(hw)[0], 0)
+        (hw / "versions" / "v1" / "assembly.glb").unlink()
+        self.refused(hw, "hw/releases/A", "exists", "automatic repair is not supported; use a new revision")
+
+    def test_the_atomic_claim_refuses_a_writer_that_loses_the_race(self) -> None:
+        hw = self.project()
+        real_claim = release.layout.claim
+
+        def rival_first(staged: Path, target: Path, target_rel: str) -> None:
+            target.mkdir(parents=True)  # another writer holds the revision before this one claims it
+            real_claim(staged, target, target_rel)
+
+        with mock.patch.object(release.layout, "claim", rival_first):
+            code, report = self.release(hw)
+        self.assertEqual((code, report["status"]), (1, "refused"))
+        self.assertIn("another writer published hw/releases/A first", report["findings"][0]["message"])
+        self.assertEqual(list((hw / "releases" / "A").iterdir()), [], "the loser published nothing")
 
     def test_a_missing_decision_refuses(self) -> None:
         hw = self.project()
