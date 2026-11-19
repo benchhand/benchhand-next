@@ -25,7 +25,7 @@ fx = load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures"
 registry = fx.schema_registry_module()
 gl = load("cad_record_guidelines", SKILL / "scripts" / "guidelines.py")
 SCHEMA = "manufacturing-guideline.schema.json"
-ACCESSED = "2026-11-18"
+ACCESSED = {"2026-11-18", "2026-11-19"}  # the survey day, and the day the H2D tech-specs page was added
 EXPECTED_IDS = {
     "fdm.generic",
     "fdm.nozzle.d0_2", "fdm.nozzle.d0_4", "fdm.nozzle.d0_6", "fdm.nozzle.d0_8",
@@ -83,7 +83,7 @@ class ShippedFiles(unittest.TestCase):
                     with self.subTest(name, characteristic=item["characteristic"], reference=citation["reference"]):
                         self.assertNotEqual(citation["kind"], "guideline")
                         self.assertTrue(citation["url"].startswith("https://"))
-                        self.assertEqual(citation["accessed"], ACCESSED)
+                        self.assertIn(citation["accessed"], ACCESSED)
                         self.assertTrue(citation["locator"].strip())
 
     def test_no_forbidden_characteristic_and_no_machine_scope_ships(self) -> None:
@@ -186,10 +186,8 @@ class ShippedResolution(unittest.TestCase):
         self.assertEqual(stated(resolved("nozzle_diameter", material_family="tpu", shore="95a")),
                          ("guideline", ">=", 0.4, "mm", ()))
 
-    def test_tpu_85a_needs_a_nozzle_of_at_least_0_6_mm_unpinned_and_pinned_to_the_h2d_sample(self) -> None:
-        facts = {"material_family": "tpu", "shore": "85a"}
-        self.assertEqual(stated(resolved("nozzle_diameter", **facts)), ("guideline", ">=", 0.6, "mm", ()))
-        self.assertEqual(stated(resolved("nozzle_diameter", pin=("fdm.machine.bambu_h2d@1",), **facts)),
+    def test_tpu_85a_needs_a_nozzle_of_at_least_0_6_mm_unpinned(self) -> None:
+        self.assertEqual(stated(resolved("nozzle_diameter", material_family="tpu", shore="85a")),
                          ("guideline", ">=", 0.6, "mm", ()))
 
     def test_a_filler_needs_a_hardened_steel_nozzle_of_at_least_0_4_mm(self) -> None:
@@ -225,6 +223,51 @@ class H2DSample(unittest.TestCase):
 
     def test_a_profile_that_pins_the_h2d_sample_gets_it(self) -> None:
         self.assertIn(self.H2D, self.applying((f"{self.H2D}@1",)))
+
+
+def sizes_um(found: Any) -> list[int]:
+    """The discrete sizes of a resolved one_of nozzle limit, in whole micrometres."""
+    assert found.operator == "one_of", found.operator
+    assert all(item.units == "um" for item in found.value)
+    return [round(item.value) for item in found.value]
+
+
+class H2DNozzleSizes(unittest.TestCase):
+    """The H2D sample states Bambu's supported nozzle diameters; a profile that pins it gets them, nobody else does."""
+
+    PIN = ("fdm.machine.bambu_h2d@1",)
+
+    def test_a_profile_pinned_to_the_h2d_sample_resolves_the_four_supported_sizes(self) -> None:
+        found = resolved("nozzle_diameter", pin=self.PIN)
+        self.assertEqual((found.status, sizes_um(found)), ("guideline", [200, 400, 600, 800]))
+
+    def test_the_h2d_sizes_admit_0_4_mm_and_refuse_0_3_mm(self) -> None:
+        offered = sizes_um(resolved("nozzle_diameter", pin=self.PIN))
+        self.assertIn(400, offered)
+        self.assertNotIn(300, offered)
+
+    def test_an_unpinned_profile_resolves_no_nozzle_sizes(self) -> None:
+        self.assertEqual(resolved("nozzle_diameter").status, "unknown")
+
+    def test_a_pinned_h2d_does_not_narrow_a_nozzle_minimum_because_its_sizes_would_relax_it(self) -> None:
+        """The H2D lists 0.2 mm, below every minimum here, so as a machine set it would relax the material's limit; the
+        resolver ignores it with a warning and the minimum stands, so a TPU 85A profile pinned to the H2D is not
+        narrowed to 0.6 and 0.8 mm."""
+        cases = {
+            "pc": ({"material_family": "pc"}, 0.4),
+            "tpu 95a": ({"material_family": "tpu", "shore": "95a"}, 0.4),
+            "tpu 85a": ({"material_family": "tpu", "shore": "85a"}, 0.6),
+            "cf filler": ({"material_family": "pla", "filler": "cf"}, 0.4),
+            "gf filler": ({"material_family": "pla", "filler": "gf"}, 0.4),
+        }
+        for name, (facts, minimum) in cases.items():
+            with self.subTest(name):
+                unpinned = stated(resolved("nozzle_diameter", **facts))
+                self.assertEqual(unpinned, ("guideline", ">=", minimum, "mm", ()))
+                pinned = stated(resolved("nozzle_diameter", pin=self.PIN, **facts))
+                self.assertEqual(pinned[:4], unpinned[:4])
+                self.assertEqual(len(pinned[4]), 1)
+                self.assertIn("fdm.machine.bambu_h2d@1 (200 um, 400 um, 600 um, 800 um) would relax", pinned[4][0])
 
 
 class SnapshotInventory(unittest.TestCase):
