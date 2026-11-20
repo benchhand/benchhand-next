@@ -241,33 +241,32 @@ class H2DNozzleSizes(unittest.TestCase):
         found = resolved("nozzle_diameter", pin=self.PIN)
         self.assertEqual((found.status, sizes_um(found)), ("guideline", [200, 400, 600, 800]))
 
-    def test_the_h2d_sizes_admit_0_4_mm_and_refuse_0_3_mm(self) -> None:
-        offered = sizes_um(resolved("nozzle_diameter", pin=self.PIN))
-        self.assertIn(400, offered)
-        self.assertNotIn(300, offered)
+    def test_the_h2d_sizes_admit_0_4_mm_for_pc_and_refuse_it_for_tpu_85a_and_0_3_mm_for_both(self) -> None:
+        """Admission is read off what each pinned profile resolves to, so the material minimum is part of the check."""
+        pc = sizes_um(resolved("nozzle_diameter", pin=self.PIN, material_family="pc"))
+        tpu = sizes_um(resolved("nozzle_diameter", pin=self.PIN, material_family="tpu", shore="85a"))
+        self.assertEqual((400 in pc, 400 in tpu), (True, False))
+        self.assertEqual((300 in pc, 300 in tpu), (False, False))
 
     def test_an_unpinned_profile_resolves_no_nozzle_sizes(self) -> None:
         self.assertEqual(resolved("nozzle_diameter").status, "unknown")
 
-    def test_a_pinned_h2d_does_not_narrow_a_nozzle_minimum_because_its_sizes_would_relax_it(self) -> None:
-        """The H2D lists 0.2 mm, below every minimum here, so as a machine set it would relax the material's limit; the
-        resolver ignores it with a warning and the minimum stands, so a TPU 85A profile pinned to the H2D is not
-        narrowed to 0.6 and 0.8 mm."""
+    def test_a_pinned_h2d_keeps_the_sizes_a_material_minimum_admits_without_a_warning(self) -> None:
+        """The H2D lists 0.2 mm, below every minimum here; the minimum drops it, and the sizes at or above the minimum stay.
+        A TPU 85A profile pinned to the H2D gets 0.6 and 0.8 mm; PC, TPU 95A and the fillers get 0.4, 0.6 and 0.8 mm."""
         cases = {
-            "pc": ({"material_family": "pc"}, 0.4),
-            "tpu 95a": ({"material_family": "tpu", "shore": "95a"}, 0.4),
-            "tpu 85a": ({"material_family": "tpu", "shore": "85a"}, 0.6),
-            "cf filler": ({"material_family": "pla", "filler": "cf"}, 0.4),
-            "gf filler": ({"material_family": "pla", "filler": "gf"}, 0.4),
+            "pc": ({"material_family": "pc"}, 0.4, [400, 600, 800]),
+            "tpu 95a": ({"material_family": "tpu", "shore": "95a"}, 0.4, [400, 600, 800]),
+            "tpu 85a": ({"material_family": "tpu", "shore": "85a"}, 0.6, [600, 800]),
+            "cf filler": ({"material_family": "pla", "filler": "cf"}, 0.4, [400, 600, 800]),
+            "gf filler": ({"material_family": "pla", "filler": "gf"}, 0.4, [400, 600, 800]),
         }
-        for name, (facts, minimum) in cases.items():
+        for name, (facts, minimum, sizes) in cases.items():
             with self.subTest(name):
-                unpinned = stated(resolved("nozzle_diameter", **facts))
-                self.assertEqual(unpinned, ("guideline", ">=", minimum, "mm", ()))
-                pinned = stated(resolved("nozzle_diameter", pin=self.PIN, **facts))
-                self.assertEqual(pinned[:4], unpinned[:4])
-                self.assertEqual(len(pinned[4]), 1)
-                self.assertIn("fdm.machine.bambu_h2d@1 (200 um, 400 um, 600 um, 800 um) would relax", pinned[4][0])
+                self.assertEqual(stated(resolved("nozzle_diameter", **facts)), ("guideline", ">=", minimum, "mm", ()))
+                pinned = resolved("nozzle_diameter", pin=self.PIN, **facts)
+                self.assertEqual((pinned.status, sizes_um(pinned)), ("guideline", sizes))
+                self.assertEqual([w for w in pinned.warnings if "relax" in w], [])
 
 
 class SnapshotInventory(unittest.TestCase):

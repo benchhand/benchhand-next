@@ -716,12 +716,11 @@ class DiscreteNozzleDiameters(Directories):
                 found = resolve(record(), self.catalog(), "nozzle_diameter")
                 self.assertEqual((found.value, found.warnings), (microns(400, 600), ()))
 
-    def test_a_set_partly_outside_a_parent_interval_needs_relaxes(self) -> None:
+    def test_a_set_partly_outside_a_parent_interval_keeps_the_sizes_inside_it_unless_it_declares_relaxes(self) -> None:
         put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", "between", quantity=fx.quantity(lower=0.3, upper=0.7))]))
         self.child([discrete(0.2, 0.4)])
         found = resolve(record(), self.catalog(), "nozzle_diameter")
-        self.assertEqual((found.operator, found.value), ("between", mi.Quantity("mm", lower=0.3, upper=0.7)))
-        self.assertTrue(any("without `relaxes`" in w for w in found.warnings), found.warnings)
+        self.assertEqual((found.operator, found.value, found.warnings), ("one_of", microns(400), ()))
         relaxes = {"reason": "the vendor ships a 0.2 mm nozzle", "citation": cite()[0]}
         self.child([discrete(0.2, 0.4, relaxes=relaxes)])
         self.assertEqual(resolve(record(), self.catalog(), "nozzle_diameter").value, microns(200, 400))
@@ -742,15 +741,14 @@ class DiscreteNozzleDiameters(Directories):
         sizes = [{"value": float(size), "units": "um"} for size in (200, 400, 600)]
         self.assertEqual(shown, {"fdm.material.pa@1": (sizes, "um"), "fdm.material.pb@1": ({"value": 0.4, "units": "mm"}, "mm")})
 
-    def test_a_strict_parent_bound_rejects_a_child_set_that_contains_its_boundary_size(self) -> None:
+    def test_a_strict_parent_bound_drops_the_child_set_size_on_its_boundary(self) -> None:
         for operator, sizes in (("<", (0.4, 0.8)), (">", (0.2, 0.4))):
             with self.subTest(operator):
                 boundary = 0.8 if operator == "<" else 0.2
                 put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", operator, quantity=fx.quantity(boundary))]))
                 self.child([discrete(*sizes)])
                 found = resolve(record(), self.catalog(), "nozzle_diameter")
-                self.assertEqual((found.operator, found.value), (operator, mi.Quantity("mm", value=boundary)))
-                self.assertTrue(any("without `relaxes`" in w and "fdm.material.pa@1" in w for w in found.warnings), found.warnings)
+                self.assertEqual((found.operator, found.value, found.warnings), ("one_of", microns(400), ()))
 
     def test_a_strict_parent_bound_accepts_a_child_set_clear_of_its_boundary_size(self) -> None:
         put(self.shipped, "generic", guideline("fdm.generic", [limit("nozzle_diameter", "<", quantity=fx.quantity(0.8))]))
@@ -785,6 +783,144 @@ class DiscreteNozzleDiameters(Directories):
         self.assertEqual(document["resolutions"][0]["value"], [{"value": float(v), "units": "um"} for v in (200, 400, 600, 800)])
         json.dumps(document, allow_nan=False)
         self.assertEqual(document["resolutions"][0]["provenance"][0]["value"], document["resolutions"][0]["value"])
+
+
+class JointNozzleConstraints(Directories):
+    """A discrete nozzle-diameter set meeting a range keeps the sizes the range admits (benchhand-tw6.9), whichever of the
+    two sits in the more specific layer. The sizes are those of the Bambu H2D, 0.2 to 0.8 mm."""
+
+    H2D = (0.2, 0.4, 0.6, 0.8)
+    PIN = ["fdm.machine.tst@1"]
+
+    def rng(self, operator: str, value: float, units: str = "mm", **extra: Any) -> dict[str, Any]:
+        return limit("nozzle_diameter", operator, value, units, **extra)
+
+    def between(self, low: float, high: float) -> dict[str, Any]:
+        return limit("nozzle_diameter", "between", quantity=fx.quantity(lower=low, upper=high))
+
+    def stack(self, general: dict[str, Any], material: dict[str, Any] | None = None, machine: dict[str, Any] | None = None) -> None:
+        """General, material and (pinned) machine layers, each given the limit it states."""
+        put(self.shipped, "g", guideline("fdm.generic", [general]))
+        if material is not None:
+            put(self.shipped, "pa", guideline("fdm.material.pa", [material], material_family=["pa"]))
+        if machine is not None:
+            put(self.shipped, "m", guideline("fdm.machine.tst", [machine]))
+
+    def found(self, **extra: Any) -> Any:
+        return resolve(record(pin=self.PIN, **extra), self.catalog(), "nozzle_diameter")
+
+    def test_a_range_above_a_pinned_set_keeps_the_sizes_it_admits_without_a_warning(self) -> None:
+        cases = {"> 0.6": (">", 0.6, (800,)), ">= 0.6": (">=", 0.6, (600, 800)), "< 0.6": ("<", 0.6, (200, 400)),
+                 "<= 0.6": ("<=", 0.6, (200, 400, 600))}
+        for name, (operator, value, expected) in cases.items():
+            with self.subTest(name):
+                self.stack(self.rng(operator, value), machine=discrete(*self.H2D))
+                found = self.found()
+                self.assertEqual((found.status, found.operator, found.value, found.warnings),
+                                 ("guideline", "one_of", microns(*expected), ()))
+
+    def test_an_inclusive_between_keeps_both_end_sizes(self) -> None:
+        self.stack(self.between(0.4, 0.6), machine=discrete(*self.H2D))
+        self.assertEqual(self.found().value, microns(400, 600))
+
+    def test_a_range_in_micrometres_meets_a_set_in_millimetres(self) -> None:
+        self.stack(self.rng(">=", 600, "um"), machine=discrete(*self.H2D))
+        found = self.found()
+        self.assertEqual((found.value, found.warnings), (microns(600, 800), ()))
+
+    def test_a_range_below_a_set_keeps_the_sizes_it_admits_without_a_warning(self) -> None:
+        self.stack(discrete(*self.H2D), machine=self.rng(">=", 0.6))
+        found = self.found()
+        self.assertEqual((found.value, found.warnings), (microns(600, 800), ()))
+
+    def test_a_range_that_admits_no_size_is_unknown_with_a_conflict_reason(self) -> None:
+        for name, general, machine in (("range above", self.rng(">=", 1.0), discrete(*self.H2D)),
+                                       ("range below", discrete(*self.H2D), self.rng(">=", 1.0))):
+            with self.subTest(name):
+                self.stack(general, machine=machine)
+                found = self.found()
+                self.assertEqual((found.status, found.value, found.provenance), ("unknown", None, ()))
+                self.assertIn("share no size", found.reasons[0])
+                self.assertIn("fdm.machine.tst@1", found.reasons[0])
+                self.assertFalse(any("would relax" in w for w in found.warnings), found.warnings)
+
+    def test_a_set_and_a_range_of_equal_rank_give_the_same_result_whatever_the_discovery_order(self) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(*self.H2D)], material_family=["pa"]))
+        put(self.shipped, "pb", guideline("fdm.material.pb", [self.rng(">=", 0.6)], material_family=["pa"]))
+        real = gl.applicable
+        results = []
+        for name, order in (("id order", list), ("reversed", lambda found: found[::-1])):
+            with self.subTest(name), mock.patch.object(gl, "applicable", lambda catalog, context: order(real(catalog, context))):
+                found = resolve(record(), self.catalog(), "nozzle_diameter")
+                dropped = [(s.value, s.guideline, s.why) for s in found.provenance[0].shadowed if "dropped" in s.why]
+                results.append((found.value, found.warnings, found.source, [p.guideline for p in found.provenance],
+                                [(s.guideline, s.why) for s in found.provenance[0].shadowed if "disputed" in s.why], dropped))
+        self.assertEqual(results[0][:2], (microns(600, 800), ()))
+        self.assertEqual(results[0][2]["reference"], "fdm.material.pa")
+        self.assertEqual(results[0], results[1])
+        self.assertEqual(sorted(g for g, _ in results[0][4]), ["fdm.material.pa@1", "fdm.material.pb@1"])
+        self.assertEqual(results[0][5], [("200 um, 400 um", "fdm.material.pa@1", "sizes dropped by fdm.material.pb@1 (material)")])
+
+    def test_a_set_and_a_range_of_equal_rank_from_different_sets_are_recorded_as_disputed(self) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(*self.H2D)], material_family=["pa"]))
+        put(self.shipped, "pb", guideline("fdm.material.pb", [self.rng(">=", 0.6)], material_family=["pa"]))
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        disputed = [s for s in found.provenance[0].shadowed if "disputed" in s.why]
+        self.assertEqual(sorted(s.guideline for s in disputed), ["fdm.material.pa@1", "fdm.material.pb@1"])
+        self.assertTrue(all("equally specific" in s.why and "600 um, 800 um" in s.why for s in disputed), disputed)
+
+    def test_the_sizes_a_range_drops_reach_the_provenance_with_the_range_that_dropped_them(self) -> None:
+        self.stack(self.rng(">=", 0.6), machine=discrete(*self.H2D))
+        found = self.found()
+        dropped = [s for s in found.provenance[0].shadowed if "dropped" in s.why]
+        self.assertEqual([(s.value, s.guideline, s.layer) for s in dropped], [("200 um, 400 um", "fdm.machine.tst@1", "machine")])
+        self.assertIn("fdm.generic@1", dropped[0].why)
+        self.assertIn("generic", dropped[0].why)
+
+    def test_a_general_range_a_material_range_and_a_machine_set_keep_the_sizes_inside_both(self) -> None:
+        self.stack(self.rng(">=", 0.2), self.rng(">=", 0.6), discrete(*self.H2D))
+        found = self.found()
+        self.assertEqual((found.value, found.warnings), (microns(600, 800), ()))
+
+    def test_a_general_set_a_material_range_and_a_wider_machine_set_keep_the_general_sizes_inside_the_range(self) -> None:
+        self.stack(discrete(0.4, 0.6), self.rng("<=", 0.6), discrete(*self.H2D))
+        found = self.found()
+        self.assertEqual(found.value, microns(400, 600))
+        self.assertEqual([w for w in found.warnings if "would relax" not in w], [])
+        self.assertEqual(len(found.warnings), 1)
+        self.assertIn("fdm.machine.tst@1", found.warnings[0])
+
+    def test_a_single_surviving_size_stays_a_one_of_with_one_member(self) -> None:
+        self.stack(self.rng(">", 0.6), machine=discrete(*self.H2D))
+        found = self.found()
+        self.assertEqual((found.operator, found.value), ("one_of", microns(800)))
+
+    def test_a_set_that_declares_relaxes_replaces_the_range_with_a_warning(self) -> None:
+        relaxes = {"reason": "this printer ships small nozzles", "citation": cite()[0]}
+        self.stack(self.rng(">=", 0.6), machine=discrete(*self.H2D, relaxes=relaxes))
+        found = self.found()
+        self.assertEqual(found.value, microns(200, 400, 600, 800))
+        self.assertTrue(any("relaxed to" in w and "this printer ships small nozzles" in w for w in found.warnings), found.warnings)
+
+    def test_a_range_that_declares_relaxes_replaces_the_set_with_a_warning(self) -> None:
+        relaxes = {"reason": "the vendor ships a 1.0 mm nozzle", "citation": cite()[0]}
+        self.stack(discrete(*self.H2D), machine=self.rng(">=", 0.6, relaxes=relaxes))
+        found = self.found()
+        self.assertEqual((found.operator, found.value), (">=", mi.Quantity("mm", value=0.6)))
+        self.assertTrue(any("relaxed to" in w and "the vendor ships a 1.0 mm nozzle" in w for w in found.warnings), found.warnings)
+
+    def test_a_calibration_still_beats_the_joint_constraint(self) -> None:
+        self.stack(self.rng(">=", 0.6), machine=discrete(*self.H2D))
+        calibration = fx.calibration("cal_nozzle", "nozzle_diameter", "tst_pa", fx.quantity(lower=0.4, upper=0.4))
+        found = self.found(calibrations=[calibration])
+        self.assertEqual((found.status, found.provenance[0].layer), ("calibrated", "L4"))
+
+    def test_an_unknown_scope_fact_keeps_the_set_unknown_and_does_not_fall_through_to_the_range(self) -> None:
+        self.stack(self.rng(">=", 0.6))
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(*self.H2D)], material_family=["pa"]))
+        found = resolve(record(family=None), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.status, "unknown")
+        self.assertIn("scope fact is unknown", found.reasons[0])
 
 
 class Pin(Directories):
