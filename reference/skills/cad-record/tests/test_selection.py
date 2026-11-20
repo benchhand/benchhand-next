@@ -477,6 +477,50 @@ class ComparisonOutput(unittest.TestCase):
         self.assertEqual(sorted(grouped), sorted(mi.MATERIAL_PROPERTIES))
 
 
+class FuFyRatioRequirement(unittest.TestCase):
+    """REQ-001 asks for fu/fy >= 1.1 of the cover. A ratio is accepted as a dimensionless number or as percent, and
+    like elongation it is tested at a temperature, so a value from another temperature cannot pass at the operating one."""
+
+    def documents(self, polymer: list[dict[str, Any]], metal_ratio: float = 1.15) -> dict[str, Any]:
+        documents = scenarios.qualified_polymer_cover()
+        requirement = next(r for r in documents["requirements.yaml"]["requirements"] if r["id"] == "REQ-001")
+        requirement["acceptance"] = [fx.criterion("fu_fy_ratio", ">=", 1.1, "dimensionless")]
+        printed = profile(documents, "materials", "tst_polymer_c_printed")
+        printed["properties"] = polymer + printed["properties"][2:]
+        profile(documents, "materials", "tst_metal_d_bar")["properties"].append(
+            scenarios.prop("fu_fy_ratio", metal_ratio, "dimensionless", temperature=(0, 150)))
+        return documents
+
+    def ratio(self, value: float, units: str, **extra: Any) -> list[dict[str, Any]]:
+        return [scenarios.prop("fu_fy_ratio", value, units, orientation=o, **extra) for o in ("XY", "Z")]
+
+    def test_a_ratio_passes_as_a_number_or_as_percent(self) -> None:
+        report = assess(self, self.documents(self.ratio(110, "percent")))
+        for ident, shown in (("printed_cover", "110 percent"), ("machined_cover", "1.15 dimensionless")):
+            with self.subTest(ident):
+                entry = candidate(report, ident)
+                (verdict,) = evaluations(entry, "REQ-001")
+                self.assertEqual((entry["status"], verdict["outcome"]), ("feasible", "pass"))
+                self.assertIn(f"{shown} against fu_fy_ratio >= 1.1 dimensionless", verdict["reasons"][0])
+        strength = only_decision(report)["comparison"][0]["service_properties"]
+        self.assertIn("strength: TST-0301 fu_fy_ratio 110 percent (supplier_typical, dry, XY, at 0..60 deg_C)", strength)
+        self.assertIn("fu_fy_ratio 1.15 dimensionless", only_decision(report)["comparison"][1]["service_properties"])
+
+    def test_a_ratio_below_the_limit_fails_the_candidate(self) -> None:
+        report = assess(self, self.documents(self.ratio(105, "percent")))
+        printed = candidate(report, "printed_cover")
+        (verdict,) = evaluations(printed, "REQ-001")
+        self.assertEqual((printed["status"], verdict["outcome"]), ("eliminated", "fail"))
+        self.assertEqual(candidate(report, "machined_cover")["status"], "feasible")
+
+    def test_a_ratio_tested_at_another_temperature_does_not_pass_at_the_operating_temperature(self) -> None:
+        report = assess(self, self.documents(self.ratio(1.2, "dimensionless", temperature=(23, 23))))
+        printed = candidate(report, "printed_cover")
+        self.assertEqual((printed["status"], printed["unknown"]), ("conditional", ["REQ-001"]))
+        (verdict,) = evaluations(printed, "REQ-001")
+        self.assertIn("15..35 deg_C requested", " ".join(verdict["reasons"]))
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run([sys.executable, "-B", str(SCRIPT), *args], capture_output=True, text=True, check=False)

@@ -405,6 +405,27 @@ class RecordDocuments(SchemaCase):
             "typical flag required": (lambda d: d["profiles"][1].pop("typical_not_allowable"), False),
         })
 
+    def test_elongation_gauge_is_optional_and_belongs_to_elongation_at_break(self) -> None:
+        base = fx.tst_record()["manufacturing/materials.yaml"]
+
+        def entry(name: str, **conditions: Any) -> Callable[[Any], None]:
+            def edit(document: Any) -> None:
+                prop = fx.material_property(name, 0.2, "dimensionless")
+                prop["conditions"].update(conditions)
+                document["profiles"][1]["properties"][0] = prop
+            return edit
+
+        gauges = {f"gauge {gauge}": (entry("elongation_at_break", gauge=gauge), True)
+                  for gauge in ("5.65sqrtS0", "5d", "A50mm", "A2in", "other")}
+        self.assert_cases("manufacturing-materials.schema.json", base, {
+            **gauges,
+            "no gauge states the value cannot meet a ductility threshold": (entry("elongation_at_break"), True),
+            "a gauge outside the enum": (entry("elongation_at_break", gauge="5.65"), False),
+            "a gauge of another case": (entry("elongation_at_break", gauge="a50mm"), False),
+            "a gauge on another property": (entry("elongation_at_yield", gauge="5d"), False),
+            "a gauge on a modulus": (entry("youngs_modulus", gauge="5d"), False),
+        })
+
     def test_selection_candidates_propose_parts_and_purchases(self) -> None:
         purchase = {"identity": fx.known("TST pin 6x20"), "specification": fx.known("TST steel"), "ratings": fx.known("TST rating"),
                     "supplier_evidence": [fx.source("supplier")]}

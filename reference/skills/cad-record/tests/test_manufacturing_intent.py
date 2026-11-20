@@ -128,6 +128,18 @@ class Normalization(unittest.TestCase):
         self.assertTrue(record.capabilities["tst_printer"].parameters["nozzle_diameter"].known)
         self.assertEqual(len(record.assembly_operations), 1)
 
+    def test_a_material_property_exposes_its_elongation_gauge_or_none(self) -> None:
+        documents = fx.tst_record()
+        gauged = fx.material_property("elongation_at_break", 0.25, "dimensionless", temperature=fx.quantity(20, "deg_C"))
+        gauged["conditions"]["gauge"] = "5.65sqrtS0"
+        bare = fx.material_property("elongation_at_break", 0.25, "dimensionless")
+        rod = next(p for p in documents["manufacturing/materials.yaml"]["profiles"] if p["id"] == "tst_metal_rod")
+        rod["properties"] += [gauged, bare]
+        record, problems = mi.check_record(fx.write_record(temp_hw(self), documents))
+        self.assertEqual([p.finding() for p in problems], [])
+        found = [p for p in record.materials["tst_metal_rod"].properties if p.name == "elongation_at_break"]
+        self.assertEqual([p.gauge for p in found], ["5.65sqrtS0", None])
+
     def test_a_record_of_an_unsupported_version_reads_as_unknowns_and_one_problem(self) -> None:
         for version in (1, 3):
             hw = fx.write_record(temp_hw(self), fx.tst_record())
@@ -800,6 +812,17 @@ class ProfileDocuments(unittest.TestCase):
         self.assertEqual(sorted(p.code for p in problems), ["intent.allowable", "intent.duplicate"])
         with self.assertRaises(mi.IntentError):
             mi.profile_document(materials, "selection", "x.yaml")
+
+    def test_a_fu_fy_ratio_reads_alike_as_a_number_or_as_percent(self) -> None:
+        materials = copy.deepcopy(fx.tst_record()["manufacturing/materials.yaml"])
+        materials["profiles"][1]["properties"] += [fx.material_property("fu_fy_ratio", 1.1, "dimensionless"),
+                                                   fx.material_property("fu_fy_ratio", 110, "percent")]
+        profiles, problems = mi.profile_document(materials, "materials", "library.yaml")
+        self.assertEqual([p.finding() for p in problems], [])
+        ratios = [p.value.value.to("dimensionless").value for p in profiles[1].properties if p.name == "fu_fy_ratio"]
+        self.assertEqual(len(ratios), 2)
+        self.assertAlmostEqual(ratios[0], 1.1)
+        self.assertAlmostEqual(ratios[1], 1.1)
 
 
 class SubjectOccurrences(unittest.TestCase):

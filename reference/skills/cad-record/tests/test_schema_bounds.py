@@ -223,6 +223,7 @@ CASES: tuple[Case, ...] = (
     fact(48, "temperature", "(-273.15, 1000]", {"max": 300}, "deg_C", schema="manufacturing-materials.schema.json"),
     fact(48, "poisson_ratio", "[0, 0.5)", {"max": 0.45}, "dimensionless", "poisson",
          schema="manufacturing-materials.schema.json"),
+    fact(48, "fu_fy_ratio", "[1, ]", None, "dimensionless", "fu_fy", schema="manufacturing-materials.schema.json"),
     number(49, "min_clearance_mm", "interfaces.schema.json", "/properties/interfaces/items/properties/min_clearance_mm",
            "(0, 5]", {"max": 1}),
     number(50, "tol", STACK, f"{CONTRIBUTOR}/tol", "[0, 5]", {"max": 1}),
@@ -271,7 +272,7 @@ FACTS = {
     "calibration.overhang_angle", "calibration.min_wall", "calibration.min_feature", "calibration.min_hole", "calibration.deviation",
     "calibration.min_bed_contact_area", "clearance_per_side", "interference_per_side", "nozzle_diameter", "layer_height",
     "hotend_max_temperature", "bed_max_temperature", "max_speed", "travel_x", "travel_y", "travel_z", "spindle_max_speed",
-    "power", "pump_pressure", "press_brake_force", "modulus", "density", "temperature", "poisson_ratio", "min_clearance_mm",
+    "power", "pump_pressure", "press_brake_force", "modulus", "density", "temperature", "poisson_ratio", "fu_fy_ratio", "min_clearance_mm",
     "tol", "tol_plus", "tol_minus", "confidence", "weight", "crank_radius_mm", "rod_length_mm", "guideline.factor",
     "period_deg", "mass_target", "bom.mass",
 }
@@ -596,7 +597,7 @@ PROPERTY_NAMES = {
     "modulus": ["youngs_modulus", "flexural_modulus", "shear_modulus", "creep_modulus"], "density": ["density"],
     "temperature": ["heat_deflection_temperature", "vicat_softening_temperature", "glass_transition_temperature",
                     "melting_temperature", "max_service_temperature"],
-    "poisson_ratio": ["poisson_ratio"],
+    "poisson_ratio": ["poisson_ratio"], "fu_fy_ratio": ["fu_fy_ratio"],
 }
 
 
@@ -655,7 +656,7 @@ class Documents(unittest.TestCase):
 
     def test_every_material_property_is_bounded_by_its_name(self) -> None:
         cases = [c for c in CASES if c.schema == MATERIALS]
-        self.assertEqual(len(cases), 4)
+        self.assertEqual(len(cases), 5)
         for case in cases:
             for name in PROPERTY_NAMES[case.name]:
                 def edit(document: Any, fact: Any, name: str = name) -> None:
