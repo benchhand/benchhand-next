@@ -19,6 +19,7 @@ import hashlib
 import importlib.util
 import shutil
 import sys
+import threading
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -34,13 +35,23 @@ LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
 SYNTHETIC = "synthetic test fixture value, not material, machine or supplier data"
 
 
+_LOAD_LOCK = threading.RLock()
+
+
 def _module(name: str, path: Path) -> Any:
-    if name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(name, path)
-        assert spec and spec.loader
-        sys.modules[name] = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sys.modules[name])
-    return sys.modules[name]
+    """Load `path` once under `name`; a thread that finds it loading waits, and a failed load leaves nothing behind."""
+    with _LOAD_LOCK:
+        if name not in sys.modules:
+            spec = importlib.util.spec_from_file_location(name, path)
+            assert spec and spec.loader
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = module
+            try:
+                spec.loader.exec_module(module)
+            except BaseException:
+                sys.modules.pop(name, None)
+                raise
+        return sys.modules[name]
 
 
 def intent_module() -> Any:
