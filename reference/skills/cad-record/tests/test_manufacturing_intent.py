@@ -852,6 +852,137 @@ class CheckDocuments(unittest.TestCase):
                           ("intent.schema", "hw/requirements.yaml")])
 
 
+class PlausibilityWarnings(unittest.TestCase):
+    """plausibility_problems: a warning for a value inside its hard bound and outside its x-plausible band."""
+
+    def documents(self, *, calibrations: list[dict[str, Any]] | None = None, parameters: dict[str, Any] | None = None) -> dict[str, Any]:
+        profile = fx.capability_profile("tst_printer", "fdm", calibrations=calibrations, parameters=parameters)
+        return {"manufacturing/capabilities.yaml": {"profiles": [profile]}}
+
+    def hole(self, value: float, units: str = "mm") -> dict[str, Any]:
+        return self.documents(calibrations=[fx.calibration("hole", "min_hole", "tst_polymer_printed", fx.quantity(value, units))])
+
+    def test_a_min_hole_beyond_its_band_warns_with_the_band_and_the_value(self) -> None:
+        documents = self.hole(15)
+        self.assertEqual(mi.schema_problems(documents), [])
+        (problem,) = mi.plausibility_problems(documents)
+        self.assertEqual((problem.code, problem.severity, problem.path), ("plausibility.limits", "warning", "hw/manufacturing/capabilities.yaml"))
+        self.assertEqual(problem.pointer, "profiles/0/calibrations/0/result/limits/value")
+        self.assertIn("value 15 mm", problem.message)
+        self.assertIn("0.5 to 10 mm", problem.message)
+
+    def test_a_min_hole_inside_its_band_or_on_its_edge_does_not_warn(self) -> None:
+        for value in (2, 0.5, 10):
+            with self.subTest(value=value):
+                self.assertEqual(mi.plausibility_problems(self.hole(value)), [])
+
+    def test_a_min_hole_below_its_band_warns(self) -> None:
+        (problem,) = mi.plausibility_problems(self.hole(0.2))
+        self.assertIn("value 0.2 mm", problem.message)
+
+    def test_a_min_hole_beyond_its_hard_bound_is_an_error_and_has_no_warning(self) -> None:
+        documents = self.hole(26)
+        self.assertTrue(mi.schema_problems(documents))
+        self.assertEqual(mi.plausibility_problems(documents), [])
+
+    def test_a_value_is_read_in_the_units_of_the_band(self) -> None:
+        cases = [(15000, "um", True), (10000, "um", False), (0.015, "m", True), (0.002, "m", False)]  # 15 mm, 10 mm (the edge), 15 mm, 2 mm
+        for value, units, warns in cases:
+            with self.subTest(value=value, units=units):
+                problems = mi.plausibility_problems(self.hole(value, units))
+                self.assertEqual(len(problems), 1 if warns else 0)
+
+    def test_another_characteristic_takes_its_own_band(self) -> None:
+        def wall(value: float) -> dict[str, Any]:
+            return self.documents(calibrations=[fx.calibration("wall", "min_wall", "tst_polymer_printed", fx.quantity(value))])
+
+        self.assertEqual(mi.plausibility_problems(wall(5))[0].message.count("0.4 to 3 mm"), 1)  # 5 mm is inside min_hole's band, not min_wall's
+        self.assertEqual(mi.plausibility_problems(wall(1)), [])
+        self.assertEqual(mi.plausibility_problems(self.hole(5)), [])
+
+    def test_a_fact_parameter_takes_the_band_of_its_definition(self) -> None:
+        documents = self.documents(parameters={"nozzle_diameter": fx.known(fx.quantity(2))})
+        self.assertEqual(mi.schema_problems(documents), [])
+        (problem,) = mi.plausibility_problems(documents)
+        self.assertEqual(problem.code, "plausibility.nozzle_diameter")
+        self.assertIn("0.2 to 1.2 mm", problem.message)
+
+    def test_both_ends_of_an_interval_are_checked(self) -> None:
+        documents = self.documents(calibrations=[fx.calibration("hole", "min_hole", "tst_polymer_printed", fx.quantity(lower=1, upper=15))])
+        (problem,) = mi.plausibility_problems(documents)
+        self.assertIn("upper 15 mm", problem.message)
+
+    def test_an_interval_end_inside_its_hard_bound_still_warns_when_its_sibling_breaks_the_bound(self) -> None:
+        documents = self.documents(calibrations=[fx.calibration("hole", "min_hole", "tst_polymer_printed", fx.quantity(lower=0.2, upper=26))])
+        self.assertTrue(mi.schema_problems(documents))  # upper 26 mm is past the 25 mm hard bound
+        (problem,) = mi.plausibility_problems(documents)  # lower 0.2 mm is inside it and below the 0.5 mm band
+        self.assertEqual(problem.pointer, "profiles/0/calibrations/0/result/limits/lower")
+        self.assertIn("lower 0.2 mm", problem.message)
+
+    def test_a_plain_number_takes_its_band(self) -> None:
+        def tolerance(value: Any) -> list[Any]:
+            return mi.plausibility_problems({"product.yaml": fx.product(general_tolerance=value)})
+
+        (problem,) = tolerance(1)  # a linear general tolerance in mm: band 0.01 to 0.5, hard bound 5
+        self.assertEqual((problem.code, problem.pointer), ("plausibility.general_tolerance", "general_tolerance"))
+        self.assertIn("0.01 to 0.5", problem.message)
+        for value in (0.1, "ISO 2768-m", 6):  # inside the band, a standard's name, past the hard bound
+            with self.subTest(value=value):
+                self.assertEqual(tolerance(value), [])
+
+    def part_with_edges(self, external: list[float]) -> dict[str, Any]:
+        part = fx.part("TST-0001")
+        part["drawing"] = {"type": "vendor_specification", "edges": {"external": external, "internal": [0, 0]}}
+        return {"parts/TST-0001/part.yaml": part}
+
+    def test_each_array_element_warns_at_its_own_index(self) -> None:
+        documents = self.part_with_edges([1, 1])  # ISO 13715 edge limits, band -0.5 to 0.5, hard bound -5 to 5
+        self.assertEqual(mi.schema_problems(documents), [])
+        problems = mi.plausibility_problems(documents)
+        self.assertEqual([p.pointer for p in problems], ["drawing/edges/external/0", "drawing/edges/external/1"])
+        self.assertEqual({p.code for p in problems}, {"plausibility.external"})
+
+    def test_an_array_element_inside_its_hard_bound_warns_when_another_breaks_it(self) -> None:
+        documents = self.part_with_edges([1, 9])
+        self.assertTrue(mi.schema_problems(documents))
+        self.assertEqual([p.pointer for p in mi.plausibility_problems(documents)], ["drawing/edges/external/0"])
+
+    def test_a_deviation_inside_its_hard_bound_warns_when_its_sibling_breaks_it_under_a_oneof(self) -> None:
+        part = fx.part("TST-0001")
+        part["drawing"] = {"type": "detail", "dimensions": [
+            {"id": "d1", "operation": "distance", "features": ["a", "b"], "tolerance": {"deviation_mm": [2, 11]}}]}
+        documents = {"parts/TST-0001/part.yaml": part}
+        self.assertTrue([p for p in mi.schema_problems(documents) if "tolerance" in p.pointer])  # 11 is past the 10 mm hard bound
+        pointers = [p.pointer for p in mi.plausibility_problems(documents)]
+        self.assertEqual(pointers, ["drawing/dimensions/0/tolerance/deviation_mm/0"])  # 2 is past the band's 1 mm only
+
+    def test_a_list_where_a_plain_number_is_expected_has_no_member_warning(self) -> None:
+        """general_tolerance [1] is refused by every alternative of its oneOf; the numeric branch's band must not warn at its member."""
+        documents = {"product.yaml": fx.product(general_tolerance=[1])}
+        self.assertTrue([p for p in mi.schema_problems(documents) if p.pointer.startswith("general_tolerance")])
+        self.assertEqual(mi.plausibility_problems(documents), [])
+
+    def test_a_unit_that_is_not_a_string_is_a_schema_problem_and_no_crash(self) -> None:
+        documents = fx.record(capabilities=[fx.capability_profile(
+            "tst_printer", "fdm", calibrations=[fx.calibration("hole", "min_hole", "tst_polymer_printed", {"value": 15, "units": ["mm"]})])])
+        self.assertEqual(mi.plausibility_problems(documents), [])
+        with tempfile.TemporaryDirectory(prefix="cad-plausibility-") as scratch:
+            _record, problems = mi.check_record(fx.write_record(Path(scratch) / "hw", documents))
+        self.assertTrue([p for p in problems if p.code == "intent.schema" and "units" in p.message])
+        self.assertEqual([p for p in problems if p.code.startswith("plausibility.")], [])
+
+    def test_check_documents_and_check_record_carry_the_warning_without_an_error(self) -> None:
+        documents = fx.record(capabilities=[fx.capability_profile(
+            "tst_printer", "fdm", calibrations=[fx.calibration("hole", "min_hole", "tst_polymer_printed", fx.quantity(15))])])
+        found = [p for p in mi.check_documents(documents, {"hw/manufacturing/capabilities.yaml"}) if p.code.startswith("plausibility.")]
+        self.assertEqual([(p.code, p.severity) for p in found], [("plausibility.limits", "warning")])
+        with tempfile.TemporaryDirectory(prefix="cad-plausibility-") as scratch:
+            hw = fx.write_record(Path(scratch) / "hw", documents)
+            _record, problems = mi.check_record(hw)
+        self.assertEqual([p.code for p in problems if p.code.startswith("plausibility.")], ["plausibility.limits"])
+        self.assertEqual([p for p in problems if p.severity == "error" and p.code == "intent.schema"], [])
+
+
 class StrictBoundTests(unittest.TestCase):
     """`<` and `>` beside `<=` and `>=`: which of two one-sided bounds is tighter, and when a worst case breaks one."""
 

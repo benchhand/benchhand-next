@@ -6,8 +6,8 @@
 
 """Hard bounds, plausibility bands, defaults and CLI/env annotations of every tunable parameter in the bundled
 schemas (docs/config-audit.md, bounds table). A hard bound is a schema minimum/maximum or enum: a violation is an
-error. A plausibility band is an `x-plausible` annotation: a miss is a warning `plausibility.<field>` that the
-config loader emits, so it never blocks and the schema does not enforce it. The expected bounds below come from
+error. A plausibility band is an `x-plausible` annotation: a miss is a warning `plausibility.<field>` that
+manufacturing_intent.plausibility_problems emits, so it never blocks and the schema does not enforce it. The expected bounds below come from
 the audit, not from the schemas."""
 
 from __future__ import annotations
