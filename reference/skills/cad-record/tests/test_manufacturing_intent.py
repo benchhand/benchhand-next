@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import math
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -352,6 +353,24 @@ class Normalization(unittest.TestCase):
         documents.pop("_sources")
         record = mi.normalize_record(documents)
         self.assertEqual([p.finding() for p in record.problems], [], "without hw, decision and artifact files are not checked")
+
+
+class LoadByPathWithoutOptionalDependencies(unittest.TestCase):
+    def test_the_module_loads_and_normalizes_with_pyyaml_jsonschema_and_referencing_missing(self) -> None:
+        code = ("import importlib.util, sys\n"
+                "class Block:\n"
+                "    def find_spec(self, name, path=None, target=None):\n"
+                "        if name.split('.')[0] in ('yaml', 'jsonschema', 'referencing'):\n"
+                "            raise ModuleNotFoundError(name)\n"
+                "sys.meta_path.insert(0, Block())\n"
+                "spec = importlib.util.spec_from_file_location('cad_record_manufacturing_intent', sys.argv[1])\n"
+                "sys.modules['cad_record_manufacturing_intent'] = module = importlib.util.module_from_spec(spec)\n"
+                "spec.loader.exec_module(module)\n"
+                "module.normalize_record({})\n"
+                "print('ok', [n for n in ('yaml', 'jsonschema', 'referencing') if n in sys.modules])\n")
+        done = subprocess.run([sys.executable, "-c", code, str(SKILL / "scripts" / "manufacturing_intent.py")],
+                              capture_output=True, text=True, check=False)
+        self.assertEqual(done.stdout.strip(), "ok []", done.stderr)
 
 
 class UseCaseReadiness(unittest.TestCase):
