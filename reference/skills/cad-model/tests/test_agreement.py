@@ -20,6 +20,7 @@ import unittest
 from pathlib import Path
 
 PROBE = Path(__file__).resolve().parent / "fixtures" / "agreement_probe.py"
+INDEX_PROBE = PROBE.with_name("surface_index_probe.py")
 
 
 class AgreementTests(unittest.TestCase):
@@ -205,6 +206,37 @@ class AgreementTests(unittest.TestCase):
             for got, expected in zip(got_point, want_point):
                 self.assertAlmostEqual(got, expected, places=4)
         self.assertEqual(glb["triangles"], [[0, 1, 2]])
+
+
+class SurfaceIndexTests(unittest.TestCase):
+    """The triangle lookup of the agreement check, through the numpy and Hypothesis tests of
+    fixtures/surface_index_probe.py. Each test runs one of them in its own process."""
+
+    def run_probe(self, test: str) -> None:
+        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(INDEX_PROBE), f"SurfaceIndex.{test}"],
+                              capture_output=True, text=True, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr[-4000:])
+
+    def test_the_lookup_answers_every_point_as_a_search_of_every_triangle(self) -> None:
+        self.run_probe("test_the_lookup_answers_every_point_as_a_search_of_every_triangle")
+
+    def test_a_large_face_of_two_triangles_agrees_with_a_fine_mesh_of_it(self) -> None:
+        self.run_probe("test_a_large_face_of_two_triangles_agrees_with_a_fine_mesh_of_it")
+
+    def test_a_face_off_axis_moved_0_2_mm_along_its_normal_does_not_agree(self) -> None:
+        self.run_probe("test_a_face_off_axis_moved_0_2_mm_along_its_normal_does_not_agree")
+
+    def test_a_triangle_spanning_billions_of_cells_leaves_a_mesh_agreeing_with_itself(self) -> None:
+        self.run_probe("test_a_triangle_spanning_billions_of_cells_leaves_a_mesh_agreeing_with_itself")
+
+    def test_many_triangles_in_one_cell_are_measured_in_bounded_batches(self) -> None:
+        self.run_probe("test_many_triangles_in_one_cell_are_measured_in_bounded_batches")
+
+    def test_many_wide_triangles_are_measured_in_bounded_batches(self) -> None:
+        self.run_probe("test_many_wide_triangles_are_measured_in_bounded_batches")
+
+    def test_more_wide_triangles_than_a_batch_are_split_across_blocks(self) -> None:
+        self.run_probe("test_more_wide_triangles_than_a_batch_are_split_across_blocks")
 
 
 if __name__ == "__main__":
