@@ -224,16 +224,19 @@ class BlockShapeTests(unittest.TestCase):
                              (0, "TST-0301", 1.15, 1.1, False))
             self.assertEqual(len(wall["location_mm"]), 3)
 
-    def test_solid_box_defaults_to_block_like_and_fdm_wall_minimum(self) -> None:
+    def test_solid_box_defaults_to_block_like_and_the_guideline_wall_floor(self) -> None:
+        """A part that names no capability profile has no nozzle or line width, so fdm.generic's 0.8 mm floor applies,
+        and the wall row says so: 1.1 mm passes it, 0.7 mm does not."""
         with tempfile.TemporaryDirectory() as tmp:
-            hw, parts_dir = build_parts(Path(tmp), box_part(1.1))
+            hw, parts_dir = build_parts(Path(tmp), {**box_part(1.1), "TST-0302": (FDM_MADE, "cq.Workplane().box(10, 10, 0.7)")})
             code, report = form_check(parts_dir, "F2", hw)
-            block = next(f for f in report["findings"] if f["check"] == "block_like")
-            wall = next(f for f in report["findings"] if f["check"] == "min_wall")
-            self.assertEqual((code, block["part"], wall["min_mm"]), (0, "TST-0301", 1.2))
-            self.assertEqual((block["blocking"], wall["blocking"], report["status"]), (False, False, "pass"))
-            self.assertLess(wall["thickness_mm"], wall["min_mm"])
-            self.assertEqual(len(wall["location_mm"]), 3)
+            block = next(f for f in report["findings"] if f["check"] == "block_like" and f["part"] == "TST-0301")
+            walls = [f for f in report["findings"] if f["check"] == "min_wall"]
+            self.assertEqual((code, block["blocking"], report["status"]), (0, False, "pass"))
+            self.assertEqual([(f["part"], f["min_mm"], f["blocking"]) for f in walls], [("TST-0302", 0.8, False)])
+            limit = report["parts"]["TST-0301"]["min_wall"]["limit"]
+            self.assertEqual((limit["required_mm"], limit["status"], limit["guideline"]), (0.8, "guideline", "fdm.generic@1"))
+            self.assertIn("no nozzle or line width", limit["note"])
 
 
 PLATE_08 = "cq.Workplane().box(10, 10, 0.8)"
@@ -283,6 +286,9 @@ class WallScanTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.tmp = tempfile.TemporaryDirectory()
         hw, parts_dir = build_parts(Path(cls.tmp.name), WALL_PARTS)
+        # These parts name no capability profile, so the resolved fdm minimum is the 0.8 mm floor. The scan is tested
+        # at the 1.2 mm a 0.4 mm nozzle resolves to, given here as the project's minimum.
+        (hw / "product.yaml").write_text("id: fixture\nmanufacturing:\n  min_wall_mm: {fdm: 1.2}\n", encoding="utf-8")
         cls.code, cls.report = form_check(parts_dir, "F2", hw)
 
     @classmethod
@@ -401,16 +407,17 @@ class WallOverrideTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec("yaml"), "pyyaml is required to read product.yaml")
 class WallThresholdTests(unittest.TestCase):
-    """Valid min_wall_mm overrides apply; anything else the product schema rejects is a RecordError."""
+    """Only written min_wall_mm overrides apply (the schema's default is never one); anything else the product schema
+    rejects is a RecordError."""
 
     def thresholds(self, product: str) -> dict[str, float]:
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "product.yaml").write_text(product, encoding="utf-8")
-            return FORM_CHECK.minimum_wall_thresholds(Path(tmp))
+            return FORM_CHECK.minimum_wall_overrides(Path(tmp))
 
-    def test_defaults_and_valid_overrides(self) -> None:
-        self.assertEqual(self.thresholds("id: fixture\n"), {"fdm": 1.2})
-        self.assertEqual(self.thresholds("id: fixture\nmanufacturing:\n  processes: [fdm]\n"), {"fdm": 1.2})
+    def test_only_written_overrides_apply(self) -> None:
+        self.assertEqual(self.thresholds("id: fixture\n"), {})
+        self.assertEqual(self.thresholds("id: fixture\nmanufacturing:\n  processes: [fdm]\n"), {})
         self.assertEqual(self.thresholds("id: fixture\nmanufacturing:\n  min_wall_mm: {fdm: 1, cnc: 0.8}\n"),
                          {"fdm": 1.0, "cnc": 0.8})
 
