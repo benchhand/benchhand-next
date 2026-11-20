@@ -224,19 +224,21 @@ class BlockShapeTests(unittest.TestCase):
                              (0, "TST-0301", 1.15, 1.1, False))
             self.assertEqual(len(wall["location_mm"]), 3)
 
-    def test_solid_box_defaults_to_block_like_and_the_guideline_wall_floor(self) -> None:
-        """A part that names no capability profile has no nozzle or line width, so fdm.generic's 0.8 mm floor applies,
-        and the wall row says so: 1.1 mm passes it, 0.7 mm does not."""
+    def test_solid_box_defaults_to_block_like_and_an_unknown_wall_limit_without_a_capability_profile(self) -> None:
+        """A part that names no capability profile has no guideline scope, as in the process checks: its minimum wall is
+        unknown (no scan, no invented floor), and a min_wall_limit_unknown diagnostic says why."""
         with tempfile.TemporaryDirectory() as tmp:
             hw, parts_dir = build_parts(Path(tmp), {**box_part(1.1), "TST-0302": (FDM_MADE, "cq.Workplane().box(10, 10, 0.7)")})
             code, report = form_check(parts_dir, "F2", hw)
             block = next(f for f in report["findings"] if f["check"] == "block_like" and f["part"] == "TST-0301")
-            walls = [f for f in report["findings"] if f["check"] == "min_wall"]
+            unknown = {f["part"]: f for f in report["findings"] if f["check"] == "min_wall_limit_unknown"}
             self.assertEqual((code, block["blocking"], report["status"]), (0, False, "pass"))
-            self.assertEqual([(f["part"], f["min_mm"], f["blocking"]) for f in walls], [("TST-0302", 0.8, False)])
+            self.assertEqual([f for f in report["findings"] if f["check"] == "min_wall"], [])
+            self.assertEqual(sorted(unknown), ["TST-0301", "TST-0302"])
+            self.assertEqual({f["blocking"] for f in unknown.values()}, {False})
+            self.assertTrue(unknown["TST-0302"]["reasons"])
             limit = report["parts"]["TST-0301"]["min_wall"]["limit"]
-            self.assertEqual((limit["required_mm"], limit["status"], limit["guideline"]), (0.8, "guideline", "fdm.generic@1"))
-            self.assertIn("no nozzle or line width", limit["note"])
+            self.assertEqual((limit["required_mm"], limit["status"]), (None, "unknown"))
 
 
 PLATE_08 = "cq.Workplane().box(10, 10, 0.8)"
@@ -286,8 +288,8 @@ class WallScanTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.tmp = tempfile.TemporaryDirectory()
         hw, parts_dir = build_parts(Path(cls.tmp.name), WALL_PARTS)
-        # These parts name no capability profile, so the resolved fdm minimum is the 0.8 mm floor. The scan is tested
-        # at the 1.2 mm a 0.4 mm nozzle resolves to, given here as the project's minimum.
+        # These parts name no capability profile, so their resolved fdm minimum is unknown. The scan is tested at the
+        # 1.2 mm a 0.4 mm nozzle resolves to, given here as the project's minimum.
         (hw / "product.yaml").write_text("id: fixture\nmanufacturing:\n  min_wall_mm: {fdm: 1.2}\n", encoding="utf-8")
         cls.code, cls.report = form_check(parts_dir, "F2", hw)
 
