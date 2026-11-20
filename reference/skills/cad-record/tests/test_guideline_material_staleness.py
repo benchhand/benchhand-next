@@ -42,6 +42,12 @@ def made(pn: str, material: Any, profile: str = "tst_printer", **extra: Any) -> 
     return fx.part(pn, process="fdm", part_intent=fx.intent(material_profile=material, route=route_of(profile), **extra))
 
 
+def without_main_material(part: dict[str, Any]) -> dict[str, Any]:
+    """The part with no `material_profile` key at all (the fixture's intent() writes `unknown` for an absent one)."""
+    del part["intent"]["material_profile"]
+    return part
+
+
 class MaterialStaleness(unittest.TestCase):
     """Materials A (family pa) and B (family pc) under one printer; PA is made of A, PB of B."""
 
@@ -56,7 +62,9 @@ class MaterialStaleness(unittest.TestCase):
                  made("PBA", "mat_b", components=[{"material_profile": "mat_a"}]), made("PO", "mat_a", "tst_other"),
                  made("PG", "mat_b", components=[{"material_profile": "mat_ghost"}]),
                  made("PX", "mat_b", components=[{"material_profile": fx.unknown()}]),
-                 made("PI", "mat_b", components=[{}])]
+                 made("PI", "mat_b", components=[{}]),
+                 without_main_material(made("PM", "mat_b", components=[{"material_profile": "mat_b"}])),
+                 made("PNB", fx.not_applicable(), components=[{"material_profile": "mat_b"}])]
         materials = [fx.material_profile("mat_a", level="family", form="printed", material_family=fx.known("pa")),
                      fx.material_profile("mat_b", level="family", form="printed", material_family=fx.known("pc"))]
         printers = [fx.capability_profile(name, "fdm", parameters={"nozzle_diameter": fx.known(fx.quantity(nozzle))})
@@ -71,7 +79,7 @@ class MaterialStaleness(unittest.TestCase):
 
     def sources(self) -> dict[str, str]:
         found = impact.subject_fingerprints(mi.load_record(self.hw))
-        return {pn: str(found[pn]["source"]) for pn in ("PA", "PB", "PN", "PU", "PBA", "PO", "PG", "PX", "PI")}
+        return {pn: str(found[pn]["source"]) for pn in ("PA", "PB", "PN", "PU", "PBA", "PO", "PG", "PX", "PI", "PM", "PNB")}
 
     def edit(self, name: str, ident: str, **scope: Any) -> tuple[dict[str, str], dict[str, str]]:
         self.put(name, guideline(ident, 0.8, **scope))
@@ -104,16 +112,25 @@ class MaterialStaleness(unittest.TestCase):
     def test_a_component_that_omits_its_material_inherits_the_part_s_and_stays_narrowed(self) -> None:
         stale = self.stale("pa", "fdm.material.pa", material_family=["pa"])
         self.assertNotIn("PI", stale)  # PI is of B alone: its component inherits B
-        self.assertIn("PBA", stale)
 
     def test_a_part_of_b_with_a_component_of_a_goes_stale(self) -> None:
         self.assertIn("PBA", self.stale("pa", "fdm.material.pa", material_family=["pa"]))
+
+    def test_a_part_with_the_main_material_key_absent_and_a_component_of_b_takes_the_whole_profile_and_goes_stale(self) -> None:
+        # the absent main could be A, so the A-only set counts although the one material named is B
+        self.assertIn("PM", self.stale("pa", "fdm.material.pa", material_family=["pa"]))
+
+    def test_a_not_applicable_main_material_is_decided_so_only_its_components_narrow_the_part(self) -> None:
+        # PNB has no main material by declaration: its component of B alone decides, so an A-only edit leaves it fresh
+        # and a B-only edit stales it
+        self.assertNotIn("PNB", self.stale("pa", "fdm.material.pa", material_family=["pa"]))
+        self.assertIn("PNB", self.stale("pc", "fdm.material.pc", material_family=["pc"]))
 
     def test_a_set_that_applies_to_both_materials_stales_both(self) -> None:
         self.assertLessEqual({"PA", "PB"}, self.stale("both", "fdm.material.both", material_family=["pa", "pc"]))
 
     def test_a_set_with_no_material_scope_stales_every_part_on_the_profile(self) -> None:
-        self.assertEqual(self.stale("generic", "fdm.generic"), {"PA", "PB", "PN", "PU", "PBA", "PO", "PG", "PX", "PI"})
+        self.assertEqual(self.stale("generic", "fdm.generic"), {"PA", "PB", "PN", "PU", "PBA", "PO", "PG", "PX", "PI", "PM", "PNB"})
 
     def test_an_edit_under_one_capability_profile_leaves_a_part_on_another_fresh(self) -> None:
         stale = self.stale("narrow", "fdm.nozzle.d0_4", nozzle_diameter=fx.quantity(lower=0.35, upper=0.45))
