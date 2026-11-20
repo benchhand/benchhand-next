@@ -734,7 +734,7 @@ class QualificationBypasses(SourcedFEACase):
         for application, force in (({"PN": PN}, [0, 30, -40]), ({"assembly_operation": "mount-bracket"}, [30, 0, -40])):
             with self.subTest(application=application):
                 report = self.frame_report(application, self.BOTH, force, tweak=operation)
-                self.assert_record_gaps(report, ["hw/assembly.yaml#operations: "])
+                self.assert_record_gaps(report, ["hw/assembly.yaml#operations/1/id: "])
 
     def test_an_assembly_zero_part_with_an_occurrence_it_does_not_own_leaves_the_load_unknown(self) -> None:
         """The neighbour's model frame is the assembly frame, so a bare reference to it confirms with no placement. An
@@ -824,16 +824,16 @@ class QualificationBypasses(SourcedFEACase):
     def test_an_application_that_fails_the_record_checks_leaves_the_case_unknown_and_names_the_gap(self) -> None:
         """Read as the assembly frame, the (30, 0, -40) N force would cover head_load. The subject schema rejects the
         first five (manufacturing.schema.json's subject); the reader rejects a reference that names nothing and an
-        occurrence of another part. A schema failure inside the loads array is reported at use_case/loads."""
-        schema = "hw/product.yaml#use_case/loads: "
+        occurrence of another part. A schema failure inside a load's application is reported at that key."""
         reference = "hw/product.yaml#use_case/loads/0/application: "
-        cases = (({"interface": None}, [schema]),
-                 ({"PN": ""}, [schema, reference + "part  is not declared"]),
-                 ({"PN": OTHER, "occurrence": OTHER}, [schema]),
+        pointer = "hw/product.yaml#use_case/loads/0/application"
+        cases = (({"interface": None}, [pointer + "/interface: "]),
+                 ({"PN": ""}, [pointer + "/PN: ", reference + "part  is not declared"]),
+                 ({"PN": OTHER, "occurrence": OTHER}, [pointer + "/occurrence: "]),
                  ({"interface": "IF-999"}, [reference + "interface IF-999 is not declared"]),
                  ({"PN": OTHER, "occurrence": "@bracket"}, [reference + f"@bracket is an occurrence of {PN}, not {OTHER}"]),
-                 ({"foo": 1}, [schema]),
-                 ({"product": False}, [schema]))
+                 ({"foo": 1}, [reference + "Additional properties"]),
+                 ({"product": False}, [pointer + "/product: "]))
         for application, expected in cases:
             with self.subTest(application=application):
                 self.assert_record_gaps(self.frame_report(application, self.BOTH, [30, 0, -40]), expected)
