@@ -859,15 +859,31 @@ class JointNozzleConstraints(Directories):
         self.assertEqual(results[0][2]["reference"], "fdm.material.pa")
         self.assertEqual(results[0], results[1])
         self.assertEqual(sorted(g for g, _ in results[0][4]), ["fdm.material.pa@1", "fdm.material.pb@1"])
+        self.assertTrue(all("equally specific" in why and "600 um, 800 um" in why for _, why in results[0][4]), results[0][4])
         self.assertEqual(results[0][5], [("200 um, 400 um", "fdm.material.pa@1", "sizes dropped by fdm.material.pb@1 (material)")])
 
-    def test_a_set_and_a_range_of_equal_rank_from_different_sets_are_recorded_as_disputed(self) -> None:
-        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(*self.H2D)], material_family=["pa"]))
-        put(self.shipped, "pb", guideline("fdm.material.pb", [self.rng(">=", 0.6)], material_family=["pa"]))
+    def test_one_guideline_stating_a_set_and_a_range_is_not_disputed(self) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(*self.H2D), self.rng(">=", 0.6)], material_family=["pa"]))
         found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(600, 800))
+        self.assertEqual([s for s in found.provenance[0].shadowed if "disputed" in s.why], [])
+
+    def test_two_sets_from_different_guidelines_at_equal_rank_are_disputed(self) -> None:
+        put(self.shipped, "pa", guideline("fdm.material.pa", [discrete(0.2, 0.4, 0.6)], material_family=["pa"]))
+        put(self.shipped, "pb", guideline("fdm.material.pb", [discrete(0.4, 0.6, 0.8)], material_family=["pa"]))
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(400, 600))
         disputed = [s for s in found.provenance[0].shadowed if "disputed" in s.why]
         self.assertEqual(sorted(s.guideline for s in disputed), ["fdm.material.pa@1", "fdm.material.pb@1"])
-        self.assertTrue(all("equally specific" in s.why and "600 um, 800 um" in s.why for s in disputed), disputed)
+
+    def test_two_children_of_one_parent_at_equal_distance_are_one_source_and_not_disputed(self) -> None:
+        put(self.shipped, "base", {**guideline("fdm.base", [discrete(*self.H2D), self.rng(">=", 0.6)]), "abstract": True})
+        for name in ("pa", "pb"):
+            child = guideline(f"fdm.material.{name}", [limit("min_wall", ">=", 1.0)], material_family=["pa"])
+            put(self.shipped, name, {**child, "extends": ["fdm.base"]})
+        found = resolve(record(), self.catalog(), "nozzle_diameter")
+        self.assertEqual(found.value, microns(600, 800))
+        self.assertEqual([s for s in found.provenance[0].shadowed if "disputed" in s.why], [])
 
     def test_the_sizes_a_range_drops_reach_the_provenance_with_the_range_that_dropped_them(self) -> None:
         self.stack(self.rng(">=", 0.6), machine=discrete(*self.H2D))
