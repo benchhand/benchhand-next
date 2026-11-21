@@ -29,6 +29,7 @@ import shutil
 import sys
 import unittest
 from collections.abc import Callable, Mapping
+from os import environ as process_env
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -630,6 +631,82 @@ class ThroughTheStudy(stress_mode_tests.StressCase):
                     self.assertIsNotNone(conditions.gauge_gap(elongations))
         self.assertIn("sheet_pc_makrolon_gp_clear_099", checked)
         self.assertIn("fdm_petg_polylite", checked)
+
+    FLAG = "CAD_FEA_METALS_NEAR_SUPPORT"
+    ALUMINIUM = "al_6061_t6_hydro"
+
+    def flagged(self, value: str | None, profile_id: str, *, load: float = 210.0, form: str = "wrought",
+                elongation: float | None = None) -> dict[str, Any]:
+        """The 210 N case (linearised 133.56 MPa, factor 1.8718 against 2) on a profile with the shipped id `profile_id`
+        and no elongation entry unless asked, with the flag set to `value` (None: unset)."""
+        profile = self.ductile_alloy(elongation)
+        profile["id"], profile["form"] = profile_id, form
+        docs = conditions_tests.documents(profiles=[profile], part=conditions_tests.bracket(profile_id))
+        self.fresh()
+        with patch.dict(process_env):
+            process_env.pop(self.FLAG, None)
+            if value is not None:
+                process_env[self.FLAG] = value
+            field = beam_field(210.0) if load > 100 else beam_field()
+            return self.solve(beam_plan(field, (0.0,), LENGTH, load), docs)
+
+    def test_the_metals_flag_is_off_by_default_and_6061_stays_unknown(self) -> None:
+        report = self.flagged(None, self.ALUMINIUM)
+        row, _ = self.row(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertFalse(report["material"]["ductility"]["shown"])
+        self.assertNotIn("form stand-in", row["uncertainty"])
+
+    def test_only_the_value_1_turns_the_metals_flag_on(self) -> None:
+        # The CAD_REQUIRE_FREECAD convention (preflight.py): the string "1" and nothing else.
+        for value in ("", "0", "true", "yes"):
+            with self.subTest(value):
+                self.assertEqual(self.row(self.flagged(value, self.ALUMINIUM))[0]["outcome"], "unknown")
+
+    def test_the_flag_on_shows_6061_ductile_by_form_and_says_so(self) -> None:
+        # 250 / 133.56 = 1.8718 is below 2, so the stand-in decides a fail; at 50 N the factor is above 2 and it decides a pass.
+        for load, outcome in ((210.0, "fail"), (LOAD, "pass")):
+            with self.subTest(outcome):
+                report = self.flagged("1", self.ALUMINIUM, load=load)
+                row, finding = self.row(report)
+                self.assertEqual(row["outcome"], outcome)
+                self.assertEqual(report["material"]["ductility"],
+                                 {"shown": True, "reason": "form stand-in, flag on", "stand_in": True})
+                self.assertIn("form stand-in, flag on", row["uncertainty"])
+                if finding:
+                    self.assertIn("form stand-in, flag on", finding["uncertainty"])
+
+    def test_the_flag_on_keeps_a_polymer_sheet_unknown(self) -> None:
+        # PMMA cast sheet has form sheet, which the form stand-in alone would accept: only the metal list holds it back.
+        report = self.flagged("1", "cast_pmma_plexiglas_gs_0f00", form="sheet")
+        row, _ = self.row(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertFalse(report["material"]["ductility"]["shown"])
+        self.assertNotIn("form stand-in", row["uncertainty"])
+
+    def test_the_flag_on_keeps_an_anisotropic_metal_unknown(self) -> None:
+        tests = conditions_tests
+        profile = tests.printed()
+        profile["id"], profile["form"] = self.ALUMINIUM, "rod"
+        profile["process_state"] = {"process": tests.fx.unknown(), "conditioning": "dry"}
+        model = {"decision": "DR-003", "justification": "TST: Z-direction values bound the layer-normal load path"}
+        self.fresh()
+        with patch.dict(process_env, {self.FLAG: "1"}):
+            report = self.solve(beam_plan(beam_field(210.0), (0.0,), LENGTH, 210.0),
+                                tests.documents(profiles=[profile], part=tests.bracket(self.ALUMINIUM)),
+                                {"conditions": {**tests.DRY_23C, "orientation": "Z"}, "effective_isotropic": model})
+        self.assertEqual(report["material"]["isotropy"]["model"], "effective_isotropic")
+        row, _ = self.row(report)
+        self.assertEqual(row["outcome"], "unknown")
+        self.assertIn("effective_isotropic", row["uncertainty"])
+        self.assertNotIn("form stand-in, flag on: ductility", row["uncertainty"])
+
+    def test_the_flag_on_leaves_a_material_that_passes_the_elongation_rule_alone(self) -> None:
+        report = self.flagged("1", self.ALUMINIUM, load=LOAD, elongation=0.30)
+        row, _ = self.row(report)
+        self.assertEqual(row["outcome"], "pass")
+        self.assertEqual(report["material"]["ductility"], {"shown": True, "reason": None})
+        self.assertNotIn("form stand-in", row["uncertainty"])
 
     def test_an_effective_isotropic_material_stays_unknown_even_when_linearised(self) -> None:
         # The printed Z yield is 20 MPa against a 133.56 MPa stress: were the material eligible this would fail.
