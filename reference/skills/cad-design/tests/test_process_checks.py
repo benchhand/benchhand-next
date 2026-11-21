@@ -1945,7 +1945,7 @@ class OutcomeOrderTests(unittest.TestCase):
 
     def test_combine_refuses_an_outcome_it_does_not_know(self) -> None:
         for stray in ("no_limit", "Pass", "waived", ""):
-            with self.subTest(stray=stray), self.assertRaisesRegex(ValueError, "not a check outcome"):
+            with self.subTest(stray=stray), self.assertRaisesRegex(pc.HandlerError, "not a check outcome"):
                 self.combined("pass", stray)
 
     def test_combine_keeps_the_reason_only_on_a_not_assessed_result(self) -> None:
@@ -2180,6 +2180,46 @@ class LooseComponentCoverageTests(Checks):
     def test_a_second_run_reuses_the_sealed_bundle(self) -> None:
         code, report = self.runs[1]
         self.assertEqual((code, report["manufacturing"]["reused"]), (1, True))
+
+
+class FormCheckPacketExitTests(unittest.TestCase):
+    """form_check's report and exit code for a packet result. No emitter produces not_assessed yet, so the seam is a
+    fixture packet handed to packet_report and packet_code, the two functions check_version ends in."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.form_check = load_module("tst_form_check_exit", FORM_CHECK)
+
+    @staticmethod
+    def packet(result: str, *rows: tuple[str, str, str | None]) -> dict[str, Any]:
+        outcomes = [{"obligation": name, "outcome": outcome, **({"reason": reason} if reason else {})}
+                    for name, outcome, reason in rows]
+        return {"result": result, "complete": True, "outcomes": outcomes, "findings": []}
+
+    def run_packet(self, packet: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        report = self.form_check.packet_report(packet, Path("bundle"), False)
+        return self.form_check.packet_code(False, packet), report
+
+    def test_a_not_assessed_packet_exits_0_and_lists_each_obligation_with_its_reason(self) -> None:
+        packet = self.packet("not_assessed", ("o.a", "pass", None), ("o.b", "not_assessed", "calibration_off"),
+                             ("o.c", "not_assessed", "no_capability_profile"))
+        code, report = self.run_packet(packet)
+        self.assertEqual(code, 0)
+        self.assertEqual(report["not_assessed"], [{"obligation": "o.b", "reason": "calibration_off"},
+                                                   {"obligation": "o.c", "reason": "no_capability_profile"}])
+
+    def test_an_unknown_packet_exits_1(self) -> None:
+        self.assertEqual(self.run_packet(self.packet("unknown", ("o.a", "unknown", None), ("o.b", "not_assessed", "calibration_off")))[0], 1)
+
+    def test_a_fail_packet_exits_1(self) -> None:
+        self.assertEqual(self.run_packet(self.packet("fail", ("o.a", "fail", None)))[0], 1)
+
+    def test_a_pass_packet_exits_0_with_nothing_not_assessed(self) -> None:
+        code, report = self.run_packet(self.packet("pass", ("o.a", "pass", None)))
+        self.assertEqual((code, report["not_assessed"]), (0, []))
+
+    def test_a_failing_fidelity_check_still_exits_1_on_a_not_assessed_packet(self) -> None:
+        self.assertEqual(self.form_check.packet_code(True, self.packet("not_assessed")), 1)
 
 
 if __name__ == "__main__":
