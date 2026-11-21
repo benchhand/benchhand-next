@@ -86,7 +86,9 @@
             "required": ["method", "criteria"],
             "properties": {
               "method": {"type": "string", "enum": ["I", "A", "D", "T"]},
-              "criteria": {"type": "string", "minLength": 1}
+              "criteria": {"type": "string", "minLength": 1},
+              "step": {"description": "The flow step that verifies it, so validate.py can flag a profile that turns that step off (flow.conflict): fea for a strength or stiffness requirement, physical for a trial or inspection outside CAD",
+                       "enum": ["interference", "form", "visibility", "access", "process", "motion", "stack_up", "fea", "drawing", "critique", "physical"]}
             }
           },
           "subjects": {"type": "array", "minItems": 1, "items": {"$ref": "manufacturing.schema.json#/$defs/subject"}},

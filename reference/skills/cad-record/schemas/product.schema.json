@@ -30,7 +30,8 @@
         "stage": {"$ref": "#/$defs/stage"},
         "recheck_from": {"$ref": "#/$defs/stage"},
         "frozen": {"$ref": "#/$defs/frozen"},
-        "change": {"$ref": "#/$defs/change"}
+        "change": {"$ref": "#/$defs/change"},
+        "profile": {"$ref": "#/$defs/profile"}
       },
       "dependentRequired": {"change": ["frozen"]}
     },
@@ -92,6 +93,67 @@
     "process": {"$ref": "manufacturing.schema.json#/$defs/primary_process"},
     "version": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
     "decision": {"type": "string", "pattern": "^DR-[0-9]{3}$"},
+    "iso_52900_category": {"description": "The ISO/ASTM 52900 additive process category of a flow.profile process, null for a subtractive or forming process. cad-record flow_profile_gate.py ISO_52900_CATEGORY maps each process key to one",
+                           "enum": ["mex", "pbf", "vpp", "bjt", "ded", "mjt", "shl", null]},
+    "limit": {"oneOf": [{"type": "number", "exclusiveMinimum": 0}, {"type": "string", "enum": ["calibrated", "off"]}]},
+    "clearance": {"oneOf": [{"type": "number", "exclusiveMinimum": 0}, {"type": "string", "enum": ["calibrated"]}]},
+    "fea": {
+      "description": "Whether and how FEA runs, the shape agreed with package A. mode is required when enabled. fast escalates a case to accurate when the fast result lies within fast_band_pct of its criterion limit, |limit - result| / limit x 100 <= fast_band_pct; without fast_band_pct, cad-analysis uses its measured default band, twice the worst-case bias.",
+      "type": "object", "additionalProperties": false, "required": ["enabled"],
+      "properties": {
+        "enabled": {"type": "boolean", "default": true},
+        "mode": {"type": "string", "enum": ["fast", "accurate"], "default": "accurate"},
+        "fast_band_pct": {"type": "number", "exclusiveMinimum": 0, "maximum": 50}
+      },
+      "allOf": [
+        {"if": {"properties": {"enabled": {"const": true}}}, "then": {"required": ["mode"]},
+         "else": {"not": {"anyOf": [{"required": ["mode"]}, {"required": ["fast_band_pct"]}]}}},
+        {"if": {"required": ["fast_band_pct"]}, "then": {"required": ["mode"], "properties": {"mode": {"const": "fast"}}}}
+      ]
+    },
+    "profile": {
+      "description": "The user's answers to the project-start questions (cad-flow flow_profile.py questions), recorded at INTENT with the decision that holds them. Each question has a default the user is shown; asked records, per question, whether the user answered (user) or accepted the default (asked-accepted-default). A number is the user's design limit; calibrated stays unknown until a calibration exists; off means not assessed. A two-state answer is a boolean; a word answer is a string, written quoted, since YAML reads a bare on, off, yes or no as a boolean",
+      "type": "object", "additionalProperties": false,
+      "required": ["human_approval", "fea", "stack_up", "critique", "motion", "storage_results_in_git", "processes"],
+      "properties": {
+        "decision": {"$ref": "#/$defs/decision"},
+        "human_approval": {"description": "all: every stage gate waits for the user; key: intent, variant, freeze and release do, and a passing full check approves the middle gates", "type": "string", "enum": ["all", "key"], "default": "all"},
+        "fea": {"$ref": "#/$defs/fea"},
+        "stack_up": {"description": "auto turns on when SPECIFY names a critical interface or a stack case", "type": "string", "enum": ["auto", "on", "off"], "default": "auto"},
+        "critique": {"description": "light: both reviewers at the L2 light-review scope, rerun on the analysed version", "type": "string", "enum": ["full", "light", "off"], "default": "full"},
+        "motion": {"description": "auto: on once a joint moves; stated to the user, never asked", "type": "string", "enum": ["auto"], "default": "auto"},
+        "storage_results_in_git": {"type": "boolean", "default": false},
+        "asked": {
+          "description": "How each project-start question was settled, keyed by its field path below flow.profile (fea, stack_up, processes/fdm/orientation, processes/fdm/pip_clearance_mm/xy, ...). cad-record flow_profile_gate.py QUESTION_FIELDS lists the keys; its gate reports a missing one",
+          "type": "object", "additionalProperties": {"enum": ["user", "asked-accepted-default"]}
+        },
+        "processes": {
+          "type": "object", "additionalProperties": false,
+          "properties": {"fdm": {"$ref": "#/$defs/fdm_profile"}}
+        }
+      }
+    },
+    "fdm_profile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["orientation", "supports", "overhang_deg", "bridge_mm", "min_wall_mm", "min_feature_mm", "warp",
+                   "cosmetic_faces", "print_in_place", "pip_clearance_mm"],
+      "properties": {
+        "orientation": {"type": "string", "enum": ["user", "propose"], "default": "user"},
+        "supports": {"type": "string", "enum": ["allowed", "free", "off"], "default": "allowed"},
+        "overhang_deg": {"oneOf": [{"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 90}, {"type": "string", "enum": ["calibrated", "off"]}], "default": "calibrated"},
+        "bridge_mm": {"$ref": "#/$defs/limit", "default": "calibrated"},
+        "min_wall_mm": {"$ref": "#/$defs/limit", "default": "calibrated"},
+        "min_feature_mm": {"$ref": "#/$defs/limit", "default": "calibrated"},
+        "warp": {"type": "string", "enum": ["calibrated", "off"], "default": "calibrated"},
+        "cosmetic_faces": {"description": "true adds the critical-surface role cosmetic, which supports may not touch", "type": "boolean", "default": false},
+        "print_in_place": {"description": "true: offer to print hinges and joints already assembled where that fits; false: assemble them", "type": "boolean", "default": false},
+        "pip_clearance_mm": {
+          "description": "The smallest print-in-place gap that separates, across the layers (xy) and between layers (z)",
+          "type": "object", "additionalProperties": false, "required": ["xy", "z"],
+          "properties": {"xy": {"$ref": "#/$defs/clearance", "default": "calibrated"}, "z": {"$ref": "#/$defs/clearance", "default": "calibrated"}}
+        }
+      }
+    },
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "frozen": {
       "description": "The frozen configuration: the built version the design_freeze gate approved, its manifest sha256 and the approving decision. Once set, layout findings stay blocking at every stage. A record version 2 freeze also anchors evidence_sha256, the canonical digest of its acceptance inventory (verification, evidence and finding dispositions, relied-on bundle manifests and source bytes); a freeze without it is refused by a release until a new freeze records one.",

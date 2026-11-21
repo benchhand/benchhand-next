@@ -9,3 +9,4 @@
 | [DR-003](DR-003-press-fit-pivot-pins.md) | Press-fit pivot pins | accepted | 2026-10-26 |
 | [DR-004](DR-004-bushings-lampholder-insert-and-retaining-rings-for-production.md) | Bushings, lampholder insert and retaining rings for production | accepted | 2026-10-27 |
 | [DR-005](DR-005-print-the-petg-parts-in-house-on-a-bambu-lab-h2d.md) | Print the PETG parts in-house on a Bambu Lab H2D | accepted | 2026-11-18 |
+| [DR-010](DR-010-flow-profile.md) | Flow profile | accepted | 2026-11-21 |

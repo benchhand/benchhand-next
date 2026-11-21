@@ -744,6 +744,37 @@ class ValidateProject(unittest.TestCase):
         self.assertTrue(any(item["message"].startswith("joints/1: ") for item in report["findings"]))
 
 
+class ApprovalProblem(unittest.TestCase):
+    """validate.approval_problem: why a decision cannot approve, None when it does. decision_approves is its boolean."""
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-record-approval-")
+        self.addCleanup(temporary.cleanup)
+        self.hw = Path(temporary.name) / "hw"
+        from modload import load_module  # noqa: PLC0415 - used by this class alone
+        self.validate = load_module("cad_record_validate", SKILL / "scripts" / "validate.py")
+
+    def test_an_accepted_decision_approves(self) -> None:
+        write_test_decision(self.hw, "DR-001", status="accepted")
+        self.assertIsNone(self.validate.approval_problem(self.hw, "DR-001"))
+        self.assertTrue(self.validate.decision_approves(self.hw, "DR-001"))
+
+    def test_any_other_status_names_itself_as_the_reason(self) -> None:
+        for status in ("proposed", "rejected", "deprecated"):
+            with self.subTest(status):
+                write_test_decision(self.hw, "DR-002", status=status)
+                self.assertEqual(self.validate.approval_problem(self.hw, "DR-002"),
+                                 f"has status {status}, not the user's approval (accepted)")
+                self.assertFalse(self.validate.decision_approves(self.hw, "DR-002"))
+
+    def test_a_missing_or_malformed_decision_never_approves_and_says_why(self) -> None:
+        write_test_decision(self.hw, "DR-003")
+        self.assertIn("has no record", self.validate.approval_problem(self.hw, "DR-004"))
+        self.assertIn("is not a DR-### id", self.validate.approval_problem(self.hw, "DR-3"))
+        decision_path(self.hw, "DR-003").write_text("# not a record\n", encoding="utf-8")
+        self.assertIn("is not a valid MADR record", self.validate.approval_problem(self.hw, "DR-003"))
+
+
 class LoadDirection(unittest.TestCase):
     def test_a_load_direction_beyond_float_range_is_a_finding_not_a_crash(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-record-load-direction-")

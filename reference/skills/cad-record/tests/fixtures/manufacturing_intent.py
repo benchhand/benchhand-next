@@ -150,6 +150,28 @@ def question(ident: str, text: str = "TST fixture question?", *, material: bool 
     return data
 
 
+PROFILE_DECISION = "DR-007"  # the decision a fixture flow.profile cites
+
+
+def flow_profile(decision: str = PROFILE_DECISION, **changes: Any) -> dict[str, Any]:
+    """A complete product.yaml flow.profile citing `decision`: every question answered by the user, in the
+    combination no flow.conflict rule fires on. `changes` replace top-level fields; `fdm` replaces
+    processes.fdm fields. The asked keys are written out, apart from the gate's own list."""
+    fdm = {"orientation": "propose", "supports": "allowed", "overhang_deg": 45, "bridge_mm": 10, "min_wall_mm": 0.8,
+           "min_feature_mm": 0.4, "warp": "calibrated", "cosmetic_faces": False, "print_in_place": True,
+           "pip_clearance_mm": {"xy": "calibrated", "z": "calibrated"}}
+    fdm.update(changes.pop("fdm", {}))
+    asked = ("human_approval", "fea", "stack_up", "critique", "storage_results_in_git", "processes/fdm/orientation",
+             "processes/fdm/supports", "processes/fdm/overhang_deg", "processes/fdm/bridge_mm", "processes/fdm/min_wall_mm",
+             "processes/fdm/min_feature_mm", "processes/fdm/warp", "processes/fdm/cosmetic_faces",
+             "processes/fdm/print_in_place", "processes/fdm/pip_clearance_mm/xy", "processes/fdm/pip_clearance_mm/z")
+    data: dict[str, Any] = {"decision": decision, "human_approval": "all", "fea": {"enabled": True, "mode": "accurate"},
+                            "stack_up": "auto", "critique": "full", "motion": "auto", "storage_results_in_git": False,
+                            "processes": {"fdm": fdm}, "asked": {field: "user" for field in asked}}
+    data.update(changes)
+    return data
+
+
 def product(use: dict[str, Any] | None = None, stage: str = "parts", **extra: Any) -> dict[str, Any]:
     data = {"record_version": 2, "id": "tst-product", "units": "mm", "regime": "iso",
             "general_tolerance": "ISO 2768-m", "flow": {"stage": stage, "recheck_from": stage},

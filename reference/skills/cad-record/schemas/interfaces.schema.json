@@ -48,6 +48,17 @@
     }
   },
   "$defs": {
+    "face": {
+      "description": "One face of a part, by its semantic feature id",
+      "type": "object", "additionalProperties": false, "required": ["PN", "feature"],
+      "properties": {
+        "PN": {"$ref": "manufacturing.schema.json#/$defs/pn"},
+        "occurrence": {"$ref": "manufacturing.schema.json#/$defs/occurrence_ref"},
+        "component": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+        "feature": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+        "region": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"}
+      }
+    },
     "functional": {
       "description": "Record version 2 functional contract of an interface. Desired fit limits (limits), calibrated process precision (capability profiles) and inspected finished dimensions (acceptance) stay three distinct things; no tolerance is inferred from a fit name",
       "type": "object", "additionalProperties": false, "required": ["critical", "functions"],
@@ -132,6 +143,26 @@
           }
         },
         "assembly_operations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/assembly_operation_id"}},
+        "print_in_place": {
+          "description": "The joints at this interface that print already assembled: each joint's kind, the joint value it prints at, the face pairs its gap separates and how it breaks free after printing. min_clearance_mm must be at least the governing product.yaml flow.profile processes.fdm.pip_clearance_mm",
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["joint", "print_pose", "gap_features", "break_free"],
+            "properties": {
+              "joint": {"enum": ["hinge", "pin", "ball", "captive", "living_hinge"]},
+              "print_pose": {"description": "the value each assembly.yaml joint prints at, in that joint's units",
+                             "type": "object", "minProperties": 1, "propertyNames": {"pattern": "^J-[0-9]{3}$"},
+                             "additionalProperties": {"type": "number"}},
+              "gap_features": {"type": "array", "minItems": 1, "items": {
+                "type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/face"}}},
+              "break_free": {
+                "type": "object", "additionalProperties": false, "required": ["method"],
+                "properties": {"method": {"$ref": "manufacturing.schema.json#/$defs/text"},
+                               "force_n": {"type": "number", "exclusiveMinimum": 0}}
+              }
+            }
+          }
+        },
         "inspections": {"$ref": "manufacturing.schema.json#/$defs/semantic_ids"},
         "decisions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/decision"}}
       }

@@ -105,6 +105,8 @@ PRODUCT = "product.schema.json"
 DRAWING = "drawing.schema.json"
 LAYOUT = "layout.schema.json"
 PART = "part.schema.json"
+PROFILE = "/$defs/profile/properties"
+FDM = "/$defs/fdm_profile/properties"
 FEA = "fea-case.schema.json"
 PLAN = "motion-plan.schema.json"
 TOOLS = "tool-settings.schema.json"
@@ -245,6 +247,39 @@ CASES: tuple[Case, ...] = (
     number(55, "mass_target", PART, "/properties/mass_target", "(0, 10000000]", {"max": 50000}),
     number(55, "bom.mass", "bom-row.schema.json", "/properties/mass", "(0, 10000000]", {"max": 50000}),
     # Fields outside the audit's 55 rows (row 0)
+    number(0, "print_in_place.break_free.force_n", "interfaces.schema.json",
+           "/$defs/functional/properties/print_in_place/items/properties/break_free/properties/force_n", "(0,)", None),
+    # The product.yaml flow.profile answers (rows 1, 2 and 4 to 7 of the audit, which the profile schema carries).
+    # A limit or clearance is a number or a word, so the bound sits on the number branch and the default on the field.
+    number(1, "flow.profile.overhang_deg", PRODUCT, f"{FDM}/overhang_deg/oneOf/0", "(0, 90)", None,
+           default="calibrated", default_pointer=f"{FDM}/overhang_deg"),
+    number(2, "flow.profile.bridge_mm", PRODUCT, "/$defs/limit/oneOf/0", "(0,)", None,
+           default="calibrated", default_pointer=f"{FDM}/bridge_mm"),
+    number(4, "flow.profile.min_wall_mm", PRODUCT, "/$defs/limit/oneOf/0", "(0,)", None,
+           default="calibrated", default_pointer=f"{FDM}/min_wall_mm"),
+    number(5, "flow.profile.min_feature_mm", PRODUCT, "/$defs/limit/oneOf/0", "(0,)", None,
+           default="calibrated", default_pointer=f"{FDM}/min_feature_mm"),
+    number(6, "flow.profile.pip_clearance_mm.xy", PRODUCT, "/$defs/clearance/oneOf/0", "(0,)", None,
+           default="calibrated", default_pointer=f"{FDM}/pip_clearance_mm/properties/xy"),
+    number(7, "flow.profile.pip_clearance_mm.z", PRODUCT, "/$defs/clearance/oneOf/0", "(0,)", None,
+           default="calibrated", default_pointer=f"{FDM}/pip_clearance_mm/properties/z"),
+    number(0, "flow.profile.fea.fast_band_pct", PRODUCT, "/$defs/fea/properties/fast_band_pct", "(0, 50]", None),
+    number(0, "flow.profile.human_approval", PRODUCT, f"{PROFILE}/human_approval", "all,key", None, shape="enum",
+           default="all", refused=("ALL",)),
+    number(0, "flow.profile.stack_up", PRODUCT, f"{PROFILE}/stack_up", "auto,on,off", None, shape="enum",
+           default="auto", refused=("true",)),
+    number(0, "flow.profile.critique", PRODUCT, f"{PROFILE}/critique", "full,light,off", None, shape="enum",
+           default="full", refused=("Full",)),
+    number(0, "flow.profile.motion", PRODUCT, f"{PROFILE}/motion", "auto", None, shape="enum", default="auto",
+           refused=("on",)),
+    number(0, "flow.profile.fea.mode", PRODUCT, "/$defs/fea/properties/mode", "fast,accurate", None, shape="enum",
+           default="accurate", refused=("slow",)),
+    number(0, "flow.profile.orientation", PRODUCT, f"{FDM}/orientation", "user,propose", None, shape="enum",
+           default="user", refused=("auto",)),
+    number(0, "flow.profile.supports", PRODUCT, f"{FDM}/supports", "allowed,free,off", None, shape="enum",
+           default="allowed", refused=("none",)),
+    number(0, "flow.profile.warp", PRODUCT, f"{FDM}/warp", "calibrated,off", None, shape="enum", default="calibrated",
+           refused=("on",)),
     number(0, "form_check.fidelity", TOOLS, "/properties/form_check/properties/fidelity", "F0,F1,F2,F3", None, shape="enum",
            default="F2", cli="--fidelity", refused=("F4", "f2")),
     number(0, "easing", PLAN, "/properties/segments/items/properties/easing", "linear,ease_in_out", None, shape="enum",
@@ -259,8 +294,6 @@ CASES: tuple[Case, ...] = (
     number(0, "guideline.factor", "manufacturing-guideline.schema.json", "/$defs/relative/properties/factor", "(0, )", None),
 )
 BY_NAME = {case.name: case for case in CASES}
-# Rows of the audit table that live only in the product.yaml `flow.profile` schema, which flow PR 1 owns
-FLOW_PROFILE_ROWS = {1, 2, 4, 5, 6, 7}
 # Audit row 8 was the product `rigor` field, which the schema no longer has
 RETIRED_ROWS = {8}
 # Fields that state a fact about a real material, machine or part: they have no default
@@ -274,10 +307,11 @@ FACTS = {
     "hotend_max_temperature", "bed_max_temperature", "max_speed", "travel_x", "travel_y", "travel_z", "spindle_max_speed",
     "power", "pump_pressure", "press_brake_force", "modulus", "density", "temperature", "poisson_ratio", "fu_fy_ratio", "min_clearance_mm",
     "tol", "tol_plus", "tol_minus", "confidence", "weight", "crank_radius_mm", "rod_length_mm", "guideline.factor",
-    "period_deg", "mass_target", "bom.mass",
+    "period_deg", "mass_target", "bom.mass", "print_in_place.break_free.force_n",
 }
-# An explicit override that has no default of its own: mesh_size_extent_ratio carries the default and mesh_size wins when set
-OVERRIDES = {"mesh_size", "interface.margin_mm"}
+# An explicit override that has no default of its own: mesh_size_extent_ratio carries the default and mesh_size wins when set;
+# fast_band_pct is absent unless the user sets it, and cad-analysis then measures its own band
+OVERRIDES = {"mesh_size", "interface.margin_mm", "flow.profile.fea.fast_band_pct"}
 # Facts whose plausibility band waits for data: the reason, and the issue that tracks it
 BAND_PENDING = {
     "calibration.min_bed_contact_area": "the only fixtures are one calibration of 20 to 25 mm2, too few to size a band; #141",
@@ -288,6 +322,10 @@ CONTENT = {"hold_frames"}
 SURFACES = {"fea-case.schema.json", "motion-plan.schema.json", "tool-settings.schema.json", "stackup.schema.json"}
 # Nodes with a bound the audit does not cover: counters, indices and geometry facts bounded only by sign
 NOT_IN_AUDIT = {
+    ("product.schema.json", "/$defs/fea/properties/enabled"): "a yes/no answer; its default is pinned by test_flow_profile_gate",
+    ("product.schema.json", f"{PROFILE}/storage_results_in_git"): "a yes/no answer; its default is pinned by test_flow_profile_gate",
+    ("product.schema.json", f"{FDM}/cosmetic_faces"): "a yes/no answer; its default is pinned by test_flow_profile_gate",
+    ("product.schema.json", f"{FDM}/print_in_place"): "a yes/no answer; its default is pinned by test_flow_profile_gate",
     ("assembly.schema.json", "/$defs/drawing_item/properties/item"): "a 1-based item index",
     ("bom-row.schema.json", "/properties/level"): "a tree depth",
     ("bom-row.schema.json", "/properties/qty"): "an instance count",
@@ -417,10 +455,10 @@ def check_bounds(test: unittest.TestCase, case: Case, accept: Any, reject: Any, 
 
 
 class Rows(unittest.TestCase):
-    def test_every_audit_row_is_covered_or_belongs_to_the_flow_profile(self) -> None:
+    def test_every_audit_row_is_covered_or_retired(self) -> None:
         covered = {case.row for case in CASES} - {0}
-        self.assertEqual(covered | FLOW_PROFILE_ROWS | RETIRED_ROWS, set(range(1, 56)))
-        self.assertFalse(covered & (FLOW_PROFILE_ROWS | RETIRED_ROWS))
+        self.assertEqual(covered | RETIRED_ROWS, set(range(1, 56)))
+        self.assertFalse(covered & RETIRED_ROWS)
 
     def test_a_value_just_outside_each_hard_bound_is_an_error_and_the_bound_itself_is_accepted(self) -> None:
         for case in CASES:

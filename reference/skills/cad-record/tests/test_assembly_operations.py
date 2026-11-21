@@ -11,6 +11,7 @@ order checks of plan section 11 row 15 are in skills/cad-motion/tests/test_acces
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -396,6 +397,26 @@ class NeverInstalledPacketTests(unittest.TestCase):
         cover = NeverInstalledTests.COVER
         _, result = self.assessed([self.SEAT, cover])
         self.assertEqual(result.statuses["assembly.order@product"].result, "pass")
+
+
+class SchemaParity(unittest.TestCase):
+    """assembly.schema.json#/$defs/assembly_operation and this module describe one set of operations. A kind
+    added to one without the other (print_in_place is deferred, see the interfaces `print_in_place` block) fails here."""
+
+    OPERATION = json.loads((SCRIPTS.parent / "schemas" / "assembly.schema.json").read_text(encoding="utf-8"))["$defs"]["assembly_operation"]
+
+    def test_the_schema_kinds_are_the_modules_kinds(self) -> None:
+        self.assertEqual(tuple(self.OPERATION["properties"]["kind"]["enum"]), ops.KINDS)
+
+    def test_the_schema_requires_per_kind_what_the_module_requires(self) -> None:
+        required: dict[str, tuple[str, ...]] = {}
+        for rule in self.OPERATION["allOf"]:
+            kinds = rule["if"].get("properties", {}).get("kind")
+            needs = rule.get("then", {}).get("required")
+            if kinds and needs:
+                for kind in kinds.get("enum", [kinds.get("const")]):
+                    required[kind] = tuple(needs)
+        self.assertEqual(required, ops.REQUIRED)
 
 
 if __name__ == "__main__":

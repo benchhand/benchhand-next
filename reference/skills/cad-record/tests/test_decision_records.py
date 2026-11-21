@@ -420,7 +420,7 @@ class IndexTests(Base):
 class LampArmExample(unittest.TestCase):
     def test_the_example_project_decisions_are_madr_records_and_dr_003_is_superseded_by_dr_004(self) -> None:
         records = dr.read_decisions(SKILL.parents[1] / "examples" / "lamp-arm" / "hw" / "decisions")
-        self.assertEqual([r.id for r in records], ["DR-001", "DR-002", "DR-003", "DR-004", "DR-005"])
+        self.assertEqual([r.id for r in records], ["DR-001", "DR-002", "DR-003", "DR-004", "DR-005", "DR-010"])
         self.assertEqual({r.status for r in records}, {"accepted"})
         self.assertEqual({r.id: r.superseded_by for r in records if r.superseded_by}, {"DR-003": ("DR-004",)})
 
