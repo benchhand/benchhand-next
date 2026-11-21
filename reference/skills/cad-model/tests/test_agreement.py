@@ -212,8 +212,8 @@ class SurfaceIndexTests(unittest.TestCase):
     """The triangle lookup of the agreement check, through the numpy and Hypothesis tests of
     fixtures/surface_index_probe.py. Each test runs one of them in its own process."""
 
-    def run_probe(self, test: str) -> None:
-        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(INDEX_PROBE), f"SurfaceIndex.{test}"],
+    def run_probe(self, test: str, group: str = "SurfaceIndex") -> None:
+        proc = subprocess.run(["uv", "run", "--quiet", "--script", str(INDEX_PROBE), f"{group}.{test}"],
                               capture_output=True, text=True, check=False)
         self.assertEqual(proc.returncode, 0, proc.stderr[-4000:])
 
@@ -243,6 +243,27 @@ class SurfaceIndexTests(unittest.TestCase):
 
     def test_more_wide_triangles_than_a_batch_are_split_across_blocks(self) -> None:
         self.run_probe("test_more_wide_triangles_than_a_batch_are_split_across_blocks")
+
+    def test_the_samples_are_the_first_point_of_each_grid_cell(self) -> None:
+        self.run_probe("test_the_samples_are_the_first_point_of_each_grid_cell", "Samples")
+
+    def test_cells_apart_along_one_axis_only_each_keep_a_sample(self) -> None:
+        self.run_probe("test_cells_apart_along_one_axis_only_each_keep_a_sample", "Samples")
+
+    def test_a_subnormal_span_keeps_cells_beyond_the_grid_apart(self) -> None:
+        self.run_probe("test_a_subnormal_span_keeps_cells_beyond_the_grid_apart", "Samples")
+
+    def test_an_extent_that_overflows_is_sampled_as_the_tuple_cells_sample_it(self) -> None:
+        self.run_probe("test_an_extent_that_overflows_is_sampled_as_the_tuple_cells_sample_it", "Samples")
+
+    def test_samples_come_in_the_order_of_the_vertices_then_the_centers(self) -> None:
+        self.run_probe("test_samples_come_in_the_order_of_the_vertices_then_the_centers", "Samples")
+
+    def test_the_samples_of_a_large_mesh_are_thinned_by_an_even_stride(self) -> None:
+        self.run_probe("test_the_samples_of_a_large_mesh_are_thinned_by_an_even_stride", "Samples")
+
+    def test_the_samples_of_far_and_degenerate_meshes_keep_every_cell(self) -> None:
+        self.run_probe("test_the_samples_of_far_and_degenerate_meshes_keep_every_cell", "Samples")
 
 
 if __name__ == "__main__":
