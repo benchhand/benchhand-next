@@ -482,6 +482,17 @@ def clearance_catalog(*limits: dict, revision: int = 2, family_limits: dict[str,
     return GL.Catalog(sets)
 
 
+def extending_catalog(parent: str) -> object:
+    """A catalog whose fdm.child extends `parent`; `parent` is fdm.generic (revision 2) or not in the catalog."""
+    child = GL.Guideline("fdm.child", 1, "TST child", (parent,), False, {"process": "fdm"}, (clearance_limit(),),
+                         "manufacturing/guidelines/fdm.child.yaml", "shipped", GENERIC_SHA)
+    sets = {"fdm.child": child}
+    if parent == "fdm.generic":
+        sets[parent] = GL.Guideline(parent, 2, "TST generic", (), False, {"process": "fdm"}, (clearance_limit(),),
+                                    "manufacturing/guidelines/fdm.generic.yaml", "shipped", GENERIC_SHA)
+    return GL.Catalog(sets)
+
+
 def clearance_limit(value: float = 0.3, operator: str = ">=") -> dict:
     return {"characteristic": "sliding_clearance", "operator": operator, "quantity": {"value": value, "units": "mm"},
             "citations": [{"kind": "supplier", "reference": "TST clearance guide", "accessed": "2026-11-20"}]}
@@ -520,6 +531,90 @@ def clearance_stack(per: str = "side", *, nominal_gap: float = 0.20, requirement
     contributor(stack, "H")["nominal"] = round(20.02 + nominal_gap, 6)
     stack["clearance"] = {"characteristic": "sliding_clearance", "per": per}
     return stack
+
+
+def pinned(documents: dict) -> None:
+    documents["manufacturing/capabilities.yaml"]["profiles"][0]["guidelines"] = ["fdm.generic@2", "fdm.material.nope@1"]
+
+def no_material(documents: dict) -> None:
+    documents["parts/TST-0001/part.yaml"]["intent"]["material_profile"] = "tst_unrecorded_material"
+
+def no_profile(documents: dict) -> None:
+    documents["parts/TST-0001/part.yaml"]["intent"]["route"][0]["capability"] = "tst_unrecorded_printer"
+
+def unknown_material(documents: dict) -> None:
+    documents["parts/TST-0001/part.yaml"]["intent"]["material_profile"] = fx.unknown("material not chosen yet")
+
+def absent_part(documents: dict) -> None:
+    documents["interfaces.yaml"]["interfaces"][0]["functional"]["surfaces"][0]["PN"] = "TST-0099"
+
+def no_sliding_surface(documents: dict) -> None:
+    documents["interfaces.yaml"]["interfaces"][0]["functional"]["surfaces"][0]["role"] = "fixed"
+
+def unknown_family(documents: dict) -> None:
+    documents["manufacturing/materials.yaml"]["profiles"][0]["material_family"] = fx.unknown("family not tested yet")
+
+def family_tst_a(documents: dict) -> None:
+    documents["manufacturing/materials.yaml"]["profiles"][0]["material_family"] = fx.known("tst_a")
+
+def one_of(*sizes: float) -> dict:
+    return {**clearance_limit(), "operator": "one_of", "quantities": [{"value": size, "units": "mm"} for size in sizes]}
+
+def relative(to: str) -> dict:
+    limit = {**clearance_limit(), "relative": {"relative_to": to, "factor": 1.0, "floor": {"value": 0.1, "units": "mm"}}}
+    del limit["quantity"]
+    return limit
+
+def pin_generic_at_revision_1(documents: dict) -> None:
+    documents["manufacturing/capabilities.yaml"]["profiles"][0]["guidelines"] = ["fdm.generic@1"]
+
+def no_nozzle(documents: dict) -> None:
+    documents["manufacturing/capabilities.yaml"]["profiles"][0]["parameters"].pop("nozzle_diameter")
+
+
+def unknown_clearance_cases() -> dict:
+    """label -> (documents or a function that edits them, catalog, bound, reason, remedy), one per way the clearance is unknown."""
+    generic = clearance_catalog(clearance_limit())
+    fallback = "resolve the guideline problem the reason names"
+    cases = {
+        "no bound record": (clearance_documents(), generic, False, "no bound record", "bind the stack to a hardware record"),
+        "no sliding part printed by fdm": (clearance_documents(pn="TST-0002"), generic, True, "no sliding part is printed by fdm",
+                                           "record an fdm route operation for a sliding part"),
+        "no capability profile": (no_profile, generic, True, "capability profile", "name a capability profile"),
+        "material missing from the record": (no_material, generic, True, "tst_unrecorded_material",
+                                             "add the material profile tst_unrecorded_material"),
+        "material profile unknown": (unknown_material, generic, True, "material profile is unknown",
+                                     "record the material profile of TST-0001"),
+        "sliding part absent from the record": (absent_part, generic, True, "TST-0099 is not a part of the record",
+                                                "add TST-0099 to the record"),
+        "no sliding surface": (no_sliding_surface, generic, True, "records no surface with role sliding",
+                               "record the sliding surfaces"),
+        "no catalog": (clearance_documents(), None, True, "no guideline catalog", "give the run a guideline catalog"),
+        "the resolver finds no limit": (clearance_documents(), clearance_catalog(), True, "sliding_clearance",
+                                        "record a guideline set that states a minimum sliding clearance"),
+        "a scope fact is unknown": (unknown_family, clearance_catalog(family_limits={"tst_a": {**clearance_limit(), "operator": "equals", "value": True}}), True,
+                                    "scope fact is unknown", "record the scope fact"),
+        "equally specific limits conflict": (clearance_documents(), clearance_catalog(clearance_limit(0.3, "<"), clearance_limit(0.3, ">=")),
+                                             True, "share no value", "change one of the named guideline limits"),
+        "a set and a range share no size": (family_tst_a, clearance_catalog(clearance_limit(1.0), family_limits={"tst_a": one_of(0.2, 0.3)}),
+                                            True, "share no size", "change the named discrete set or range"),
+        "a relative limit without a nozzle diameter": (no_nozzle, clearance_catalog(relative("nozzle_diameter")), True,
+                                                       "states no nozzle diameter", "record the nozzle diameter"),
+        "a relative limit without a line width": (no_nozzle, clearance_catalog(relative("line_width")), True,
+                                                  "neither a line width nor a nozzle diameter", "record the line width or the nozzle diameter"),
+        "an unsupported operator": (clearance_documents(), clearance_catalog(clearance_limit(0.3, "~")), True,
+                                    "operator ~ is not supported", fallback),
+        "an extends parent that is not a known set": (clearance_documents(), extending_catalog("fdm.nope"), True,
+                                                      "fdm.nope is not a known guideline set", fallback),
+        "a pin at another revision": (pin_generic_at_revision_1, extending_catalog("fdm.generic"), True, "is pinned at revision 1", fallback),
+        "no operator can state the limit": (clearance_documents(), clearance_catalog(clearance_limit(0.3, ">"), clearance_limit(0.5, "<=")),
+                                            True, "cannot be stated", "state the sliding clearance with limits one operator"),
+        "a maximum is no minimum": (clearance_documents(), clearance_catalog(clearance_limit(0.3, "<=")), True, "<=",
+                                    "state the sliding clearance as a minimum"),
+        "a pin that is not applied": (pinned, generic, True, "not applied", "correct the guideline pin"),
+    }
+    return cases
+
 
 
 class ClearanceTests(unittest.TestCase):
@@ -571,27 +666,8 @@ class ClearanceTests(unittest.TestCase):
         self.assertEqual((result["outcome"], codes(result)), ("pass", []))
 
     def test_each_missing_input_makes_the_clearance_unknown_with_its_reason(self) -> None:
-        def pinned(documents: dict) -> None:
-            documents["manufacturing/capabilities.yaml"]["profiles"][0]["guidelines"] = ["fdm.generic@2", "fdm.material.nope@1"]
-
-        def no_material(documents: dict) -> None:
-            documents["parts/TST-0001/part.yaml"]["intent"]["material_profile"] = "tst_unrecorded_material"
-
-        def no_profile(documents: dict) -> None:
-            documents["parts/TST-0001/part.yaml"]["intent"]["route"][0]["capability"] = "tst_unrecorded_printer"
-
-        generic = clearance_catalog(clearance_limit())
-        cases = {
-            "no bound record": (clearance_documents(), generic, False, "no bound record"),
-            "no sliding part printed by fdm": (clearance_documents(pn="TST-0002"), generic, True, "no sliding part is printed by fdm"),
-            "no capability profile": (no_profile, generic, True, "capability profile"),
-            "material missing from the record": (no_material, generic, True, "tst_unrecorded_material"),
-            "no catalog": (clearance_documents(), None, True, "no guideline catalog"),
-            "the resolver finds no limit": (clearance_documents(), clearance_catalog(), True, "sliding_clearance"),
-            "a maximum is no minimum": (clearance_documents(), clearance_catalog(clearance_limit(0.3, "<=")), True, "<="),
-            "a pin that is not applied": (pinned, generic, True, "not applied"),
-        }
-        for label, (documents, catalog, bound, reason) in cases.items():
+        cases = unknown_clearance_cases()
+        for label, (documents, catalog, bound, reason, remedy) in cases.items():
             with self.subTest(label):
                 if callable(documents):
                     base = clearance_documents()
@@ -602,6 +678,7 @@ class ClearanceTests(unittest.TestCase):
                 self.assertEqual(codes(result), ["stack.clearance_unknown"])
                 self.assertEqual(result["clearance"]["status"], "unknown")
                 self.assertIn(reason, result["findings"][0]["measured"]["reason"])
+                self.assertIn(remedy, result["findings"][0]["remedy"])
 
     def test_the_largest_minimum_across_the_sliding_parts_governs(self) -> None:
         catalog = clearance_catalog(clearance_limit(0.3), family_limits={"tst_b": clearance_limit(0.5)})
@@ -633,6 +710,9 @@ class ClearanceTests(unittest.TestCase):
         self.assertEqual(codes(result), ["stack.clearance_unknown", "stack.contributor_unknown"])
         self.assertEqual(result["clearance"]["status"], "unknown")
         self.assertIn("nominal gap is not established", result["clearance"]["reasons"][0])
+        remedy = next(f for f in result["findings"] if f["code"] == "stack.clearance_unknown")["remedy"]
+        self.assertIn("establish the unknown contributor", remedy)
+        self.assertNotIn("guideline", remedy)
 
     def test_a_sliding_part_with_an_unknown_route_makes_the_clearance_unknown(self) -> None:
         documents = two_sliding_documents()
@@ -641,6 +721,7 @@ class ClearanceTests(unittest.TestCase):
         result = self.run_stack(documents, clearance_stack("side", nominal_gap=0.4), catalog)
         self.assertEqual(codes(result), ["stack.clearance_unknown"])
         self.assertIn("TST-0005's route is unknown", result["clearance"]["reasons"][0])
+        self.assertIn("record the route of TST-0005", result["findings"][0]["remedy"])
 
     def test_a_calibrated_sliding_clearance_is_reported_as_not_judged_in_stackup(self) -> None:
         documents = clearance_documents()
@@ -650,6 +731,9 @@ class ClearanceTests(unittest.TestCase):
         self.assertEqual(codes(result), ["stack.clearance_unknown"])
         self.assertEqual(result["clearance"]["status"], "unknown")
         self.assertIn("calibration not judged in stackup", result["clearance"]["reasons"][0])
+        remedy = result["findings"][0]["remedy"]
+        self.assertIn("by hand", remedy)
+        self.assertNotIn("record a guideline set", remedy)
 
     def test_a_clearance_failure_keeps_the_statistical_governs_note_of_a_justified_stack(self) -> None:
         stack = IntentStackContractTests.justified(clearance_stack("side"))
@@ -660,8 +744,12 @@ class ClearanceTests(unittest.TestCase):
         self.assertEqual(codes(result), ["stack.clearance_below_minimum"])
         self.assertTrue(any("approved statistical interval governs" in text for text in result["limits"]))
 
-    def test_a_worst_case_stack_that_fails_on_clearance_alone_gains_no_statistical_note(self) -> None:
-        result = self.run_stack(clearance_documents(), clearance_stack("side"), clearance_catalog(clearance_limit()))
+    def test_a_justified_stack_whose_statistical_interval_also_misses_gains_no_statistical_note(self) -> None:
+        stack = IntentStackContractTests.justified(clearance_stack("side"))
+        stack["consequence"] = "performance"
+        stack["requirement"]["min"] = 0.15  # the statistics 0.1..0.3 miss it as well, so they accept nothing
+        result = self.run_stack(clearance_documents(method="justified_rss"), stack, clearance_catalog(clearance_limit()))
+        self.assertEqual((result["requirement"]["governing"], result["requirement"]["statistical_pass"]), ("justified_rss", False))
         self.assertEqual(result["outcome"], "fail")
         self.assertFalse(any("statistical interval governs" in text for text in result["limits"]))
 
@@ -777,7 +865,7 @@ class StackPacketTests(unittest.TestCase):
         self.assertEqual([p.message for p in seen[0].problems if p.code == "intent.guideline"], [], "a shipped copy is accepted")
         self.assertEqual(dict(seen[0].guideline_digests.get("tst_printer", {}).get("tst_polymer_printed", {})), frozen, "the digests are those of the snapshot")
 
-    def test_main_reads_the_clearance_through_the_snapshot_catalog_and_the_packet_depends_on_it(self) -> None:
+    def build_with_snapshot_catalog(self) -> None:
         self.build(clearance_documents(), clearance_stack("side", nominal_gap=0.4))
         for name, data in GL.snapshot_files(self.hw).items():  # what a build copies into the version
             target = self.hw / "versions" / "v1" / "record" / name
@@ -785,9 +873,16 @@ class StackPacketTests(unittest.TestCase):
             target.write_bytes(data)
         (self.hw / "versions" / "v1" / "manifest.json").unlink()
         snapshot_version(self.hw)
+
+    def test_main_reads_the_clearance_through_the_snapshot_catalog(self) -> None:
+        self.build_with_snapshot_catalog()
         status, output = self.run_stack()
         row = output["clearance"]
         self.assertEqual((status, row["status"], row["minimum_mm"], row["met"]), (0, "guideline", 0.3, True))
+
+    def test_the_packet_depends_on_the_guideline_set_the_clearance_read(self) -> None:
+        self.build_with_snapshot_catalog()
+        self.run_stack()
         packet, _ = self.packet()
         shipped = GL.discover(None).guidelines["fdm.generic"].sha256
         self.assertEqual(packet["dependencies"]["guideline_fdm_generic_r2"], shipped)
