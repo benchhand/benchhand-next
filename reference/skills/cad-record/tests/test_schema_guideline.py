@@ -97,7 +97,8 @@ class GuidelineFile(unittest.TestCase):
         relative = {"relative_to": "nozzle_diameter", "factor": 2}
         cases: dict[str, tuple[dict[str, Any], bool]] = {}
         for characteristic, good, bad in (("nozzle_diameter", 0.4, 50), ("hole_diameter_deviation", 0.1, 5),
-                                          ("dimensional_deviation", 0.1, 5), ("profile_deviation", 0.1, 5)):
+                                          ("dimensional_deviation", 0.1, 5), ("profile_deviation", 0.1, 5),
+                                          ("sliding_clearance", 0.3, 6)):
             for label, floor, valid in (("good", good, True), ("out of bound", bad, False)):
                 limit_ = {**base, "characteristic": characteristic, "relative": {**relative, "floor": fx.quantity(floor)}}
                 cases[f"{characteristic} {label} floor"] = (guideline(limits=[limit_]), valid)
@@ -187,6 +188,11 @@ class GuidelineFile(unittest.TestCase):
             "min_hole in range": (guideline(limits=[limit(characteristic="min_hole", quantity=fx.quantity(2.0))]), True),
             "min_feature below its bound": (guideline(limits=[limit(characteristic="min_feature", quantity=fx.quantity(0.05))]), False),
             "min_hole in the wrong dimension": (guideline(limits=[limit(characteristic="min_hole", quantity=fx.quantity(2.0, "deg"))]), False),
+            "sliding_clearance in range": (guideline(limits=[limit(characteristic="sliding_clearance", quantity=fx.quantity(0.3))]), True),
+            "sliding_clearance past 5 mm": (guideline(limits=[limit(characteristic="sliding_clearance", quantity=fx.quantity(6))]), False),
+            "sliding_clearance negative": (guideline(limits=[limit(characteristic="sliding_clearance", quantity=fx.quantity(-0.1))]), False),
+            "sliding_clearance of zero": (guideline(limits=[limit(characteristic="sliding_clearance", quantity=fx.quantity(0))]), False),
+            "sliding_clearance in the wrong dimension": (guideline(limits=[limit(characteristic="sliding_clearance", quantity=fx.quantity(0.3, "deg"))]), False),
             "a characteristic the capability schema does not bound": (guideline(limits=[limit(characteristic="min_gap")]), False),
             "overhang in range": (guideline(limits=[limit(characteristic="overhang_angle", operator="<=", quantity=fx.quantity(45, "deg"))]), True),
             "overhang past 90 deg": (guideline(limits=[limit(characteristic="overhang_angle", operator="<=", quantity=fx.quantity(120, "deg"))]), False),

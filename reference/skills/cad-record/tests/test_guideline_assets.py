@@ -25,7 +25,7 @@ fx = load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures"
 registry = fx.schema_registry_module()
 gl = load("cad_record_guidelines", SKILL / "scripts" / "guidelines.py")
 SCHEMA = "manufacturing-guideline.schema.json"
-ACCESSED = {"2026-11-18", "2026-11-19"}  # the survey day, and the day the H2D tech-specs page was added
+ACCESSED = {"2026-11-18", "2026-11-19", "2026-11-20"}  # the survey day, the H2D tech-specs page, and the Prusa clearance page
 EXPECTED_IDS = {
     "fdm.generic",
     "fdm.nozzle.d0_2", "fdm.nozzle.d0_4", "fdm.nozzle.d0_6", "fdm.nozzle.d0_8",
@@ -104,6 +104,7 @@ class ShippedValues(unittest.TestCase):
             ("min_wall", ">=", (0.8, "mm")),
             ("min_feature", ">=", (2.0, "mm")),
             ("min_hole", ">=", (2.0, "mm")),
+            ("sliding_clearance", ">=", (0.3, "mm")),
         ])
         relative = [(item["characteristic"], item["relative"]) for item in limits_of("fdm.generic") if "relative" in item]
         self.assertEqual(relative, [("min_wall", {"relative_to": "line_width", "factor": 3, "floor": {"value": 0.8, "units": "mm"}})])
@@ -111,7 +112,18 @@ class ShippedValues(unittest.TestCase):
     def test_single_source_limits_have_one_citation_and_two_source_limits_two(self) -> None:
         counts = [(item["characteristic"], "relative" in item, len(item["citations"])) for item in limits_of("fdm.generic")]
         self.assertEqual(counts, [("overhang_angle", False, 2), ("bridge_span", False, 1), ("min_wall", False, 2),
-                                  ("min_wall", True, 2), ("min_feature", False, 1), ("min_hole", False, 1)])
+                                  ("min_wall", True, 2), ("min_feature", False, 1), ("min_hole", False, 1),
+                                  ("sliding_clearance", False, 1)])
+
+    def test_the_sliding_clearance_is_the_prusa_value_with_its_per_side_reading_stated(self) -> None:
+        item = limit_of("fdm.generic", "sliding_clearance")
+        (citation,) = item["citations"]
+        self.assertEqual(next(d for d in shipped().values() if d["id"] == "fdm.generic")["revision"], 2)
+        self.assertEqual((citation["kind"], citation["url"]),
+                         ("supplier", "https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135"))
+        self.assertIn("movable parts is at least 0.3 mm", citation["locator"])
+        self.assertIn("does not say per side or diametral", citation["locator"])
+        self.assertIn("per side", citation["locator"])
 
     def test_each_nozzle_set_is_three_line_widths_with_a_floor_of_0_8_mm(self) -> None:
         for diameter in ("0_2", "0_4", "0_6", "0_8"):

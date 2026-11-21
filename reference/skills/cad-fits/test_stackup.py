@@ -257,6 +257,27 @@ class IntentStackContractTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "unknown")
         self.assertIn("stack.effect_missing", codes(result))
 
+    def test_press_fit_pin_is_unknown_and_names_the_missing_source(self) -> None:
+        stack = fixture("closing_gap.yaml")
+        stack["requirement"]["min"] = -1.0
+        documents = closing_gap_documents()
+        documents["interfaces.yaml"]["interfaces"][0]["limits"] = {
+            "press_fit": {"fit": "5 H7/p6", "hole": {"PN": "TST-0001", "feature": "cover_seat"},
+                          "shaft": {"PN": "TST-0002", "feature": "shoulder_length"}}}
+        result = self.bound(documents, stack, "closing-gap")
+        self.assertEqual(result["outcome"], "unknown")
+        self.assertEqual(codes(result), ["stack.press_fit_unknown"])
+        finding = result["findings"][0]
+        self.assertEqual(finding["outcome"], "unknown")
+        self.assertIn("no qualifying press-fit source", finding["measured"]["reason"])
+        self.assertIn("printed coupon on the target printer and material", finding["measured"]["reason"])
+
+    def test_a_stack_without_a_press_fit_has_no_press_fit_finding(self) -> None:
+        stack = fixture("closing_gap.yaml")
+        stack["requirement"]["min"] = -1.0
+        result = self.bound(closing_gap_documents(), stack, "closing-gap")
+        self.assertNotIn("stack.press_fit_unknown", codes(result))
+
     def test_an_effect_the_interface_declares_relevant_cannot_be_dropped(self) -> None:
         result = self.bound(closing_gap_documents(relevant=("manufacture", "coating", "thermal", "moisture")),
                             fixture("closing_gap.yaml"), "closing-gap")
@@ -443,6 +464,239 @@ class IntentStackContractTests(unittest.TestCase):
         self.assertEqual(codes(result), ["stack.capability_unresolved"])
 
 
+GL = stackup.GUIDELINES
+GENERIC_SHA = "ab" * 32
+
+
+def clearance_catalog(*limits: dict, revision: int = 2, family_limits: dict[str, dict] | None = None) -> object:
+    """A hand-built catalog holding fdm.generic with `limits`, so these tests do not depend on the shipped file.
+    `family_limits` adds one set per material family (family -> its sliding_clearance limit)."""
+    generic = GL.Guideline("fdm.generic", revision, "TST generic", (), False, {"process": "fdm"}, tuple(limits),
+                           "manufacturing/guidelines/fdm.generic.yaml", "shipped", GENERIC_SHA)
+    sets = {"fdm.generic": generic}
+    for family, family_limit in (family_limits or {}).items():
+        ident = f"fdm.material.{family}"
+        sets[ident] = GL.Guideline(ident, 1, f"TST {family}", (), False, {"process": "fdm", "material_family": (family,)},
+                                   (family_limit,), f"manufacturing/guidelines/{ident}.yaml", "shipped", "cd" * 32)
+    return GL.Catalog(sets)
+
+
+def clearance_limit(value: float = 0.3, operator: str = ">=") -> dict:
+    return {"characteristic": "sliding_clearance", "operator": operator, "quantity": {"value": value, "units": "mm"},
+            "citations": [{"kind": "supplier", "reference": "TST clearance guide", "accessed": "2026-11-20"}]}
+
+
+def clearance_documents(*, pn: str = "TST-0001", relevant: tuple[str, ...] = ("manufacture", "coating", "thermal"),
+                        method: str = "worst_case") -> dict:
+    """closing_gap_documents with IF-001's sliding surface on `pn`."""
+    documents = closing_gap_documents(relevant=relevant, method=method)
+    documents["interfaces.yaml"]["interfaces"][0]["functional"]["surfaces"] = [
+        {"PN": pn, "feature": "pivot_bore", "role": "sliding", "dimension_state": "assembled"}]
+    return documents
+
+
+def two_sliding_documents() -> dict:
+    """clearance_documents with a second printed sliding part, TST-0005, in the material family tst_b (TST-0001 is tst_a)."""
+    documents = clearance_documents()
+    documents["interfaces.yaml"]["interfaces"][0]["functional"]["surfaces"].append(
+        {"PN": "TST-0005", "feature": "pivot_bore", "role": "sliding", "dimension_state": "assembled"})
+    second = copy.deepcopy(documents["parts/TST-0001/part.yaml"])
+    second["PN"] = "TST-0005"
+    second["intent"]["material_profile"] = "tst_polymer_b"
+    documents["parts/TST-0005/part.yaml"] = second
+    documents["assembly.yaml"]["subassemblies"][0]["parts"].append("TST-0005")
+    profiles = documents["manufacturing/materials.yaml"]["profiles"]
+    profiles[0]["material_family"] = fx.known("tst_a")
+    other = copy.deepcopy(profiles[0])
+    other.update(id="tst_polymer_b", material_family=fx.known("tst_b"))
+    profiles.append(other)
+    return documents
+
+
+def clearance_stack(per: str = "side", *, nominal_gap: float = 0.20, requirement_min: float = -1.0) -> dict:
+    stack = fixture("closing_gap.yaml")
+    stack["requirement"]["min"] = requirement_min
+    contributor(stack, "H")["nominal"] = round(20.02 + nominal_gap, 6)
+    stack["clearance"] = {"characteristic": "sliding_clearance", "per": per}
+    return stack
+
+
+class ClearanceTests(unittest.TestCase):
+    """The stack-level sliding-clearance check: the nominal gap per side against the guideline minimum."""
+
+    def run_stack(self, documents: dict, stack: dict, catalog: object | None, *, bound: bool = True) -> dict:
+        with tempfile.TemporaryDirectory() as directory:
+            hw = fx.write_record(Path(directory) / "project" / "hw", documents)
+            write_case(hw, "closing-gap", stack)
+            record = intent.load_record(hw) if bound else None
+            result = stackup.compute(stack, record, case="closing-gap", on=ON, decisions=frozenset({"DR-001"}),
+                                     catalog=catalog)
+        for finding in result["findings"]:
+            self.assertEqual(list(stackup._validator("finding").iter_errors(finding)), [], finding["id"])
+        return result
+
+    def test_a_nominal_gap_below_the_guideline_minimum_fails_and_cites_the_set(self) -> None:
+        result = self.run_stack(clearance_documents(), clearance_stack("side"), clearance_catalog(clearance_limit()))
+        self.assertEqual(result["outcome"], "fail")
+        self.assertEqual(codes(result), ["stack.clearance_below_minimum"])
+        row = result["clearance"]
+        self.assertEqual((row["status"], row["met"], row["per"]), ("guideline", False, "side"))
+        self.assertAlmostEqual(row["nominal_per_side_mm"], 0.2, places=6)
+        self.assertEqual((row["minimum_mm"], row["operator"]), (0.3, ">="))
+        winner = row["resolutions"][0]["provenance"][0]
+        self.assertEqual(winner["guideline"], "fdm.generic@2")
+        self.assertEqual(row["guidelines"], {"fdm.generic@2": GENERIC_SHA})
+        self.assertNotIn("calibrate", result["findings"][0]["remedy"])
+
+    def test_a_diametral_gap_is_halved_before_it_is_compared(self) -> None:
+        stack = clearance_stack("diameter", nominal_gap=0.5)
+        result = self.run_stack(clearance_documents(), stack, clearance_catalog(clearance_limit()))
+        self.assertAlmostEqual(result["clearance"]["nominal_per_side_mm"], 0.25, places=6)
+        self.assertEqual(codes(result), ["stack.clearance_below_minimum"])
+
+    def test_a_met_guideline_clearance_never_raises_an_unknown_stack_to_pass(self) -> None:
+        stack = clearance_stack("diameter", nominal_gap=0.8)
+        stack["relevant"].append("moisture")  # a relevant effect with no contributor: the stack is unknown
+        documents = clearance_documents(relevant=("manufacture", "coating", "thermal", "moisture"))
+        result = self.run_stack(documents, stack, clearance_catalog(clearance_limit()))
+        self.assertTrue(result["clearance"]["met"])
+        self.assertEqual(result["outcome"], "unknown")
+        self.assertEqual(codes(result), ["stack.effect_missing"])
+
+    def test_a_met_guideline_clearance_leaves_a_passing_stack_passing_and_adds_no_finding(self) -> None:
+        stack = clearance_stack("side", nominal_gap=0.4)
+        result = self.run_stack(clearance_documents(), stack, clearance_catalog(clearance_limit()))
+        self.assertTrue(result["clearance"]["met"])
+        self.assertEqual((result["outcome"], codes(result)), ("pass", []))
+
+    def test_each_missing_input_makes_the_clearance_unknown_with_its_reason(self) -> None:
+        def pinned(documents: dict) -> None:
+            documents["manufacturing/capabilities.yaml"]["profiles"][0]["guidelines"] = ["fdm.generic@2", "fdm.material.nope@1"]
+
+        def no_material(documents: dict) -> None:
+            documents["parts/TST-0001/part.yaml"]["intent"]["material_profile"] = "tst_unrecorded_material"
+
+        def no_profile(documents: dict) -> None:
+            documents["parts/TST-0001/part.yaml"]["intent"]["route"][0]["capability"] = "tst_unrecorded_printer"
+
+        generic = clearance_catalog(clearance_limit())
+        cases = {
+            "no bound record": (clearance_documents(), generic, False, "no bound record"),
+            "no sliding part printed by fdm": (clearance_documents(pn="TST-0002"), generic, True, "no sliding part is printed by fdm"),
+            "no capability profile": (no_profile, generic, True, "capability profile"),
+            "material missing from the record": (no_material, generic, True, "tst_unrecorded_material"),
+            "no catalog": (clearance_documents(), None, True, "no guideline catalog"),
+            "the resolver finds no limit": (clearance_documents(), clearance_catalog(), True, "sliding_clearance"),
+            "a maximum is no minimum": (clearance_documents(), clearance_catalog(clearance_limit(0.3, "<=")), True, "<="),
+            "a pin that is not applied": (pinned, generic, True, "not applied"),
+        }
+        for label, (documents, catalog, bound, reason) in cases.items():
+            with self.subTest(label):
+                if callable(documents):
+                    base = clearance_documents()
+                    documents(base)
+                    documents = base
+                result = self.run_stack(documents, clearance_stack("side"), catalog, bound=bound)
+                self.assertEqual(result["outcome"], "unknown")
+                self.assertEqual(codes(result), ["stack.clearance_unknown"])
+                self.assertEqual(result["clearance"]["status"], "unknown")
+                self.assertIn(reason, result["findings"][0]["measured"]["reason"])
+
+    def test_the_largest_minimum_across_the_sliding_parts_governs(self) -> None:
+        catalog = clearance_catalog(clearance_limit(0.3), family_limits={"tst_b": clearance_limit(0.5)})
+        result = self.run_stack(two_sliding_documents(), clearance_stack("side", nominal_gap=0.4), catalog)
+        row = result["clearance"]
+        self.assertEqual((row["parts"], row["minimum_mm"], row["met"]), (["TST-0001", "TST-0005"], 0.5, False))
+        self.assertEqual((result["outcome"], codes(result)), ("fail", ["stack.clearance_below_minimum"]))
+
+    def test_a_strict_minimum_is_not_met_by_an_equal_gap(self) -> None:
+        catalog = clearance_catalog(clearance_limit(0.3, ">"))
+        equal = self.run_stack(clearance_documents(), clearance_stack("side", nominal_gap=0.3), catalog)
+        self.assertEqual((equal["clearance"]["operator"], equal["clearance"]["met"]), (">", False))
+        self.assertEqual(codes(equal), ["stack.clearance_below_minimum"])
+        above = self.run_stack(clearance_documents(), clearance_stack("side", nominal_gap=0.31), catalog)
+        self.assertTrue(above["clearance"]["met"])
+
+    def test_equal_minima_keep_the_strict_one(self) -> None:
+        catalog = clearance_catalog(clearance_limit(0.3, ">="), family_limits={"tst_b": clearance_limit(0.3, ">")})
+        result = self.run_stack(two_sliding_documents(), clearance_stack("side", nominal_gap=0.3), catalog)
+        self.assertEqual((result["clearance"]["operator"], result["clearance"]["met"]), (">", False))
+
+    def test_an_unknown_nominal_gap_leaves_the_clearance_unknown(self) -> None:
+        stack = clearance_stack("side")
+        thermal = contributor(stack, "T")
+        for key in ("direction", "nominal", "tol", "source"):
+            thermal.pop(key)
+        thermal.update(status="unknown", reason="no thermal expansion analysis yet")
+        result = self.run_stack(clearance_documents(), stack, clearance_catalog(clearance_limit()))
+        self.assertEqual(codes(result), ["stack.clearance_unknown", "stack.contributor_unknown"])
+        self.assertEqual(result["clearance"]["status"], "unknown")
+        self.assertIn("nominal gap is not established", result["clearance"]["reasons"][0])
+
+    def test_a_sliding_part_with_an_unknown_route_makes_the_clearance_unknown(self) -> None:
+        documents = two_sliding_documents()
+        documents["parts/TST-0005/part.yaml"]["intent"]["route"] = fx.unknown("route not recorded yet")
+        catalog = clearance_catalog(clearance_limit(), family_limits={"tst_b": clearance_limit(0.5)})
+        result = self.run_stack(documents, clearance_stack("side", nominal_gap=0.4), catalog)
+        self.assertEqual(codes(result), ["stack.clearance_unknown"])
+        self.assertIn("TST-0005's route is unknown", result["clearance"]["reasons"][0])
+
+    def test_a_calibrated_sliding_clearance_is_reported_as_not_judged_in_stackup(self) -> None:
+        documents = clearance_documents()
+        documents["manufacturing/capabilities.yaml"]["profiles"][0]["calibrations"].append(
+            fx.calibration("slide_coupon", "sliding_clearance", "tst_polymer_printed", fx.quantity(lower=0.25, upper=0.35)))
+        result = self.run_stack(documents, clearance_stack("side", nominal_gap=0.4), clearance_catalog(clearance_limit()))
+        self.assertEqual(codes(result), ["stack.clearance_unknown"])
+        self.assertEqual(result["clearance"]["status"], "unknown")
+        self.assertIn("calibration not judged in stackup", result["clearance"]["reasons"][0])
+
+    def test_a_clearance_failure_keeps_the_statistical_governs_note_of_a_justified_stack(self) -> None:
+        stack = IntentStackContractTests.justified(clearance_stack("side"))
+        stack["consequence"] = "performance"
+        stack["requirement"]["min"] = 0.0  # the worst case -0.1..0.5 misses it, the approved statistics meet it
+        result = self.run_stack(clearance_documents(method="justified_rss"), stack, clearance_catalog(clearance_limit()))
+        self.assertEqual((result["requirement"]["governing"], result["outcome"]), ("justified_rss", "fail"))
+        self.assertEqual(codes(result), ["stack.clearance_below_minimum"])
+        self.assertTrue(any("approved statistical interval governs" in text for text in result["limits"]))
+
+    def test_a_worst_case_stack_that_fails_on_clearance_alone_gains_no_statistical_note(self) -> None:
+        result = self.run_stack(clearance_documents(), clearance_stack("side"), clearance_catalog(clearance_limit()))
+        self.assertEqual(result["outcome"], "fail")
+        self.assertFalse(any("statistical interval governs" in text for text in result["limits"]))
+
+    def test_the_shipped_catalog_sliding_clearance_resolves_in_a_stack(self) -> None:
+        shipped = GL.discover(None)
+        result = self.run_stack(clearance_documents(), clearance_stack("side"), shipped)
+        row = result["clearance"]
+        self.assertEqual((row["status"], row["minimum_mm"], row["operator"], row["met"]), ("guideline", 0.3, ">=", False))
+        generic = shipped.guidelines["fdm.generic"]
+        self.assertEqual(row["guidelines"]["fdm.generic@2"], generic.sha256)
+        self.assertEqual(codes(result), ["stack.clearance_below_minimum"])
+
+    def test_the_packet_depends_on_every_guideline_set_the_clearance_resolved_through(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            stack_path = Path(directory) / "case.yaml"
+            stack_path.write_text("id: STK\n", encoding="utf-8")
+            found = stackup.packet_dependencies(Path(directory), stack_path, {}, {"fdm.generic@2": GENERIC_SHA})
+        self.assertEqual(found["guideline_fdm_generic_r2"], GENERIC_SHA)
+        self.assertIn("stack_case", found)
+
+    def test_a_stack_without_a_clearance_block_has_no_clearance_row(self) -> None:
+        stack = clearance_stack()
+        del stack["clearance"]
+        result = self.run_stack(clearance_documents(), stack, clearance_catalog(clearance_limit()))
+        self.assertNotIn("clearance", result)
+
+    def test_the_clearance_block_names_its_characteristic_and_basis(self) -> None:
+        for block in ({"characteristic": "sliding_clearance"}, {"characteristic": "min_wall", "per": "side"},
+                      {"characteristic": "sliding_clearance", "per": "radius"}, {"per": "side"}):
+            with self.subTest(block=block):
+                stack = clearance_stack()
+                stack["clearance"] = block
+                with self.assertRaises(stackup.StackError):
+                    self.run_stack(clearance_documents(), stack, clearance_catalog(clearance_limit()))
+
+
 class StackPacketTests(unittest.TestCase):
     """A record-bound intent stack at hw/analysis/cases/<case>/case.yaml publishes its analysis bundle as
     hw/analysis/<V>/<case>/ (the bundle release.py requires for the case) and the interface.stack / feature.fit
@@ -521,6 +775,21 @@ class StackPacketTests(unittest.TestCase):
                 self.run_stack()
         self.assertEqual([p.message for p in seen[0].problems if p.code == "intent.guideline"], [], "a shipped copy is accepted")
         self.assertEqual(dict(seen[0].guideline_digests.get("tst_printer", {}).get("tst_polymer_printed", {})), frozen, "the digests are those of the snapshot")
+
+    def test_main_reads_the_clearance_through_the_snapshot_catalog_and_the_packet_depends_on_it(self) -> None:
+        self.build(clearance_documents(), clearance_stack("side", nominal_gap=0.4))
+        for name, data in GL.snapshot_files(self.hw).items():  # what a build copies into the version
+            target = self.hw / "versions" / "v1" / "record" / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+        (self.hw / "versions" / "v1" / "manifest.json").unlink()
+        snapshot_version(self.hw)
+        status, output = self.run_stack()
+        row = output["clearance"]
+        self.assertEqual((status, row["status"], row["minimum_mm"], row["met"]), (0, "guideline", 0.3, True))
+        packet, _ = self.packet()
+        shipped = GL.discover(None).guidelines["fdm.generic"].sha256
+        self.assertEqual(packet["dependencies"]["guideline_fdm_generic_r2"], shipped)
 
     def test_a_failed_worst_case_is_the_stack_outcome_evidence_reads_and_a_rerun_reuses_it(self) -> None:
         self.build(closing_gap_documents(), fixture("closing_gap.yaml"))

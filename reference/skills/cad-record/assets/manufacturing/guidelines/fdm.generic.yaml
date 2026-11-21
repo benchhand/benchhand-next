@@ -4,7 +4,7 @@
 
 schema_version: 1
 id: fdm.generic
-revision: 1
+revision: 2
 title: FDM generic design-for-manufacturing guidance
 scope:
   process: fdm
@@ -93,3 +93,14 @@ limits:
     url: https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/
     accessed: '2026-11-18'
     locator: 'FDM specifications table, Minimum Hole Diameter: 2.0 mm'
+- characteristic: sliding_clearance
+  operator: '>='
+  quantity:
+    value: 0.3
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Modeling with 3D printing in mind
+    url: https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135
+    accessed: '2026-11-20'
+    locator: 'Tolerances: an initial good measurement for movable parts is at least 0.3 mm. The source does not say per side or diametral; this set reads it per side, the stricter reading'

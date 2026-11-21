@@ -365,7 +365,7 @@ class SupportPolicyTests(Checks):
         found = self.finding(result, "process.fdm.overhang")
         self.assertEqual((found["criterion"]["operator"], found["criterion"]["value"], found["criterion"]["units"]), ("<=", 45.0, "deg"))
         self.assertEqual((found["criterion"]["source"]["kind"], found["criterion"]["source"]["reference"],
-                          found["criterion"]["source"]["revision"]), ("guideline", "fdm.generic", "1"))
+                          found["criterion"]["source"]["revision"]), ("guideline", "fdm.generic", "2"))
 
     def test_without_a_calibration_or_a_catalog_the_need_for_support_is_unknown_never_a_universal_angle(self) -> None:
         result = self.assess(printed("TST-0101", {"strategy": "none"}, calibrations=[]), geometry("TST-0101", SHELF))
@@ -1473,7 +1473,7 @@ class GuidelineLimitTests(Checks):
                 criterion = self.finding(result, code)["criterion"]
                 self.assertEqual((criterion["operator"], criterion["value"], criterion["units"]), (operator, value, units))
                 self.assertEqual((criterion["source"]["kind"], criterion["source"]["reference"], criterion["source"]["revision"],
-                                  criterion["source"]["sha256"]), ("guideline", ref, "1", SHIPPED.guidelines[ref].sha256))
+                                  criterion["source"]["sha256"]), ("guideline", ref, str(SHIPPED.guidelines[ref].revision), SHIPPED.guidelines[ref].sha256))
 
     def test_a_guideline_pass_counts_only_for_three_service_classes(self) -> None:
         cases = {"wall": (walled(3.0), GEOMETRY), "small_feature": (walled(3.0, pins=(3.0,)), GEOMETRY),
@@ -1530,7 +1530,7 @@ class GuidelineLimitTests(Checks):
     def test_the_packet_depends_on_every_guideline_set_its_limits_can_come_from(self) -> None:
         packet = self.judged(walled(3.0)).packet({"version_manifest": "0" * 64})
         self.assertEqual(packet_errors(packet), [])
-        for ref, key in (("fdm.generic", "guideline_fdm_generic_r1"), ("fdm.nozzle.d0_4", "guideline_fdm_nozzle_d0_4_r1")):
+        for ref, key in (("fdm.generic", "guideline_fdm_generic_r2"), ("fdm.nozzle.d0_4", "guideline_fdm_nozzle_d0_4_r1")):
             self.assertEqual(packet["dependencies"][key], SHIPPED.guidelines[ref].sha256)
         self.assertNotIn("guideline_fdm_nozzle_d0_6_r1", packet["dependencies"], "a 0.6 mm set cannot apply to a 0.4 mm nozzle")
 
@@ -1576,7 +1576,7 @@ class GuidelineLimitTests(Checks):
     def test_a_resolver_warning_reaches_the_finding_that_cites_the_limit(self) -> None:
         result = self.judged(walled(1.0), pin=("fdm.generic@7",))
         conditions = self.finding(result, "process.fdm.wall")["criterion"]["conditions"]
-        self.assertIn("pinned fdm.generic@7, but the catalog has revision 1: not applied", conditions)
+        self.assertIn("pinned fdm.generic@7, but the catalog has revision 2: not applied", conditions)
 
     def test_a_refused_guideline_file_surfaces_as_a_finding(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1676,7 +1676,7 @@ class LegacyWallLimitTests(Checks):
 
     def test_without_a_nozzle_or_line_width_the_floor_applies_and_says_so(self) -> None:
         limit = self.limit(guided(parameters={}))
-        self.assertEqual((limit["required_mm"], limit["guideline"]), (0.8, "fdm.generic@1"))
+        self.assertEqual((limit["required_mm"], limit["guideline"]), (0.8, "fdm.generic@2"))
         self.assertIn("no nozzle or line width", limit["note"])
 
     def test_the_wall_diagnostic_and_the_process_checks_agree_on_every_limit_they_cannot_state(self) -> None:
