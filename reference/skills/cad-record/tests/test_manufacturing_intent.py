@@ -98,7 +98,8 @@ class Quantities(unittest.TestCase):
 
     def test_quantities_refuse_non_finite_boolean_and_reversed_values(self) -> None:
         for data in ({"value": float("nan"), "units": "mm"}, {"value": float("inf"), "units": "mm"}, {"value": True, "units": "mm"},
-                     {"lower": 2, "upper": 1, "units": "mm"}, {"value": 1, "units": "furlong"}, {"units": "mm"}):
+                     {"lower": 2, "upper": 1, "units": "mm"}, {"value": 1, "units": "furlong"}, {"units": "mm"},
+                     {"value": 10**400, "units": "mm"}):
             with self.subTest(data=data), self.assertRaises(mi.IntentError):
                 mi.quantity(data)
         tested = mi.quantity({"lower": 20, "upper": 80, "units": "deg_C"})
@@ -1152,6 +1153,19 @@ class PlausibilityWarnings(unittest.TestCase):
         documents = self.layer(fx.known(fx.quantity(4)), fx.known(fx.quantity(0.4)))
         self.assertTrue(mi.schema_problems(documents))
         self.assertEqual(mi.plausibility_problems(documents), [])
+
+    def test_an_integer_too_large_for_a_float_is_left_to_its_hard_bound_and_does_not_crash(self) -> None:
+        huge = 10**400
+        cases = {  # label: (documents, pointers that warn: the huge member never, a representable sibling still)
+            "plain number": ({"product.yaml": fx.product(general_tolerance=huge)}, []),
+            "quantity": (self.hole(huge, "um"), []),
+            "array element": (self.part_with_edges([huge, 1]), ["drawing/edges/external/1"]),
+            "relative layer height": (self.layer(fx.known(fx.quantity(huge)), fx.known(fx.quantity(0.4))), []),
+            "relative nozzle": (self.layer(fx.known(fx.quantity(0.9)), fx.known(fx.quantity(huge))), []),
+        }
+        for label, (documents, pointers) in cases.items():
+            with self.subTest(label):
+                self.assertEqual([p.pointer for p in mi.plausibility_problems(documents)], pointers)
 
     def test_a_tool_checks_its_own_layer_height_against_its_own_nozzle(self) -> None:
         tool = {"id": "wide", "description": "A wide hotend", "parameters": {

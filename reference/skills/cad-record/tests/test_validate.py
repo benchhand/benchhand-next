@@ -118,6 +118,17 @@ class ValidateProject(unittest.TestCase):
         found = self.plausibility()
         self.assertEqual([item["code"] for item in found], ["plausibility.layer_height"], found)
 
+    def test_an_integer_too_large_for_a_float_is_a_schema_error_and_no_crash(self) -> None:
+        path = self.hw / "manufacturing" / "capabilities.yaml"
+        text = path.read_text(encoding="utf-8")
+        self.assertEqual(text.count("value: {value: 350, units: deg_C}"), 1)
+        path.write_text(text.replace("value: {value: 350, units: deg_C}", "value: {value: 1" + "0" * 400 + ", units: deg_C}"), encoding="utf-8")
+        result, report = self.validate()
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertTrue([item for item in report["findings"] if item.get("severity") == "error"], report)
+        self.assertEqual([item for item in report["findings"] if str(item.get("code", "")).startswith("plausibility.")], [])
+
     def test_copied_template_with_one_placeholder_part_validates(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-record-template-")
         self.addCleanup(temporary.cleanup)
