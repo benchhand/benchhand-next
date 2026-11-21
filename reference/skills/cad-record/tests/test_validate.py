@@ -88,6 +88,36 @@ class ValidateProject(unittest.TestCase):
         )
         return result, result_payload(result.stdout)
 
+    def plausibility(self) -> list[dict[str, object]]:
+        result, report = self.validate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return [item for item in report["findings"] if str(item.get("code", "")).startswith("plausibility.")]
+
+    def test_the_lamp_example_has_no_plausibility_warning(self) -> None:
+        """The H2D profile states 350 deg_C and 1000 mm/s, both real figures from its spec page."""
+        self.assertEqual(self.plausibility(), [])
+
+    def test_a_value_beyond_its_band_is_a_warning_that_does_not_block(self) -> None:
+        path = self.hw / "manufacturing" / "capabilities.yaml"
+        text = path.read_text(encoding="utf-8")
+        self.assertEqual(text.count("value: {value: 350, units: deg_C}"), 1)
+        path.write_text(text.replace("value: {value: 350, units: deg_C}", "value: {value: 450, units: deg_C}"), encoding="utf-8")
+        (found,) = self.plausibility()  # 450 is inside the 500 deg_C hard bound and past the 350 deg_C band
+        self.assertEqual((found["code"], found["severity"]), ("plausibility.hotend_max_temperature", "warning"))
+        self.assertTrue(str(found["path"]).endswith("manufacturing/capabilities.yaml#/profiles/0/parameters/hotend_max_temperature/value/value"), found)
+        self.assertIn("450", str(found["message"]))
+
+    def test_a_layer_height_beyond_its_nozzle_band_is_a_warning_that_does_not_block(self) -> None:
+        path = self.hw / "manufacturing" / "capabilities.yaml"
+        text = path.read_text(encoding="utf-8")
+        old = 'layer_height:\n        status: unknown\n        reason: "Bambu Lab publishes no layer-height range for the H2D (tech specs, accessed 2026-11-18); a calibration print would answer it"'
+        self.assertEqual(text.count(old), 1)
+        new = ("layer_height:\n        status: known\n        value: {value: 0.9, units: mm}\n        basis: supplier_typical\n"
+               "        sources:\n          - {kind: datasheet, reference: TST fixture, url: https://example.com/h2d, accessed: \"2026-11-18\"}")
+        path.write_text(text.replace(old, new), encoding="utf-8")
+        found = self.plausibility()
+        self.assertEqual([item["code"] for item in found], ["plausibility.layer_height"], found)
+
     def test_copied_template_with_one_placeholder_part_validates(self) -> None:
         temporary = tempfile.TemporaryDirectory(prefix="cad-record-template-")
         self.addCleanup(temporary.cleanup)
@@ -542,7 +572,7 @@ class ValidateProject(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         self.assertTrue(any("@ring-hub names no occurrence" in m for m in self.messages()))
 
-    def add_clearance(self, pair: str, minimum: object = 2.0, kind: str = "clearance", number: int = 6) -> None:
+    def add_clearance(self, pair: str, minimum: object = 1.0, kind: str = "clearance", number: int = 6) -> None:
         """Append a clearance requirement interface IF-00<number> to the lamp example's interfaces.yaml."""
         path = self.hw / "interfaces.yaml"
         with path.open("a", encoding="utf-8") as stream:

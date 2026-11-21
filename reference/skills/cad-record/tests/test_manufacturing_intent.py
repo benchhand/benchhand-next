@@ -1040,8 +1040,9 @@ class CheckDocuments(unittest.TestCase):
 class PlausibilityWarnings(unittest.TestCase):
     """plausibility_problems: a warning for a value inside its hard bound and outside its x-plausible band."""
 
-    def documents(self, *, calibrations: list[dict[str, Any]] | None = None, parameters: dict[str, Any] | None = None) -> dict[str, Any]:
-        profile = fx.capability_profile("tst_printer", "fdm", calibrations=calibrations, parameters=parameters)
+    def documents(self, *, calibrations: list[dict[str, Any]] | None = None, parameters: dict[str, Any] | None = None,
+                  **extra: Any) -> dict[str, Any]:
+        profile = fx.capability_profile("tst_printer", "fdm", calibrations=calibrations, parameters=parameters, **extra)
         return {"manufacturing/capabilities.yaml": {"profiles": [profile]}}
 
     def hole(self, value: float, units: str = "mm") -> dict[str, Any]:
@@ -1103,6 +1104,58 @@ class PlausibilityWarnings(unittest.TestCase):
         (problem,) = mi.plausibility_problems(documents)  # lower 0.2 mm is inside it and below the 0.5 mm band
         self.assertEqual(problem.pointer, "profiles/0/calibrations/0/result/limits/lower")
         self.assertIn("lower 0.2 mm", problem.message)
+
+    def layer(self, layer: Any, nozzle: Any = None, **extra: Any) -> dict[str, Any]:
+        parameters = {"layer_height": layer, **({"nozzle_diameter": nozzle} if nozzle is not None else {})}
+        return self.documents(parameters=parameters, **extra)
+
+    def test_a_layer_height_beyond_its_nozzle_band_warns_with_the_limit(self) -> None:
+        documents = self.layer(fx.known(fx.quantity(0.9)), fx.known(fx.quantity(0.4)))  # the band is 0.8 of the nozzle: 0.32 mm
+        self.assertEqual(mi.schema_problems(documents), [])
+        (problem,) = mi.plausibility_problems(documents)
+        self.assertEqual((problem.code, problem.severity, problem.path), ("plausibility.layer_height", "warning", "hw/manufacturing/capabilities.yaml"))
+        self.assertEqual(problem.pointer, "profiles/0/parameters/layer_height/value/value")
+        for text in ("value 0.9 mm", "at most 0.8 of nozzle_diameter 0.4 mm"):
+            self.assertIn(text, problem.message)
+
+    def test_a_layer_height_at_or_below_its_nozzle_band_does_not_warn(self) -> None:
+        for layer in (0.32, 0.2, 0.05):  # 0.32 is the edge: 0.8 of 0.4
+            with self.subTest(layer=layer):
+                self.assertEqual(mi.plausibility_problems(self.layer(fx.known(fx.quantity(layer)), fx.known(fx.quantity(0.4)))), [])
+
+    def test_a_layer_height_and_its_nozzle_are_compared_in_one_unit(self) -> None:
+        cases = [(300, "um", 0.4, "mm", False), (500, "um", 0.4, "mm", True), (0.0003, "m", 0.4, "mm", False), (0.2, "mm", 400, "um", False)]
+        for layer, layer_units, nozzle, nozzle_units, warns in cases:
+            with self.subTest(layer=layer, layer_units=layer_units):
+                documents = self.layer(fx.known(fx.quantity(layer, layer_units)), fx.known(fx.quantity(nozzle, nozzle_units)))
+                self.assertEqual(len(mi.plausibility_problems(documents)), 1 if warns else 0)
+
+    def test_a_layer_height_without_a_known_nozzle_or_value_has_no_relative_warning(self) -> None:
+        unknown = fx.unknown()
+        for label, documents in (("no nozzle", self.layer(fx.known(fx.quantity(0.9)))),
+                                 ("unknown nozzle", self.layer(fx.known(fx.quantity(0.9)), unknown)),
+                                 ("unknown layer", self.layer(unknown, fx.known(fx.quantity(0.4))))):
+            with self.subTest(label):
+                self.assertEqual(mi.plausibility_problems(documents), [])
+
+    def test_each_end_of_a_layer_interval_is_checked_against_the_largest_nozzle(self) -> None:
+        documents = self.layer(fx.known(fx.quantity(lower=0.1, upper=0.5)), fx.known(fx.quantity(lower=0.35, upper=0.45)))  # limit 0.36 mm
+        (problem,) = mi.plausibility_problems(documents)
+        self.assertEqual(problem.pointer, "profiles/0/parameters/layer_height/value/upper")
+        self.assertIn("upper 0.5 mm", problem.message)
+
+    def test_a_layer_height_beyond_its_hard_bound_has_no_relative_warning(self) -> None:
+        documents = self.layer(fx.known(fx.quantity(4)), fx.known(fx.quantity(0.4)))
+        self.assertTrue(mi.schema_problems(documents))
+        self.assertEqual(mi.plausibility_problems(documents), [])
+
+    def test_a_tool_checks_its_own_layer_height_against_its_own_nozzle(self) -> None:
+        tool = {"id": "wide", "description": "A wide hotend", "parameters": {
+            "nozzle_diameter": fx.known(fx.quantity(0.4)), "layer_height": fx.known(fx.quantity(0.9))}}
+        documents = self.layer(fx.known(fx.quantity(0.2)), fx.known(fx.quantity(0.4)), tools=[tool])
+        self.assertEqual(mi.schema_problems(documents), [])
+        (problem,) = mi.plausibility_problems(documents)
+        self.assertEqual(problem.pointer, "profiles/0/tools/0/parameters/layer_height/value/value")
 
     def test_a_plain_number_takes_its_band(self) -> None:
         def tolerance(value: Any) -> list[Any]:

@@ -106,8 +106,8 @@
     },
     "fact_layer_height": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_layer_height"}}}},
     "qty_hotend_max_temperature": {
-      "description": "Hotend limit: 0 to 500 deg_C",
-      "x-plausible": {"max": 300, "units": "deg_C"},
+      "description": "Hotend limit: 0 to 500 deg_C; a plausible limit is at most 350 deg_C, which current printers reach: the Bambu Lab H2D (https://bambulab.com/uk/h2d/tech-specs, Max Nozzle Temperature 350 °C) and the Creality K2 Plus (https://www.creality.com/products/k2-series-3d-printer, Max Nozzle Temperature 350 °C)",
+      "x-plausible": {"max": 350, "units": "deg_C"},
       "properties": {"units": {"enum": ["deg_C", "K"]}},
       "allOf": [
         {"if": {"required": ["units"], "properties": {"units": {"const": "deg_C"}}}, "then": {"properties": {"value": {"minimum": 0, "maximum": 500}, "lower": {"minimum": 0, "maximum": 500}, "upper": {"minimum": 0, "maximum": 500}}}},
@@ -126,8 +126,8 @@
     },
     "fact_bed_max_temperature": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_bed_max_temperature"}}}},
     "qty_max_speed": {
-      "description": "Print speed: above 0 and at most 1000 mm/s",
-      "x-plausible": {"max": 500, "units": "mm_s"},
+      "description": "Print speed: above 0 and at most 1000 mm/s. The plausible band equals the hard bound because current printers such as the Bambu Lab H2D reach it (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s)",
+      "x-plausible": {"max": 1000, "units": "mm_s"},
       "properties": {"units": {"enum": ["mm_s", "m_s"]}},
       "allOf": [
         {"if": {"required": ["units"], "properties": {"units": {"const": "mm_s"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1000}, "lower": {"exclusiveMinimum": 0, "maximum": 1000}, "upper": {"exclusiveMinimum": 0, "maximum": 1000}}}},
