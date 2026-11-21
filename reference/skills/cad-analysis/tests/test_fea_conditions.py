@@ -268,6 +268,34 @@ class Refusals(SourcedFEACase):
         self.assertIn("material.density_only", codes)
         self.assertIn("material.property", codes)  # E, nu and yield are unknown, never derived from density
 
+    def sourced_artifact(self, recorded: bytes, snapshot: bytes) -> Path:
+        """A case whose yield strength cites a datasheet artifact recorded with the sha256 of `recorded`, while the
+        version's record snapshot holds `snapshot` at that path."""
+        artifact = "manufacturing/sources/alloy-datasheet.txt"
+        datasheet = fx.source("datasheet", "TST alloy datasheet", artifact=artifact,
+                              sha256=hashlib.sha256(recorded).hexdigest())
+        tested = fx.quantity(lower=10, upper=40, units="deg_C")
+        cited = prop("yield_strength", 250, "MPa", temperature=tested)
+        cited["value"]["sources"] = [datasheet]
+        rest = [prop("youngs_modulus", 70000, "MPa", temperature=tested), prop("poisson_ratio", 0.33, "dimensionless", temperature=tested),
+                prop("density", 2700, "kg_m3", temperature=tested)]
+        self.build(documents(profiles=[alloy(*rest, cited)]))
+        held = self.hw / "versions" / "v1" / "record" / artifact
+        held.parent.mkdir(parents=True, exist_ok=True)
+        held.write_bytes(snapshot)
+        self.seal("v1")
+        return self.case({"conditions": DRY_23C})
+
+    def test_a_source_artifact_whose_bytes_differ_from_its_sha256_is_refused_before_the_solve(self) -> None:
+        path = self.sourced_artifact(recorded=b"the datasheet as recorded\n", snapshot=b"a different datasheet\n")
+        self.assertEqual(self.refused(path), ["material.source_artifact"])
+
+    def test_a_source_artifact_whose_bytes_match_its_sha256_is_not_refused(self) -> None:
+        path = self.sourced_artifact(recorded=b"the datasheet as recorded\n", snapshot=b"the datasheet as recorded\n")
+        status, report = self.call(path)
+        self.assertEqual(status, 0, report)
+        self.assertEqual(len(self.solved), 1)
+
     def test_a_property_tested_under_another_condition_is_refused(self) -> None:
         self.build(documents())
         self.assertIn("material.condition", self.refused(self.case({"conditions": {**DRY_23C, "conditioning": "conditioned"}})))
