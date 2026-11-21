@@ -126,8 +126,7 @@
     },
     "fact_bed_max_temperature": {"if": {"required": ["status"], "properties": {"status": {"const": "known"}}}, "then": {"properties": {"value": {"$ref": "#/$defs/qty_bed_max_temperature"}}}},
     "qty_max_speed": {
-      "description": "Print speed: above 0 and at most 1000 mm/s. The plausible band equals the hard bound because current printers such as the Bambu Lab H2D reach it (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s)",
-      "x-plausible": {"max": 1000, "units": "mm_s"},
+      "description": "Print speed: above 0 and at most 1000 mm/s. It has no separate plausibility band: current printers such as the Bambu Lab H2D reach the hard bound (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s)",
       "properties": {"units": {"enum": ["mm_s", "m_s"]}},
       "allOf": [
         {"if": {"required": ["units"], "properties": {"units": {"const": "mm_s"}}}, "then": {"properties": {"value": {"exclusiveMinimum": 0, "maximum": 1000}, "lower": {"exclusiveMinimum": 0, "maximum": 1000}, "upper": {"exclusiveMinimum": 0, "maximum": 1000}}}},

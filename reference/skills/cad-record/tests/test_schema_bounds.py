@@ -210,7 +210,7 @@ CASES: tuple[Case, ...] = (
     fact(45, "layer_height", "(0, 3]", {"relative_to": "nozzle_diameter", "max": 0.8}, "mm"),
     fact(45, "hotend_max_temperature", "[0, 500]", {"max": 350}, "deg_C"),
     fact(45, "bed_max_temperature", "[0, 150]", {"max": 120}, "deg_C"),
-    fact(45, "max_speed", "(0, 1000]", {"max": 1000}, "mm_s"),
+    fact(45, "max_speed", "(0, 1000]", None, "mm_s"),
     fact(46, "travel_x", "(0, 10000]", {"max": 2000}, "mm"),
     fact(46, "travel_y", "(0, 10000]", {"max": 2000}, "mm"),
     fact(46, "travel_z", "(0, 10000]", {"max": 2000}, "mm"),

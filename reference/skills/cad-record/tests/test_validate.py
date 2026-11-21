@@ -93,10 +93,6 @@ class ValidateProject(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return [item for item in report["findings"] if str(item.get("code", "")).startswith("plausibility.")]
 
-    def test_the_lamp_example_has_no_plausibility_warning(self) -> None:
-        """The H2D profile states 350 deg_C and 1000 mm/s, both real figures from its spec page."""
-        self.assertEqual(self.plausibility(), [])
-
     def test_a_value_beyond_its_band_is_a_warning_that_does_not_block(self) -> None:
         path = self.hw / "manufacturing" / "capabilities.yaml"
         text = path.read_text(encoding="utf-8")
@@ -174,7 +170,8 @@ class ValidateProject(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("flow/frozen/version v1 is not a built version", result.stdout)
 
-    def test_example_record_validates(self) -> None:
+    def test_the_example_record_validates_with_no_findings_and_no_plausibility_warning(self) -> None:
+        """The H2D profile states 350 deg_C, a real figure from its spec page, so no band warns."""
         result, report = self.validate()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(report, {"ok": True, "findings": []})
