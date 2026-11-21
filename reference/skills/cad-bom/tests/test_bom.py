@@ -24,6 +24,7 @@ from pathlib import Path
 from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import result_payload  # noqa: E402
+from decision_fixture import add_flow_profile  # noqa: E402
 
 
 HERE = Path(__file__).resolve().parent
@@ -282,6 +283,7 @@ class StepRoundTripTests(unittest.TestCase):
             )
             # The record as current cad-record reads it: record version 2 with explicit unknowns.
             record_fixtures().upgrade_record(hw)
+            add_flow_profile(hw)  # the project-start profile is due at LAYOUT
 
             bom_proc, _ = self.run_bom(hw)
             self.assertEqual(bom_proc.returncode, 0, bom_proc.stderr)

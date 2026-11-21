@@ -91,6 +91,52 @@ class CheckoutLocationTests(unittest.TestCase):
                                                     "manufacturing": {"built": 1, "reused": 0}})
 
 
+class OutputKeyInputTests(unittest.TestCase):
+    """What the manufacturing output key hashes: the code and data that decide an output, never a gate. The key is
+    code_shas.closure of manufacture.py and OUTPUT_DATA (manufacture.py builds its `identity` from the same call), read
+    in a copy of the skills tree so an edit leaves the real one alone."""
+
+    VALIDATOR = "cad-record/scripts/validate.py"
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory(prefix="cad-output-key-")
+        cls.tree = Path(shutil.copytree(SKILLS, Path(cls.tmp.name) / "skills", ignore=shutil.ignore_patterns("__pycache__")))
+        spec = importlib.util.spec_from_file_location("cad_motion_code_shas_copy", cls.tree / "cad-motion" / "scripts" / "code_shas.py")
+        assert spec is not None and spec.loader is not None
+        cls.code_shas = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = cls.code_shas
+        spec.loader.exec_module(cls.code_shas)
+        sys.path.insert(0, str(SKILLS / "cad-model" / "scripts"))
+        from cadmodel import manufacture
+
+        cls.script = cls.tree / "cad-model" / "scripts" / "cadmodel" / "manufacture.py"
+        cls.data = [cls.tree / entry.resolve().relative_to(SKILLS) for entry in manufacture.OUTPUT_DATA]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def key(self) -> str:
+        self.code_shas._closure.cache_clear()  # the tree changed under the process
+        return str(self.code_shas.digest(self.script, self.data))
+
+    def edit(self, rel: str) -> None:
+        path = self.tree / rel
+        path.write_text(path.read_text(encoding="utf-8") + "\n# edited by the test\n", encoding="utf-8")
+
+    def test_an_edit_to_the_validator_leaves_the_output_key_unchanged(self) -> None:
+        before = self.key()
+        self.assertNotIn(self.VALIDATOR, self.code_shas.closure(self.script, self.data))
+        self.edit(self.VALIDATOR)
+        self.assertEqual(self.key(), before)
+
+    def test_an_edit_to_a_module_that_decides_an_output_changes_the_output_key(self) -> None:
+        before = self.key()
+        self.edit("cad-record/scripts/manufacturing_intent.py")
+        self.assertNotEqual(self.key(), before)
+
+
 class OutputDataTests(unittest.TestCase):
     def test_the_declared_data_covers_every_data_file_the_manufacturing_code_names(self) -> None:
         sys.path.insert(0, str(SKILLS / "cad-model" / "scripts"))

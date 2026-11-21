@@ -108,7 +108,7 @@ REQUIREMENTS = {"requirements": [{"id": "REQ-001", "text": "Pin fits", "rational
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import load_module as _load, result_payload  # noqa: E402
-from decision_fixture import write_test_decision  # noqa: E402
+from decision_fixture import add_flow_profile, write_test_decision  # noqa: E402
 
 
 fx = _load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures" / "manufacturing_intent.py")
@@ -154,6 +154,7 @@ class DrawingRecordAdditions(unittest.TestCase):
         for name, document in fx.current_documents({**self.docs, **parts}).items():
             (self.hw / name).parent.mkdir(parents=True, exist_ok=True)
             (self.hw / name).write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+        add_flow_profile(self.hw)  # the project-start profile is due from SPECIFY on
         rows = bom_rows(list(self.parts.values()), self.procurement_columns)
         self.bom_edit(rows)
         columns = BASE_COLUMNS + (PROCUREMENT_COLUMNS if self.procurement_columns else [])

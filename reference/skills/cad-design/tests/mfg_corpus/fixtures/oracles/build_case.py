@@ -44,6 +44,8 @@ import yaml
 FIXTURES = Path(__file__).resolve().parent
 SKILLS = FIXTURES.parents[4]
 sys.path.insert(0, str(SKILLS / "cad-model" / "scripts"))
+sys.path.insert(0, str(SKILLS.parent / "scripts"))
+from decision_fixture import add_flow_profile  # noqa: E402
 from cadmodel import build, mesh  # noqa: E402
 PARTS = {"TST-0001": ("Base block", "base", "block.py"), "TST-0002": ("Mounting plate", "plate", "plate.py"),
          "TST-0003": ("Heat-set insert", "insert", "insert.py")}
@@ -104,6 +106,7 @@ def write_project(hw: Path, model: dict[str, Any]) -> None:
     (hw / "manufacturing").mkdir()
     for name, document in MANUFACTURING.items():
         (hw / "manufacturing" / name).write_text(yaml.safe_dump(document), encoding="utf-8")
+    add_flow_profile(hw)  # `run` builds only on a settled project-start profile
     write_models(hw, model)
 
 

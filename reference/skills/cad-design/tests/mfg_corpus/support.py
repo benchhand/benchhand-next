@@ -34,6 +34,15 @@ def load(name: str, path: Path) -> Any:
     return load_module(name, path)
 
 
+def add_flow_profile(hw: Path) -> str:
+    """scripts/decision_fixture.py add_flow_profile: settle the project-start profile of the test project `hw`."""
+    if str(REPO / "scripts") not in sys.path:
+        sys.path.insert(0, str(REPO / "scripts"))
+    import decision_fixture
+
+    return decision_fixture.add_flow_profile(hw)
+
+
 def verdict(outcomes: Iterable[str]) -> Outcome:
     """A check's obligation outcomes as one verdict: any fail gives fail, else any unknown gives unknown, else pass."""
     seen = set(outcomes)
@@ -291,6 +300,7 @@ def readback_verdict(model_source: str, *, manufacture: Mapping[str, Any] | None
         documents[part] = {**documents[part], "manufacture": dict(manufacture)}
     with tempfile.TemporaryDirectory() as tmp:
         hw = fx.write_record(Path(tmp) / "project" / "hw", documents)
+        add_flow_profile(hw)  # `run` builds only on a settled project-start profile
         model = hw / "parts" / projects.PN / "model.py"
         model.parent.mkdir(parents=True, exist_ok=True)
         model.write_text(model_source, encoding="utf-8")

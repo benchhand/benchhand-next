@@ -6,6 +6,47 @@ general_tolerance: ISO 2768-m
 flow:
   stage: layout
   recheck_from: layout
+  profile:
+    decision: DR-007
+    human_approval: all
+    fea:
+      enabled: true
+      mode: accurate
+    stack_up: auto
+    critique: full
+    motion: auto
+    storage_results_in_git: false
+    processes:
+      fdm:
+        orientation: propose
+        supports: allowed
+        overhang_deg: 45
+        bridge_mm: 10
+        min_wall_mm: 0.8
+        min_feature_mm: 0.4
+        warp: calibrated
+        cosmetic_faces: false
+        print_in_place: true
+        pip_clearance_mm:
+          xy: calibrated
+          z: calibrated
+    asked:
+      human_approval: user
+      fea: user
+      stack_up: user
+      critique: user
+      storage_results_in_git: user
+      processes/fdm/orientation: user
+      processes/fdm/supports: user
+      processes/fdm/overhang_deg: user
+      processes/fdm/bridge_mm: user
+      processes/fdm/min_wall_mm: user
+      processes/fdm/min_feature_mm: user
+      processes/fdm/warp: user
+      processes/fdm/cosmetic_faces: user
+      processes/fdm/print_in_place: user
+      processes/fdm/pip_clearance_mm/xy: user
+      processes/fdm/pip_clearance_mm/z: user
 use_case:
   status: confirmed
   decision: DR-001

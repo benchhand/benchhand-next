@@ -31,6 +31,8 @@ HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
 VIEWS_JOB = HERE / "freecad_views_job.py"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from decision_fixture import add_flow_profile  # noqa: E402
 import drawing_contract  # noqa: E402
 import drawing_document  # noqa: E402
 import freecad_runtime  # noqa: E402
@@ -91,6 +93,7 @@ def write_project(root: Path, *, features: bool = True) -> tuple[Path, Path]:
         (hw / name).write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     (hw / "parts" / PN / "part.yaml").write_text(yaml.safe_dump(PART, sort_keys=False), encoding="utf-8")
     fx.upgrade_record(hw)  # record version 2, every manufacturing-intent field unknown
+    add_flow_profile(hw)  # the project-start profile is due from SPECIFY on
     model = b'KERNEL = "cadquery"\nPARAMS = {}\n'
     (hw / "parts" / PN / "model.py").write_bytes(model)
     with (hw / "bom.csv").open("w", newline="", encoding="utf-8") as stream:

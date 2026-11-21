@@ -31,6 +31,7 @@ SCRATCH = HERE.parent / "scripts" / "scratch.py"
 sys.path.insert(0, str(HERE.parents[1] / "cad-drawings" / "scripts"))
 import freecad_runtime  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from decision_fixture import add_flow_profile  # noqa: E402
 from modload import result_payload  # noqa: E402
 FREECADCMD = freecad_runtime.find_freecadcmd()
 FREECAD_PRESENT = FREECADCMD is not None and FREECADCMD.is_file()
@@ -284,6 +285,7 @@ class InitAndDeliver(ScratchCase):
         model = ('KERNEL = "cadquery"\nPARAMS = {"size": 12.0}\n\n\ndef build(params):\n    import cadquery as cq\n\n'
                  '    return cq.Workplane("XY").box(params["size"], params["size"], params["size"])\n')
         (self.hw / "parts" / "PRT-0001" / "model.py").write_text(model, encoding="utf-8")
+        add_flow_profile(self.hw)  # `run` builds at LAYOUT at the earliest, so it needs a settled profile at any stage
         cad_model = HERE.parents[1] / "cad-model" / "scripts" / "cad_model.py"
         lead = subprocess.run(["uv", "run", "--quiet", "--script", str(cad_model), "run", "hw", "--label", "v1"],
                               cwd=self.project, capture_output=True, text=True, timeout=1800)

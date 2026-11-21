@@ -412,7 +412,8 @@ class ValidateProject(unittest.TestCase):
         shutil.copy2(VALIDATOR, validator_copy)
         for sibling in ("assembly_data.py", "assembly_operations.py", "design_rules.py", "layout.py",
                         "manufacturing_intent.py", "evidence.py", "evidence_paths.py", "impact.py", "selection.py",
-                        "schema_registry.py", "yaml_loader.py", "emit.py", "decision_records.py", "guidelines.py"):
+                        "schema_registry.py", "yaml_loader.py", "emit.py", "decision_records.py", "guidelines.py",
+                        "flow_profile_gate.py"):
             shutil.copy2(VALIDATOR.with_name(sibling), validator_copy.with_name(sibling))
         shutil.copytree(SKILL / "schemas", self.project / "skill" / "schemas")
         shutil.copy2(SKILL / "layout.json", self.project / "skill" / "layout.json")
@@ -937,6 +938,123 @@ class SubjectOccurrences(unittest.TestCase):
 
     def test_an_omitted_occurrence_of_a_single_occurrence_part_is_clean(self) -> None:
         self.assertEqual(self.findings({"PN": "TST-0001"}), [])
+
+
+class FlowProfileFindings(unittest.TestCase):
+    """validate.py reports the project-start profile through flow_profile_gate. The lamp example is clean; each
+    test below makes one edit to its product.yaml."""
+
+    validate = ValidateProject.validate
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-record-profile-")
+        self.addCleanup(temporary.cleanup)
+        self.project = Path(temporary.name) / "project"
+        self.hw = self.project / "hw"
+        fx.migrated_copy(EXAMPLE, self.hw)
+        self.product_path = self.hw / "product.yaml"
+
+    def edit_product(self, old: str, new: str) -> None:
+        text = self.product_path.read_text(encoding="utf-8")
+        self.assertEqual(text.count(old), 1, old)
+        self.product_path.write_text(text.replace(old, new), encoding="utf-8")
+
+    def drop_profile(self) -> None:
+        lines = self.product_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        start = lines.index("  profile:\n")
+        end = next(i for i in range(start + 1, len(lines)) if not lines[i].startswith("    "))
+        self.product_path.write_text("".join(lines[:start] + lines[end:]), encoding="utf-8")
+
+    def flow_findings(self) -> list[dict[str, object]]:
+        _result, report = self.validate()
+        return [item for item in report["findings"] if str(item.get("code", "")).startswith("flow.")]
+
+    def test_the_example_profile_is_clean(self) -> None:
+        self.assertEqual(self.flow_findings(), [])
+
+    def test_a_missing_profile_blocks_from_specify_on(self) -> None:
+        self.drop_profile()
+        found = self.flow_findings()
+        self.assertEqual([(item["code"], item["severity"]) for item in found], [("flow.profile", "error")])
+        self.assertIn("flow.profile is missing", str(found[0]["message"]))
+
+    def test_a_bare_word_the_yaml_read_as_a_boolean_is_reported_with_its_fix(self) -> None:
+        self.edit_product('critique: "light"', "critique: off")
+        found = [item for item in self.flow_findings() if item["code"] == "flow.profile_unquoted"]
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('critique: "off"', str(found[0]["action"]))
+
+    def test_a_conflict_with_the_record_is_an_error_at_layout_and_a_warning_before(self) -> None:
+        self.edit_product("enabled: false", "enabled: true\n      mode: accurate")  # fea on, critique light
+        found = self.flow_findings()
+        self.assertEqual([(item["code"], item["severity"]) for item in found], [("flow.conflict", "error")])
+        self.assertIn("fea is on, but critique is light", str(found[0]["message"]))
+        self.edit_product("stage: layout\n  recheck_from: layout", "stage: specify\n  recheck_from: specify")
+        self.assertEqual([item["severity"] for item in self.flow_findings() if item["code"] == "flow.conflict"], ["warning"])
+
+    def test_the_safety_rule_is_an_error_before_layout_too(self) -> None:
+        self.edit_product("stage: layout\n  recheck_from: layout", "stage: specify\n  recheck_from: specify")
+        self.edit_product("service_class: {status: unknown, reason: not recorded before record version 2, question: Q-001}",
+                          "service_class: {status: known, value: safety_critical, basis: user_declared, "
+                          "sources: [{kind: user, reference: TST fixture, origin: TST fixture user}]}")
+        result, report = self.validate()
+        self.assertEqual([item["message"] for item in report["findings"] if item.get("code") != "flow.conflict"], [],
+                         "the record is schema-valid")
+        found = [item for item in report["findings"] if item.get("code") == "flow.conflict"]
+        # the lamp profile has fea off and critique light: the rule refuses each, as an error although SPECIFY is before LAYOUT
+        self.assertEqual([item["severity"] for item in found], ["error", "error"], found)
+        self.assertIn("safety_critical service refuses fea off", str(found[0]["message"]))
+        self.assertIn("safety_critical service refuses critique: light", str(found[1]["message"]))
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def write_case(self, case: str, text: str) -> None:
+        folder = self.hw / "analysis" / "cases" / case
+        folder.mkdir(parents=True)
+        (folder / "case.yaml").write_text(text, encoding="utf-8")
+
+    def test_an_fea_case_conflicts_with_fea_off(self) -> None:
+        self.write_case("bracket_load", "step: bracket.step\nloads: []\n")
+        found = [item for item in self.flow_findings() if item["code"] == "flow.conflict"]
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("analysis case bracket_load", str(found[0]["message"]))
+
+    def test_a_stack_up_case_shares_the_folder_but_is_not_an_fea_case(self) -> None:
+        self.write_case("arm_stack", "contributors: []\n")
+        self.assertEqual([item for item in self.flow_findings() if item["code"] == "flow.conflict"], [])
+
+    def make_first_interface_critical(self) -> None:
+        path = self.hw / "interfaces.yaml"
+        text = path.read_text(encoding="utf-8")
+        old = "critical: {status: unknown, reason: not recorded before record version 2, question: Q-023}"
+        fact = ('critical: {status: known, value: true, basis: user_declared, '
+                'sources: [{kind: user, reference: TST fixture, origin: TST fixture user}]}')
+        self.assertEqual(text.count(old), 1)
+        path.write_text(text.replace(old, fact, 1), encoding="utf-8")
+
+    def test_a_critical_interface_conflicts_with_stack_up_off(self) -> None:
+        self.edit_product('stack_up: "auto"', 'stack_up: "off"')
+        self.make_first_interface_critical()
+        found = self.flow_findings()
+        self.assertEqual([(item["code"], item["severity"]) for item in found], [("flow.conflict", "error")])
+        self.assertIn("stack_up is off", str(found[0]["message"]))
+
+    def test_a_malformed_interfaces_file_is_a_schema_finding_and_judges_no_conflict(self) -> None:
+        self.edit_product('stack_up: "auto"', 'stack_up: "off"')
+        self.make_first_interface_critical()
+        path = self.hw / "interfaces.yaml"
+        path.write_text(path.read_text(encoding="utf-8") + "bogus: 1\n", encoding="utf-8")
+        result, report = self.validate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertTrue(any(str(item["path"]).endswith("interfaces.yaml") for item in report["findings"]))
+        self.assertEqual([item for item in report["findings"] if item.get("code") == "flow.conflict"], [])
+    def test_a_malformed_product_is_a_schema_finding_and_judges_no_conflict(self) -> None:
+        self.edit_product("enabled: false", "enabled: true\n      mode: accurate")  # a conflict on a valid product
+        self.product_path.write_text(self.product_path.read_text(encoding="utf-8") + "bogus: 1\n", encoding="utf-8")
+        result, report = self.validate()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertTrue(any(str(item["path"]).endswith("product.yaml") for item in report["findings"]))
+        self.assertEqual([item for item in report["findings"] if item.get("code") == "flow.conflict"], [])
 
 
 if __name__ == "__main__":

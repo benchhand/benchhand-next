@@ -40,7 +40,7 @@ HERE = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import load_module as load  # noqa: E402
-from decision_fixture import write_test_decision  # noqa: E402
+from decision_fixture import add_flow_profile, write_test_decision  # noqa: E402
 
 
 acceptance = load("cad_record_acceptance_fixtures", HERE / "fixtures" / "acceptance.py")
@@ -898,6 +898,7 @@ class BuiltRecord(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix="cad-evidence-run-test-")
         self.addCleanup(temporary.cleanup)
         self.hw = fx.write_record(Path(temporary.name) / "hw", fx.tst_record())
+        add_flow_profile(self.hw)  # `evidence.py run` starts with validate.py, which needs a settled profile
         for pn in ("TST-0001", "TST-0002", "TST-0004"):
             (self.hw / "parts" / pn / "model.py").write_text(f"# {pn}\n", encoding="utf-8")
         folder = self.hw / "versions" / "v1"

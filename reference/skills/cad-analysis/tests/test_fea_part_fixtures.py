@@ -41,9 +41,11 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(SKILLS / "cad-drawings" / "scripts"))
 sys.path.insert(0, str(SKILLS / "cad-record" / "scripts"))
+sys.path.insert(0, str(SKILLS.parent / "scripts"))
 
 import fea_static  # noqa: E402
 import freecad_runtime  # noqa: E402
+from decision_fixture import add_flow_profile  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("cad_record_mi_fixtures",
                                                SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
@@ -235,6 +237,7 @@ def documents() -> dict[str, Any]:
 def lay_out(hw: Path, version: str = "v1") -> None:
     """Write the record below `hw` and snapshot it into versions/<version>, as the FEA tests lay out a version."""
     fx.write_record(hw, documents())
+    add_flow_profile(hw)  # the project-start profile is due at ANALYSIS
     folder = hw / "versions" / version
     record = folder / "record"
     for rel in documents():
