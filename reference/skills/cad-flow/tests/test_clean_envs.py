@@ -79,6 +79,7 @@ class PlanTests(unittest.TestCase):
                 "numpy-2.3.0",
                 "python_fcl-0.7.0.11",
                 "click-8.5.1",
+                "referencing-0.37.0",
             ),
         )  # every distribution cad_model.py's header names
         # Not the plugin's: another tool's validate.py, an unshipped name, and a shared environment.

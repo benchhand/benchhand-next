@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import pickle
 import shutil
 import subprocess
 import sys
@@ -371,7 +372,8 @@ class Normalization(unittest.TestCase):
 
 class LoadByPathWithoutOptionalDependencies(unittest.TestCase):
     def test_the_module_loads_and_normalizes_with_pyyaml_jsonschema_and_referencing_missing(self) -> None:
-        code = ("import importlib.util, sys\n"
+        documents = fx.tst_record()
+        code = ("import importlib.util, pickle, sys\n"
                 "class Block:\n"
                 "    def find_spec(self, name, path=None, target=None):\n"
                 "        if name.split('.')[0] in ('yaml', 'jsonschema', 'referencing'):\n"
@@ -380,11 +382,13 @@ class LoadByPathWithoutOptionalDependencies(unittest.TestCase):
                 "spec = importlib.util.spec_from_file_location('cad_record_manufacturing_intent', sys.argv[1])\n"
                 "sys.modules['cad_record_manufacturing_intent'] = module = importlib.util.module_from_spec(spec)\n"
                 "spec.loader.exec_module(module)\n"
-                "module.normalize_record({})\n"
-                "print('ok', [n for n in ('yaml', 'jsonschema', 'referencing') if n in sys.modules])\n")
+                "record = module.normalize_record(pickle.load(sys.stdin.buffer))\n"
+                "print('ok', len(record.parts), [n for n in ('yaml', 'jsonschema', 'referencing') if n in sys.modules])\n")
         done = subprocess.run([sys.executable, "-c", code, str(SKILL / "scripts" / "manufacturing_intent.py")],
-                              capture_output=True, text=True, check=False)
-        self.assertEqual(done.stdout.strip(), "ok []", done.stderr)
+                              input=pickle.dumps(documents), capture_output=True, check=False)
+        parts = len(mi.normalize_record(documents).parts)
+        self.assertGreater(parts, 0, "the fixture must hold parts, or the count below proves nothing")
+        self.assertEqual(done.stdout.decode().strip(), f"ok {parts} []", done.stderr.decode())
 
 
 class UseCaseReadiness(unittest.TestCase):
