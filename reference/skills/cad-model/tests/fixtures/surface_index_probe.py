@@ -123,6 +123,39 @@ class SurfaceIndex(unittest.TestCase):
         mesh = agreement.Mesh(corners, np.arange(len(corners)).reshape(-1, 3))
         self.assertEqual(agreement.compare(mesh, mesh, 0.04)["status"], "pass")
 
+    def test_a_triangle_beyond_int64_cells_is_judged_as_a_search_of_every_triangle_judges_it(self) -> None:
+        """A triangle with corners near 1e19 mm has cell indices past int64. `compare` must not raise or wrap the
+        indices, and must count the sample points off the surface as a search of every triangle does. (At this size
+        float error puts the triangle's own center beyond the reach, so the full search fails one point too.)"""
+        far = 1e19
+        small = [(0, 0, 0), (0.75, 0, 0), (0, 0.75, 0)]
+        corners = np.array(small * 3 + [(0, 0, 0), (far, far, 0), (far, 0, far)], dtype=float).reshape(-1, 3, 3)
+        mesh = mesh_of(corners)
+        reach = agreement.REACH_MARGIN * 0.04 * (1.0 + agreement.REFERENCE_FACTOR) + agreement.EPS_MM
+        samples = agreement._samples(mesh)
+        expected = int((~brute_force(corners, reach, samples)).sum())
+        row = agreement.compare(mesh, mesh, 0.04)
+        self.assertEqual((row["glb_points_off"], row["step_points_off"]), (expected, expected))
+
+    def test_a_mesh_with_a_nonfinite_coordinate_is_unknown_not_an_error(self) -> None:
+        """An infinite or NaN corner has no cell index. `compare` must not raise and must name the cause."""
+        small = [(0, 0, 0), (0.75, 0, 0), (0, 0.75, 0)]
+
+        def mesh_with(first_corner: float) -> agreement.Mesh:
+            corners = np.array(small * 3 + [(first_corner, 0, 0), (0, 0, 0), (1, 0, 0)], dtype=float)
+            return agreement.Mesh(corners, np.arange(len(corners)).reshape(-1, 3))
+
+        clean = mesh_with(0.0)
+        for bad in (-np.inf, np.inf, np.nan):
+            broken = mesh_with(bad)
+            # Each side alone must trip the guard: a check of one mesh only would pass the "both" case.
+            for sides, (glb, step) in {"both": (broken, broken), "glb only": (broken, clean),
+                                       "step only": (clean, broken)}.items():
+                with self.subTest(bad=bad, sides=sides):
+                    row = agreement.compare(glb, step, 0.04)
+                    self.assertEqual(row["status"], "unknown")
+                    self.assertIn("nonfinite", row["reason"])
+
     def measure_pairs(self, corners: np.ndarray, points: np.ndarray, reach: float) -> tuple[int, int, np.ndarray]:
         """(the largest array `within` builds, the pairs it measures, its answer). SEAM: `_Surface.within` takes
         the points directly (compare samples its own). A wrapper on numpy's `repeat`, `tile` and `arange`, which

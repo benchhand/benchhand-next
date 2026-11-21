@@ -229,6 +229,12 @@ class SurfaceIndexTests(unittest.TestCase):
     def test_a_triangle_spanning_billions_of_cells_leaves_a_mesh_agreeing_with_itself(self) -> None:
         self.run_probe("test_a_triangle_spanning_billions_of_cells_leaves_a_mesh_agreeing_with_itself")
 
+    def test_a_triangle_beyond_int64_cells_is_judged_as_a_search_of_every_triangle_judges_it(self) -> None:
+        self.run_probe("test_a_triangle_beyond_int64_cells_is_judged_as_a_search_of_every_triangle_judges_it")
+
+    def test_a_mesh_with_a_nonfinite_coordinate_is_unknown_not_an_error(self) -> None:
+        self.run_probe("test_a_mesh_with_a_nonfinite_coordinate_is_unknown_not_an_error")
+
     def test_many_triangles_in_one_cell_are_measured_in_bounded_batches(self) -> None:
         self.run_probe("test_many_triangles_in_one_cell_are_measured_in_bounded_batches")
 
