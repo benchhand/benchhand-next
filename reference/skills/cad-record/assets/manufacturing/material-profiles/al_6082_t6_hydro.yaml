@@ -190,9 +190,15 @@ profiles:
         reason: The source does not state one numeric test temperature; retain the
           exact test condition in the cited source conditions.
       conditioning: unknown
+      gauge: other
       notes: 'Research property elongation_minimum; source condition: T6 extruded,
         cross section 5.00–20.00 mm; gauge length described in datasheet footnote;
-        reported statistic: minimum'
+        reported statistic: minimum. Gauge other: the sheet states the elongation
+        gauge only as a choice of two (page 2, table "Extruded Mechanical and Physical
+        Property Limits", footnote 3): "Elongation percent is minimum in 2" or 4 times
+        specimen diameter." Footnote 4 ("Elongation values represent "A" elongation
+        per BS EN 755-2") is not tied to a table marker and does not define the gauge
+        on the sheet, so it is not used.'
   - name: thermal_expansion
     value:
       status: known

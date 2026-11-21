@@ -708,6 +708,22 @@ class ThroughTheStudy(stress_mode_tests.StressCase):
         self.assertEqual(report["material"]["ductility"], {"shown": True, "reason": None})
         self.assertNotIn("form stand-in", row["uncertainty"])
 
+    def test_only_the_shipped_304_passes_the_gauge_step_of_the_ductility_gate(self) -> None:
+        # Outokumpu Table 5 defines "A" as 5.65*sqrt(S0), so 304 is on the EN gauge. The Hydro sheets state "2 in or 4
+        # times specimen diameter" and Salzgitter "A80": none of them is the EN gauge, so those stay not shown ductile.
+        assets = HERE.parents[1] / "cad-record" / "assets" / "manufacturing" / "material-profiles"
+        shown = {"stainless_304_outokumpu_core": True, "al_6061_t6_hydro": False, "al_6082_t6_hydro": False,
+                 "steel_dc01_salzgitter": False}
+        found = {}
+        for path in sorted(assets.glob("*.yaml")):
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            profiles, _ = conditions.intent().profile_document(data, "materials", path.name)
+            for profile in profiles:
+                if profile.id in shown:
+                    elongations = [p for p in profile.properties if p.name == "elongation_at_break"]
+                    found[profile.id] = conditions.gauge_gap(elongations) is None
+        self.assertEqual(found, shown)
+
     def test_an_effective_isotropic_material_stays_unknown_even_when_linearised(self) -> None:
         # The printed Z yield is 20 MPa against a 133.56 MPa stress: were the material eligible this would fail.
         fx, tests = conditions_tests.fx, conditions_tests

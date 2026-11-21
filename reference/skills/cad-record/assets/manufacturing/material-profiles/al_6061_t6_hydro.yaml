@@ -193,9 +193,13 @@ profiles:
         reason: The source does not state one numeric test temperature; retain the
           exact test condition in the cited source conditions.
       conditioning: unknown
+      gauge: other
       notes: 'Research property elongation_minimum_thickness_le_6_3mm; source condition:
         T6 extruded; applicable test gauge length 2 in or 4× specimen diameter; reported
-        statistic: minimum'
+        statistic: minimum. Gauge other: the sheet states the elongation gauge only
+        as a choice of two (page 2, table "6061 Extruded Mechanical and Physical Property
+        Limits", footnote 3): "Elongation percent is minimum in 2" or 4 times specimen
+        diameter." Neither is the EN 5.65*sqrt(S0) gauge.'
   - name: thermal_expansion
     value:
       status: known

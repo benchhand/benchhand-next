@@ -215,9 +215,12 @@ profiles:
             Core 304/4301 ... H ... Elongation A (%) 45'
         basis: standard
       conditioning: unknown
+      gauge: 5.65sqrtS0
       notes: 'Research property elongation_a_cold_rolled; source condition: 20 °C;
         cold-rolled product form C; elongation gauge designation A as defined by applicable
-        product standard; reported statistic: minimum per referenced standard'
+        product standard; reported statistic: minimum per referenced standard. Gauge
+        5.65sqrtS0: the datasheet (page 8, Table 5, Core 304/4301, column "Elongation
+        A (%)") states under the table: "A initial length = 5.65√S0(A5)".'
   - name: youngs_modulus
     value:
       status: known

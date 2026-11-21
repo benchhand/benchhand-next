@@ -606,6 +606,43 @@ class ShippedAssets(SchemaCase):
                             self.assertNotEqual(prop.value.basis, "allowable")
                             self.assertTrue(all(s.url and s.accessed and s.conditions for s in prop.value.sources), (profile.id, prop.name))
 
+    def test_shipped_metal_profiles_state_the_gauge_their_datasheet_states(self) -> None:
+        """Each shipped metal profile records elongation_at_break in percent with the gauge its datasheet names:
+        Outokumpu Table 5 defines "A" as 5.65*sqrt(S0); the Hydro sheets say "2 in or 4 times specimen diameter" and
+        Salzgitter names only "A80". The gate compares the 5.65sqrtS0 gauge only, so the other three are `other`."""
+        expected = {  # profile id -> (percent, gauge), read from the datasheets and not from the profile files
+            "al_6061_t6_hydro": (8, "other"),
+            "al_6082_t6_hydro": (6, "other"),
+            "steel_dc01_salzgitter": (28, "other"),
+            "stainless_304_outokumpu_core": (45, "5.65sqrtS0"),
+        }
+        found: dict[str, tuple[float | None, str | None]] = {}
+        for path in sorted((ASSETS / "material-profiles").glob("*.yaml")):
+            profiles, problems = intent.profile_document(yaml.safe_load(path.read_text(encoding="utf-8")), "materials", path.name)
+            self.assertEqual([p.finding() for p in problems], [])
+            for profile in profiles:
+                if profile.id in expected:
+                    entries = [p for p in profile.properties if p.name == "elongation_at_break"]
+                    self.assertEqual(len(entries), 1, profile.id)
+                    quantity = entries[0].value.value
+                    self.assertEqual(quantity.units, "percent", profile.id)
+                    found[profile.id] = (quantity.value, entries[0].gauge)
+        self.assertEqual(found, expected)
+
+    def test_a_gauge_other_than_the_en_one_keeps_its_datasheet_wording_in_the_conditions_notes(self) -> None:
+        """The gauge enum carries no source field, so the quoted footnote or label sits in conditions.notes."""
+        quotes = {
+            "al_6061_t6_hydro.yaml": 'Elongation percent is minimum in 2" or 4 times specimen diameter.',
+            "al_6082_t6_hydro.yaml": 'Elongation percent is minimum in 2" or 4 times specimen diameter.',
+            "steel_dc01_salzgitter.yaml": "Total elongation A80 in %",
+        }
+        for name, quote in quotes.items():
+            with self.subTest(name):
+                data = yaml.safe_load((ASSETS / "material-profiles" / name).read_text(encoding="utf-8"))
+                [entry] = [p for p in data["profiles"][0]["properties"] if p["name"] == "elongation_at_break"]
+                self.assertEqual(entry["conditions"]["gauge"], "other")
+                self.assertIn(quote, entry["conditions"]["notes"])
+
 
 if __name__ == "__main__":
     unittest.main()
