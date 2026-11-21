@@ -164,6 +164,20 @@ class SharedDefinitions(SchemaCase):
             "unknown kind": {"kind": "rumour", "reference": "x"},
         })
 
+    def assert_not_assessed_needs_a_reason(self, finding: dict[str, Any]) -> None:
+        """D37: not_assessed is a check outcome that always says why; no other outcome carries a reason."""
+        outcome = {"obligation": "process.fdm.support@TST-0001/print", "outcome": "not_assessed", "method": "none",
+                   "coverage": "no calibrated profile", "reason": "calibration_off"}
+        for definition, base in (("finding", {**finding, "outcome": "not_assessed", "reason": "calibration_off"}),
+                                 ("obligation_outcome", outcome)):
+            bare = {k: v for k, v in base.items() if k != "reason"}
+            self.assert_shared(definition, {f"reason {r}": {**base, "reason": r} for r in ("calibration_off", "no_capability_profile")}, {
+                "not_assessed without a reason": bare,
+                "unknown reason": {**base, "reason": "vibes"},
+                "reason on a pass": {**base, "outcome": "pass"},
+                "reason on an unknown": {**base, "outcome": "unknown", "remedy": "x"},
+            })
+
     def test_subjects_criteria_findings_and_obligations(self) -> None:
         self.assert_shared("subject", {"product": {"product": True}, "part feature": {"PN": "TST-0001", "component": "left", "feature": "bore"},
                                        "interface": {"interface": "IF-001"}, "operation": {"assembly_operation": "press-pin"}},
@@ -199,6 +213,7 @@ class SharedDefinitions(SchemaCase):
                            {"fail without remedy": no_remedy, "no units": {**finding, "measured": {"value": 62}},
                             "no recheck": {k: v for k, v in finding.items() if k != "recheck"},
                             "bad severity": {**finding, "severity": "blocker"}, "bad code": {**finding, "code": "Overhang"}})
+        self.assert_not_assessed_needs_a_reason(finding)
         self.assert_shared("obligation_id", {"part": "process.fdm.support@TST-0001/print", "component": "process.cnc.access@TST-0001.left/mill",
                                              "feature": "feature.fit@TST-0001#bore", "interface": "interface.stack@IF-001",
                                              "requirement": "requirement.physically_validated@REQ-004", "product": "intent.use_case@product",
@@ -472,6 +487,10 @@ class RecordDocuments(SchemaCase):
             "confirmed": (lambda d: (d.update(status="confirmed"), d["assessment"].update(decision="DR-001"),
                                      d["recommendation"].update(status="final")), True),
             "pass needs criterion and source": (lambda d: d["candidates"][0]["evaluations"][0].update(outcome="pass"), False),
+            "not_assessed with a reason": (lambda d: d["candidates"][0]["evaluations"][0].update(outcome="not_assessed", reason="no_capability_profile"), True),
+            "not_assessed without a reason": (lambda d: d["candidates"][0]["evaluations"][0].update(outcome="not_assessed"), False),
+            "not_assessed with an unknown reason": (lambda d: d["candidates"][0]["evaluations"][0].update(outcome="not_assessed", reason="vibes"), False),
+            "a reason on an unknown outcome": (lambda d: d["candidates"][0]["evaluations"][0].update(reason="calibration_off"), False),
             "a candidate without tradeoffs": (lambda d: d["candidates"][0].pop("tradeoffs"), False),
         })
         self.assert_valid("manufacturing-selection.schema.json", {"status": "not_assessed", "candidates": []})

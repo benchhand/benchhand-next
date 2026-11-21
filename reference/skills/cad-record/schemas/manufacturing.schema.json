@@ -158,7 +158,13 @@
       "description": "Independent evidence facets, not an ordinal badge: each requirement and part can hold several",
       "enum": ["cad_valid", "geometrically_manufacturable", "process_planned", "simulation_supported", "physically_validated"]
     },
-    "outcome": {"description": "A check obligation's result; unknown is never a pass", "enum": ["pass", "fail", "unknown", "not_applicable"]},
+    "outcome": {"description": "A check obligation's result; unknown is never a pass", "enum": ["pass", "fail", "unknown", "not_applicable", "not_assessed"]},
+    "not_assessed_reason": {"description": "Why a check was not assessed: its calibration is off, or no capability profile exists for it", "enum": ["calibration_off", "no_capability_profile"]},
+    "not_assessed_rule": {
+      "description": "A not_assessed outcome carries its reason; no other outcome does",
+      "if": {"properties": {"outcome": {"const": "not_assessed"}}, "required": ["outcome"]},
+      "then": {"required": ["reason"]}, "else": {"not": {"required": ["reason"]}}
+    },
     "severity": {"enum": ["critical", "major", "minor", "info"]},
     "function": {"enum": ["structural", "cosmetic", "locating", "sliding", "rotating", "sealing", "spring", "thermal", "electrical", "optical", "other"]},
     "function_entry": {
@@ -283,6 +289,7 @@
         "subject": {"$ref": "#/$defs/subject"},
         "severity": {"$ref": "#/$defs/severity"},
         "outcome": {"$ref": "#/$defs/outcome"},
+        "reason": {"$ref": "#/$defs/not_assessed_reason"},
         "measured": {"oneOf": [{"$ref": "#/$defs/quantity"},
                                {"type": "object", "additionalProperties": false, "required": ["text"], "properties": {"text": {"$ref": "#/$defs/text"}}},
                                {"$ref": "#/$defs/fact_unknown"}]},
@@ -314,20 +321,25 @@
         },
         "decisions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/decision"}}
       },
-      "if": {"properties": {"outcome": {"enum": ["fail", "unknown"]}}}, "then": {"required": ["remedy"]}
+      "allOf": [
+        {"if": {"properties": {"outcome": {"enum": ["fail", "unknown"]}}}, "then": {"required": ["remedy"]}},
+        {"$ref": "#/$defs/not_assessed_rule"}
+      ]
     },
     "obligation_outcome": {
       "type": "object", "additionalProperties": false, "required": ["obligation", "outcome", "method", "coverage"],
       "properties": {
         "obligation": {"$ref": "#/$defs/obligation_id"},
         "outcome": {"$ref": "#/$defs/outcome"},
+        "reason": {"$ref": "#/$defs/not_assessed_reason"},
         "level": {"$ref": "#/$defs/evidence_level"},
         "method": {"$ref": "#/$defs/text"},
         "source": {"$ref": "#/$defs/source"},
         "uncertainty": {"$ref": "#/$defs/text"},
         "coverage": {"description": "what the method covered, and what it did not", "$ref": "#/$defs/text"},
         "findings": {"$ref": "#/$defs/semantic_ids"}
-      }
+      },
+      "allOf": [{"$ref": "#/$defs/not_assessed_rule"}]
     },
     "waiver": {
       "description": "An explicit, scoped, justified and approved waiver: its exact subject, criterion and operating envelope, its expiry or the change that ends it, the reason, the consequence and the approving authority and decision. A waived obligation stays waived, never pass, and no waiver overrides a governing safety or regulatory requirement or a forbidden geometry failure",

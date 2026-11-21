@@ -39,6 +39,7 @@
           "properties": {
             "requirement": {"$ref": "manufacturing.schema.json#/$defs/requirement_id"},
             "outcome": {"$ref": "manufacturing.schema.json#/$defs/outcome"},
+            "reason": {"$ref": "manufacturing.schema.json#/$defs/not_assessed_reason"},
             "method": {"$ref": "manufacturing.schema.json#/$defs/text"},
             "criterion": {"$ref": "manufacturing.schema.json#/$defs/criterion"},
             "value": {"oneOf": [{"$ref": "manufacturing.schema.json#/$defs/quantity"}, {"$ref": "manufacturing.schema.json#/$defs/text"}]},
@@ -46,7 +47,10 @@
             "source": {"$ref": "manufacturing.schema.json#/$defs/source"},
             "note": {"$ref": "manufacturing.schema.json#/$defs/text"}
           },
-          "if": {"properties": {"outcome": {"enum": ["pass", "fail"]}}}, "then": {"required": ["criterion", "source"]}
+          "allOf": [
+            {"if": {"properties": {"outcome": {"enum": ["pass", "fail"]}}}, "then": {"required": ["criterion", "source"]}},
+            {"$ref": "manufacturing.schema.json#/$defs/not_assessed_rule"}
+          ]
         }},
         "changes": {
           "type": "object", "additionalProperties": false, "minProperties": 1,
