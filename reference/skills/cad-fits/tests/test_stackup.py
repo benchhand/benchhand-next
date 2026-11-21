@@ -26,20 +26,21 @@ import unittest.mock
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from decision_fixture import decision_path  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-SCRIPT = HERE / "scripts" / "stackup.py"
+SKILL = HERE.parent
+SCRIPT = SKILL / "scripts" / "stackup.py"
 SPEC = importlib.util.spec_from_file_location("cad_stackup", SCRIPT)
 assert SPEC and SPEC.loader
 stackup = importlib.util.module_from_spec(SPEC)
 sys.modules["cad_stackup"] = stackup
 SPEC.loader.exec_module(stackup)
 
-FIXTURES = HERE / "tests" / "fixtures"
+FIXTURES = HERE / "fixtures"
 _FX_SPEC = importlib.util.spec_from_file_location(
-    "cad_record_mi_fixtures", HERE.parent / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
+    "cad_record_mi_fixtures", SKILL.parent / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
 assert _FX_SPEC and _FX_SPEC.loader
 fx = sys.modules.get("cad_record_mi_fixtures") or importlib.util.module_from_spec(_FX_SPEC)
 if "cad_record_mi_fixtures" not in sys.modules:
@@ -125,7 +126,7 @@ def evidence_module() -> object:
     """cad-record evidence.py, the one reader of producer check packets."""
     name = "cad_record_evidence"
     if name not in sys.modules:
-        spec = importlib.util.spec_from_file_location(name, HERE.parent / "cad-record" / "scripts" / "evidence.py")
+        spec = importlib.util.spec_from_file_location(name, SKILL.parent / "cad-record" / "scripts" / "evidence.py")
         assert spec and spec.loader
         sys.modules[name] = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(sys.modules[name])

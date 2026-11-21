@@ -10,7 +10,7 @@ Each property names the rule of the standard it asserts. ISO 286-1:2010 is the s
 values below are its Table 1 (IT6 to IT11, up to 120 mm), typed apart from ../data/iso286.json so a typo
 in the data shows up.
 
-Run: uv run --no-project --with-requirements harness/test-requirements.txt python -B -m unittest discover -s skills/cad-fits -p test_fits_properties.py
+Run: uv run --no-project --with-requirements harness/test-requirements.txt python -B -m unittest discover -s skills/cad-fits/tests -p test_fits_properties.py
 """
 
 from __future__ import annotations
@@ -24,10 +24,10 @@ from pathlib import Path
 from hypothesis import example, given, strategies as st
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parents[1] / "scripts"))
+sys.path.insert(0, str(HERE.parents[2] / "scripts"))
 import property_profile  # noqa: E402,F401  (registers and loads the profile)
 
-SPEC = importlib.util.spec_from_file_location("cad_fits_props", HERE / "scripts" / "fits.py")
+SPEC = importlib.util.spec_from_file_location("cad_fits_props", HERE.parent / "scripts" / "fits.py")
 assert SPEC and SPEC.loader
 fits = importlib.util.module_from_spec(SPEC)
 sys.modules["cad_fits_props"] = fits

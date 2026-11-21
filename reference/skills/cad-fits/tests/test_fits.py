@@ -31,7 +31,7 @@ from pathlib import Path
 import sys
 import unittest
 
-SCRIPT = Path(__file__).with_name("scripts") / "fits.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "fits.py"
 SPEC = importlib.util.spec_from_file_location("cad_fits", SCRIPT)
 assert SPEC and SPEC.loader
 fits = importlib.util.module_from_spec(SPEC)

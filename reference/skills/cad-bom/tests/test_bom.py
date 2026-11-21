@@ -22,16 +22,17 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from modload import result_payload  # noqa: E402
 
 
-HERE = Path(__file__).parent
-BOM_SCRIPT = HERE / "scripts" / "bom.py"
-BUILDER = HERE / "fixtures" / "build_assembly.py"
+HERE = Path(__file__).resolve().parent
+SKILL = HERE.parent
+BOM_SCRIPT = SKILL / "scripts" / "bom.py"
+BUILDER = SKILL / "fixtures" / "build_assembly.py"
 SPEC = importlib.util.spec_from_file_location("cad_bom", BOM_SCRIPT)
-RECORD_VALIDATOR = HERE.parent / "cad-record" / "scripts" / "validate.py"
-RECORD_FIXTURES = HERE.parent / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py"
+RECORD_VALIDATOR = SKILL.parent / "cad-record" / "scripts" / "validate.py"
+RECORD_FIXTURES = SKILL.parent / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py"
 assert SPEC and SPEC.loader
 bom = importlib.util.module_from_spec(SPEC)
 sys.modules["cad_bom"] = bom
