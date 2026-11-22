@@ -2,7 +2,8 @@
 # Only the printer is recorded; every other capability stays unknown. Start a new profile from cad-record
 # assets/manufacturing/capability-templates.yaml; a template is never a capability.
 # h2d holds the numbers Bambu Lab publishes and nothing else. Bambu publishes no layer height, minimum wall or feature,
-# overhang angle, bridge span or hole and fit tolerance, so those stay unknown and no calibration is recorded (DR-005).
+# overhang angle, bridge span or hole and fit tolerance, so generic guideline values govern those (DR-005).
+# For a tighter limit, print a test coupon on the printer. A recorded calibration counts only when `CAD_CALIBRATION=1`.
 profiles:
   - id: h2d
     revision: 1
@@ -88,7 +89,7 @@ profiles:
       layer_height:
         status: unknown
         reason: "Bambu Lab publishes no layer-height range for the H2D (tech specs, accessed 2026-11-18); a calibration print would answer it"
-    # No FDM check passes a tool to the calibration lookup (process_checks additive.py), so both hotends sit in one
+    # No FDM check passes a tool to the capability lookup (process_checks additive.py), so both hotends sit in one
     # profile and no rule picks between them. The schema's FDM vocabulary has no flow parameter, so each maximum flow
     # is in the description with its cited source.
     tools:

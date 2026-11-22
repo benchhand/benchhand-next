@@ -1,6 +1,6 @@
 # cad-record capability templates: fields and guidance only, never machine numbers.
 # A template is never a capability: copy one into hw/manufacturing/capabilities.yaml and record your actual
-# machine, operator or supplier, its parameters with their sources, and its calibrations.
+# machine, operator or supplier, its parameters with their sources, and, when `CAD_CALIBRATION=1`, its calibrations.
 profiles:
   - id: fdm_template
     revision: 1
@@ -11,9 +11,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record nozzle, filament, layer height, hotend, bed and enclosure limits, filament drying and support materials.
-      - Calibrate walls, small features, holes, bridges, overhangs, warping and layer strength per filament profile, orientation and settings; a slicer preview or a print trial is evidence only for what it shows.
+      - When `CAD_CALIBRATION=1`, calibrate walls, small features, holes, bridges, overhangs, warping and layer strength per filament profile, orientation and settings; a slicer preview or a print trial is evidence only for what it shows.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -45,9 +45,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the resin handling, wash and post-cure practice.
-      - Calibrate dimensional accuracy, distortion, drainage and ageing per resin, orientation and cure.
+      - When `CAD_CALIBRATION=1`, calibrate dimensional accuracy, distortion, drainage and ageing per resin, orientation and cure.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -73,9 +73,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record axes, travel, spindle, tool holders, workholding and the stock and materials it machines.
-      - Record each cutter's diameter, corner radius, flutes, reach and holder as a tool; calibrate accuracy and finish per material, setup and tool.
+      - Record each cutter's diameter, corner radius, flutes, reach and holder as a tool; when `CAD_CALIBRATION=1`, calibrate accuracy and finish per material, setup and tool.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -105,9 +105,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - List every exact material, composition, coating and thickness the machine is approved or forbidden for, with its extraction; never approve PVC or an unidentified plastic or coating.
-      - Record the source type, power, assist gas and operating conditions; calibrate kerf, taper, minimum holes, slots and webs, tolerance and edge quality per material and thickness, and the stock thickness distribution.
+      - Record the source type, power, assist gas and operating conditions; when `CAD_CALIBRATION=1`, calibrate kerf, taper, minimum holes, slots and webs, tolerance and edge quality per material and thickness, and the stock thickness distribution.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -136,9 +136,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - 'A separate profile: never inherit laser assumptions.'
-      - Calibrate kerf, taper, minimum features, tolerance and edge finish per material and thickness.
+      - When `CAD_CALIBRATION=1`, calibrate kerf, taper, minimum features, tolerance and edge finish per material and thickness.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -163,9 +163,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - 'A separate profile: never inherit laser or waterjet assumptions.'
-      - Calibrate kerf, bevel, minimum features, tolerance, heat-affected edge and distortion per material and thickness.
+      - When `CAD_CALIBRATION=1`, calibrate kerf, bevel, minimum features, tolerance, heat-affected edge and distortion per material and thickness.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -190,9 +190,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the press brake, tooling and the materials and thicknesses it forms.
-      - Calibrate bend radius, bend allowance and springback per material, grain direction, thickness and tool.
+      - When `CAD_CALIBRATION=1`, calibrate bend radius, bend allowance and springback per material, grain direction, thickness and tool.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -216,9 +216,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the casting method, tooling and the materials it casts.
-      - Calibrate shrinkage, draft, minimum wall and typical defects per material and tool, and name the secondary operations.
+      - When `CAD_CALIBRATION=1`, calibrate shrinkage, draft, minimum wall and typical defects per material and tool, and name the secondary operations.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -241,9 +241,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the moulding method, tooling and the materials it moulds.
-      - Calibrate shrinkage, draft, minimum wall and typical defects per material and tool.
+      - When `CAD_CALIBRATION=1`, calibrate shrinkage, draft, minimum wall and typical defects per material and tool.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -267,9 +267,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the die and the profiles it makes.
-      - Calibrate profile tolerance per material and die.
+      - When `CAD_CALIBRATION=1`, calibrate profile tolerance per material and die.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -291,9 +291,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the drills and machines.
-      - Calibrate achieved hole size and position per material and drill.
+      - When `CAD_CALIBRATION=1`, calibrate achieved hole size and position per material and drill.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -312,9 +312,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the reamers and their sizes.
-      - Calibrate achieved bore size and finish per material and reamer.
+      - When `CAD_CALIBRATION=1`, calibrate achieved bore size and finish per material and reamer.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -333,9 +333,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the taps and thread sizes.
-      - Calibrate thread quality and engagement per material.
+      - When `CAD_CALIBRATION=1`, calibrate thread quality and engagement per material.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -354,9 +354,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the sanding, blasting or polishing tools.
-      - Calibrate removed material and finish per material and method.
+      - When `CAD_CALIBRATION=1`, calibrate removed material and finish per material and method.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -375,9 +375,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the coating type and method.
-      - Calibrate coating thickness range per material and method; a coating changes fits.
+      - When `CAD_CALIBRATION=1`, calibrate coating thickness range per material and method; a coating changes fits.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -400,9 +400,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Record the joining method and consumables.
-      - Calibrate joint strength and distortion per material and method.
+      - When `CAD_CALIBRATION=1`, calibrate joint strength and distortion per material and method.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}
@@ -420,9 +420,9 @@ profiles:
     guidance:
       - Copy this profile into hw/manufacturing/capabilities.yaml, give it your own id, then remove template and guidance.
       - Record your actual machine, operator or supplier values with their sources; leave a value unknown, with its reason, until you have one.
-      - 'Parameters describe the machine and are never its achieved accuracy: record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
+      - 'Parameters describe the machine and are never its achieved accuracy; when `CAD_CALIBRATION=1`, record achievable dimensions, features and finish only as calibrations from your own coupons, measurements or supplier evidence, each scoped to its material, feature, orientation, setup and tool.'
       - Range and resolution are specifications, not uncertainty.
-      - Record each instrument's demonstrated measurement uncertainty as a calibration with its calibration record.
+      - When `CAD_CALIBRATION=1`, record each instrument's demonstrated measurement uncertainty as a calibration with its calibration record.
     machine:
       identity: {status: unknown, reason: 'template: record the make, model and identity of your machine'}
     operator: {status: unknown, reason: 'template: record who operates it and their constraints'}

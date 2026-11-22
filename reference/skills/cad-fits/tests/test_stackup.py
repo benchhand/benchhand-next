@@ -16,6 +16,7 @@ import importlib.util
 import io
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -73,19 +74,21 @@ def closing_gap_documents(*, method: str = "worst_case", relevant: tuple[str, ..
     return documents
 
 
-def tab_slot_documents() -> dict:
-    """Two laser-cut, powder-coated steel plates joined by a critical tab-and-slot interface IF-002."""
+def tab_slot_documents(process: str = "laser") -> dict:
+    """Two laser-cut (or, with `process`, otherwise made), powder-coated steel plates joined by a critical tab-and-slot
+    interface IF-002."""
     def plate(pn: str, title: str, feature: str) -> dict:
-        return fx.part(pn, title, process="laser", material="TST steel sheet", part_intent=fx.intent(
+        return fx.part(pn, title, process=process, material="TST steel sheet", part_intent=fx.intent(
             functions=[{"function": "locating"}], material_profile="tst_steel_sheet",
             critical_surfaces=fx.not_applicable("the stack covers the fit"),
-            route=[fx.operation("cut", "laser", "tst_laser"),
+            route=[fx.operation("cut", process, "tst_laser"),
                    fx.operation("coat", "coating", targets=[{"feature": feature}])]))
 
     laser = fx.capability_profile(
-        "tst_laser", "laser",
+        "tst_laser", process,
         materials=[{"material": "tst_steel_sheet", "status": "approved", "thickness": fx.known(fx.quantity(3)),
-                    "extraction": fx.known("TST extraction"), "operations": ["cut"], "source": fx.source("user")}],
+                    "extraction": fx.known("TST extraction"), "operations": ["cut"], "source": fx.source("user")}]
+        if process == "laser" else None,
         calibrations=[fx.calibration("tst_slot_coupon", "slot_width_deviation", "tst_steel_sheet",
                                      fx.quantity(lower=-0.05, upper=0.05))])
     interface = fx.interface("IF-002", "TST-0011", "TST-0012", "mounting", functional={
@@ -149,11 +152,14 @@ class IntentStackContractTests(unittest.TestCase):
             self.assertEqual(list(stackup._validator("obligation_outcome").iter_errors(row)), [], row)
 
     def bound(self, documents: dict, stack: dict, case: str) -> dict:
+        return self.bound_with(documents, stack, case)
+
+    def bound_with(self, documents: dict, stack: dict, case: str, **options: object) -> dict:
         with tempfile.TemporaryDirectory() as directory:
             hw = fx.write_record(Path(directory) / "project" / "hw", documents)
             write_case(hw, case, stack)
             record = intent.load_record(hw)
-            result = stackup.compute(stack, record, case=case, on=ON, decisions=frozenset({"DR-001"}))
+            result = stackup.compute(stack, record, case=case, on=ON, decisions=frozenset({"DR-001"}), **options)
         self.assert_schema_valid(result)
         return result
 
@@ -295,6 +301,20 @@ class IntentStackContractTests(unittest.TestCase):
         result = self.bound(closing_gap_documents(), stack, "closing-gap")
         self.assertEqual(result["outcome"], "unknown")
         self.assertEqual(codes(result), ["stack.designation_not_capability"])
+
+    def test_off_a_guideline_source_qualifies_manufacturing_variation(self) -> None:
+        stack = fixture("closing_gap.yaml")
+        contributor(stack, "S")["source"] = fx.source("guideline", "fdm.generic", revision="1", sha256="a" * 64)
+        result = stackup.compute(stack, calibration=False)
+        self.assertNotIn("stack.limits_unqualified", codes(result))
+
+    def test_off_no_remedy_asks_for_a_calibrated_capability(self) -> None:
+        stack = fixture("closing_gap.yaml")
+        contributor(stack, "S")["source"] = fx.source("user", "drawing tolerance")
+        result = stackup.compute(stack, calibration=False)
+        remedies = [f["remedy"] for f in result["findings"] if f["code"] == "stack.limits_unqualified"]
+        self.assertTrue(remedies)
+        self.assertFalse([r for r in remedies if "calibrated" in r], remedies)
 
     def test_a_drawn_tolerance_alone_does_not_qualify_manufacturing_variation(self) -> None:
         stack = fixture("closing_gap.yaml")
@@ -456,6 +476,26 @@ class IntentStackContractTests(unittest.TestCase):
         result = self.bound(tab_slot_documents(), stack, "tab-slot")
         self.assertEqual(result["outcome"], "unknown")
         self.assertEqual(codes(result), ["stack.state_mismatch"])
+
+    def test_off_an_fdm_capability_contributor_stays_unknown_and_names_the_missing_guideline(self) -> None:
+        documents = tab_slot_documents("fdm")
+        result = self.bound_with(documents, fixture("laser_tab_slot.yaml"), "tab-slot", calibration=False)
+        self.assertEqual(result["outcome"], "unknown")
+        self.assertEqual(codes(result), ["stack.capability_unresolved"])
+        found = result["findings"][0]
+        self.assertIn("printer calibration is off, and no guideline value covers slot_width_deviation", found["consequence"] + found["uncertainty"])
+        self.assertEqual(found["remedy"], "for a tighter limit, print a test coupon on the target printer")
+
+    def test_off_a_non_fdm_unresolved_capability_keeps_its_real_fix_without_printer_wording(self) -> None:
+        documents = tab_slot_documents()
+        documents["manufacturing/capabilities.yaml"]["profiles"][0]["calibrations"] = []
+        result = self.bound_with(documents, fixture("laser_tab_slot.yaml"), "tab-slot", calibration=False)
+        self.assertEqual(codes(result), ["stack.capability_unresolved"])
+        remedy = result["findings"][0]["remedy"]
+        self.assertEqual(remedy, "record evidence of the capability for this material and scope "
+                                 "(test pieces, a capability study or supplier evidence)")
+        for word in ("printer", "coupon"):
+            self.assertNotIn(word, remedy)
 
     def test_an_uncalibrated_capability_stays_unknown(self) -> None:
         documents = tab_slot_documents()
@@ -620,13 +660,14 @@ def unknown_clearance_cases() -> dict:
 class ClearanceTests(unittest.TestCase):
     """The stack-level sliding-clearance check: the nominal gap per side against the guideline minimum."""
 
-    def run_stack(self, documents: dict, stack: dict, catalog: object | None, *, bound: bool = True) -> dict:
+    def run_stack(self, documents: dict, stack: dict, catalog: object | None, *, bound: bool = True,
+                  calibration: bool = True) -> dict:
         with tempfile.TemporaryDirectory() as directory:
             hw = fx.write_record(Path(directory) / "project" / "hw", documents)
             write_case(hw, "closing-gap", stack)
             record = intent.load_record(hw) if bound else None
             result = stackup.compute(stack, record, case="closing-gap", on=ON, decisions=frozenset({"DR-001"}),
-                                     catalog=catalog)
+                                     catalog=catalog, calibration=calibration)
         for finding in result["findings"]:
             self.assertEqual(list(stackup._validator("finding").iter_errors(finding)), [], finding["id"])
         return result
@@ -734,6 +775,16 @@ class ClearanceTests(unittest.TestCase):
         remedy = result["findings"][0]["remedy"]
         self.assertIn("by hand", remedy)
         self.assertNotIn("record a guideline set", remedy)
+
+    def test_off_a_recorded_calibrated_sliding_clearance_is_not_used_and_the_guideline_governs(self) -> None:
+        documents = clearance_documents()
+        documents["manufacturing/capabilities.yaml"]["profiles"][0]["calibrations"].append(
+            fx.calibration("slide_coupon", "sliding_clearance", "tst_polymer_printed", fx.quantity(lower=0.25, upper=0.35)))
+        result = self.run_stack(documents, clearance_stack("side", nominal_gap=0.4), clearance_catalog(clearance_limit()),
+                                calibration=False)
+        self.assertNotIn("stack.clearance_unknown", codes(result))
+        row = result["clearance"]
+        self.assertEqual((row["status"], row["met"], row["minimum_mm"]), ("guideline", True, 0.3))
 
     def test_a_clearance_failure_keeps_the_statistical_governs_note_of_a_justified_stack(self) -> None:
         stack = IntentStackContractTests.justified(clearance_stack("side"))
@@ -898,7 +949,10 @@ class StackPacketTests(unittest.TestCase):
         self.assertEqual((row["obligation"], row["outcome"], row["level"], row["method"]),
                          (self.OBLIGATION, "fail", "process_planned", "1D worst-case tolerance stack"))
         self.assertEqual([f["code"] for f in packet["findings"]], ["stack.worst_case_violation"])
-        self.assertEqual(packet["dependencies"], {"stack_case": hashlib.sha256(self.case.read_bytes()).hexdigest()})
+        # The packet seals the calibration flag value, off here, beside the stack case.
+        self.assertEqual(packet["dependencies"], {
+            "stack_case": hashlib.sha256(self.case.read_bytes()).hexdigest(),
+            "flag_cad_calibration": hashlib.sha256(b"CAD_CALIBRATION=0").hexdigest()})
         analysis = self.hw / "analysis" / "v1" / "closing-gap"
         self.assertEqual(json.loads((analysis / "results.json").read_text(encoding="utf-8"))["id"], "STK-014")
         self.assertEqual(detail["analysis"], {"bundle": "hw/analysis/v1/closing-gap", "manifest_sha256": hashlib.sha256(
@@ -1033,6 +1087,23 @@ class StackupCliTests(unittest.TestCase):
                                    "--version", "v1"], capture_output=True, text=True, check=False, timeout=300)
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
             self.assertTrue((hw / "analysis" / "v1" / "pn-stack").is_dir())
+
+    def test_a_bundle_made_before_the_flag_is_refused_with_the_flag_off(self) -> None:
+        """A bundle sealed with no flag key (the recipe before the flag) may hold a calibrated clearance. The flag-off rerun
+        seals its own value, so it never reuses that bundle."""
+        with tempfile.TemporaryDirectory() as directory:
+            hw = fx.write_record(Path(directory) / "project" / "hw", closing_gap_documents())
+            case = write_case(hw, "closing-gap", fixture("closing_gap.yaml"))
+            snapshot_version(hw)
+            with unittest.mock.patch.object(stackup.GUIDELINES, "calibration_recipe", return_value={}), \
+                    contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                stackup.main([str(case), "--hw", str(hw), "--version", "v1"])
+            with unittest.mock.patch.dict("os.environ"):
+                os.environ.pop(stackup.GUIDELINES.CALIBRATION_FLAG, None)
+                proc = subprocess.run(["uv", "run", "--quiet", "--script", str(SCRIPT), str(case), "--hw", str(hw),
+                                       "--version", "v1"], capture_output=True, text=True, check=False, timeout=300)
+            self.assertEqual(proc.returncode, 2, proc.stdout[-300:])
+            self.assertIn("--replace", proc.stderr)
 
     def test_rerun_reuses_bundle_and_recipe_change_requires_replace(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
