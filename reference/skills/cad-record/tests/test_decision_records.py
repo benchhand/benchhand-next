@@ -166,6 +166,33 @@ class WriteTests(Base):
                 dr.write_decision(self.dir, **{**MINIMAL, "title": "Old", "superseded_by": names})
         self.assertEqual(len(list(self.dir.glob("DR-*.md"))), 1)
 
+    def test_gate_is_written_as_a_front_matter_mapping_and_read_back(self) -> None:
+        path = dr.write_decision(self.dir, **MINIMAL, gate=("layout", "parts"))
+        front = yaml.safe_load(path.read_text(encoding="utf-8").split("---\n")[1])
+        self.assertEqual(front["gate"], {"from": "layout", "to": "parts"})
+        self.assertEqual(dr.read_decision(path).gate, ("layout", "parts"))
+
+    def test_a_record_without_a_gate_reads_none_and_writes_no_key(self) -> None:
+        path = dr.write_decision(self.dir, **MINIMAL)
+        self.assertNotIn("gate", yaml.safe_load(path.read_text(encoding="utf-8").split("---\n")[1]))
+        self.assertIsNone(dr.read_decision(path).gate)
+
+    def test_a_malformed_gate_is_refused_naming_the_file_and_the_key(self) -> None:
+        for label, value in (("a scalar", "layout"), ("a list", "[layout, parts]"), ("without to", "{from: layout}"),
+                             ("an unknown stage", "{from: layout, to: nowhere}"),
+                             ("an extra key", "{from: layout, to: parts, via: x}"),
+                             ("a number", "{from: 3, to: parts}"), ("a null", "null"),
+                             ("equal ends", "{from: layout, to: layout}")):
+            path = self.put("DR-001-gate.md", document(f"status: accepted\ndate: 2026-10-26\ngate: {value}\n"))
+            with self.subTest(label), self.assertRaisesRegex(dr.DecisionRecordError, r"DR-001-gate\.md.*gate"):
+                dr.read_decision(path)
+
+    def test_writing_a_gate_with_an_unknown_stage_is_refused_and_leaves_the_directory(self) -> None:
+        for gate in (("layout", "nowhere"), ("nowhere", "parts"), ("layout", "layout")):
+            with self.subTest(gate), self.assertRaisesRegex(dr.DecisionRecordError, "gate"):
+                dr.write_decision(self.dir, **MINIMAL, gate=gate)
+        self.assertEqual(list(self.dir.iterdir()), [])
+
     def test_a_fenced_heading_in_prose_is_allowed(self) -> None:
         context = "Layout:\n\n```\n## not a heading\n```"
         path = dr.write_decision(self.dir, **{**MINIMAL, "context": context})

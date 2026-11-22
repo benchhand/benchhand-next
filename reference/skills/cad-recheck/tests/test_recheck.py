@@ -40,6 +40,7 @@ stamp_module = load("cad_recheck_stamp", STAMP)
 acceptance = load("cad_record_acceptance_fixtures", ACCEPTANCE)
 evidence, fx = acceptance.evidence, acceptance.fx
 DAY = date(2026, 11, 19)  # the fixed UTC day of the gate decisions and of the stamp timestamp below
+LAYOUT_GATE = ("layout", "parts")  # the `gate:` front matter of the decision that approves the layout -> parts advance
 STAMP_TIME = "2026-11-19T10:00:00Z"
 LEGACY_PRODUCT = "id: test-project\nflow:\n  stage: {stage}\n  recheck_from: {threshold}\n"
 
@@ -210,12 +211,14 @@ class RecheckHookTests(unittest.TestCase):
         return checks
 
     def provisional_gate(self, flow_stage: str, recheck_from: str = "ground", *, decision: str | None = "proposed",
-                         decided: date = DAY) -> None:
+                         decided: date = DAY, title: str | None = None,
+                         gate: tuple[str, str] | None = LAYOUT_GATE) -> None:
         """The state after a provisional gate: flow.stage advanced to `flow_stage`, with a decision of status
-        `decision` (none when None) dated `decided` (the fixed DAY by default)."""
+        `decision` (none when None) dated `decided` (the fixed DAY by default), titled `title` and carrying the
+        `gate:` key `gate` (the layout -> parts advance by default, none when None)."""
         self.stage_product(flow_stage, recheck_from)
         if decision is not None:
-            write_test_decision(self.root / "hw", "DR-001", status=decision, date=decided,
+            write_test_decision(self.root / "hw", "DR-001", status=decision, date=decided, title=title, gate=gate,
                                 context="Temporary until the full check: v1 passed fast checks 1-4.")
         self.git("add", "hw")
 
@@ -273,13 +276,61 @@ class RecheckHookTests(unittest.TestCase):
     def test_a_superseded_decision_does_not_pass_the_advance(self) -> None:
         self.provisional_gate("parts", decision="proposed")
         write_test_decision(self.root / "hw", "DR-002", status="rejected", date=DAY)
-        write_test_decision(self.root / "hw", "DR-001", status="proposed", date=DAY,
+        write_test_decision(self.root / "hw", "DR-001", status="proposed", date=DAY, gate=LAYOUT_GATE,
                             superseded_by=("DR-002",))
         self.git("add", "hw")
         self.assertEqual(self.stamp_gate("layout").returncode, 0)
         result = self.verify()
         self.assertEqual(result.returncode, 2)
         self.assertIn("layout → parts", result.stderr)
+
+    def test_a_decision_that_is_not_a_gate_of_the_advance_does_not_pass_it(self) -> None:
+        for what, title, gate in (
+                ("the flow profile", "Flow profile", None),
+                ("an unrelated decision", "Choose the bolt grade", None),
+                ("another transition", "Gate", ("parts", "detail")),
+                ("the reverse transition", "Gate", ("parts", "layout")),
+                ("the right start, another end", "Gate", ("layout", "detail")),
+                ("another start, the right end", "Gate", ("concept", "parts"))):
+            with self.subTest(what):
+                self.provisional_gate("parts", decision="accepted", title=title, gate=gate)
+                self.assertEqual(self.stamp_gate("layout").returncode, 0)
+                result = self.verify()
+                self.refused_gate(result)
+                self.assertIn("gate: {from: layout, to: parts}", result.stderr)
+
+    def test_a_title_that_names_the_gate_does_not_pass_it_without_the_gate_key(self) -> None:
+        self.provisional_gate("parts", decision="accepted", title="Gate layout to parts", gate=None)
+        self.assertEqual(self.stamp_gate("layout").returncode, 0)
+        self.refused_gate(self.verify())
+
+    def test_a_malformed_gate_value_is_a_refusal_naming_the_record(self) -> None:
+        written: list[Path] = []
+        for what, value in (("a scalar", "layout"), ("a list", "[layout, parts]"), ("no to", "{from: layout}"),
+                            ("an unknown stage", "{from: layout, to: nowhere}"),
+                            ("an extra key", "{from: layout, to: parts, via: x}"), ("a number", "{from: 3, to: parts}")):
+            with self.subTest(what):
+                if written:
+                    written.pop().unlink()  # the previous case's malformed record would make the fixture refuse
+                self.provisional_gate("parts", decision="accepted", gate=None)
+                path = decision_path(self.root / "hw", "DR-001")
+                written.append(path)
+                text = path.read_text(encoding="utf-8").replace("\n---\n", f"\ngate: {value}\n---\n", 1)
+                path.write_text(text, encoding="utf-8")
+                self.git("add", "hw")
+                self.assertEqual(self.stamp_gate("layout").returncode, 0)
+                result = self.verify()
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("DR-001-", result.stderr)
+                self.assertIn("gate", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_a_gate_decision_among_other_decisions_passes_the_advance(self) -> None:
+        self.provisional_gate("parts", decision="accepted", title="Flow profile", gate=None)
+        write_test_decision(self.root / "hw", "DR-002", status="proposed", date=DAY, gate=LAYOUT_GATE)
+        self.git("add", "hw")
+        self.assertEqual(self.stamp_gate("layout").returncode, 0)
+        self.assertEqual(self.verify().returncode, 0)
 
     def test_a_decision_dated_before_the_stamp_does_not_pass_the_advance(self) -> None:
         self.provisional_gate("parts", decided=date(2026, 11, 18))
@@ -344,7 +395,7 @@ class RecheckHookTests(unittest.TestCase):
 
     def restage_decision(self, decision: str) -> None:
         """The index: the decision at status `decision`, stamped again."""
-        write_test_decision(self.root / "hw", "DR-001", status=decision, date=DAY)
+        write_test_decision(self.root / "hw", "DR-001", status=decision, date=DAY, gate=LAYOUT_GATE)
         self.git("add", "hw")
         self.assertEqual(self.stamp_gate("layout").returncode, 0)
 
@@ -369,7 +420,8 @@ class RecheckHookTests(unittest.TestCase):
         (self.root / "hw" / "extra.txt").write_text("a staged change\n", encoding="utf-8")
         self.git("add", "hw/extra.txt")
         self.assertEqual(self.stamp_gate("layout").returncode, 0)
-        write_test_decision(self.root / "hw", "DR-001", status="accepted", date=DAY)  # in the work tree, not staged
+        write_test_decision(self.root / "hw", "DR-001", status="accepted", date=DAY,
+                            gate=LAYOUT_GATE)  # in the work tree, not staged
         self.refused_gate(self.verify())
         self.refused_gate(self.run_python(STAMP, "--verify", "--committed", cwd=self.root))
 
