@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Callable
 from unittest import mock
 
+import jsonschema
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
@@ -148,13 +149,15 @@ def frozen_lamp(hw: Path, *, before_build: Callable[[Path], None] | None = None,
                 failed: dict[str, str] | None = None, skip_bundles: tuple[str, ...] = (), attach: tuple[str, ...] = (),
                 label: str = "v1", older: tuple[str, ...] = (), service_class: str = "appearance_concept",
                 ledger: Callable[[Path, Any, list[dict[str, Any]]], list[dict[str, Any]]] | None = None,
-                anchor: bool = True) -> None:
+                anchor: bool = True, packet: Callable[[dict[str, Any]], None] | None = None,
+                stated: dict[str, str] | None = None) -> None:
     """The lamp example migrated to record version 2 and reconciled for release (released revisions, a
     confirmed `service_class` use case and explicit routes, every software check of `label` passed by a
     sealed producer packet, verification passed with accepted ledger evidence), built as `label`, frozen at
     it with its acceptance digest (unless not `anchor`), every required bundle published, and DR-005
     approving it. Each `older` version is built first, with a check and a render bundle of its own;
-    `ledger` may rewrite the accepted entries before the freeze."""
+    `ledger` may rewrite the accepted entries before the freeze, `packet` the producer packet before it is sealed and
+    `stated` the verification.csv result of a requirement (default pass)."""
     fx.migrated_copy(LAMP, hw)
     for part in sorted((hw / "parts").glob("*/part.yaml")):
         edit_yaml(part, lambda data: data.update(rev="A"))
@@ -172,9 +175,12 @@ def frozen_lamp(hw: Path, *, before_build: Callable[[Path], None] | None = None,
         publish(hw, "renders", "iso", {"iso.png": f"{old} render\n"}, version=old)
     build_version(hw, omit, failed, attach, label)
     record = impact.read_record(hw)
-    acceptance.publish_packet(hw, label, acceptance.producer_packet(record))
+    producer = acceptance.producer_packet(record)
+    if packet:
+        packet(producer)
+    acceptance.publish_packet(hw, label, producer)
     evidence = {"REQ-002": f"sweep hw/motion/{label}/elbow-sweep", "REQ-004": f"hw/analysis/{label}/arm-load/results.json"}
-    edit_csv(hw / "verification.csv", lambda rows: [row.update(result="pass", evidence=evidence.get(
+    edit_csv(hw / "verification.csv", lambda rows: [row.update(result=(stated or {}).get(row["requirement_id"], "pass"), evidence=evidence.get(
         row["requirement_id"], "hw/docs/inspection.md")) for row in rows])
     version_sha = sha(hw / "versions" / label / "manifest.json")
     entries = [acceptance.entry(record, f"EV-{number:03d}", {"product": True, "requirements": [req]}, "cad_valid",
@@ -697,6 +703,85 @@ class Documents(ReleaseCase):
         self.guide(hw, "--rev", "A", "--date", "2026-11-02")  # build_guide.py refuses any date but the sealed one
 
 
+class SelectedBundleStatus(ReleaseCase):
+    """D37: a bundle whose producer assessed nothing (status not_assessed) is no refusal and no pass. No emitter
+    seals one yet, so the seam is a bundle published with that status and handed to select_bundle."""
+
+    def select(self, status: str) -> Any:
+        hw = self.project()
+        publish(hw, "analysis", "extra", {"results.json": '{"status": "x"}\n'}, status=status)
+        package = release.Release(hw, "A", "v1", "DR-005", "hw/releases/A")
+        release.select_bundle(package, "analysis", "extra", release.sha256(hw / "versions" / "v1" / "manifest.json"), "test")
+        return package
+
+    def test_a_not_assessed_bundle_is_selected_and_recorded_as_not_assessed(self) -> None:
+        package = self.select("not_assessed")
+        self.assertEqual((package.findings, package.checks), ([], {"analysis/extra": "not_assessed"}))
+        self.assertEqual([b["path"] for b in package.bundles], ["hw/analysis/v1/extra"])
+
+    def test_a_failing_bundle_is_still_refused(self) -> None:
+        package = self.select("fail")
+        self.assertEqual(([f["code"] for f in package.findings], package.checks), (["release.failed"], {}))
+        self.assertIn("records status 'fail', not pass or not_assessed", package.findings[0]["message"])
+
+    def test_the_release_manifest_schema_accepts_a_not_assessed_check(self) -> None:
+        schema = json.loads((SKILL / "schemas" / "release-manifest.schema.json").read_text(encoding="utf-8"))
+        jsonschema.validate({"analysis/extra": "not_assessed"}, {"$ref": "#/$defs/checks", "$defs": schema["$defs"]})
+
+
+class NotAssessedRelease(ReleaseCase):
+    """D37: a release whose only open obligation is not_assessed is released, and nothing in it reads as a pass. No emitter
+    yet gives a producer outcome not_assessed, so the seam is the sealed producer packet of the frozen lamp."""
+
+    REQ = "REQ-001"
+    OBLIGATION = "policy.cad_valid@REQ-001"
+
+    def project_with_not_assessed(self, stated: str = "not_assessed") -> Path:
+        def packet(data: dict[str, Any]) -> None:
+            for row in data["outcomes"]:
+                if row["obligation"] == self.OBLIGATION:
+                    row.update(outcome="not_assessed", reason="calibration_off")
+            data["result"] = "not_assessed"
+
+        def ledger(hw: Path, record: Any, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return [entry for entry in entries if entry.get("requirement") != self.REQ]
+
+        return self.project(packet=packet, ledger=ledger, stated={self.REQ: stated})
+
+    def test_it_is_released_with_the_row_reading_not_assessed(self) -> None:
+        hw = self.project_with_not_assessed()
+        code, report = self.release(hw)
+        self.assertEqual((code, report["status"]), (0, "released"), report.get("findings"))
+        manifest = json.loads((hw / "releases" / "A" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["checks"][f"verification/{self.REQ}"], "not_assessed")
+        self.assertIn(self.OBLIGATION, manifest["acceptance"]["open_obligations"])
+        self.assertNotIn("cad_valid", manifest["acceptance"]["claims"][self.REQ])
+
+    def test_the_acceptance_check_is_not_recorded_as_a_pass(self) -> None:
+        hw = self.project_with_not_assessed()
+        self.release(hw)
+        manifest = json.loads((hw / "releases" / "A" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["checks"]["acceptance"], "not_assessed")
+
+    def test_a_release_with_nothing_not_assessed_still_records_a_pass(self) -> None:
+        hw = self.project()
+        self.release(hw)
+        manifest = json.loads((hw / "releases" / "A" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["checks"]["acceptance"], "pass")
+
+    def test_a_row_stating_not_assessed_over_evidence_that_passes_is_refused(self) -> None:
+        hw = self.project(stated={self.REQ: "not_assessed"})
+        code, report = self.release(hw)
+        self.assertEqual((code, report["status"]), (1, "refused"))
+        self.assertTrue(any("evidence.csv_unsupported" in item["message"] for item in report["findings"]), report["findings"])
+
+    def test_a_row_stating_pass_over_not_assessed_evidence_is_refused(self) -> None:
+        hw = self.project_with_not_assessed("pass")
+        code, report = self.release(hw)
+        self.assertEqual((code, report["status"]), (1, "refused"))
+        self.assertTrue(any("evidence.csv_unsupported" in item["message"] for item in report["findings"]), report["findings"])
+
+
 class Refusal(ReleaseCase):
     """Each gap refuses with a finding that names it, and hw/ is byte-identical afterwards."""
 
@@ -895,7 +980,7 @@ class Refusal(ReleaseCase):
         before = tree(hw)
         code, report = self.release(hw)
         self.assertEqual(code, 1)
-        self.assertIn("release verification result must be pass or waived", json.dumps(report["findings"]))
+        self.assertIn("release verification result must be pass, waived or not_assessed", json.dumps(report["findings"]))
         self.assertEqual(tree(hw), before)
         hw = self.project()
         edit_csv(hw / "verification.csv", lambda rows: rows[1].update(evidence="hw/motion/v1/elbow-limits"))

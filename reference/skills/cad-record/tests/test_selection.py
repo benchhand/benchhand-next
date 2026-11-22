@@ -158,6 +158,38 @@ class AssessmentBeforeFinalRecommendation(unittest.TestCase):
         self.assertEqual(tree_digest(hw.parent), before, "selection.py never writes the design record")
 
 
+class NotAssessedIsNoPass(unittest.TestCase):
+    """D37: a mandatory evaluation that is not_assessed blocks nothing, and the suitability text never counts it as a pass.
+    The seam is an Evaluation handed to the suitability text: nothing computes a not_assessed evaluation yet."""
+
+    @staticmethod
+    def suitability(*outcomes: tuple[str, str]) -> str:
+        evaluations = [selection.Evaluation(name, True, outcome, {"PN": "TST-0001"}, "m") for name, outcome in outcomes]
+        assessed = selection._Assessed(None, evaluations, status=selection.FEASIBLE)
+        return selection._Assessor.suitability(None, assessed)
+
+    def test_a_not_assessed_constraint_is_named_apart_from_the_passes(self) -> None:
+        text = self.suitability(("REQ-001", "pass"), ("REQ-002", "not_assessed"))
+        self.assertIn("(REQ-001)", text)
+        self.assertIn("not assessed, not a pass: REQ-002", text)
+
+    def test_the_recommendation_reason_names_them_too(self) -> None:
+        from types import SimpleNamespace
+
+        evaluations = [selection.Evaluation(n, True, o, {"PN": "TST-0001"}, "m") for n, o in
+                       (("REQ-001", "pass"), ("REQ-002", "not_assessed"))]
+        primary = selection._Assessed(SimpleNamespace(raw={}, parts=(), id="C1"), evaluations, status=selection.FEASIBLE)
+        requirements = {name: SimpleNamespace(evidence_required=()) for name in ("REQ-001", "REQ-002")}
+        assessor = SimpleNamespace(record=SimpleNamespace(requirements=requirements))
+        proposal = selection._recommendation(assessor, [primary], primary, None, None, False, [], {"optical": [], "prototype": None, "change_triggers": []})
+        text = json.dumps(proposal)
+        self.assertIn("meets every mandatory constraint it was assessed against: REQ-001; not assessed, not a pass: REQ-002", text)
+
+    def test_a_candidate_with_nothing_not_assessed_reads_as_before(self) -> None:
+        self.assertEqual(self.suitability(("REQ-001", "pass")),
+                         "feasible: every mandatory constraint assessed passes (REQ-001)")
+
+
 class PrintableButUnsuitable(unittest.TestCase):
     """Row 2: a part that prints (envelope, calibrated printer, approved material) still fails its service."""
 

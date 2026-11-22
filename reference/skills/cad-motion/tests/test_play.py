@@ -13,6 +13,7 @@ PlayBoundsTests are kernel-free; PlayGeometryTests build the play_fixture.py geo
 
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import subprocess
@@ -20,6 +21,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parents[1]
@@ -215,6 +217,19 @@ class PlayGeometryTests(unittest.TestCase):
 
 def validator(definition: str):
     return fx.ref_validator(f"https://srobroek.com/cad/schemas/manufacturing.schema.json#/$defs/{definition}")
+
+
+class ExitCodeTests(unittest.TestCase):
+    """D37: a packet that assessed nothing exits 0; an unknown or failing one exits 1. No emitter yet shows not_assessed, so
+    the seam is the status check_packet.emit hands back."""
+
+    def test_the_exit_code_follows_the_packet_status(self) -> None:
+        for status, code in {"pass": 0, "not_assessed": 0, "unknown": 1, "fail": 1}.items():
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as hw, \
+                    patch.object(play, "assess", return_value=({"dependencies": {}}, {})), \
+                    patch.object(play.code_shas, "closure", return_value="c"), patch.object(play.check_packet, "emit", return_value=({"result": status}, status)), \
+                    patch("sys.stdout", io.StringIO()), patch("sys.stderr", io.StringIO()):
+                self.assertEqual(play.main(["--hw", hw, "--parts-dir", hw]), code)
 
 
 if __name__ == "__main__":

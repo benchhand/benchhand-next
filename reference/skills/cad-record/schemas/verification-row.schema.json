@@ -9,7 +9,7 @@
     "requirement_id": {"type": "string", "pattern": "^REQ-[0-9]{3}$"},
     "method": {"type": "string", "enum": ["I", "A", "D", "T"]},
     "criteria": {"type": "string", "minLength": 1},
-    "result": {"type": "string", "enum": ["planned", "pass", "fail", "waived"]},
+    "result": {"type": "string", "enum": ["planned", "pass", "fail", "waived", "not_assessed"]},
     "evidence": {"type": "string"}
   }
 }

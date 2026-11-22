@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 from pathlib import Path
+from unittest.mock import patch
 import shutil
 import subprocess
 import sys
@@ -38,6 +40,7 @@ from modload import load_module as load  # noqa: E402
 ops = load("cad_record_assembly_operations", SKILLS / "cad-record" / "scripts" / "assembly_operations.py")
 assembly_data = load("cad_record_assembly_data", SKILLS / "cad-record" / "scripts" / "assembly_data.py")
 fx = load("cad_record_mi_fixtures", SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
+access = load("cad_motion_access", SCRIPT)
 PNS = ("TST-0101", "TST-0102", "TST-0103", "TST-0104", "TST-0105")
 TITLES = {"TST-0101": "Housing", "TST-0102": "Bearing", "TST-0103": "Cover", "TST-0104": "Cover screw",
           "TST-0105": "Bracket"}
@@ -430,6 +433,19 @@ class EngagementAccessTests(unittest.TestCase):
             with self.subTest(locating=name):
                 self.assertEqual(self.outcome(f"locating-{name}", "press",
                                               {"press_fit": press, "locating_fit": locating}), expected)
+
+
+class ExitCodeTests(unittest.TestCase):
+    """D37: a packet that assessed nothing exits 0; an unknown or failing one exits 1. No emitter yet shows not_assessed, so
+    the seam is the status check_packet.emit hands back."""
+
+    def test_the_exit_code_follows_the_packet_status(self) -> None:
+        for status, code in {"pass": 0, "not_assessed": 0, "unknown": 1, "fail": 1}.items():
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as hw, \
+                    patch.object(access, "assess", return_value=({"dependencies": {}}, {})), \
+                    patch.object(access.check_packet, "emit", return_value=({"result": status}, status)), \
+                    patch("sys.stdout", io.StringIO()), patch("sys.stderr", io.StringIO()):
+                self.assertEqual(access.main(["--hw", hw, "--parts-dir", hw]), code)
 
 
 if __name__ == "__main__":

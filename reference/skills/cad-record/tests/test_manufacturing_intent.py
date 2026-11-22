@@ -64,6 +64,12 @@ def proposing_selection(pn: str = "TST-0901") -> dict[str, Any]:
                 "evaluations": [], "pros": ["TST pro"], "cons": ["TST con"], "tradeoffs": ["TST tradeoff"]}]}
 
 
+class Vocabularies(unittest.TestCase):
+    def test_the_outcome_words_are_the_manufacturing_schema_outcomes(self) -> None:
+        schema = json.loads((HERE.parent / "schemas" / "manufacturing.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(mi.OUTCOMES), set(schema["$defs"]["outcome"]["enum"]))
+
+
 class Versions(unittest.TestCase):
     def test_only_version_2_is_current_and_any_other_is_refused(self) -> None:
         self.assertEqual(mi.record_version({"record_version": 2}), 2)

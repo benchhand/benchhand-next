@@ -373,7 +373,7 @@ class ValidateProject(unittest.TestCase):
         findings = json.dumps(report["findings"])
         self.assertEqual(result.returncode, 1)
         self.assertIn("directory name does not match manifest rev", findings)
-        self.assertIn("verification result must be pass or waived", findings)
+        self.assertIn("verification result must be pass, waived or not_assessed", findings)
         self.assertIn("release cannot include prototype revision X1", findings)
 
     def test_rejects_part_with_missing_decision_reference(self) -> None:

@@ -7,7 +7,7 @@
   "$defs": {
     "product_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
     "rev": {"type": "string", "pattern": "^[A-HJ-NPRTUVWY]$"},
-    "checks": {"type": "object", "additionalProperties": {"type": "string", "enum": ["pass", "fail", "waived"]}},
+    "checks": {"type": "object", "additionalProperties": {"type": "string", "enum": ["pass", "fail", "waived", "not_assessed"]}},
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "package_path": {
       "description": "A path inside the package directory",

@@ -308,5 +308,20 @@ class BundleNameMatchesTheProducer(unittest.TestCase):
         self.assertIn("holds no assessment of IF-006", str(raised.exception))
 
 
+class StopReactionExitCode(unittest.TestCase):
+    """D37: a packet that assessed nothing exits 0; an unknown or failing one exits 1. No emitter yet shows not_assessed, so
+    the seam is the status check_packet.emit hands back."""
+
+    def test_the_exit_code_follows_the_packet_status(self) -> None:
+        import stop_reaction
+
+        scenario = Scenario(self)
+        for status, code in {"pass": 0, "not_assessed": 0, "unknown": 1, "fail": 1}.items():
+            with self.subTest(status=status), patch.object(stop_reaction, "assess", return_value=({"dependencies": {}}, {})), \
+                    patch.object(stop_reaction.check_packet, "emit", return_value=({"result": status}, status)), \
+                    patch("sys.stdout", io.StringIO()), patch("sys.stderr", io.StringIO()):
+                self.assertEqual(stop_reaction.main(["--hw", str(scenario.hw), "--version", "v1"]), code)
+
+
 if __name__ == "__main__":
     unittest.main()

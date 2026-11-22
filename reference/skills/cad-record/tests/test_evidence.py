@@ -101,6 +101,127 @@ def codes(findings: Any, severity: str | None = None) -> set[str]:
     return {f.code for f in findings if severity is None or f.severity == severity}
 
 
+def not_assessed_packet(record: Any, *others: tuple[str, str], result: str = "not_assessed", bundle: str = "tst") -> Any:
+    """A producer packet whose every software obligation is not_assessed (calibration off) except the `others`
+    given as (obligation, outcome). No emitter writes one yet, so a fixture packet is the seam."""
+    data = acceptance.producer_packet(record)
+    given = dict(others)
+    for row in data["outcomes"]:
+        row["outcome"] = given.get(row["obligation"], "not_assessed")
+        if row["outcome"] == "not_assessed":
+            row["reason"] = "calibration_off"
+    data["result"] = result
+    return evidence.ProducerPacket(f"hw/checks/v1/{bundle}", "b" * 64, data)
+
+
+class PacketResultOrder(unittest.TestCase):
+    """check_packet.build: a packet's result is fail, else unknown, else not_assessed, else pass (D37)."""
+
+    def result(self, *outcomes: str, missing: bool = False) -> str:
+        record = normalized(documents())
+        expected = [o for o in mi.required_checks(record) if o.id in (READBACK, STRENGTH)]
+        rows = [{"obligation": o.id, "outcome": outcome} for o, outcome in zip(expected, outcomes)]
+        return check_packet.build(record, expected[:len(rows) + (1 if missing else 0)], "tst", rows, [], {})["result"]
+
+    def test_the_result_follows_the_order(self) -> None:
+        cases = {("pass", "pass"): "pass", ("pass", "not_assessed"): "not_assessed", ("not_assessed", "not_assessed"): "not_assessed",
+                 ("unknown", "not_assessed"): "unknown", ("fail", "not_assessed"): "fail", ("not_assessed", "pass"): "not_assessed"}
+        for outcomes, shown in cases.items():
+            with self.subTest(outcomes=outcomes):
+                self.assertEqual(self.result(*outcomes), shown)
+
+    def test_an_incomplete_packet_is_unknown_even_with_not_assessed_outcomes(self) -> None:
+        self.assertEqual(self.result("not_assessed", missing=True), "unknown")
+
+
+class NotAssessedIsNoPass(unittest.TestCase):
+    """D37: a not_assessed packet is consistent and gives no obligation a pass."""
+
+    def setUp(self) -> None:
+        self.record = normalized(documents())
+
+    def test_a_packet_that_shows_not_assessed_is_consistent(self) -> None:
+        result = assess(self.record, not_assessed_packet(self.record, (READBACK, "pass")))
+        self.assertNotIn("packet.invalid", codes(result.findings))
+
+    def test_the_packet_result_must_follow_the_order_fail_unknown_not_assessed_pass(self) -> None:
+        cases = {"not_assessed": [(READBACK, "pass")], "unknown": [(READBACK, "unknown")], "fail": [(READBACK, "fail")]}
+        for shown, others in cases.items():
+            for stated in {"pass", "not_assessed", "unknown", "fail"} - {shown}:
+                with self.subTest(shown=shown, stated=stated):
+                    result = assess(self.record, not_assessed_packet(self.record, *others, result=stated))
+                    self.assertIn("packet.invalid", codes(result.findings))
+            with self.subTest(shown=shown):
+                result = assess(self.record, not_assessed_packet(self.record, *others, result=shown))
+                self.assertNotIn("packet.invalid", codes(result.findings))
+
+    def test_a_not_assessed_outcome_never_becomes_a_pass_for_its_obligation(self) -> None:
+        result = assess(self.record, not_assessed_packet(self.record))
+        self.assertNotIn("packet.invalid", codes(result.findings))
+        self.assertEqual((result.statuses[READBACK].result, result.statuses[STRENGTH].result), ("not_assessed", "not_assessed"))
+        self.assertEqual(result.statuses[READBACK].sources, ("hw/checks/v1/tst",))
+        self.assertEqual(result.statuses[READBACK].reasons, ("calibration_off",))
+
+    def test_the_best_status_ranks_not_assessed_below_every_resolved_one_and_above_stale_planned_and_nothing(self) -> None:
+        best = evidence._best
+        for found, shown in {("pass", "not_assessed"): "pass", ("waived", "not_assessed"): "waived",
+                             ("not_applicable", "not_assessed"): "not_applicable", ("not_assessed", "stale"): "not_assessed",
+                             ("not_assessed", "planned"): "not_assessed", ("not_assessed",): "not_assessed",
+                             ("unknown", "not_assessed"): "unknown", ("fail", "not_assessed"): "fail"}.items():
+            with self.subTest(found=found):
+                self.assertEqual(best(found, False), shown)
+
+
+class NotAssessedBlocksNothing(unittest.TestCase):
+    """D37: an obligation only not_assessed outcomes cover is open and visible, never a pass, and never a blocker."""
+
+    def setUp(self) -> None:
+        self.record = normalized(documents("appearance_concept"))
+        self.result = assess(self.record, not_assessed_packet(self.record))
+        self.shown = {i for i, s in self.result.statuses.items() if s.result == "not_assessed"}
+
+    def errors_on(self, stage: str, ids: Any) -> set[str]:
+        return {f.obligation for f in self.result.gate(stage) if f.severity == "error" and f.obligation in ids}
+
+    def test_the_fixture_has_not_assessed_obligations(self) -> None:
+        self.assertIn(READBACK, self.shown)
+
+    def test_no_stage_gate_blocks_on_a_not_assessed_obligation(self) -> None:
+        for stage in ("parts", "detail", "design_freeze", "release"):
+            with self.subTest(stage=stage):
+                self.assertEqual(self.errors_on(stage, self.shown), set())
+
+    def test_the_gate_names_each_not_assessed_obligation_without_an_error(self) -> None:
+        for stage in ("parts", "design_freeze", "release"):
+            with self.subTest(stage=stage):
+                named = {f.obligation: f.severity for f in self.result.gate(stage) if f.code == "gate.not_assessed"}
+                self.assertEqual(named.get(READBACK), "info")
+
+    def test_the_release_lists_them_open_and_claims_none_of_their_levels(self) -> None:
+        policy = self.result.release()
+        self.assertTrue(self.shown <= set(policy.open_obligations))
+        self.assertEqual({f.obligation for f in policy.blocking if f.obligation in self.shown}, set())
+        level = self.result.statuses[READBACK].obligation.level
+        self.assertNotEqual(self.result.facets["TST-0001"][level], "pass")
+        self.assertTrue(all(level not in levels for levels in policy.claims.values()))
+
+    def test_a_stamped_packet_recomputes_no_blocker_from_them(self) -> None:
+        packet = self.result.packet("design_freeze", "c" * 64)
+        self.assertEqual(packet["statuses"][READBACK]["result"], "not_assessed")
+        blocked = evidence.packet_blocking(packet, record=self.record, stage="design_freeze", selection_sha256=None)
+        self.assertFalse([b for b in blocked if READBACK in b])
+
+    def test_a_producer_is_not_run_again_for_them(self) -> None:
+        passed = assess(self.record, packet(self.record))
+        self.assertEqual(evidence.stale_producers(self.result, "release") - evidence.stale_producers(passed, "release"), set())
+
+    def test_one_unknown_among_the_outcomes_keeps_the_obligation_unknown_and_blocking(self) -> None:
+        unknown = not_assessed_packet(self.record, (READBACK, "unknown"), result="unknown", bundle="other")
+        result = assess(self.record, not_assessed_packet(self.record), unknown)
+        self.assertEqual(result.statuses[READBACK].result, "unknown")
+        self.assertIn(READBACK, {f.obligation for f in result.gate("parts") if f.severity == "error"})
+
+
 class UnknownNeverPasses(unittest.TestCase):
     """Row 16: an untested, planned, uncalibrated or merely stated result is never a pass."""
 
@@ -575,6 +696,45 @@ class ProgressiveGates(unittest.TestCase):
         gate = evidence.assess(old).gate("parts")
         self.assertEqual([f.code for f in gate], ["gate.record"])
         self.assertIn("record_version None is not supported", gate[0].message)
+
+
+class NotAssessedIsNoPhysicalTest(unittest.TestCase):
+    """D37 covers the tool's own checks, not a test the record requires the user to perform: a producer's not_assessed on a
+    physically_validated obligation never stands in for it."""
+
+    def released(self, *entries_for: Any) -> tuple[Any, Any]:
+        docs = documents("production")
+        base = normalized(docs)
+        trial = next(o for o in mi.required_checks(base) if o.id == TRIAL)
+        data = acceptance.producer_packet(base)
+        data["expected"].append(trial.as_dict())
+        data["outcomes"].append({"obligation": TRIAL, "outcome": "not_assessed", "reason": "calibration_off", "method": "none",
+                                 "coverage": "none"})
+        data["result"] = "not_assessed"
+        record = normalized(docs, [make(base) for make in entries_for])
+        result = assess(record, evidence.ProducerPacket("hw/checks/v1/trial", "d" * 64, data))
+        return result, result.release()
+
+    def test_without_a_recorded_test_the_obligation_is_unknown_and_blocks_a_production_release(self) -> None:
+        result, policy = self.released()
+        self.assertEqual(result.statuses[TRIAL].result, "unknown")
+        self.assertEqual({(f.code, f.severity) for f in policy.findings if f.obligation == TRIAL}, {("gate.unresolved", "error")})
+        self.assertIn(TRIAL, {f.obligation for f in policy.blocking})
+        self.assertNotIn("evidence.physical_claim", codes(result.findings), "the tool claimed no test")
+
+    def test_a_planned_test_outranks_the_producers_not_assessed(self) -> None:
+        planned = lambda base: acceptance.entry(base, "EV-003", {"PN": "TST-0001", "operation": "print"},  # noqa: E731
+                                                "physically_validated", "planned", obligation=TRIAL)
+        result, policy = self.released(planned)
+        self.assertEqual(result.statuses[TRIAL].result, "planned")
+        self.assertIn(TRIAL, {f.obligation for f in policy.blocking})
+
+    def test_once_the_test_is_recorded_the_release_passes_it(self) -> None:
+        tested = lambda base: acceptance.entry(base, "EV-003", {"PN": "TST-0001", "operation": "print"},  # noqa: E731
+                                               "physically_validated", obligation=TRIAL, version="v1", manifest_sha256=V1)
+        result, policy = self.released(tested)
+        self.assertEqual(result.statuses[TRIAL].result, "pass")
+        self.assertNotIn(TRIAL, {f.obligation for f in policy.blocking})
 
 
 class ReleasePolicy(unittest.TestCase):

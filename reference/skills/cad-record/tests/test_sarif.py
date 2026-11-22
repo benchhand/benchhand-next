@@ -166,6 +166,12 @@ class MappingTests(unittest.TestCase):
                 [result] = results_of([{"code": "x", "message": "m", "severity": "major", "outcome": outcome}])
                 self.assertEqual((result["kind"], result["level"]), (kind, level))
 
+    def test_a_not_assessed_finding_is_informational_and_quiet_never_a_pass(self) -> None:
+        item = {"code": "x", "message": "m", "severity": "major", "outcome": "not_assessed", "reason": "calibration_off"}
+        [result] = results_of([item])
+        self.assertEqual((result["kind"], result["level"]), ("informational", "none"))
+        self.assertEqual(schema_errors(sarif.document([item])), [])
+
     def test_no_outcome_or_an_unknown_one_leaves_kind_out(self) -> None:
         for extra in ({}, {"outcome": "maybe"}):
             with self.subTest(extra=extra):
