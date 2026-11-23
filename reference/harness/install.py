@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import sys
 from typing import NamedTuple
@@ -47,6 +48,39 @@ def installer_content(source: Path, harness: str, home: Path | None, rendered: s
         for resource in profile.get("resources", [])
     ]
     return (json.dumps(profile, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def strip_user_invocable(data: bytes) -> bytes:
+    """Drop the one top-level `user-invocable: false` line from SKILL.md front matter.
+
+    Plain byte handling, so an install needs no PyYAML and keeps every other byte and the line endings.
+    A file without the key is returned as is; any other form of the key raises.
+    """
+    lines = data.splitlines(keepends=True)
+    if not lines or lines[0].rstrip(b"\r\n") != b"---":
+        raise ValueError("expected YAML front matter at the top of the skill")
+    end = next((i for i, line in enumerate(lines[1:], 1) if line.rstrip(b"\r\n") == b"---"), None)
+    if end is None:
+        raise ValueError("front matter has no closing --- line")
+    # A quoted spelling is the same YAML key, so it counts as a hit and then fails the exact-form check.
+    hits = [i for i in range(1, end) if re.match(rb"""["']?user-invocable""", lines[i])]
+    if not hits:
+        return data
+    if len(hits) != 1 or lines[hits[0]].rstrip(b"\r\n") != b"user-invocable: false":
+        raise ValueError("expected exactly one `user-invocable: false` line in the front matter")
+    del lines[hits[0]]
+    return b"".join(lines)
+
+
+def skill_content(source: Path, harness: str) -> bytes | None:
+    """Every harness but Claude Code gets SKILL.md without the Claude-only `user-invocable` key."""
+    if harness == "claude" or source.name != "SKILL.md" or source.parent.parent != SKILLS:
+        return None
+    data = source.read_bytes()
+    stripped = strip_user_invocable(data)
+    return None if stripped == data else stripped
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -120,7 +154,7 @@ def file_pairs(harnesses: tuple[str, ...], scope: Path, home: Path | None = None
         skills_dir, agents_dir, commands_dir = harness_layout(harness, project, home)
         for source in skill_files():
             target = skills_dir / source.relative_to(SKILLS)
-            pairs.append(FilePair(source, target, relative_key(target, scope)))
+            pairs.append(FilePair(source, target, relative_key(target, scope), skill_content(source, harness)))
         agent_root = GENERATED / harness / "agents"
         for source in sorted(agent_root.iterdir()):
             if source.is_file():
