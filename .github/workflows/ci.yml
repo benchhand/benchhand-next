@@ -12,8 +12,9 @@ concurrency:
 permissions:
   contents: read
 
-# One job, one runner, one environment sync. Keep it that way: add steps here
-# instead of new jobs or matrix entries unless a check truly needs another OS.
+# The PR job runs unit, contract and API tests (docs/testing.md). End-to-end tests
+# with real kernels and FreeCAD get their own job when they exist: main, nightly and
+# PRs labelled `e2e`. Add a step only when it catches a failure that matters.
 jobs:
   check:
     runs-on: ubuntu-latest
