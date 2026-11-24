@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/record/manufacturing-findings.schema.json",
+  "title": "benchhand finding dispositions (hw/manufacturing/findings.yaml)",
+  "description": "The lead's dispositions of immutable producer findings. Each names the finding id and the exact producer bundle manifest it lives in; producer rows are never copied or edited here. Declining or waiving a finding never turns a mandatory fail or unknown into a pass: the original outcome is evaluated together with the permitted, scoped disposition",
+  "x-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "dispositions"
+  ],
+  "properties": {
+    "dispositions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/disposition"
+      }
+    }
+  },
+  "$defs": {
+    "disposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finding",
+        "producer",
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "finding": {
+          "$ref": "common.schema.json#/$defs/semantic_id"
+        },
+        "code": {
+          "$ref": "common.schema.json#/$defs/finding_code"
+        },
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bundle",
+            "manifest_sha256"
+          ],
+          "properties": {
+            "bundle": {
+              "$ref": "common.schema.json#/$defs/project_path",
+              "description": "the producer bundle directory, project-relative"
+            },
+            "manifest_sha256": {
+              "$ref": "common.schema.json#/$defs/sha256"
+            }
+          }
+        },
+        "status": {
+          "enum": [
+            "open",
+            "resolved",
+            "accepted_waiver",
+            "declined"
+          ]
+        },
+        "reason": {
+          "$ref": "common.schema.json#/$defs/text"
+        },
+        "decision": {
+          "$ref": "common.schema.json#/$defs/decision"
+        },
+        "replacement_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/evidence_id"
+          }
+        },
+        "waiver": {
+          "$ref": "common.schema.json#/$defs/waiver"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "accepted_waiver"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "waiver",
+              "decision"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "waiver"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "declined"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "decision"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "replacement_evidence"
+                ]
+              },
+              {
+                "required": [
+                  "decision"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "dispositions": [
+        {
+          "finding": "overhang_1",
+          "producer": {
+            "bundle": "hw/checks/v1/TST-0001",
+            "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "status": "accepted_waiver",
+          "reason": "trial print",
+          "decision": "DR-001",
+          "waiver": {
+            "decision": "DR-001",
+            "subject": {
+              "PN": "TST-0001"
+            },
+            "criterion": "creep",
+            "operating_envelope": "below 30 deg_C",
+            "until_change": "any load change",
+            "reason": "trial",
+            "consequence": "sag",
+            "authority": "lead"
+          }
+        }
+      ]
+    }
+  ]
+}

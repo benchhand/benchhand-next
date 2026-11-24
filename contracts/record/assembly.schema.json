@@ -1,0 +1,1703 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/record/assembly.schema.json",
+  "title": "benchhand assembly record (hw/assembly.yaml)",
+  "x-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subassemblies",
+    "joints"
+  ],
+  "properties": {
+    "operations": {
+      "description": "Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assembly_operation"
+          }
+        },
+        {
+          "$ref": "common.schema.json#/$defs/fact_unknown"
+        }
+      ]
+    },
+    "occurrences": {
+      "description": "Explicit placements of part definitions; a PN listed in a subassembly's parts is one implicit occurrence at the identity placement instead",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "PN"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/occurrence_id"
+          },
+          "PN": {
+            "$ref": "common.schema.json#/$defs/pn"
+          },
+          "placement": {
+            "$ref": "#/$defs/placement"
+          }
+        }
+      }
+    },
+    "profiles": {
+      "description": "Reusable periodic tables a periodic_table coupling evaluates, by name",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/profile"
+      }
+    },
+    "mechanisms": {
+      "description": "Shared mechanism parameters whose outputs several slider_crank couplings follow",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/mechanism"
+      }
+    },
+    "subassemblies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "parts"
+            ]
+          },
+          {
+            "required": [
+              "occurrences"
+            ]
+          }
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "common.schema.json#/$defs/pn"
+            }
+          },
+          "occurrences": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "common.schema.json#/$defs/occurrence_ref"
+            }
+          }
+        }
+      }
+    },
+    "joints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "parent",
+          "child",
+          "axis",
+          "origin",
+          "min",
+          "max"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "nominal"
+            ]
+          },
+          {
+            "required": [
+              "coupling"
+            ]
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "fixed"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "nominal"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "prismatic"
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "torque"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "torque_path"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "torque_path"
+              ]
+            },
+            "then": {
+              "required": [
+                "torque"
+              ],
+              "properties": {
+                "torque": {
+                  "const": "transmitted"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/joint_id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "revolute",
+              "prismatic",
+              "fixed"
+            ]
+          },
+          "parent": {
+            "$ref": "#/$defs/part_ref"
+          },
+          "child": {
+            "$ref": "#/$defs/part_ref"
+          },
+          "axis": {
+            "$ref": "common.schema.json#/$defs/vector"
+          },
+          "origin": {
+            "$ref": "common.schema.json#/$defs/vector"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "nominal": {
+            "description": "The value of an independent joint; a coupled joint has none",
+            "type": "number"
+          },
+          "coupling": {
+            "$ref": "#/$defs/coupling"
+          },
+          "torque": {
+            "description": "Whether the child carries drive torque. From stage parts on, every revolute declares it (none for a hand-positioned or free-running joint), and so does every fixed joint inside the drive train that a revolute not declared none starts; a fixed joint declared transmitted names its torque_path",
+            "type": "string",
+            "enum": [
+              "transmitted",
+              "none"
+            ]
+          },
+          "torque_path": {
+            "$ref": "#/$defs/torque_path"
+          }
+        }
+      }
+    },
+    "drawing": {
+      "$ref": "#/$defs/assembly_drawing"
+    }
+  },
+  "$defs": {
+    "joint_id": {
+      "type": "string",
+      "pattern": "^J-[0-9]{3}$"
+    },
+    "torque_path": {
+      "description": "What carries the drive torque across a torque: transmitted joint; required on a fixed joint, optional on a revolute driven through an unmodelled shaft. Hardware types (key, set_screw, pin) name their modelled occurrences in parts",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "key",
+            "set_screw",
+            "d_flat",
+            "press_fit",
+            "spline",
+            "clamp",
+            "pin",
+            "adhesive"
+          ]
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/part_ref"
+          }
+        },
+        "decision": {
+          "$ref": "common.schema.json#/$defs/decision"
+        }
+      }
+    },
+    "coupling": {
+      "description": "A dependent joint's law: its value derives from a driver joint",
+      "oneOf": [
+        {
+          "description": "q = ratio * q_driver + offset; ratio in dependent units per driver unit",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "driver",
+            "ratio"
+          ],
+          "properties": {
+            "type": {
+              "const": "linear"
+            },
+            "driver": {
+              "$ref": "#/$defs/joint_id"
+            },
+            "ratio": {
+              "type": "number"
+            },
+            "offset": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "description": "q = profile((q_driver + phase_deg) mod period_deg); the driver is revolute",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "driver",
+            "profile"
+          ],
+          "properties": {
+            "type": {
+              "const": "periodic_table"
+            },
+            "driver": {
+              "$ref": "#/$defs/joint_id"
+            },
+            "profile": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "phase_deg": {
+              "type": "number"
+            }
+          }
+        },
+        {
+          "description": "One output of a slider_crank mechanism: piston displacement (prismatic) or rod angle (revolute)",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "mechanism",
+            "output"
+          ],
+          "properties": {
+            "type": {
+              "const": "slider_crank"
+            },
+            "mechanism": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "output": {
+              "enum": [
+                "displacement",
+                "rod_angle"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "profile": {
+      "description": "Piecewise-linear periodic table: samples from 0 to period_deg with matching end values",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_unit",
+        "output_unit",
+        "period_deg",
+        "interpolation",
+        "samples"
+      ],
+      "properties": {
+        "input_unit": {
+          "const": "deg"
+        },
+        "output_unit": {
+          "enum": [
+            "mm",
+            "deg"
+          ]
+        },
+        "period_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 360
+        },
+        "interpolation": {
+          "const": "linear"
+        },
+        "samples": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+    "mechanism": {
+      "description": "A centred slider-crank: the driver turns the crank about crank_axis through origin_mm; the piston slides along bank_axis",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "driver",
+        "origin_mm",
+        "crank_axis",
+        "bank_axis",
+        "crank_radius_mm",
+        "rod_length_mm"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "type": {
+          "const": "slider_crank"
+        },
+        "driver": {
+          "$ref": "#/$defs/joint_id"
+        },
+        "origin_mm": {
+          "$ref": "common.schema.json#/$defs/vector"
+        },
+        "crank_axis": {
+          "$ref": "common.schema.json#/$defs/vector"
+        },
+        "bank_axis": {
+          "$ref": "common.schema.json#/$defs/vector"
+        },
+        "crank_radius_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "x-plausible": {
+            "max": 200
+          }
+        },
+        "rod_length_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "x-plausible": {
+            "max": 500
+          }
+        },
+        "phase_deg": {
+          "type": "number"
+        }
+      }
+    },
+    "occurrence_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "part_ref": {
+      "description": "An occurrence reference, or a PN that has exactly one occurrence",
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/pn"
+        },
+        {
+          "$ref": "common.schema.json#/$defs/occurrence_ref"
+        }
+      ]
+    },
+    "placement": {
+      "description": "Rest placement x -> R x + t: rotation about the definition's local origin, then translation (mm)",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "translation_mm": {
+          "$ref": "common.schema.json#/$defs/vector"
+        },
+        "rotation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "axis",
+            "angle_deg"
+          ],
+          "properties": {
+            "axis": {
+              "$ref": "common.schema.json#/$defs/vector"
+            },
+            "angle_deg": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "drawing_item": {
+      "description": "One assembly-drawing item row: a PN and, when it is placed more than once, the occurrences it stands for",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "PN"
+      ],
+      "properties": {
+        "item": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "PN": {
+          "$ref": "common.schema.json#/$defs/pn"
+        },
+        "occurrences": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/occurrence_ref"
+          }
+        }
+      }
+    },
+    "assembly_drawing": {
+      "description": "Assembly drawing intent: identity, views, presentation-only explode offsets, parts-list items, subassembly sheets and installation operations",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "rev",
+        "title",
+        "views",
+        "items"
+      ],
+      "properties": {
+        "number": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rev": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "enum": [
+            "modeled_mechanical_assembly",
+            "complete_assembly"
+          ]
+        },
+        "excludes": {
+          "description": "What a modelled scope leaves out, named on the drawing",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "views": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "direction"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*$"
+              },
+              "kind": {
+                "enum": [
+                  "assembled",
+                  "exploded"
+                ]
+              },
+              "direction": {
+                "enum": [
+                  "front",
+                  "back",
+                  "left",
+                  "right",
+                  "top",
+                  "bottom",
+                  "iso"
+                ]
+              }
+            }
+          }
+        },
+        "explode": {
+          "description": "Exploded-view offsets in mm, assembly frame; each occurrence also moves by its kinematic ancestors' offsets",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ref",
+              "offset_mm"
+            ],
+            "properties": {
+              "ref": {
+                "$ref": "#/$defs/part_ref"
+              },
+              "offset_mm": {
+                "$ref": "common.schema.json#/$defs/vector"
+              }
+            }
+          }
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/drawing_item"
+          }
+        },
+        "subassembly_sheets": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          }
+        }
+      }
+    },
+    "assembly_operation": {
+      "description": "One assembly operation. An installation step puts `part` into `into` along `direction` (in the receiving part's model frame) until the acceptance holds; the fit, insert or ring comes from the interface limit of the same kind. predecessors name the operations that must come first, closes the parts it encloses, and tool_access the tools that must reach. A tool name alone is display text: its reach stays unknown. path, when given, is the part's insertion path; without it the part travels in a straight line along direction, and checks report that default. edge_distance is a fastener, insert or heat-set joint's distance from its hole to the nearest edge against its sourced criterion",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "part"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$"
+        },
+        "kind": {
+          "enum": [
+            "press_fit",
+            "heat_set",
+            "retaining_ring",
+            "insert",
+            "fasten",
+            "join",
+            "close",
+            "adjust",
+            "inspect",
+            "disassemble"
+          ]
+        },
+        "part": {
+          "$ref": "#/$defs/part_ref"
+        },
+        "into": {
+          "$ref": "#/$defs/part_ref"
+        },
+        "interface": {
+          "$ref": "common.schema.json#/$defs/interface_id"
+        },
+        "direction": {
+          "$ref": "common.schema.json#/$defs/vector"
+        },
+        "acceptance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "features"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "seated",
+                "standoff",
+                "flush",
+                "engaged",
+                "torqued",
+                "adjusted",
+                "inspected"
+              ]
+            },
+            "features": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*$"
+              }
+            }
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "consumables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "verify_joint": {
+          "type": "string",
+          "pattern": "^J-[0-9]{3}$"
+        },
+        "predecessors": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          }
+        },
+        "closes": {
+          "description": "parts this operation encloses: no later operation reaches them",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/part_ref"
+          }
+        },
+        "tool_access": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tool"
+            ],
+            "properties": {
+              "tool": {
+                "type": "string",
+                "minLength": 1
+              },
+              "capability": {
+                "$ref": "common.schema.json#/$defs/profile_id"
+              },
+              "approach": {
+                "$ref": "common.schema.json#/$defs/vector"
+              },
+              "reach": {
+                "$ref": "common.schema.json#/$defs/quantity_fact"
+              },
+              "envelope": {
+                "$ref": "common.schema.json#/$defs/text_fact"
+              }
+            }
+          }
+        },
+        "engagement": {
+          "$ref": "common.schema.json#/$defs/quantity_fact"
+        },
+        "torque": {
+          "$ref": "common.schema.json#/$defs/quantity_fact"
+        },
+        "retention": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "service_access": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "edge_distance": {
+          "description": "The joint's edge distance: the criterion it must meet (property edge_distance, a length bound with its source) and the distance the design gives, a known length (an interval's lower end governs) or an unknown with its reason",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "criterion",
+            "distance"
+          ],
+          "properties": {
+            "criterion": {
+              "allOf": [
+                {
+                  "$ref": "common.schema.json#/$defs/criterion"
+                },
+                {
+                  "required": [
+                    "units"
+                  ],
+                  "properties": {
+                    "property": {
+                      "const": "edge_distance"
+                    },
+                    "operator": {
+                      "enum": [
+                        ">=",
+                        "between"
+                      ]
+                    },
+                    "units": {
+                      "enum": [
+                        "mm",
+                        "um",
+                        "m"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "distance": {
+              "$ref": "common.schema.json#/$defs/quantity_fact"
+            }
+          }
+        },
+        "path": {
+          "description": "The insertion path of `part`: its offsets in mm from the installed pose, in the receiving part's model frame, keeping the installed orientation. The part starts at start, passes via in order and arrives installed; the last leg runs along direction",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start"
+          ],
+          "properties": {
+            "start": {
+              "$ref": "common.schema.json#/$defs/vector"
+            },
+            "via": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "common.schema.json#/$defs/vector"
+              }
+            }
+          }
+        },
+        "inspection": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "press_fit",
+                  "heat_set",
+                  "retaining_ring"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "into",
+              "interface",
+              "direction",
+              "acceptance"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "insert",
+                  "fasten",
+                  "join"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "into",
+              "direction",
+              "acceptance"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "close"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "into",
+              "closes"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "adjust",
+                  "inspect"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "acceptance"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "disassemble"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "into",
+              "direction"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "close",
+                  "adjust",
+                  "inspect",
+                  "disassemble"
+                ]
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "edge_distance"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "path"
+            ]
+          },
+          "then": {
+            "required": [
+              "direction"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "press_fit",
+                  "heat_set",
+                  "retaining_ring",
+                  "insert",
+                  "fasten",
+                  "join",
+                  "close"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "occurrences": [
+        {
+          "id": "ring-base",
+          "PN": "LMP-0011",
+          "placement": {
+            "translation_mm": [
+              0,
+              0,
+              21.495
+            ],
+            "rotation": {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle_deg": 180
+            }
+          }
+        },
+        {
+          "id": "ring-elbow",
+          "PN": "LMP-0011",
+          "placement": {
+            "translation_mm": [
+              160,
+              -11.005,
+              40
+            ],
+            "rotation": {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle_deg": 90
+            }
+          }
+        },
+        {
+          "id": "ring-head",
+          "PN": "LMP-0011",
+          "placement": {
+            "translation_mm": [
+              360,
+              -8.505,
+              40
+            ],
+            "rotation": {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle_deg": 90
+            }
+          }
+        }
+      ],
+      "subassemblies": [
+        {
+          "id": "base_sub",
+          "title": "Base subassembly (base plate and pivot boss, its bushing)",
+          "parts": [
+            "LMP-0001",
+            "LMP-0008"
+          ]
+        },
+        {
+          "id": "arm_sub",
+          "title": "Arm subassembly (lower link, upper link, and head, with pins, bushing, insert, and rings)",
+          "parts": [
+            "LMP-0002",
+            "LMP-0003",
+            "LMP-0004",
+            "LMP-0005",
+            "LMP-0006",
+            "LMP-0007",
+            "LMP-0009",
+            "LMP-0010"
+          ],
+          "occurrences": [
+            "@ring-base",
+            "@ring-elbow",
+            "@ring-head"
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "J-001",
+          "type": "revolute",
+          "parent": "LMP-0001",
+          "child": "LMP-0002",
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "origin": [
+            0,
+            0,
+            40
+          ],
+          "min": -10,
+          "max": 80,
+          "nominal": 0,
+          "torque": "none"
+        },
+        {
+          "id": "J-002",
+          "type": "revolute",
+          "parent": "LMP-0002",
+          "child": "LMP-0003",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            160,
+            0,
+            40
+          ],
+          "min": -120,
+          "max": 0,
+          "nominal": -30,
+          "torque": "none"
+        },
+        {
+          "id": "J-003",
+          "type": "revolute",
+          "parent": "LMP-0003",
+          "child": "LMP-0004",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            360,
+            0,
+            40
+          ],
+          "min": -45,
+          "max": 45,
+          "nominal": 0,
+          "torque": "none"
+        },
+        {
+          "id": "J-004",
+          "type": "fixed",
+          "parent": "LMP-0002",
+          "child": "LMP-0005",
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "origin": [
+            0,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-005",
+          "type": "fixed",
+          "parent": "LMP-0002",
+          "child": "LMP-0006",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            160,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-006",
+          "type": "fixed",
+          "parent": "LMP-0003",
+          "child": "LMP-0007",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            360,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-007",
+          "type": "fixed",
+          "parent": "LMP-0001",
+          "child": "LMP-0008",
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "origin": [
+            0,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-008",
+          "type": "fixed",
+          "parent": "LMP-0004",
+          "child": "LMP-0009",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            360,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-009",
+          "type": "fixed",
+          "parent": "LMP-0004",
+          "child": "LMP-0010",
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "origin": [
+            430,
+            0,
+            50
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-010",
+          "type": "fixed",
+          "parent": "LMP-0005",
+          "child": "@ring-base",
+          "axis": [
+            0,
+            0,
+            1
+          ],
+          "origin": [
+            0,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-011",
+          "type": "fixed",
+          "parent": "LMP-0006",
+          "child": "@ring-elbow",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            160,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        },
+        {
+          "id": "J-012",
+          "type": "fixed",
+          "parent": "LMP-0007",
+          "child": "@ring-head",
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "origin": [
+            360,
+            0,
+            40
+          ],
+          "min": 0,
+          "max": 0,
+          "nominal": 0
+        }
+      ],
+      "drawing": {
+        "number": "LMP-ASM",
+        "rev": "X1",
+        "title": "Lamp arm assembly",
+        "scope": "modeled_mechanical_assembly",
+        "excludes": [
+          "lampholder and wiring (IF-005)",
+          "M6 mounting fasteners and feet (IF-004)"
+        ],
+        "views": [
+          {
+            "id": "assembled_front",
+            "kind": "assembled",
+            "direction": "front"
+          },
+          {
+            "id": "exploded_iso",
+            "kind": "exploded",
+            "direction": "iso"
+          }
+        ],
+        "explode": [
+          {
+            "ref": "LMP-0008",
+            "offset_mm": [
+              0,
+              0,
+              40
+            ]
+          },
+          {
+            "ref": "LMP-0002",
+            "offset_mm": [
+              0,
+              0,
+              75
+            ]
+          },
+          {
+            "ref": "LMP-0005",
+            "offset_mm": [
+              0,
+              0,
+              45
+            ]
+          },
+          {
+            "ref": "@ring-base",
+            "offset_mm": [
+              0,
+              0,
+              -96
+            ]
+          },
+          {
+            "ref": "LMP-0006",
+            "offset_mm": [
+              0,
+              40,
+              0
+            ]
+          },
+          {
+            "ref": "@ring-elbow",
+            "offset_mm": [
+              0,
+              -70,
+              0
+            ]
+          },
+          {
+            "ref": "LMP-0003",
+            "offset_mm": [
+              0,
+              0,
+              45
+            ]
+          },
+          {
+            "ref": "LMP-0007",
+            "offset_mm": [
+              0,
+              40,
+              0
+            ]
+          },
+          {
+            "ref": "@ring-head",
+            "offset_mm": [
+              0,
+              -70,
+              0
+            ]
+          },
+          {
+            "ref": "LMP-0004",
+            "offset_mm": [
+              60,
+              0,
+              0
+            ]
+          },
+          {
+            "ref": "LMP-0009",
+            "offset_mm": [
+              0,
+              35,
+              50
+            ]
+          },
+          {
+            "ref": "LMP-0010",
+            "offset_mm": [
+              50,
+              0,
+              -86.6
+            ]
+          }
+        ],
+        "items": [
+          {
+            "item": 1,
+            "PN": "LMP-0001"
+          },
+          {
+            "item": 2,
+            "PN": "LMP-0002"
+          },
+          {
+            "item": 3,
+            "PN": "LMP-0003"
+          },
+          {
+            "item": 4,
+            "PN": "LMP-0004"
+          },
+          {
+            "item": 5,
+            "PN": "LMP-0005"
+          },
+          {
+            "item": 6,
+            "PN": "LMP-0006"
+          },
+          {
+            "item": 7,
+            "PN": "LMP-0007"
+          },
+          {
+            "item": 8,
+            "PN": "LMP-0008"
+          },
+          {
+            "item": 9,
+            "PN": "LMP-0009"
+          },
+          {
+            "item": 10,
+            "PN": "LMP-0010"
+          },
+          {
+            "item": 11,
+            "PN": "LMP-0011",
+            "occurrences": [
+              "@ring-base",
+              "@ring-elbow",
+              "@ring-head"
+            ]
+          }
+        ],
+        "subassembly_sheets": [
+          "base_sub",
+          "arm_sub"
+        ]
+      },
+      "operations": [
+        {
+          "id": "heat_set_base_bushing",
+          "kind": "heat_set",
+          "part": "LMP-0008",
+          "into": "LMP-0001",
+          "interface": "IF-001",
+          "direction": [
+            0,
+            0,
+            -1
+          ],
+          "acceptance": {
+            "kind": "flush",
+            "features": [
+              "top_end",
+              "boss_top_face"
+            ]
+          }
+        },
+        {
+          "id": "heat_set_head_bushing",
+          "kind": "heat_set",
+          "part": "LMP-0009",
+          "into": "LMP-0004",
+          "interface": "IF-003",
+          "direction": [
+            0,
+            -1,
+            0
+          ],
+          "acceptance": {
+            "kind": "seated",
+            "features": [
+              "head_underside",
+              "counterbore_floor"
+            ]
+          }
+        },
+        {
+          "id": "heat_set_socket_insert",
+          "kind": "heat_set",
+          "part": "LMP-0010",
+          "into": "LMP-0004",
+          "interface": "IF-005",
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "acceptance": {
+            "kind": "flush",
+            "features": [
+              "installed_end",
+              "socket_boss_face"
+            ]
+          }
+        },
+        {
+          "id": "press_base_pin",
+          "kind": "press_fit",
+          "part": "LMP-0005",
+          "into": "LMP-0002",
+          "interface": "IF-001",
+          "direction": [
+            0,
+            0,
+            -1
+          ],
+          "tools": [
+            "Arbor press or pin punch"
+          ],
+          "acceptance": {
+            "kind": "standoff",
+            "features": [
+              "head_underside",
+              "hub_top_face"
+            ]
+          }
+        },
+        {
+          "id": "ring_base",
+          "kind": "retaining_ring",
+          "part": "@ring-base",
+          "into": "LMP-0005",
+          "interface": "IF-001",
+          "direction": [
+            0,
+            0,
+            1
+          ],
+          "tools": [
+            "External circlip pliers"
+          ],
+          "acceptance": {
+            "kind": "engaged",
+            "features": [
+              "ring_groove"
+            ]
+          },
+          "verify_joint": "J-001"
+        },
+        {
+          "id": "press_elbow_pin",
+          "kind": "press_fit",
+          "part": "LMP-0006",
+          "into": "LMP-0002",
+          "interface": "IF-002",
+          "direction": [
+            0,
+            -1,
+            0
+          ],
+          "tools": [
+            "Arbor press or pin punch"
+          ],
+          "acceptance": {
+            "kind": "standoff",
+            "features": [
+              "head_underside",
+              "cheek_face"
+            ]
+          }
+        },
+        {
+          "id": "ring_elbow",
+          "kind": "retaining_ring",
+          "part": "@ring-elbow",
+          "into": "LMP-0006",
+          "interface": "IF-002",
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "tools": [
+            "External circlip pliers"
+          ],
+          "acceptance": {
+            "kind": "engaged",
+            "features": [
+              "ring_groove"
+            ]
+          },
+          "verify_joint": "J-002"
+        },
+        {
+          "id": "press_head_pin",
+          "kind": "press_fit",
+          "part": "LMP-0007",
+          "into": "LMP-0003",
+          "interface": "IF-003",
+          "direction": [
+            0,
+            -1,
+            0
+          ],
+          "tools": [
+            "Arbor press or pin punch"
+          ],
+          "acceptance": {
+            "kind": "standoff",
+            "features": [
+              "head_underside",
+              "cheek_face"
+            ]
+          }
+        },
+        {
+          "id": "ring_head",
+          "kind": "retaining_ring",
+          "part": "@ring-head",
+          "into": "LMP-0007",
+          "interface": "IF-003",
+          "direction": [
+            0,
+            1,
+            0
+          ],
+          "tools": [
+            "External circlip pliers"
+          ],
+          "acceptance": {
+            "kind": "engaged",
+            "features": [
+              "ring_groove"
+            ]
+          },
+          "verify_joint": "J-003"
+        }
+      ]
+    }
+  ]
+}
