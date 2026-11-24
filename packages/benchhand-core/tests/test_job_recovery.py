@@ -19,7 +19,7 @@ from benchhand_contracts.models.jobs.job_schema import JobStatus
 from benchhand_core.jobs import JobError, JobService, JobSpec
 from benchhand_core.jobs.identity import process_identity
 from conftest import Pids
-from job_support import FAMILY, example_record, python
+from job_support import FAMILY, example_record, python, running, wait_until
 
 
 def write_record(project: Path, pids: Pids, job_id: str = "stale0000001", **overrides: object) -> Path:
@@ -76,6 +76,22 @@ def test_an_orphaned_job_is_reported_and_never_signalled(project: Path, pids: Pi
     assert path.exists()
 
 
+def test_a_supervisor_that_ended_but_was_not_reaped_does_not_keep_its_job_orphaned(
+    project: Path, pids: Pids
+) -> None:
+    zombie = subprocess.Popen([sys.executable, "-c", "pass"])  # ended, and nobody reaps it
+    try:
+        assert wait_until(lambda: not running(zombie.pid), 30)
+        identity = process_identity(zombie.pid)
+        assert identity is not None  # a zombie keeps its identity ...
+        path = write_record(project, pids, process={"pid": zombie.pid, "identity": identity})
+        recovery = JobService(project).recovery
+    finally:
+        zombie.wait()
+    assert recovery.removed == ("stale0000001",)  # ... but it no longer runs
+    assert not path.exists()
+
+
 def test_a_job_whose_processes_ended_after_startup_is_cancelled_without_signals(
     project: Path, pids: Pids
 ) -> None:
@@ -103,6 +119,14 @@ def test_records_that_cannot_be_judged_are_reported_and_left(project: Path, pids
     (runs / "invalid.json").write_text(json.dumps({"jobId": "invalid"}), encoding="utf-8")
     elsewhere = write_record(project, pids, "elsewhere0001", host="another-host")
     write_record(project, pids, "badtime00001", createdAt="yesterday")
+    python_names = {key: value for key, value in example_record().items() if key != "jobId"}
+    python_names["job_id"] = "pythonnames1"  # the field's name, not its wire name
+    invalid = {
+        "pythonnames1": python_names,
+        "extrafield01": example_record(jobId="extrafield01", unexpected=True),
+    }
+    for name, record in invalid.items():
+        (runs / f"{name}.json").write_text(json.dumps(record), encoding="utf-8")
     renamed = write_record(project, pids, "original0001")
     renamed.rename(renamed.with_name("renamed0001.json"))
     recovery = JobService(project).recovery
@@ -110,7 +134,9 @@ def test_records_that_cannot_be_judged_are_reported_and_left(project: Path, pids
         "badtime00001.json",
         "broken.json",
         "elsewhere0001.json",
+        "extrafield01.json",
         "invalid.json",
+        "pythonnames1.json",
         "renamed0001.json",
     ]
     assert recovery.removed == ()
@@ -134,12 +160,14 @@ def test_a_service_killed_outright_takes_its_jobs_with_it(project: Path, pids: P
     try:
         job_id = owner.stdout.readline().strip()
         child, grandchild = pids.family(marker)
-        pids.known.append(owner.pid)
+        record = json.loads((project / ".benchhand" / "runs" / f"{job_id}.json").read_text())
+        supervisor = record["process"]["pid"]
+        pids.known += [owner.pid, supervisor]
         owner.send_signal(signal.SIGKILL)  # nothing of the service can clean up
     finally:
         owner.wait()
         owner.stdout.close()
-    pids.assert_gone(child, grandchild)
+    pids.assert_gone(supervisor, child, grandchild)
     recovery = JobService(project).recovery
     assert recovery.removed == (job_id,)
     assert not (project / ".benchhand" / "runs" / f"{job_id}.json").exists()

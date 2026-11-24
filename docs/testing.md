@@ -9,6 +9,7 @@ A test or CI step exists to catch a real failure that someone would otherwise sh
 | Unit | One module's logic: flow transitions, CEL rules, record validation, fit maths, framing | `packages/*/tests/` | Every push and PR |
 | Contract | Schemas are valid, their examples validate, generated code matches `contracts/` | `tests/` | Every push and PR |
 | API | One public surface end to end in-process: an MCP tool call through the server, or a provider through the protocol host with a fake provider | `packages/*/tests/api/` | Every push and PR |
+| Wheel | A built wheel installs in a fresh venv and runs outside the checkout | `packages/*/tests/`, marked `wheel` | Every push and PR, as its own step (`just test-wheel`); the default `pytest` run skips them |
 | End to end | The lamp-arm project from GROUND to RELEASE through MCP, with real kernels and FreeCAD | `tests/e2e/` | On `main`, nightly, and on PRs labelled `e2e` |
 
 ## Rules

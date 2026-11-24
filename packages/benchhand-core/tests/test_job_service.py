@@ -159,6 +159,23 @@ def test_closing_the_service_cancels_running_jobs(project: Path, pids: Pids) -> 
     assert JobService(project).status(handle.job_id).status == JobStatus.cancelled
 
 
+def test_closing_stops_every_job_even_when_one_record_is_lost(project: Path, pids: Pids) -> None:
+    service = JobService(project, grace_seconds=0.2)
+    markers = [project / "first", project / "second"]
+    handles = [service.start(JobSpec("kernel/build", python(FAMILY, str(m)))) for m in markers]
+    family = [pids.family(marker) for marker in markers]
+    record = project / ".benchhand" / "runs" / f"{handles[0].job_id}.json"
+    saved = record.read_text()
+    record.unlink()
+    with pytest.raises(ExceptionGroup) as raised:
+        service.close()
+    assert [type(error) for error in raised.value.exceptions] == [UnknownJob]
+    pids.assert_gone(*family[0], *family[1])  # the lost record spared neither job
+    record.write_text(saved)
+    service.close()  # the kept outcome is written now
+    assert [service.status(h.job_id).status for h in handles] == [JobStatus.cancelled] * 2
+
+
 def test_list_jobs_and_unknown_ids(service: JobService) -> None:
     first = service.start(JobSpec("kernel/build", python("pass")))
     second = service.start(JobSpec("kernel/build", python("pass")))

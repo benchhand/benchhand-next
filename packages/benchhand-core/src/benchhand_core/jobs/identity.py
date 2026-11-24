@@ -1,7 +1,7 @@
 """Process identity and pid-reuse safety.
 
 The kernel reuses process ids, so a pid alone proves nothing once its process is gone. A recorded
-process runs only while some process has that pid and that identity.
+process runs only while some process has that pid and that identity and has not ended.
 
 Nothing here lets a caller signal a recorded process or group: checking an identity and then
 signalling leaves a window in which the pid can be reused. Only a process's own parent, which
@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
@@ -37,7 +38,13 @@ def _boot_id() -> str:
         return ""
 
 
-def _linux_identity(pid: int) -> str | None:
+@dataclass(frozen=True)
+class _Snapshot:
+    identity: str
+    zombie: bool  # ended, waiting for its parent to reap it
+
+
+def _linux_snapshot(pid: int) -> _Snapshot | None:
     try:
         stat = Path(f"/proc/{pid}/stat").read_text(encoding="ascii", errors="replace")
     except (FileNotFoundError, ProcessLookupError):
@@ -46,14 +53,15 @@ def _linux_identity(pid: int) -> str | None:
         raise Unsupported(f"cannot read /proc/{pid}/stat: {error}") from error
     # The command name may hold spaces and parentheses; the fields after the last ")" start at
     # field 3 (state), so field 22 (start time, in clock ticks after boot) is index 19.
-    return f"{_boot_id()}:{stat.rpartition(')')[2].split()[19]}"
+    fields = stat.rpartition(")")[2].split()
+    return _Snapshot(f"{_boot_id()}:{fields[19]}", fields[0] in ("Z", "X"))
 
 
-def _ps_identity(pid: int) -> str | None:
+def _ps_snapshot(pid: int) -> _Snapshot | None:
     ps = shutil.which("ps") or "/bin/ps"
     try:
         result = subprocess.run(
-            [ps, "-o", "lstart=", "-p", str(pid)],
+            [ps, "-o", "lstart=,state=", "-p", str(pid)],
             capture_output=True,
             text=True,
             env={**os.environ, "LC_ALL": "C"},
@@ -61,24 +69,31 @@ def _ps_identity(pid: int) -> str | None:
         )
     except OSError as error:
         raise Unsupported(f"no /proc and no usable ps ({error}): process identities unavailable") from error
-    started = " ".join(result.stdout.split())
-    if started:
-        return started
+    fields = result.stdout.split()  # the start time's words, then the state
+    if len(fields) > 1:
+        return _Snapshot(" ".join(fields[:-1]), fields[-1].startswith("Z"))
     if result.returncode == 1:
         return None
-    raise Unsupported(f"`ps -o lstart= -p {pid}` failed: {result.stderr.strip() or result.returncode}")
+    raise Unsupported(f"`ps -o lstart=,state= -p {pid}` failed: {result.stderr.strip() or result.returncode}")
+
+
+def _snapshot(pid: int) -> _Snapshot | None:
+    if pid <= 0:
+        raise ValueError(f"not a process id: {pid}")
+    if sys.platform.startswith("linux"):
+        return _linux_snapshot(pid)
+    return _ps_snapshot(pid)
 
 
 def process_identity(pid: int) -> str | None:
     """The start identity of process `pid`, or None when no process has that id. A zombie keeps
     its identity until it is reaped."""
-    if pid <= 0:
-        raise ValueError(f"not a process id: {pid}")
-    if sys.platform.startswith("linux"):
-        return _linux_identity(pid)
-    return _ps_identity(pid)
+    snapshot = _snapshot(pid)
+    return None if snapshot is None else snapshot.identity
 
 
 def process_runs(pid: int, recorded_identity: str) -> bool:
-    """Whether the recorded process still runs: some process has its pid and its identity."""
-    return process_identity(pid) == recorded_identity
+    """Whether the recorded process still runs: some process has its pid and its identity, and has
+    not ended. A zombie, which an init that does not reap leaves behind, has ended."""
+    snapshot = _snapshot(pid)
+    return snapshot is not None and snapshot.identity == recorded_identity and not snapshot.zombie

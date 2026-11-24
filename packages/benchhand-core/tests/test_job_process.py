@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 from benchhand_core.jobs.process import SupervisedProcess
 from conftest import Pids
-from job_support import FAMILY, LEAVER, LINGERER, python, wait_until
+from job_support import FAMILY, LEAVER, LINGERER, python, running, wait_until
 
 
 def spawn(argv: list[str], tmp_path: Path, grace_seconds: float = 0.5) -> SupervisedProcess:
@@ -85,6 +85,21 @@ def test_the_group_dies_when_its_parent_is_killed_outright(tmp_path: Path, pids:
         parent.wait()
         parent.stdout.close()
     pids.assert_gone(supervisor, child, grandchild)
+
+
+def test_the_group_still_dies_when_the_supervisor_is_killed_after_it_sent_terminate(
+    tmp_path: Path, pids: Pids
+) -> None:
+    marker = tmp_path / "pids"
+    process = spawn(python(FAMILY, str(marker)), tmp_path, grace_seconds=60)
+    child, grandchild = pids.family(marker)
+    pids.known.append(process.pid)
+    process._popen.send_signal(signal.SIGTERM)  # the supervisor sends TERM to the group, which ignores it
+    time.sleep(1)  # well past the supervisor's poll, well before its KILL
+    assert running(child) and running(grandchild)
+    process._popen.kill()  # the supervisor stalls and its owner's timeout kills it
+    pids.assert_gone(child, grandchild)
+    process.terminate()
 
 
 def test_a_command_that_ends_by_itself_reports_its_status(tmp_path: Path) -> None:

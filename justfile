@@ -3,7 +3,7 @@
 default: check
 
 # Lint, type-check and test everything, and check the generated contract code.
-check: lint typecheck test contracts-check
+check: lint typecheck test test-wheel contracts-check
 
 lint:
     uv run ruff check .
@@ -15,6 +15,10 @@ typecheck:
 
 test:
     uv run pytest
+
+# The tests that build a wheel and install it in a fresh venv (docs/testing.md).
+test-wheel:
+    uv run pytest -m wheel
 
 # Regenerate models, types, validators, fixtures and reference docs from contracts/ (ADR-0017).
 contracts:

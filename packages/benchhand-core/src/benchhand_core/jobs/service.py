@@ -321,10 +321,18 @@ class JobService:
         return self._write_final(record, _outcome_of(None, cancelled=True))
 
     def close(self) -> None:
-        """Cancel every running job of this service."""
+        """Stop every running job of this service. Each is stopped whatever its record holds, and
+        one that fails does not spare the others. The errors are raised together afterwards; a job
+        whose final record could not be written keeps its outcome, and the next call writes it."""
+        errors: list[Exception] = []
         with self._lock:
-            for job_id in list(self._live):
-                self.cancel(job_id)
+            for job_id, process in list(self._live.items()):
+                try:
+                    self._finish(job_id, process, cancelled=not process.exited())
+                except Exception as error:  # noqa: BLE001 - every job gets its turn
+                    errors.append(error)
+        if errors:
+            raise ExceptionGroup("jobs that could not be closed", errors)
 
     def __enter__(self) -> JobService:
         return self

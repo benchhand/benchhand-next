@@ -1,14 +1,16 @@
 """The run records of one project: <project>/.benchhand/runs/<jobId>.json.
 
-Each record is a JobRecord of contracts/jobs/job.schema.json, parsed into the generated model on
-every read. Files are replaced atomically. `locked` serialises record creation and cleanup across
-processes. A job id becomes part of a path only after it matches the contract's JobId, and a
-record belongs to the file that holds it only if its jobId is the file's name.
+Each record is a JobRecord of contracts/jobs/job.schema.json: every read validates the file's JSON
+against the contract, then parses it into the generated model. Files are replaced atomically.
+`locked` serialises record creation and cleanup across processes. A job id becomes part of a path
+only after it matches the contract's JobId, and a record belongs to the file that holds it only if
+its jobId is the file's name.
 """
 
 from __future__ import annotations
 
 import fcntl
+import json
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -72,10 +74,12 @@ class RecordStore:
         """Raises RecordError for a file that is no JobRecord or holds another job's id, and
         FileNotFoundError for a file that is gone."""
         try:
-            record = JobRecord.model_validate_json(path.read_text(encoding="utf-8"))
+            contents = json.loads(path.read_text(encoding="utf-8"))
+            validate(f"{JOB_CONTRACT}#/$defs/JobRecord", contents)
+            record = JobRecord.model_validate(contents)
         except FileNotFoundError:
             raise
-        except (OSError, ValueError) as error:  # a pydantic ValidationError is a ValueError
+        except (OSError, ValueError) as error:  # ContractViolation and pydantic's error are ValueErrors
             raise RecordError(f"unreadable run record {path} ({type(error).__name__}: {error})") from error
         if record.job_id != path.stem:
             raise RecordError(f"run record {path} holds job {record.job_id!r}, not {path.stem!r}")

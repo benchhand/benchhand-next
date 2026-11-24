@@ -33,6 +33,7 @@ with JobService(Path(sys.argv[2])) as service:
 """
 
 
+@pytest.mark.wheel
 @pytest.mark.skipif(UV is None, reason="needs uv")
 def test_the_installed_wheel_runs_a_job_without_a_checkout(tmp_path: Path) -> None:
     assert UV is not None

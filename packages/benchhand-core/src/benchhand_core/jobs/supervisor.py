@@ -13,7 +13,8 @@ The supervisor reports on the status fd whether the command started: `started`, 
 the whole group when the command ends, when its owner ends, however abruptly, and `grace` seconds
 after it was asked to stop; at the first request it sends TERM to the group. It exits with the
 command's status, or dies of the same signal. Should the supervisor itself be killed outright, the
-anchor sees it go and kills the group.
+anchor sees it go and kills the group; the anchor ignores TERM, INT and HUP so that a stop request
+to the group cannot take the anchor away before then.
 """
 
 from __future__ import annotations
@@ -63,7 +64,7 @@ def _hold_group(supervisor: int, status_fd: int) -> None:
     """The anchor: lead a process group, and kill it when the supervisor is gone."""
     os.close(status_fd)
     for sig in STOP_SIGNALS:
-        signal.signal(sig, signal.SIG_DFL)
+        signal.signal(sig, signal.SIG_IGN)  # a stop request to the group must not end the anchor
     os.setpgid(0, 0)
     while os.getppid() == supervisor:
         time.sleep(ANCHOR_POLL_SECONDS)

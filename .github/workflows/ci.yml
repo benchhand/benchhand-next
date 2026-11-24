@@ -38,6 +38,8 @@ jobs:
         working-directory: ui
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run pytest
+      - name: Built wheels run outside the checkout
+        run: uv run pytest -m wheel
       - name: TypeScript types, the generated contract types included
         run: just typecheck
       - name: Generated contract code is current; no breaking change without a major bump (ADR-0017)
