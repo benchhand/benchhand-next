@@ -2,3 +2,8 @@
 # Change `repo` once at the repo swap.
 repo = "benchhand/benchhand-next"
 image = "ghcr.io/benchhand/benchhand-next"
+
+# The prototype commit (benchhand/benchhand main) whose behaviour this repo follows.
+# Advance it after porting the changes that `just reference-changes` lists.
+reference_repo = "benchhand/benchhand"
+reference_commit = "412b5d9ae2faa420f909c1f50cc98a696651539f"

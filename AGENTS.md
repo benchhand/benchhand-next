@@ -5,3 +5,5 @@
 - `reference/` holds the prototype's tests and fixtures as a behavioural oracle. Don't edit it. Port its cases into new tests instead.
 - Keep functions under the ruff complexity limits. They are enforced, not ratcheted.
 - Run `just check` before committing.
+- Subagents: set the model explicitly on every launch, and never let a child inherit one. Use the strongest model for contracts and core boundaries, a cheaper model for work a contract or test bounds, and a different model family for review.
+- The prototype in `benchhand/benchhand` keeps changing. `release.toml` `reference_commit` records the last commit whose behaviour is reflected here. Run `just reference-changes` to list what landed since, and port the relevant behaviour (ADR-0015).
