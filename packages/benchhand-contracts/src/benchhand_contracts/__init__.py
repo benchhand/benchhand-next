@@ -4,6 +4,7 @@ The stable API:
 
 - ``validate(schema_id, instance)`` raises ``ContractViolation`` when an instance doesn't match the
   contract with that ``$id``, and ``UnknownSchemaError`` when no packaged contract has the id.
+  ``violations(schema_id, instance)`` returns every violation instead, the one ``validate`` raises first.
 - ``benchhand_contracts.models.<dir>.<name>_schema`` holds the pydantic models of
   ``contracts/<dir>/<name>.schema.json``, for example ``benchhand_contracts.models.provider.protocol_schema``.
 - ``Finding`` is the model of ``contracts/common/finding.schema.json``.
@@ -13,6 +14,6 @@ The schemas ship as package data in ``benchhand_contracts/schemas`` and the conf
 """
 
 from .models.common.finding_schema import BenchhandFinding as Finding
-from .validation import ContractViolation, UnknownSchemaError, validate
+from .validation import ContractViolation, UnknownSchemaError, validate, violations
 
-__all__ = ["ContractViolation", "Finding", "UnknownSchemaError", "validate"]
+__all__ = ["ContractViolation", "Finding", "UnknownSchemaError", "validate", "violations"]

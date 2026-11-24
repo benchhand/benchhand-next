@@ -8,15 +8,26 @@ from importlib.resources import files
 from typing import Any
 
 import pytest
-from benchhand_contracts import ContractViolation, UnknownSchemaError, validate
+from benchhand_contracts import ContractViolation, UnknownSchemaError, validate, violations
 
-MANIFEST_ID = "https://benchhand.github.io/benchhand/contracts/provider/manifest.schema.json"
+CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
+MANIFEST_ID = f"{CONTRACTS}provider/manifest.schema.json"
 HOOK_KIND_ID = "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/HookKind"
 
 
+def _schema_text(rel_path: str) -> str:
+    return (files("benchhand_contracts") / "schemas" / rel_path).read_text(encoding="utf-8")
+
+
+def _resolve(document: Any, pointer: str) -> Any:
+    for part in pointer.split("/")[1:]:
+        part = part.replace("~1", "/").replace("~0", "~")
+        document = document[int(part)] if isinstance(document, list) else document[part]
+    return document
+
+
 def _manifest_example() -> dict[str, Any]:
-    path = files("benchhand_contracts") / "schemas" / "provider" / "manifest.schema.json"
-    return copy.deepcopy(json.loads(path.read_text(encoding="utf-8"))["examples"][0])
+    return copy.deepcopy(json.loads(_schema_text("provider/manifest.schema.json"))["examples"][0])
 
 
 def test_a_valid_instance_passes() -> None:
@@ -31,7 +42,23 @@ def test_a_violation_carries_the_instance_pointer_and_schema_path() -> None:
         validate(MANIFEST_ID, manifest)
     assert caught.value.schema_id == MANIFEST_ID
     assert caught.value.pointer == "/hooks/0/kind"
-    assert caught.value.schema_path.endswith("/enum")
+    # schema_path is where the failing keyword is, past the $ref that led to it.
+    resource, _, pointer = caught.value.schema_path.partition("#")
+    protocol = json.loads(_schema_text("provider/protocol.schema.json"))
+    assert resource == f"{CONTRACTS}provider/protocol.schema.json"
+    assert _resolve(protocol, pointer) is protocol["$defs"]["HookKind"]["enum"]
+
+
+def test_violations_lists_every_violation_with_the_most_relevant_first() -> None:
+    manifest = _manifest_example()
+    del manifest["name"]
+    manifest["hooks"][0]["kind"] = "nonsense"
+    found = violations(MANIFEST_ID, manifest)
+    assert {violation.pointer for violation in found} == {"", "/hooks/0/kind"}
+    with pytest.raises(ContractViolation) as caught:
+        validate(MANIFEST_ID, manifest)
+    assert (caught.value.pointer, caught.value.message) == (found[0].pointer, found[0].message)
+    assert violations(MANIFEST_ID, _manifest_example()) == []
 
 
 def test_an_unknown_schema_id_is_an_error() -> None:

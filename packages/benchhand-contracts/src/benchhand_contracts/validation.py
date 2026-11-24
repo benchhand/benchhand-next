@@ -35,7 +35,9 @@ class ContractViolation(ValueError):
         self.pointer = pointer
         """JSON pointer (RFC 6901) to the offending value in the instance; ``""`` is the whole instance."""
         self.schema_path = schema_path
-        """Keyword path from the schema at ``schema_id`` to the failing keyword, through any ``$ref``."""
+        """Where the failing keyword is, after following every ``$ref``: the ``$id`` of the schema that
+        holds it and a JSON pointer, such as ``…/record/common.schema.json#/$defs/revision/pattern``.
+        ``""`` for a NaN or Infinity."""
         self.message = message
 
 
@@ -45,13 +47,26 @@ class UnknownSchemaError(LookupError):
 
 def validate(schema_id: str, instance: Any) -> None:
     """Raise :class:`ContractViolation` unless ``instance`` matches the schema at ``schema_id``."""
+    found = violations(schema_id, instance)
+    if found:
+        raise found[0]
+
+
+def violations(schema_id: str, instance: Any) -> list[ContractViolation]:
+    """Every way ``instance`` breaks the schema at ``schema_id``, the most relevant first; ``[]`` if none.
+
+    A NaN or Infinity is the only violation reported, since the schema can't judge one."""
     validator = _validator(schema_id)
     pointer = _non_finite_number(instance)
     if pointer is not None:
-        raise ContractViolation(schema_id, pointer, "", "NaN and Infinity are not JSON numbers")
-    error = best_match(validator.iter_errors(instance))
-    if error is not None:
-        raise _violation(schema_id, error)
+        return [ContractViolation(schema_id, pointer, "", "NaN and Infinity are not JSON numbers")]
+    errors = list(validator.iter_errors(instance))
+    if not errors:
+        return []
+    first = best_match(errors)
+    rest = [best_match([error]) for error in errors if error is not first]
+    rest.sort(key=lambda error: _pointer(error.absolute_path))
+    return [_violation(schema_id, error) for error in [first, *rest]]
 
 
 @cache
@@ -133,9 +148,39 @@ def _violation(schema_id: str, error: ValidationError) -> ContractViolation:
     return ContractViolation(
         schema_id=schema_id,
         pointer=_pointer(error.absolute_path),
-        schema_path=_pointer(error.absolute_schema_path),
+        schema_path=_keyword_location(error),
         message=error.message,
     )
+
+
+def _keyword_location(error: ValidationError) -> str:
+    """The ``$id`` and JSON pointer of the failing keyword. jsonschema leaves ``$ref`` out of an error's
+    schema path, so the subschema that failed is found by identity among the loaded contracts."""
+    location = _schema_locations().get(id(error.schema))
+    if location is None or not isinstance(error.validator, str):
+        return ""
+    return location + _pointer([error.validator])
+
+
+@cache
+def _schema_locations() -> dict[int, str]:
+    """``id()`` of every subschema of the packaged contracts -> its ``$id#pointer``."""
+    locations: dict[int, str] = {}
+    for uri in _registry():
+        _index_schema(_registry().contents(uri), f"{uri}#", locations)
+    return locations
+
+
+def _index_schema(node: Any, location: str, locations: dict[int, str]) -> None:
+    if isinstance(node, dict):
+        locations[id(node)] = location
+        children: Iterable[tuple[str | int, Any]] = node.items()
+    elif isinstance(node, list):
+        children = enumerate(node)
+    else:
+        return
+    for key, child in children:
+        _index_schema(child, location + _pointer([key]), locations)
 
 
 def _pointer(parts: Iterable[str | int]) -> str:
