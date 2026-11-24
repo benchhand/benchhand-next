@@ -1,0 +1,7 @@
+{"probe": "capabilities", "time": 1795508019.008297, "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}
+{"probe": "image", "time": 1795508022.1596, "bytes": 7855, "path": "/private/tmp/probe/claude/probe.png", "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}
+{"probe": "progress", "time": 1795508030.815107, "seconds": 5, "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}
+{"probe": "form", "time": 1795508033.1318731, "error": "NoBackChannelError(-32600, \"Cannot send 'elicitation/create': this transport context has no back-channel for server-initiated requests.\", None)", "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}
+{"probe": "app", "time": 1795508036.650979, "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}
+{"probe": "timeout-start", "time": 1795508039.84846, "seconds": 75, "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}
+{"probe": "timeout-end", "time": 1795508114.8512058, "seconds": 75, "protocol_version": "2026-07-28", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {"list_changed": true}}}

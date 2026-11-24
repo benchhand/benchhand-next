@@ -1,0 +1,10 @@
+{"probe": "capabilities", "time": 1795508026.026541, "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "image", "time": 1795508026.041277, "bytes": 7855, "path": "/private/tmp/probe/opencode/probe.png", "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "progress", "time": 1795508031.092643, "seconds": 5, "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "form", "time": 1795508113.518104, "error": "MCPError(-32000, 'Connection closed', None)", "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "capabilities", "time": 1795508178.064354, "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "image", "time": 1795508182.993492, "bytes": 7855, "path": "/private/tmp/probe/opencode/probe.png", "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "progress", "time": 1795508192.2114801, "seconds": 5, "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "form", "time": 1795508282.8383958, "error": "MCPError(-32000, 'Connection closed', None)", "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "app", "time": 1795508333.40067, "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}
+{"probe": "timeout-start", "time": 1795508344.517735, "seconds": 75, "protocol_version": "2025-11-25", "client_capabilities": {"elicitation": {"form": {}, "url": {}}, "roots": {}}}

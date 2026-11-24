@@ -1,0 +1,10 @@
+{"probe": "capabilities", "time": 1795508028.09159, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "image", "time": 1795508028.131356, "bytes": 7855, "path": "/private/tmp/probe/pi/probe.png", "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "progress", "time": 1795508033.186273, "seconds": 5, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "form", "time": 1795508033.219305, "error": "MCPError(-32601, 'Method not found: elicitation/create', None)", "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "app", "time": 1795508033.2460642, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "timeout-start", "time": 1795508033.276712, "seconds": 75, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "progress", "time": 1795508117.181876, "seconds": 5, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "form", "time": 1795508117.7164092, "error": "MCPError(-32601, 'Method not found: elicitation/create', None)", "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "app", "time": 1795508117.997664, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}
+{"probe": "timeout-start", "time": 1795508118.247801, "seconds": 75, "protocol_version": "2025-11-25", "client_capabilities": {"roots": {}}}

@@ -1,0 +1,7 @@
+{"probe": "capabilities", "time": 1795508023.375369, "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
+{"probe": "image", "time": 1795508026.898686, "bytes": 7855, "path": "/private/tmp/probe/codex/probe.png", "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
+{"probe": "progress", "time": 1795508036.2756522, "seconds": 5, "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
+{"probe": "form", "time": 1795508039.566449, "action": "cancel", "content": null, "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
+{"probe": "app", "time": 1795508043.0578601, "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
+{"probe": "timeout-start", "time": 1795508046.911826, "seconds": 75, "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
+{"probe": "timeout-end", "time": 1795508121.913858, "seconds": 75, "protocol_version": "2025-06-18", "client_capabilities": {"experimental": {"codex/auth-change": {}}, "elicitation": {"form": {}, "url": {}}}}
