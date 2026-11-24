@@ -18,7 +18,7 @@ class MakeBuy(Enum):
 
 class BenchhandEbomRowHwBomCsv(ContractModel):
     """
-    One hw/bom.csv row. The column order is the property order: the required columns, then optionally all seven procurement columns together. An empty cell is null
+    One hw/bom.csv row. The column order is the property order: the required columns, then optionally all seven procurement columns together. An empty cell is null, so a text value is never empty
     """
 
     model_config = ConfigDict(
@@ -30,13 +30,13 @@ class BenchhandEbomRowHwBomCsv(ContractModel):
     """
     A part number
     """
-    rev: Annotated[str | None, Field(pattern="^(X[1-9][0-9]*|[A-HJ-NPRTUVWY])?$")]
+    rev: Annotated[str | None, Field(pattern="^(X[1-9][0-9]*|[A-HJ-NPRTUVWY])$")]
     qty: Annotated[int, Field(ge=1)]
-    title: str | None
-    material: str | None
+    title: Annotated[str | None, Field(min_length=1)]
+    material: Annotated[str | None, Field(min_length=1)]
     process: common_schema.PrimaryProcess | None
     make_buy: MakeBuy
-    supplier: str | None
+    supplier: Annotated[str | None, Field(min_length=1)]
     mass: Annotated[float | None, Field(gt=0.0, le=10000000.0)]
     """
     grams, copied from the part mass_target
@@ -45,9 +45,9 @@ class BenchhandEbomRowHwBomCsv(ContractModel):
     """
     what qty counts; the BOM counts STEP instances
     """
-    designation: str | None = None
-    manufacturer: str | None = None
-    manufacturer_part_number: str | None = None
-    supplier_part_number: str | None = None
-    specification_reference: str | None = None
-    specification_revision: str | None = None
+    designation: Annotated[str | None, Field(min_length=1)] = None
+    manufacturer: Annotated[str | None, Field(min_length=1)] = None
+    manufacturer_part_number: Annotated[str | None, Field(min_length=1)] = None
+    supplier_part_number: Annotated[str | None, Field(min_length=1)] = None
+    specification_reference: Annotated[str | None, Field(min_length=1)] = None
+    specification_revision: Annotated[str | None, Field(min_length=1)] = None

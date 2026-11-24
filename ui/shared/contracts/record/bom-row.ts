@@ -2,7 +2,7 @@
 // Source: contracts/record/bom-row.schema.json
 
 /**
- * One hw/bom.csv row. The column order is the property order: the required columns, then optionally all seven procurement columns together. An empty cell is null
+ * One hw/bom.csv row. The column order is the property order: the required columns, then optionally all seven procurement columns together. An empty cell is null, so a text value is never empty
  */
 export interface BenchhandEBOMRowHwBomCsv {
   level: number;

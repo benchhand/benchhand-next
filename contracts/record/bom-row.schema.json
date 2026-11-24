@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/record/bom-row.schema.json",
   "title": "benchhand EBOM row (hw/bom.csv)",
-  "description": "One hw/bom.csv row. The column order is the property order: the required columns, then optionally all seven procurement columns together. An empty cell is null",
+  "description": "One hw/bom.csv row. The column order is the property order: the required columns, then optionally all seven procurement columns together. An empty cell is null, so a text value is never empty",
   "x-version": "1.0.0",
   "type": "object",
   "additionalProperties": false,
@@ -31,7 +31,7 @@
         "string",
         "null"
       ],
-      "pattern": "^(X[1-9][0-9]*|[A-HJ-NPRTUVWY])?$"
+      "pattern": "^(X[1-9][0-9]*|[A-HJ-NPRTUVWY])$"
     },
     "qty": {
       "type": "integer",
@@ -41,13 +41,15 @@
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "material": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "process": {
       "anyOf": [
@@ -74,7 +76,8 @@
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "mass": {
       "description": "grams, copied from the part mass_target",
@@ -98,37 +101,43 @@
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "manufacturer": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "manufacturer_part_number": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "supplier_part_number": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "specification_reference": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     },
     "specification_revision": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1
     }
   },
   "dependentRequired": {
