@@ -62,6 +62,9 @@ def manufacturing(name: str) -> DocumentSpec:
 
 
 def guideline(stem: str) -> DocumentSpec:
+    """The guideline set in guidelines/<stem>.yaml; `stem` is one file name, as the loader's scan finds."""
+    if not stem or stem in (".", "..") or any(char in stem for char in "/\\\0"):
+        raise ValueError(f"{stem!r} is not a guideline file stem; expected one file name without a directory")
     return DocumentSpec(f"{GUIDELINES_DIR}/{stem}.yaml", "manufacturing-guideline", "yaml", Guideline)
 
 

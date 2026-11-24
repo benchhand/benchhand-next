@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import pydantic
 from benchhand_contracts import ContractViolation
 from benchhand_contracts.base import ContractModel
 
@@ -150,7 +151,25 @@ def _decision_front(path: str, data: Any) -> Any:
     found = contracts.violations(documents.DECISION_CONTRACT, data)
     if found:
         raise RecordSchemaError(path, found)
-    return DecisionFrontMatter.model_validate(data).root
+    return _model(path, documents.DECISION_CONTRACT, DecisionFrontMatter, data).root
+
+
+def _model(path: str, contract: str, model: type[pydantic.BaseModel], data: Any, pointer: str = "") -> Any:
+    """`data`, which meets its contract, as the contract's generated model. A model that refuses it anyway is
+    a schema error of the file, not a crash."""
+    try:
+        return model.model_validate(data)
+    except pydantic.ValidationError as error:
+        schema_id = contracts.schema_id(contract)
+        found = [
+            ContractViolation(schema_id, pointer + _pointer(item["loc"]), "", item["msg"])
+            for item in error.errors()
+        ]
+        raise RecordSchemaError(path, found) from error
+
+
+def _pointer(parts: tuple[str | int, ...]) -> str:
+    return "".join("/" + str(part).replace("~", "~0").replace("/", "~1") for part in parts)
 
 
 # --- reading -----------------------------------------------------------------------------------------
@@ -181,8 +200,10 @@ def read_document(root: Path, spec: DocumentSpec) -> Any:
     data = _parse(spec, _text(root, spec.path))
     check_document(spec, data)
     if spec.format == "csv":
-        return [spec.model.model_validate(row) for row in data]
-    return spec.model.model_validate(data)
+        return [
+            _model(spec.path, spec.contract, spec.model, row, f"/{index}") for index, row in enumerate(data)
+        ]
+    return _model(spec.path, spec.contract, spec.model, data)
 
 
 def read_decision(root: Path, file_name: str) -> Decision:
@@ -320,37 +341,48 @@ def _on_disk(root: Path, spec: DocumentSpec) -> Any:
 
 
 def _render(root: Path, spec: DocumentSpec, document: Document) -> str | None:
-    """The new text of `spec`'s file, after checking `document`; None when the file already states it."""
+    """The new text of `spec`'s file, after checking `document` and, for a part, that its directory is its
+    PN; None when the file already states it."""
     data = _as_data(spec, document)
     check_document(spec, data)
+    if spec.model is Part and spec != documents.part(data["PN"]):
+        message = f"PN {data['PN']} is saved as {spec.path}; a part directory is named after its PN"
+        raise RecordError(spec.path, message, code="part.directory_mismatch")
     current = _on_disk(root, spec)
     if current is not None and same(data, current):
         return None
-    if spec.format == "csv":
+    if spec.format == "yaml":
+        return render_yaml(ordered_like(data, current))
+    try:
         return render_csv(data, contracts.schema(spec.contract))
-    return render_yaml(ordered_like(data, current))
+    except FormatError as error:
+        raise RecordError(spec.path, str(error), code="record.csv_columns") from error
 
 
-def _render_part(root: Path, pn: str, part: Part) -> str | None:
-    spec = documents.part(pn)
-    text = _render(root, spec, part)
-    if part.pn != pn:
-        message = f"PN {part.pn} is saved under {pn}; a part directory is named after its PN"
-        raise RecordError(spec.path, message, code="part.directory_mismatch")
-    return text
+def _check_one_file_per_decision(root: Path, key: str, path: str) -> None:
+    """Refuse to write `path` beside another DR file of the same id: renaming one is not a save."""
+    directory = root / documents.DECISIONS_DIR
+    others = sorted(
+        other.name
+        for other in (directory.glob(f"{key}-*.md") if directory.is_dir() else [])
+        if DECISION_FILE.fullmatch(other.name) and documents.decision_path(other.name) != path
+    )
+    if others:
+        message = f"{key} is also the id of {others[0]}; a slug changes by renaming that file, not by a save"
+        raise RecordError(path, message, code="decision.duplicate")
 
 
 def _render_decision(root: Path, key: str, decision: Decision) -> tuple[str, str | None]:
-    """The decision file's path and new text (None when unchanged), after checking its front matter and
-    that its id is `key`, the id the record holds it under."""
+    """The decision file's path and new text (None when unchanged), after checking its front matter, that
+    its id is `key`, the id the record holds it under, and that no other file holds that id."""
     path = documents.decision_path(f"{key}-{decision.slug}.md")
     _check_decision_name(path, decision.slug)
     front = as_json(decision.front)
     _decision_front(path, front)
-    if decision.id != key:
-        raise RecordError(
-            path, f"front matter id {decision.id} is saved as {key}", code="decision.id_mismatch"
-        )
+    if front["id"] != key:
+        message = f"front matter id {front['id']} is saved as {key}"
+        raise RecordError(path, message, code="decision.id_mismatch")
+    _check_one_file_per_decision(root, key, path)
     try:
         current_front, current_body = split_front_matter(_text(root, path))
     except (RecordError, FormatError):
@@ -378,7 +410,8 @@ def _record_documents(record: Record) -> list[tuple[DocumentSpec, Document]]:
 
 def _record_files(root: Path, record: Record) -> list[tuple[str, str | None]]:
     files = [(spec.path, _render(root, spec, document)) for spec, document in _record_documents(record)]
-    files.extend((documents.part(pn).path, _render_part(root, pn, part)) for pn, part in record.parts.items())
+    parts = [(documents.part(pn), part) for pn, part in record.parts.items()]
+    files.extend((spec.path, _render(root, spec, part)) for spec, part in parts)
     files.extend(_render_decision(root, key, decision) for key, decision in record.decisions.items())
     return files
 
@@ -397,7 +430,7 @@ def _replace(root: Path, path: str, text: str) -> None:
 
 
 def save_document(root: Path, spec: DocumentSpec, document: Document) -> None:
-    """Write one YAML document or the rows of one CSV file, after checking it against its contract."""
+    """Write one YAML document or the rows of one CSV file, after the checks `save_record` makes of it."""
     text = _render(root, spec, document)
     if text is not None:
         _replace(root, spec.path, text)
@@ -405,7 +438,7 @@ def save_document(root: Path, spec: DocumentSpec, document: Document) -> None:
 
 def save_decision(root: Path, decision: Decision) -> None:
     """Write one decision record file, after checking its front matter and file name."""
-    path, text = _render_decision(root, decision.id, decision)
+    path, text = _render_decision(root, str(as_json(decision.front).get("id", "")), decision)
     if text is not None:
         _replace(root, path, text)
 

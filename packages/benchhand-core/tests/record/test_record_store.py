@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,7 @@ from benchhand_core.record.errors import (
     RecordSchemaError,
     RecordVersionError,
 )
-from benchhand_core.record.model import Policy
+from benchhand_core.record.model import BomRow, Policy
 
 
 def tree(root: Path) -> dict[str, bytes]:
@@ -315,3 +316,70 @@ def test_malformed_text_is_an_unreadable_finding_not_a_crash(lamp_arm: Path, nam
     (lamp_arm / "hw" / name).write_text(text, encoding="utf-8")
     read = store.read_record(lamp_arm)
     assert [(error.code, error.path) for error in read.errors] == [("record.unreadable", f"hw/{name}")]
+
+
+def test_an_integer_cell_past_the_digit_limit_is_unreadable_at_its_line_and_column(lamp_arm: Path) -> None:
+    bom_path = lamp_arm / "hw/bom.csv"
+    lines = bom_path.read_text(encoding="utf-8").splitlines()
+    cells = lines[2].split(",")
+    cells[3] = "1" * 5000  # qty; int() refuses more than 4300 digits
+    lines[2] = ",".join(cells)
+    bom_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with pytest.raises(RecordReadError, match="line 3, column qty"):
+        store.load_record(lamp_arm)
+
+
+def test_a_bom_where_only_some_rows_state_the_procurement_columns_touches_no_file(lamp_arm: Path) -> None:
+    record = store.load_record(lamp_arm)
+    before = tree(lamp_arm)
+    plain = {"level": 1, "PN": "LMP-0001", "rev": "A", "qty": 1, "title": "Base", "material": None}
+    plain |= {"process": None, "make_buy": "make", "supplier": None, "mass": None}
+    record.bom.append(BomRow.model_validate(plain))
+    with pytest.raises(RecordError) as raised:
+        store.save_record(lamp_arm, record)
+    assert (raised.value.code, raised.value.path) == ("record.csv_columns", "hw/bom.csv")
+    assert tree(lamp_arm) == before
+
+
+def test_a_decision_saved_under_a_new_slug_beside_its_old_file_touches_no_file(lamp_arm: Path) -> None:
+    record = store.load_record(lamp_arm)
+    before = tree(lamp_arm)
+    renamed = dataclasses.replace(record.decisions["DR-001"], slug="renamed")
+    with pytest.raises(RecordError) as raised:
+        store.save_decision(lamp_arm, renamed)
+    assert (raised.value.code, raised.value.path) == ("decision.duplicate", "hw/decisions/DR-001-renamed.md")
+    record.decisions["DR-001"] = renamed
+    with pytest.raises(RecordError, match="DR-001 is also the id of DR-001-"):
+        store.save_record(lamp_arm, record)
+    assert tree(lamp_arm) == before
+
+
+def test_save_document_and_save_decision_check_the_file_identity_first(lamp_arm: Path) -> None:
+    record = store.load_record(lamp_arm)
+    before = tree(lamp_arm)
+    with pytest.raises(RecordError) as raised:
+        store.save_document(lamp_arm, documents.part("LMP-0012"), record.parts["LMP-0011"])
+    assert raised.value.code == "part.directory_mismatch"
+    assert raised.value.path == "hw/parts/LMP-0012/part.yaml"
+
+    decision = record.decisions["DR-001"]
+    fields = decision.front.model_dump(exclude={"id"}, exclude_unset=True)
+    without_id = dataclasses.replace(decision, front=type(decision.front).model_construct(**fields))
+    with pytest.raises(RecordSchemaError, match="'id' is a required property"):
+        store.save_decision(lamp_arm, without_id)
+    assert tree(lamp_arm) == before
+
+
+@pytest.mark.parametrize("stem", ["../escape", "nested/inner", "..", ""])
+def test_a_guideline_key_is_one_file_name(stem: str) -> None:
+    with pytest.raises(ValueError, match="not a guideline file stem"):
+        documents.guideline(stem)
+
+
+def test_a_gate_title_that_is_one_line_with_a_visible_character_loads(lamp_arm: Path) -> None:
+    # U+0085 is whitespace to Python's re but not to ECMAScript; the contract's class is ECMAScript's.
+    gate = 'kind: gate\nstatus: provisional\ngate: layout_freeze\nstage: layout\ntitle: "\\N"\n'
+    (lamp_arm / "hw/decisions/DR-021-nel.md").write_text(
+        f"---\nid: DR-021\ndate: '2026-11-21'\n{gate}---\n", encoding="utf-8"
+    )
+    assert store.load_record(lamp_arm).decisions["DR-021"].front.title == "\x85"

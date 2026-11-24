@@ -145,13 +145,34 @@ def parse_csv(text: str, row_schema: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         if len(cells) != len(header):
             raise FormatError(f"line {number}: {len(cells)} cells, expected {len(header)}")
-        parsed.append({name: by_name[name].read(cell) for name, cell in zip(header, cells, strict=True)})
+        parsed.append(_csv_row(number, header, cells, by_name))
     return parsed
 
 
+def _csv_row(
+    number: int, header: tuple[str, ...], cells: list[str], by_name: dict[str, Column]
+) -> dict[str, Any]:
+    row = {}
+    for name, cell in zip(header, cells, strict=True):
+        try:
+            row[name] = by_name[name].read(cell)
+        except ValueError as error:  # such as an integer past Python's digit limit
+            raise FormatError(f"line {number}, column {name}: {str(error)[:200]}") from error
+    return row
+
+
 def render_csv(rows: list[dict[str, Any]], row_schema: dict[str, Any]) -> str:
+    """The CSV text of `rows`: the required columns, or every column when a row states more. Every row then
+    states every column, since a blank cell reads back as null."""
     required, *rest = accepted_headers(row_schema)
     header = rest[0] if rest and any(set(row) - set(required) for row in rows) else required
+    for index, row in enumerate(rows):
+        missing = [name for name in header if name not in row]
+        if missing:
+            raise FormatError(
+                f"row {index} lacks the columns {', '.join(missing)} that another row states; "
+                "every row states the optional columns, or none does"
+            )
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
     writer.writerow(header)
