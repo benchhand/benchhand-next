@@ -1,9 +1,18 @@
 """benchhand-contracts: models and validators generated from contracts/ (ADR-0017).
 
-The models are in ``benchhand_contracts._generated``, one module per contract. Conformance fixtures
-are in ``_generated/examples``.
+The stable API:
+
+- ``validate(schema_id, instance)`` raises ``ContractViolation`` when an instance doesn't match the
+  contract with that ``$id``, and ``UnknownSchemaError`` when no packaged contract has the id.
+- ``benchhand_contracts.models.<dir>.<name>_schema`` holds the pydantic models of
+  ``contracts/<dir>/<name>.schema.json``, for example ``benchhand_contracts.models.provider.protocol_schema``.
+- ``Finding`` is the model of ``contracts/common/finding.schema.json``.
+
+The schemas ship as package data in ``benchhand_contracts/schemas`` and the conformance fixtures in
+``benchhand_contracts/examples``, so an installed wheel needs no repository checkout.
 """
 
+from .models.common.finding_schema import BenchhandFinding as Finding
 from .validation import ContractViolation, UnknownSchemaError, validate
 
-__all__ = ["ContractViolation", "UnknownSchemaError", "validate"]
+__all__ = ["ContractViolation", "Finding", "UnknownSchemaError", "validate"]

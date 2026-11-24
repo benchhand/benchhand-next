@@ -58,7 +58,7 @@ def _validator(schema_id: str) -> Draft202012Validator:
 
 @cache
 def _registry() -> Registry:
-    root = files("benchhand_contracts") / "_generated" / "schemas"
+    root = files("benchhand_contracts") / "schemas"
     resources = []
     for path in _schema_files(root):
         contents = json.loads(path.read_text(encoding="utf-8"))

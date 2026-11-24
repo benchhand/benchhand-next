@@ -22,7 +22,12 @@ dev = [
 [tool.ruff]
 line-length = 110
 target-version = "py312"
-extend-exclude = ["reference", "packages/benchhand-contracts/src/benchhand_contracts/_generated"]
+extend-exclude = [
+  "reference",
+  "packages/benchhand-contracts/src/benchhand_contracts/models",
+  "packages/benchhand-contracts/src/benchhand_contracts/schemas",
+  "packages/benchhand-contracts/src/benchhand_contracts/examples",
+]
 
 [tool.ruff.lint]
 # Greenfield: the complexity limits are enforced outright, i.e. a ratchet held at zero.

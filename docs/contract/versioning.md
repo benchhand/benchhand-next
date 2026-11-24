@@ -4,18 +4,20 @@ Decision: [ADR-0017](../adr/0017-contracts.md). The JSON Schema 2020-12 files un
 
 ## Generated outputs
 
-`just contracts` reads every `contracts/**/*.schema.json` file and writes the outputs below. A new schema file is picked up without a change to the generator. Each output directory is replaced as a whole, so the outputs of a deleted schema disappear too. Each generated file names its source and says that it must not be edited.
+`just contracts` reads every `contracts/**/*.schema.json` file and writes the outputs below. A new schema file is picked up without a change to the generator. Everything is generated into a scratch directory first, and each output directory is then replaced as a whole, so the outputs of a deleted schema disappear too and a failed run leaves the previous outputs in place. Each generated file names its source and says that it must not be edited.
 
 | Output | Location | Tool |
 |---|---|---|
-| pydantic v2 models, one module per schema | `packages/benchhand-contracts/src/benchhand_contracts/_generated/` | datamodel-code-generator, pinned in `pyproject.toml` |
-| Schema copies for the runtime validator | `_generated/schemas/` | copied byte for byte |
-| Conformance fixtures | `_generated/examples/<path>.examples.json` | `tools/gen/contracts_gen/examples.py` |
+| pydantic v2 models, one module per schema | `packages/benchhand-contracts/src/benchhand_contracts/models/` | datamodel-code-generator, pinned in `pyproject.toml` |
+| Schema copies for the runtime validator | `benchhand_contracts/schemas/` | copied byte for byte |
+| Conformance fixtures | `benchhand_contracts/examples/<path>.examples.json` | `tools/gen/contracts_gen/examples.py` |
 | TypeScript types | `ui/shared/contracts/<path>.ts` | json-schema-to-typescript, pinned in `ui/shared/package.json` |
 | Ajv standalone validators | `ui/shared/contracts/<path>.validate.js` and `.validate.d.ts` | Ajv, pinned in `ui/shared/package.json` |
 | Reference pages | `docs/contract/generated/` | `tools/gen/contracts_gen/docs.py` |
 
 The Python runtime validator is `benchhand_contracts.validate(schema_id, instance)`. The schema id is a contract's `$id`, or a `$id` with a JSON pointer fragment such as `#/$defs/InitializeParams`. A mismatch raises `ContractViolation`, which carries `pointer` (the JSON pointer to the bad value) and `schema_path` (the failing keyword). An unknown id raises `UnknownSchemaError`. `format` is an annotation on both the Python and the TypeScript side.
+
+The models of `contracts/<dir>/<name>.schema.json` are in `benchhand_contracts.models.<dir>.<name>_schema`, with `-` in a path becoming `_`, for example `benchhand_contracts.models.provider.protocol_schema`. `benchhand_contracts.Finding` is the model of `contracts/common/finding.schema.json`. The schemas and fixtures are package data, so an installed `benchhand-contracts` wheel validates without a checkout of this repository.
 
 Rules for schema authors:
 

@@ -18,7 +18,6 @@ from referencing import Registry, Resource
 
 from .sources import GENERATED_NOTICE, Contract
 
-EXAMPLES_DIR = "examples"
 EXAMPLES_SUFFIX = ".examples.json"
 UNKNOWN_PROPERTY = "x-conformance-unknown"
 
@@ -34,14 +33,14 @@ def contract_registry(contracts: list[Contract]) -> Registry:
 
 
 def write_examples(contracts: list[Contract], out_dir: Path) -> None:
-    """Write ``<stem>.examples.json`` for each contract that has examples into ``out_dir/examples``."""
+    """Write ``<stem>.examples.json`` into ``out_dir`` for each contract that has examples."""
     registry = contract_registry(contracts)
     for contract in contracts:
         cases = [_case(target, examples, registry) for target, examples in _targets(contract)]
         if not cases:
             continue
         document = {"$comment": f"{GENERATED_NOTICE} Source: {contract.source}", "cases": cases}
-        path = out_dir / EXAMPLES_DIR / f"{contract.stem}{EXAMPLES_SUFFIX}"
+        path = out_dir / f"{contract.stem}{EXAMPLES_SUFFIX}"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 

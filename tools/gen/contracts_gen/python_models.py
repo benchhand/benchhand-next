@@ -1,4 +1,4 @@
-"""Pydantic v2 models, packaged schema copies and the package marker for benchhand_contracts._generated."""
+"""Pydantic v2 models and the packaged schema copies in benchhand_contracts."""
 
 from __future__ import annotations
 
@@ -25,7 +25,6 @@ DATAMODEL_CODEGEN_OPTIONS = (
 )
 SOURCE_MARKER = "@@contracts-gen-source@@"
 RUFF_CONFIG = 'line-length = 110\ntarget-version = "py312"\n'
-SCHEMAS_DIR = "schemas"
 
 
 class PythonGenerationError(Exception):
@@ -33,15 +32,19 @@ class PythonGenerationError(Exception):
 
 
 def write_python(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
-    """Write models for every contract into ``out_dir`` (the ``_generated`` package)."""
+    """Write models for every contract into ``out_dir`` (the ``benchhand_contracts.models`` package)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     _run_datamodel_codegen(contracts, contracts_dir, out_dir)
     _stamp_sources(contracts, out_dir)
     (out_dir / "__init__.py").write_text(
-        f'"""Models and schemas generated from contracts/. {GENERATED_NOTICE}"""\n', encoding="utf-8"
+        f'"""Models generated from contracts/. {GENERATED_NOTICE}"""\n', encoding="utf-8"
     )
+
+
+def write_schemas(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
+    """Copy every contract byte for byte into ``out_dir``, the package data the runtime validator loads."""
     for contract in contracts:
-        target = out_dir / SCHEMAS_DIR / contract.rel_path
+        target = out_dir / contract.rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(contracts_dir / contract.rel_path, target)
 
@@ -72,13 +75,18 @@ def _module_sources(contracts: list[Contract]) -> dict[str, str]:
     """Generated module path -> source path, following datamodel-codegen's file naming."""
     sources = {}
     for contract in contracts:
-        module = contract.rel_path.removesuffix(".json").replace(".", "_") + ".py"
-        sources[module] = contract.source
+        sources[_module_name(contract.rel_path.removesuffix(".json")) + ".py"] = contract.source
         package = Path(contract.rel_path).parent
         while package != Path("."):
-            sources.setdefault(f"{package.as_posix()}/__init__.py", f"contracts/{package.as_posix()}/")
+            module = _module_name(package.as_posix())
+            sources.setdefault(f"{module}/__init__.py", f"contracts/{package.as_posix()}/")
             package = package.parent
     return sources
+
+
+def _module_name(rel_path: str) -> str:
+    """``record/bom-row.schema`` -> ``record/bom_row_schema``, as datamodel-codegen names modules."""
+    return rel_path.replace(".", "_").replace("-", "_")
 
 
 def _stamp_sources(contracts: list[Contract], out_dir: Path) -> None:

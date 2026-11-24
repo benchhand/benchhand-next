@@ -15,7 +15,7 @@ HOOK_KIND_ID = "https://benchhand.github.io/benchhand/contracts/provider/protoco
 
 
 def _manifest_example() -> dict[str, Any]:
-    path = files("benchhand_contracts") / "_generated" / "schemas" / "provider" / "manifest.schema.json"
+    path = files("benchhand_contracts") / "schemas" / "provider" / "manifest.schema.json"
     return copy.deepcopy(json.loads(path.read_text(encoding="utf-8"))["examples"][0])
 
 
