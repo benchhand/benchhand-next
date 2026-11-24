@@ -1,0 +1,17 @@
+[project]
+name = "benchhand-core"
+version = "0.0.0"
+description = "benchhand core: flow engine, guide, record service, jobs, middleware and provider host. No CAD dependencies."
+requires-python = ">=3.12"
+dependencies = ["benchhand-contracts", "benchhand-provider", "pyyaml>=6.0"]
+
+[tool.uv.sources]
+benchhand-contracts = { workspace = true }
+benchhand-provider = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/benchhand_core"]

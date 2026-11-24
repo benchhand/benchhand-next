@@ -1,0 +1,7 @@
+{
+  "name": "@benchhand/shared",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Shared UI code and the TypeScript contract types generated from contracts/ (never hand-edited)."
+}

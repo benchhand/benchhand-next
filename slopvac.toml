@@ -1,0 +1,54 @@
+# The prose gate for this repository, applied by the `prose` job in .github/workflows/ci.yml.
+# Simplified Technical English categories report as suggestions, as in slopvac itself.
+profile = "normal"
+
+exclude = [
+  "**/node_modules/**",
+  "**/.venv/**",
+  "reference/**",
+  ".beads/**",
+  # The approved design plan, kept verbatim as reviewed.
+  "docs/design-plan.md",
+]
+
+[thresholds]
+max_errors = 0
+
+[categories.ste-descriptive]
+severity = "suggestion"
+
+[categories.ste-nouns]
+severity = "suggestion"
+
+[categories.ste-practices]
+severity = "suggestion"
+
+[categories.ste-procedural]
+severity = "suggestion"
+
+[categories.ste-punctuation]
+severity = "suggestion"
+
+[categories.ste-sentences]
+severity = "suggestion"
+
+[categories.ste-verbs]
+severity = "suggestion"
+
+[categories.ste-words]
+severity = "suggestion"
+
+# Index pages are lists of links; they have no prose to score.
+[[overrides]]
+files = ["**/README.md"]
+
+[overrides.thresholds]
+max_errors = 0
+min_score = 0
+
+# Until the 1.0 user docs exist, every document here is for developers, and citing ADRs is its job.
+[[overrides]]
+files = ["docs/**", "README.md", "AGENTS.md", "tools/**/README.md"]
+
+[overrides.rules]
+"docs-discipline.internal-refs" = "off"

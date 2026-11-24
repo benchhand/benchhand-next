@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/provider/manifest.schema.json",
+  "title": "benchhand-provider.toml",
+  "x-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "version",
+    "protocol",
+    "kinds",
+    "hooks",
+    "command",
+    "environment",
+    "needs"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false
+    },
+    "kinds": {
+      "type": "array",
+      "items": {
+        "$ref": "protocol.schema.json#/$defs/HookKind"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "hooks": {
+      "type": "array",
+      "items": {
+        "$ref": "protocol.schema.json#/$defs/HookDecl"
+      },
+      "minItems": 1
+    },
+    "resident": {
+      "type": "boolean",
+      "default": false
+    },
+    "command": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "timeouts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "description": "Seconds per hook method, e.g. {\"solver/solve\": 3600}."
+    },
+    "environment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "uv"
+            },
+            "requires-python": {
+              "type": "string"
+            },
+            "dependencies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "requires-python",
+            "dependencies"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "freecad"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "system"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "needs": {
+      "$ref": "protocol.schema.json#/$defs/Needs"
+    },
+    "cli": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "summary"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "kernel-build123d",
+      "version": "1.0.0",
+      "protocol": {
+        "min": 1,
+        "max": 1
+      },
+      "kinds": [
+        "kernel"
+      ],
+      "hooks": [
+        {
+          "kind": "kernel",
+          "id": "build"
+        },
+        {
+          "kind": "kernel",
+          "id": "export"
+        },
+        {
+          "kind": "kernel",
+          "id": "inspect"
+        }
+      ],
+      "resident": false,
+      "command": [
+        "python",
+        "-m",
+        "benchhand_kernel_build123d"
+      ],
+      "environment": {
+        "kind": "uv",
+        "requires-python": ">=3.12,<3.13",
+        "dependencies": [
+          "build123d==0.13.0",
+          "cadquery-ocp-novtk==8.0.1.1.0",
+          "bd_warehouse==0.4.0",
+          "benchhand-provider"
+        ]
+      },
+      "needs": {
+        "freecad": false,
+        "chromium": false,
+        "network": false
+      },
+      "cli": [
+        {
+          "name": "probe",
+          "summary": "Check the build123d environment."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# The one place that names the repository (ADR-0015). CI, templates and docs read it.
+# Change `repo` once at the repo swap.
+repo = "benchhand/benchhand-next"
+image = "ghcr.io/benchhand/benchhand-next"

@@ -1,0 +1,46 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-packages --locked
+      - name: Lint (complexity limits enforced outright, ADR-0012)
+        run: uv run ruff check . && uv run ruff format --check .
+      - run: uv run pytest
+
+  prose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - name: slopvac on changed Markdown
+        run: |
+          base="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
+          files=$(git diff --name-only --diff-filter=AM "$base" -- '*.md' ':!reference/**' || true)
+          [ -z "$files" ] || uvx slopvac $files
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm typecheck
