@@ -1,0 +1,141 @@
+"""Cleanup of run records when a service starts, ported from the prototype's run record tests.
+
+Records of live, orphaned, reused, foreign and broken entries; processes of dead owners.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import signal
+import socket
+import subprocess
+import sys
+import textwrap
+from pathlib import Path
+
+import pytest
+from benchhand_core.jobs import JobError, JobService, JobSpec
+from benchhand_core.jobs.identity import process_identity
+from conftest import Pids
+from job_support import FAMILY, example_record, python, wait_until
+
+pytestmark = pytest.mark.usefixtures("waitid_variant")
+
+
+def write_record(project: Path, pids: Pids, job_id: str = "stale0000001", **overrides: object) -> Path:
+    """A record of a job whose owner and process ended, unless `overrides` say otherwise."""
+    ended = pids.ended_pid()
+    leader = {"pid": ended, "identity": "ended"}
+    fields = {
+        "jobId": job_id,
+        "host": socket.gethostname(),
+        "owner": leader,
+        "process": leader,
+        "logPath": str(project / ".benchhand" / "runs" / f"{job_id}.log"),
+        **overrides,
+    }
+    record = example_record(**fields)
+    path = project / ".benchhand" / "runs" / f"{job_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record), encoding="utf-8")
+    return path
+
+
+def test_the_record_of_an_ended_job_with_nothing_left_is_removed(project: Path, pids: Pids) -> None:
+    path = write_record(project, pids)
+    log = path.with_suffix(".log")
+    log.write_text("old output")
+    recovery = JobService(project).recovery
+    assert recovery.removed == ("stale0000001",)
+    assert not path.exists()
+    assert not log.exists()
+
+
+def test_a_record_whose_ids_were_reused_is_stale_and_never_signalled(project: Path, pids: Pids) -> None:
+    other = pids.sleeper()
+    reused = {"pid": other.pid, "identity": "an earlier process"}
+    path = write_record(project, pids, owner=reused, process=reused)
+    recovery = JobService(project).recovery
+    assert recovery.removed == ("stale0000001",)
+    assert not path.exists()
+    assert other.poll() is None
+
+
+def test_an_orphaned_group_is_reported_and_never_signalled_until_cancelled(project: Path, pids: Pids) -> None:
+    group = pids.sleeper()
+    path = write_record(project, pids, process={"pid": group.pid, "identity": process_identity(group.pid)})
+    service = JobService(project, grace_seconds=0.3)
+    assert service.recovery.orphaned == ("stale0000001",)
+    assert path.exists()
+    assert group.poll() is None
+    assert service.status("stale0000001")["status"] == "running"
+    cancelled = service.cancel("stale0000001")
+    assert cancelled["status"] == "cancelled"
+    assert wait_until(lambda: group.poll() is not None)
+
+
+def test_a_job_whose_owner_runs_is_left_alone(project: Path, pids: Pids) -> None:
+    holder = pids.sleeper()
+    owner = {"pid": holder.pid, "identity": process_identity(holder.pid)}
+    path = write_record(project, pids, owner=owner)
+    recovery = JobService(project).recovery
+    assert (recovery.removed, recovery.orphaned) == ((), ())
+    assert path.exists()
+    with pytest.raises(JobError, match="owned by process"):
+        JobService(project).cancel("stale0000001")
+
+
+def test_records_that_cannot_be_judged_are_reported_and_left(project: Path, pids: Pids) -> None:
+    runs = project / ".benchhand" / "runs"
+    runs.mkdir(parents=True)
+    (runs / "broken.json").write_text("{", encoding="utf-8")
+    (runs / "invalid.json").write_text(json.dumps({"jobId": "invalid"}), encoding="utf-8")
+    elsewhere = write_record(project, pids, "elsewhere0001", host="another-host")
+    recovery = JobService(project).recovery
+    assert sorted(item.path.name for item in recovery.unverifiable) == [
+        "broken.json",
+        "elsewhere0001.json",
+        "invalid.json",
+    ]
+    assert recovery.removed == ()
+    assert elsewhere.exists()
+
+
+def test_a_service_killed_outright_takes_its_jobs_with_it(project: Path, pids: Pids) -> None:
+    marker = project / "pids"
+    owner_code = textwrap.dedent(f"""
+        import time
+        from benchhand_core.jobs import JobService, JobSpec
+        service = JobService({str(project)!r})
+        command = [{sys.executable!r}, "-c", {FAMILY!r}, {str(marker)!r}]
+        handle = service.start(JobSpec("kernel/build", command))
+        print(handle["jobId"], flush=True)
+        time.sleep(600)
+    """)
+    owner = subprocess.Popen([sys.executable, "-c", owner_code], stdout=subprocess.PIPE, text=True)
+    assert owner.stdout is not None
+    try:
+        job_id = owner.stdout.readline().strip()
+        child, grandchild = pids.family(marker)
+        pids.known.append(owner.pid)
+        owner.send_signal(signal.SIGKILL)  # nothing of the service can clean up
+    finally:
+        owner.wait()
+        owner.stdout.close()
+    pids.assert_gone(child, grandchild)
+    recovery = JobService(project).recovery
+    assert recovery.removed == (job_id,)
+    assert not (project / ".benchhand" / "runs" / f"{job_id}.json").exists()
+
+
+def test_a_second_service_of_the_project_leaves_the_first_ones_jobs(project: Path) -> None:
+    with JobService(project, grace_seconds=0.2) as first:
+        handle = first.start(JobSpec("kernel/build", python("import time; time.sleep(600)")))
+        second = JobService(project)
+        assert second.recovery.removed == ()
+        assert second.status(handle["jobId"])["status"] == "running"
+        assert (
+            os.getpid()
+            == json.loads(next((project / ".benchhand" / "runs").glob("*.json")).read_text())["owner"]["pid"]
+        )
