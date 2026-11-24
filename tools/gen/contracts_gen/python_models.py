@@ -1,0 +1,90 @@
+"""Pydantic v2 models, packaged schema copies and the package marker for benchhand_contracts._generated."""
+
+from __future__ import annotations
+
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+from .sources import GENERATED_NOTICE, Contract
+
+# Fixed options keep the output identical on every machine; datamodel-code-generator is pinned in
+# pyproject.toml, and the preset name pins its defaults.
+DATAMODEL_CODEGEN_OPTIONS = (
+    "--input-file-type",
+    "jsonschema",
+    "--preset",
+    "standard-py312-20261123",
+    "--formatters",
+    "ruff-format",
+    "--disable-timestamp",
+    "--use-schema-description",
+    "--use-field-description",
+)
+SOURCE_MARKER = "@@contracts-gen-source@@"
+RUFF_CONFIG = 'line-length = 110\ntarget-version = "py312"\n'
+SCHEMAS_DIR = "schemas"
+
+
+class PythonGenerationError(Exception):
+    """datamodel-code-generator failed."""
+
+
+def write_python(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
+    """Write models for every contract into ``out_dir`` (the ``_generated`` package)."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _run_datamodel_codegen(contracts, contracts_dir, out_dir)
+    _stamp_sources(contracts, out_dir)
+    (out_dir / "__init__.py").write_text(
+        f'"""Models and schemas generated from contracts/. {GENERATED_NOTICE}"""\n', encoding="utf-8"
+    )
+    for contract in contracts:
+        target = out_dir / SCHEMAS_DIR / contract.rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(contracts_dir / contract.rel_path, target)
+
+
+def _run_datamodel_codegen(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="contracts-gen-") as scratch:
+        # Only the schema files go in, so other files under contracts/ never become models.
+        inputs = Path(scratch, "inputs")
+        for contract in contracts:
+            target = inputs / contract.rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(contracts_dir / contract.rel_path, target)
+        # Ruff takes its settings from the config nearest the output file, so the output goes to a
+        # directory with its own config: the result can't depend on where it is written.
+        staged = Path(scratch, "out")
+        staged.mkdir()
+        Path(scratch, "ruff.toml").write_text(RUFF_CONFIG, encoding="utf-8")
+        header = f"# {GENERATED_NOTICE}\n# Source: {SOURCE_MARKER}"
+        command = [sys.executable, "-m", "datamodel_code_generator", "--input", str(inputs), "--output"]
+        command += [str(staged), *DATAMODEL_CODEGEN_OPTIONS, "--custom-file-header", header]
+        result = subprocess.run(command, cwd=scratch, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise PythonGenerationError(f"datamodel-codegen failed:\n{result.stderr}")
+        shutil.copytree(staged, out_dir, dirs_exist_ok=True)
+
+
+def _module_sources(contracts: list[Contract]) -> dict[str, str]:
+    """Generated module path -> source path, following datamodel-codegen's file naming."""
+    sources = {}
+    for contract in contracts:
+        module = contract.rel_path.removesuffix(".json").replace(".", "_") + ".py"
+        sources[module] = contract.source
+        package = Path(contract.rel_path).parent
+        while package != Path("."):
+            sources.setdefault(f"{package.as_posix()}/__init__.py", f"contracts/{package.as_posix()}/")
+            package = package.parent
+    return sources
+
+
+def _stamp_sources(contracts: list[Contract], out_dir: Path) -> None:
+    sources = _module_sources(contracts)
+    for path in sorted(out_dir.rglob("*.py")):
+        text = path.read_text(encoding="utf-8")
+        if SOURCE_MARKER in text:
+            source = sources.get(path.relative_to(out_dir).as_posix(), "contracts/")
+            path.write_text(text.replace(SOURCE_MARKER, source), encoding="utf-8")

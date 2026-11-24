@@ -2,8 +2,8 @@
 
 default: check
 
-# Lint, type-check and test everything.
-check: lint test
+# Lint, type-check and test everything, and check the generated contract code.
+check: lint test contracts-check
 
 lint:
     uv run ruff check .
@@ -12,9 +12,14 @@ lint:
 test:
     uv run pytest
 
-# Regenerate code from contracts/ (ADR-0017). Arrives in Phase 1.
+# Regenerate models, types, validators, fixtures and reference docs from contracts/ (ADR-0017).
 contracts:
-    @echo "codegen lands in Phase 1"
+    PYTHONPATH=tools/gen uv run python -m contracts_gen generate
+
+# Fail on generated files that differ from a fresh run, and on a breaking change without a major bump.
+contracts-check:
+    PYTHONPATH=tools/gen uv run python -m contracts_gen check
+    PYTHONPATH=tools/gen uv run python -m contracts_gen breaking
 
 # List prototype PRs merged and commits landed since release.toml's reference_commit.
 reference-changes:

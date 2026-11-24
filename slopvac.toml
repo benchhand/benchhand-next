@@ -9,6 +9,8 @@ exclude = [
   ".beads/**",
   # The approved design plan, kept verbatim as reviewed.
   "docs/design-plan.md",
+  # Reference pages generated from contracts/ (`just contracts`).
+  "docs/contract/generated/**",
 ]
 
 [thresholds]

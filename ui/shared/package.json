@@ -3,5 +3,15 @@
   "private": true,
   "type": "module",
   "version": "0.0.0",
-  "description": "Shared UI code and the TypeScript contract types generated from contracts/ (never hand-edited)."
+  "description": "Shared UI code and the TypeScript contract types generated from contracts/ (never hand-edited).",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "16.0.0",
+    "typescript": "7.0.2"
+  }
 }

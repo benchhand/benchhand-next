@@ -16,6 +16,7 @@ dev = [
   "mypy>=1.18",
   "jsonschema>=4.23",
   "pyyaml>=6.0",
+  "datamodel-code-generator==0.101.0",
 ]
 
 [tool.ruff]
@@ -32,4 +33,9 @@ max-complexity = 10
 
 [tool.pytest.ini_options]
 testpaths = ["packages", "tests"]
+pythonpath = ["tools/gen"]
 addopts = "-q"
+
+[tool.pyright]
+# tools/gen is imported by its tests through pytest's pythonpath, not installed.
+extraPaths = ["tools/gen"]
