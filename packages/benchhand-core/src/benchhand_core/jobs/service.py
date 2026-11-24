@@ -1,14 +1,16 @@
 """The job service: long jobs as private process groups, with run records, progress and cancellation.
 
-A job is a command started under a supervisor (supervisor.py) that leads its own process group
-and kills the whole group if the service process ends. Each job has a run record under
-<project>/.benchhand/runs/ (store.py). Records and handles follow contracts/jobs/job.schema.json.
+A job is a command started under a supervisor (supervisor.py) that runs it in a process group of
+its own and kills the whole group when the command ends or the service process does. Each job has a
+run record under <project>/.benchhand/runs/ (store.py). Records and handles are the JobRecord and
+JobHandle models generated from contracts/jobs/job.schema.json.
 
-The service has no threads. `status`, `list_jobs`, `cancel` and `reap` notice jobs that ended,
-kill what they left in their group, reap the supervisor and write the final status. The host
-calls `reap` periodically so ended jobs do not wait for the next question about them.
+The service has no threads. `status`, `list_jobs`, `cancel`, `report_progress` and `reap` notice
+jobs that ended, reap the supervisor and write the final status. The host calls `reap`
+periodically so ended jobs do not wait for the next question about them.
 
-Process identity rules (identity.py) make every check pid-reuse safe. On construction the service
+This service signals only the supervisors it started and still holds unreaped; no process id read
+from a record is ever signalled, since the id may have been reused. On construction the service
 cleans up: it removes the records of jobs whose processes are gone, leaves the records of jobs
 whose owner still runs, and reports what it cannot judge without touching it.
 """
@@ -26,21 +28,20 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any
 
-from benchhand_core.jobs.errors import JobError, JobNotSucceeded, RecordError
-from benchhand_core.jobs.identity import (
-    Unsupported,
-    group_survives,
-    process_identity,
-    process_runs,
-    require_posix,
+from benchhand_contracts.models.jobs.job_schema import (
+    JobHandle,
+    JobProgress,
+    JobRecord,
+    JobStatus,
+    ProcessIdentity,
 )
-from benchhand_core.jobs.process import DEFAULT_GRACE_SECONDS, SupervisedProcess, terminate_recorded_group
-from benchhand_core.jobs.schema import validate_handle
-from benchhand_core.jobs.store import Record, RecordStore
 
-JobHandle = dict[str, Any]  # a JobHandle of contracts/jobs/job.schema.json
-TERMINAL = frozenset({"succeeded", "failed", "cancelled"})
-MAX_MESSAGE_LENGTH = 500  # JobProgress.message maxLength
+from benchhand_core.jobs.errors import JobError, JobNotSucceeded, RecordError
+from benchhand_core.jobs.identity import Unsupported, process_identity, process_runs, require_posix
+from benchhand_core.jobs.process import DEFAULT_GRACE_SECONDS, SupervisedProcess
+from benchhand_core.jobs.store import RecordStore
+
+TERMINAL = frozenset({JobStatus.succeeded, JobStatus.failed, JobStatus.cancelled})
 JOB_ID_LENGTH = 12
 
 
@@ -66,36 +67,49 @@ class UnverifiableRecord:
 @dataclass(frozen=True)
 class Recovery:
     """What the cleanup at construction found. `removed`: ids of records whose processes are gone.
-    `orphaned`: ids of jobs whose owner ended but whose processes still run; they are left alone
-    and `cancel` stops them. `unverifiable`: records that cannot be judged."""
+    `orphaned`: ids of jobs whose owner ended but whose supervisor still runs; it ends the job
+    itself, and nothing here signals it. `unverifiable`: records that cannot be judged."""
 
     removed: tuple[str, ...] = ()
     orphaned: tuple[str, ...] = ()
     unverifiable: tuple[UnverifiableRecord, ...] = ()
 
 
-def _now() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")
+@dataclass(frozen=True)
+class _Outcome:
+    """How a job ended, kept until its final record is written."""
+
+    status: JobStatus
+    exit_code: int | None
+    error: str | None
 
 
-def handle_of(record: Record) -> JobHandle:
-    """The handle of a run record. `resultPath` is set once the job succeeded and wrote it."""
-    result = Path(record["resultPath"])
-    handle = {
-        "jobId": record["jobId"],
-        "kind": record["kind"],
-        "status": record["status"],
-        "progress": dict(record["progress"]),
-        "resultPath": str(result) if record["status"] == "succeeded" and result.exists() else None,
-        "logPath": record["logPath"],
-        "exitCode": record["exitCode"],
-        "error": record["error"],
-        "createdAt": record["createdAt"],
-        "startedAt": record["startedAt"],
-        "finishedAt": record["finishedAt"],
-    }
-    validate_handle(handle)
-    return handle
+def _now() -> datetime:
+    return datetime.now(UTC).replace(microsecond=0)
+
+
+def handle_of(record: JobRecord) -> JobHandle:
+    """The handle of a run record. `result_path` is set once the job succeeded and wrote its result."""
+    result = Path(record.result_path)
+    delivered = record.status is JobStatus.succeeded and result.is_file()
+    return JobHandle(
+        job_id=record.job_id,
+        kind=record.kind,
+        status=record.status,
+        progress=record.progress.model_copy(),
+        result_path=str(result) if delivered else None,
+        log_path=record.log_path,
+        exit_code=record.exit_code,
+        error=record.error,
+        created_at=record.created_at,
+        started_at=record.started_at,
+        finished_at=record.finished_at,
+    )
+
+
+def _revised(record: JobRecord, **changes: Any) -> JobRecord:
+    """A validated copy of `record` with `changes`."""
+    return JobRecord.model_validate(record.model_dump() | changes)
 
 
 def _describe_exit(code: int) -> str:
@@ -109,16 +123,21 @@ class JobService:
         self.grace_seconds = grace_seconds
         self._store = RecordStore(self.project_root)
         self._live: dict[str, SupervisedProcess] = {}
+        self._pending: dict[str, _Outcome] = {}  # ended jobs whose final record is not yet written
         self._lock = threading.RLock()
-        self._owner = {"pid": os.getpid(), "identity": process_identity(os.getpid())}
+        identity = process_identity(os.getpid())
+        if identity is None:
+            raise Unsupported("this process has no identity")
+        self._owner = ProcessIdentity(pid=os.getpid(), identity=identity)
         self.recovery = self._recover()
 
     # -- starting ------------------------------------------------------------------------------
 
     def start(self, spec: JobSpec) -> JobHandle:
-        """Start a job in its own process group and record it. A missing or non-executable
-        program raises FileNotFoundError or PermissionError, as subprocess does. An invalid kind
-        raises jsonschema.ValidationError before anything is recorded."""
+        """Start a job in its own process group and record it. A program that cannot be executed
+        from the job's cwd raises FileNotFoundError or PermissionError, as subprocess does. An
+        invalid kind raises pydantic's ValidationError (a ValueError). Nothing stays recorded
+        after either."""
         if not spec.argv:
             raise ValueError("a job needs a command")
         cwd = Path(spec.cwd) if spec.cwd is not None else self.project_root
@@ -126,11 +145,11 @@ class JobService:
             record = self._queue(spec, cwd)
             try:
                 process = self._spawn(record, spec, cwd)
-                self._mark_running(record, process)
+                record = self._mark_running(record, process)
             except BaseException:
-                self._store.delete(record["jobId"], with_log=True)
+                self._store.delete(record.job_id, with_log=True)
                 raise
-            self._live[record["jobId"]] = process
+            self._live[record.job_id] = process
             return handle_of(record)
 
     def _new_job_id(self) -> str:
@@ -139,57 +158,59 @@ class JobService:
             if not self._store.record_path(job_id).exists():
                 return job_id
 
-    def _queue(self, spec: JobSpec, cwd: Path) -> Record:
+    def _queue(self, spec: JobSpec, cwd: Path) -> JobRecord:
         job_id = self._new_job_id()
         result = (
             Path(spec.result_path)
             if spec.result_path is not None
             else self._store.default_result_path(job_id)
         )
-        record: Record = {
-            "jobId": job_id,
-            "kind": spec.kind,
-            "status": "queued",
-            "progress": {"fraction": None, "message": None},
-            "argv": list(spec.argv),
-            "cwd": str(cwd),
-            "host": socket.gethostname(),
-            "owner": dict(self._owner),
-            "process": None,
-            "resultPath": str(result.resolve()),
-            "logPath": str(self._store.log_path(job_id)),
-            "exitCode": None,
-            "error": None,
-            "createdAt": _now(),
-            "startedAt": None,
-            "finishedAt": None,
-        }
+        record = JobRecord(
+            job_id=job_id,
+            kind=spec.kind,
+            status=JobStatus.queued,
+            progress=JobProgress(fraction=None, message=None),
+            argv=list(spec.argv),
+            cwd=str(cwd),
+            host=socket.gethostname(),
+            owner=self._owner,
+            process=None,
+            result_path=str(result.resolve()),
+            log_path=str(self._store.log_path(job_id)),
+            exit_code=None,
+            error=None,
+            created_at=_now(),
+            started_at=None,
+            finished_at=None,
+        )
         self._store.write(record)
         return record
 
-    def _spawn(self, record: Record, spec: JobSpec, cwd: Path) -> SupervisedProcess:
+    def _spawn(self, record: JobRecord, spec: JobSpec, cwd: Path) -> SupervisedProcess:
         env = {
             **os.environ,
             **spec.env,
-            "BENCHHAND_JOB_ID": record["jobId"],
-            "BENCHHAND_JOB_RESULT": record["resultPath"],
+            "BENCHHAND_JOB_ID": record.job_id,
+            "BENCHHAND_JOB_RESULT": record.result_path,
         }
-        with open(record["logPath"], "ab") as log:
+        with open(record.log_path, "ab") as log:
             return SupervisedProcess(
                 spec.argv, cwd=cwd, env=env, output=log, grace_seconds=self.grace_seconds
             )
 
-    def _mark_running(self, record: Record, process: SupervisedProcess) -> None:
-        record.update(
-            status="running",
-            process={"pid": process.pid, "identity": process.identity},
-            startedAt=_now(),
+    def _mark_running(self, record: JobRecord, process: SupervisedProcess) -> JobRecord:
+        running = _revised(
+            record,
+            status=JobStatus.running,
+            process=ProcessIdentity(pid=process.pid, identity=process.identity),
+            started_at=_now(),
         )
         try:
-            self._store.write(record)
+            self._store.write(running)
         except BaseException:
-            process.terminate(grace_seconds=0)
+            process.terminate()
             raise
+        return running
 
     # -- asking --------------------------------------------------------------------------------
 
@@ -213,34 +234,33 @@ class JobService:
     def result(self, job_id: str) -> Path:
         """The result file of a job that succeeded and wrote it."""
         handle = self.status(job_id)
-        if handle["status"] != "succeeded":
-            raise JobNotSucceeded(f"job {job_id} is {handle['status']}, not succeeded")
-        if handle["resultPath"] is None:
+        if handle.status is not JobStatus.succeeded:
+            raise JobNotSucceeded(f"job {job_id} is {handle.status.value}, not succeeded")
+        if handle.result_path is None:
             raise JobNotSucceeded(f"job {job_id} succeeded without writing its result")
-        return Path(handle["resultPath"])
+        return Path(handle.result_path)
 
     def report_progress(
         self, job_id: str, *, fraction: float | None = None, message: str | None = None
     ) -> JobHandle:
         """Record the progress of a running job, as a provider `$/progress` notification
-        reports it. Progress that arrives after the job ended is dropped."""
-        if fraction is not None and not 0 <= fraction <= 1:
-            raise ValueError(f"progress fraction {fraction} is outside 0..1")
-        if message is not None and len(message) > MAX_MESSAGE_LENGTH:
-            raise ValueError(f"progress message is longer than {MAX_MESSAGE_LENGTH} characters")
+        reports it. Progress that arrives after the job ended is dropped. Raises ValueError for
+        a fraction outside 0..1 or a message the contract's JobProgress does not allow."""
+        JobProgress(fraction=fraction, message=message)
         with self._lock:
+            self._reap_job(job_id)
             record = self._store.read(job_id)
-            if record["status"] in TERMINAL:
+            if record.status in TERMINAL:
                 return handle_of(record)
             if job_id not in self._live:
                 raise JobError(f"job {job_id} is not owned by this service")
-            progress = record["progress"]
-            record["progress"] = {
-                "fraction": progress["fraction"] if fraction is None else fraction,
-                "message": progress["message"] if message is None else message,
-            }
-            self._store.write(record)
-            return handle_of(record)
+            progress = JobProgress(
+                fraction=record.progress.fraction if fraction is None else fraction,
+                message=record.progress.message if message is None else message,
+            )
+            revised = _revised(record, progress=progress)
+            self._store.write(revised)
+            return handle_of(revised)
 
     # -- ending --------------------------------------------------------------------------------
 
@@ -256,47 +276,49 @@ class JobService:
         return self._finish(job_id, process, cancelled=False)
 
     def _finish(self, job_id: str, process: SupervisedProcess, *, cancelled: bool) -> JobHandle:
-        """Kill what the job left in its group, reap its supervisor and write the final status."""
-        code = process.terminate(grace_seconds=0 if not cancelled else self.grace_seconds)
-        del self._live[job_id]
-        record = self._store.read(job_id)
-        if cancelled:
-            status, error = "cancelled", "the job was cancelled"
-        elif code == 0:
-            status, error = "succeeded", None
-        else:
-            status, error = "failed", _describe_exit(code)
-        return self._write_final(record, status, code, error)
+        """Stop the job if it still runs, reap its supervisor and write the final status. When the
+        write fails, the job's outcome is kept and the next call writes it again."""
+        outcome = self._pending.get(job_id)
+        if outcome is None:
+            outcome = self._pending[job_id] = _outcome_of(process.terminate(), cancelled=cancelled)
+        handle = self._write_final(self._store.read(job_id), outcome)
+        del self._live[job_id], self._pending[job_id]
+        return handle
 
-    def _write_final(self, record: Record, status: str, code: int | None, error: str | None) -> JobHandle:
-        record.update(status=status, exitCode=code, error=error, finishedAt=_now())
-        self._store.write(record)
-        return handle_of(record)
+    def _write_final(self, record: JobRecord, outcome: _Outcome) -> JobHandle:
+        final = _revised(
+            record,
+            status=outcome.status,
+            exit_code=outcome.exit_code,
+            error=outcome.error,
+            finished_at=_now(),
+        )
+        self._store.write(final)
+        return handle_of(final)
 
     def cancel(self, job_id: str) -> JobHandle:
         """Stop a job: SIGTERM to its process group, the grace period, then SIGKILL. A job that
         already ended keeps its status. Raises JobError for a job another process owns."""
         with self._lock:
             record = self._store.read(job_id)
-            if record["status"] in TERMINAL:
+            if record.status in TERMINAL:
                 return handle_of(record)
             process = self._live.get(job_id)
             if process is None:
                 return self._cancel_unowned(record)
             return self._finish(job_id, process, cancelled=not process.exited())
 
-    def _cancel_unowned(self, record: Record) -> JobHandle:
+    def _cancel_unowned(self, record: JobRecord) -> JobHandle:
         state = self._judge(record)
         if state == "owned":
+            raise JobError(f"job {record.job_id} is owned by process {record.owner.pid}, which still runs")
+        if state == "orphaned":
             raise JobError(
-                f"job {record['jobId']} is owned by process {record['owner']['pid']}, which still runs"
+                f"job {record.job_id} lost its owner and is not signalled from here: its supervisor ends it"
             )
         if state == "unverifiable":
-            raise JobError(f"job {record['jobId']} cannot be checked from this host")
-        leader = record["process"]
-        if leader is not None:
-            terminate_recorded_group(leader["pid"], leader["identity"], self.grace_seconds)
-        return self._write_final(record, "cancelled", None, "the job was cancelled")
+            raise JobError(f"job {record.job_id} cannot be checked from this host")
+        return self._write_final(record, _outcome_of(None, cancelled=True))
 
     def close(self) -> None:
         """Cancel every running job of this service."""
@@ -314,19 +336,15 @@ class JobService:
 
     # -- cleanup -------------------------------------------------------------------------------
 
-    def _judge(self, record: Record) -> str:
-        """`owned`: the owner still runs. `orphaned`: the owner is gone but processes run.
+    def _judge(self, record: JobRecord) -> str:
+        """`owned`: the owner still runs. `orphaned`: the owner is gone but the supervisor runs.
         `stale`: nothing runs. `unverifiable`: another host, or no way to check."""
-        if record["host"] != socket.gethostname():
+        if record.host != socket.gethostname():
             return "unverifiable"
-        process = record["process"]
         try:
-            if process_runs(record["owner"]["pid"], record["owner"]["identity"]):
+            if process_runs(record.owner.pid, record.owner.identity):
                 return "owned"
-            if process is not None and (
-                process_runs(process["pid"], process["identity"])
-                or group_survives(process["pid"], process["identity"])
-            ):
+            if record.process is not None and process_runs(record.process.pid, record.process.identity):
                 return "orphaned"
         except Unsupported:
             return "unverifiable"
@@ -347,10 +365,19 @@ class JobService:
                     continue
                 state = self._judge(record)
                 if state == "stale":
-                    self._store.delete(record["jobId"], with_log=True)
-                    removed.append(record["jobId"])
+                    self._store.delete(record.job_id, with_log=True)
+                    removed.append(record.job_id)
                 elif state == "orphaned":
-                    orphaned.append(record["jobId"])
+                    orphaned.append(record.job_id)
                 elif state == "unverifiable":
-                    unverifiable.append(UnverifiableRecord(path, f"a job recorded on host {record['host']}"))
+                    unverifiable.append(UnverifiableRecord(path, f"a job recorded on host {record.host}"))
         return Recovery(tuple(removed), tuple(orphaned), tuple(unverifiable))
+
+
+def _outcome_of(code: int | None, *, cancelled: bool) -> _Outcome:
+    """`code` is None only for a job whose process is gone and whose status nobody saw."""
+    if cancelled or code is None:
+        return _Outcome(JobStatus.cancelled, code, "the job was cancelled")
+    if code == 0:
+        return _Outcome(JobStatus.succeeded, 0, None)
+    return _Outcome(JobStatus.failed, code, _describe_exit(code))

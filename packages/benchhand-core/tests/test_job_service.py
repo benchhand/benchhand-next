@@ -3,22 +3,24 @@
 from __future__ import annotations
 
 import json
+import os
 import signal
 import threading
 from pathlib import Path
 
 import pytest
+from benchhand_contracts.models.jobs.job_schema import JobHandle, JobRecord, JobStatus
 from benchhand_core.jobs import JobError, JobNotSucceeded, JobService, JobSpec, UnknownJob
-from benchhand_core.jobs.schema import validate_handle, validate_record
 from conftest import Pids
-from job_support import FAMILY, LEAVER, LINGERER, python, wait_until
+from job_support import FAMILY, LEAVER, LINGERER, python, running, wait_until
 
-pytestmark = pytest.mark.usefixtures("waitid_variant")
 STARTUP_SECONDS = 120.0
 
 
-def finished(service: JobService, job_id: str) -> dict:
-    assert wait_until(lambda: service.status(job_id)["status"] not in ("queued", "running"), STARTUP_SECONDS)
+def finished(service: JobService, job_id: str) -> JobHandle:
+    assert wait_until(
+        lambda: service.status(job_id).status not in (JobStatus.queued, JobStatus.running), STARTUP_SECONDS
+    )
     return service.status(job_id)
 
 
@@ -26,27 +28,25 @@ def test_start_records_a_running_job_in_its_own_group(service: JobService, proje
     marker = project / "pids"
     handle = service.start(JobSpec("kernel/build", python(FAMILY, str(marker))))
     child, _ = pids.family(marker)
-    validate_handle(handle)
-    assert (handle["status"], handle["kind"]) == ("running", "kernel/build")
-    path = project / ".benchhand" / "runs" / f"{handle['jobId']}.json"
-    assert path.parent.resolve() == (project / ".benchhand" / "runs").resolve()
+    assert (handle.status, handle.kind) == (JobStatus.running, "kernel/build")
+    path = project / ".benchhand" / "runs" / f"{handle.job_id}.json"
     record = json.loads(path.read_text())
-    validate_record(record)
-    leader = record["process"]["pid"]
-    assert record["owner"]["pid"] == __import__("os").getpid()
-    assert __import__("os").getpgid(child) == leader  # its own process group, led by the supervisor
+    supervisor = record["process"]["pid"]
+    assert record["owner"]["pid"] == os.getpid()
+    assert os.getsid(child) == supervisor  # under the supervisor...
+    assert os.getpgid(child) not in (supervisor, os.getpgrp())  # ...in a process group of its own
     assert (path.parent / ".gitignore").read_text() == "*\n"
 
 
 def test_a_job_that_exits_zero_succeeds_with_its_result(service: JobService, project: Path) -> None:
     code = "import os; open(os.environ['BENCHHAND_JOB_RESULT'], 'w').write('{\"ok\": true}')"
     handle = service.start(JobSpec("kernel/build", python(code)))
-    done = finished(service, handle["jobId"])
-    assert (done["status"], done["exitCode"], done["error"]) == ("succeeded", 0, None)
-    assert done["finishedAt"] is not None
-    result = service.result(handle["jobId"])
+    done = finished(service, handle.job_id)
+    assert (done.status, done.exit_code, done.error) == (JobStatus.succeeded, 0, None)
+    assert done.finished_at is not None
+    result = service.result(handle.job_id)
     assert json.loads(result.read_text()) == {"ok": True}
-    assert done["resultPath"] == str(result)
+    assert done.result_path == str(result)
 
 
 def test_a_result_path_can_be_chosen(service: JobService, project: Path) -> None:
@@ -54,54 +54,52 @@ def test_a_result_path_can_be_chosen(service: JobService, project: Path) -> None
     target.parent.mkdir()
     code = "import os; open(os.environ['BENCHHAND_JOB_RESULT'], 'w').write('42')"
     handle = service.start(JobSpec("kernel/build", python(code), result_path=target))
-    finished(service, handle["jobId"])
-    assert service.result(handle["jobId"]) == target.resolve()
+    finished(service, handle.job_id)
+    assert service.result(handle.job_id) == target.resolve()
 
 
 def test_success_without_a_result_file_has_no_result_path(service: JobService) -> None:
     handle = service.start(JobSpec("kernel/build", python("pass")))
-    assert finished(service, handle["jobId"])["resultPath"] is None
+    assert finished(service, handle.job_id).result_path is None
     with pytest.raises(JobNotSucceeded):
-        service.result(handle["jobId"])
+        service.result(handle.job_id)
 
 
 def test_a_job_that_exits_nonzero_or_dies_of_a_signal_fails(service: JobService) -> None:
     failing = service.start(JobSpec("kernel/build", python("import sys; sys.exit(3)")))
-    done = finished(service, failing["jobId"])
-    assert (done["status"], done["exitCode"], done["error"]) == ("failed", 3, "the job exited with status 3")
+    done = finished(service, failing.job_id)
+    assert (done.status, done.exit_code, done.error) == (JobStatus.failed, 3, "the job exited with status 3")
     killed = service.start(
         JobSpec("kernel/build", python("import os, signal; os.kill(os.getpid(), signal.SIGUSR1)"))
     )
-    done = finished(service, killed["jobId"])
-    assert (done["status"], done["exitCode"]) == ("failed", -signal.SIGUSR1)
+    done = finished(service, killed.job_id)
+    assert (done.status, done.exit_code) == (JobStatus.failed, -signal.SIGUSR1)
     with pytest.raises(JobNotSucceeded):
-        service.result(failing["jobId"])
+        service.result(failing.job_id)
 
 
 def test_output_goes_to_the_log_not_to_the_service(service: JobService) -> None:
     handle = service.start(
         JobSpec("kernel/build", python("import sys; print('out'); print('err', file=sys.stderr)"))
     )
-    done = finished(service, handle["jobId"])
-    assert sorted(Path(done["logPath"]).read_text().split()) == ["err", "out"]
+    done = finished(service, handle.job_id)
+    assert sorted(Path(done.log_path).read_text().split()) == ["err", "out"]
 
 
 def test_progress_is_recorded_while_running_and_dropped_after(service: JobService, project: Path) -> None:
     handle = service.start(JobSpec("kernel/build", python("import time; time.sleep(600)")))
-    job_id = handle["jobId"]
-    assert handle["progress"] == {"fraction": None, "message": None}
+    job_id = handle.job_id
+    assert (handle.progress.fraction, handle.progress.message) == (None, None)
     service.report_progress(job_id, fraction=0.25, message="building")
-    assert service.report_progress(job_id, fraction=0.5)["progress"] == {
-        "fraction": 0.5,
-        "message": "building",
-    }
-    assert service.status(job_id)["progress"] == {"fraction": 0.5, "message": "building"}
+    expected = {"fraction": 0.5, "message": "building"}
+    assert service.report_progress(job_id, fraction=0.5).progress.model_dump() == expected
+    assert service.status(job_id).progress.model_dump() == expected
     with pytest.raises(ValueError):
         service.report_progress(job_id, fraction=1.5)
     with pytest.raises(ValueError):
         service.report_progress(job_id, message="x" * 501)
     service.cancel(job_id)
-    assert service.report_progress(job_id, fraction=0.9)["progress"]["fraction"] == 0.5
+    assert service.report_progress(job_id, fraction=0.9).progress.fraction == 0.5
     with pytest.raises(UnknownJob):
         service.report_progress("nonexistent", fraction=0.1)
 
@@ -110,18 +108,18 @@ def test_cancel_kills_a_family_that_ignores_sigterm(service: JobService, project
     marker = project / "pids"
     handle = service.start(JobSpec("collision/sweep", python(FAMILY, str(marker))))
     child, grandchild = pids.family(marker)
-    cancelled = service.cancel(handle["jobId"])
-    assert (cancelled["status"], cancelled["exitCode"]) == ("cancelled", -signal.SIGKILL)
+    cancelled = service.cancel(handle.job_id)
+    assert (cancelled.status, cancelled.exit_code) == (JobStatus.cancelled, -signal.SIGKILL)
     pids.assert_gone(child, grandchild)
-    assert service.cancel(handle["jobId"]) == cancelled  # idempotent
-    assert service.status(handle["jobId"])["status"] == "cancelled"
+    assert service.cancel(handle.job_id) == cancelled  # idempotent
+    assert service.status(handle.job_id).status == JobStatus.cancelled
 
 
 def test_cancel_of_a_job_that_ended_keeps_its_status(service: JobService) -> None:
     handle = service.start(JobSpec("kernel/build", python("pass")))
-    done = finished(service, handle["jobId"])
-    assert service.cancel(handle["jobId"]) == done
-    assert done["status"] == "succeeded"
+    done = finished(service, handle.job_id)
+    assert service.cancel(handle.job_id) == done
+    assert done.status == JobStatus.succeeded
 
 
 def test_a_process_left_behind_by_a_finished_job_is_killed(
@@ -129,7 +127,7 @@ def test_a_process_left_behind_by_a_finished_job_is_killed(
 ) -> None:
     marker = project / "grandchild"
     handle = service.start(JobSpec("kernel/build", python(LEAVER, str(marker))))
-    assert finished(service, handle["jobId"])["status"] == "succeeded"
+    assert finished(service, handle.job_id).status == JobStatus.succeeded
     grandchild = int(marker.read_text())
     pids.known.append(grandchild)
     pids.assert_gone(grandchild)
@@ -141,17 +139,15 @@ def test_a_group_that_outlives_its_command_is_killed_on_cancel(
     marker = project / "pids"
     handle = service.start(JobSpec("kernel/build", python(LINGERER, str(marker))))
     child, grandchild = pids.family(marker)
-    service.cancel(handle["jobId"])
+    service.cancel(handle.job_id)
     pids.assert_gone(child, grandchild)
 
 
 def test_reap_finishes_ended_jobs_without_being_asked_about_them(service: JobService) -> None:
     handle = service.start(JobSpec("kernel/build", python("pass")))
-    assert (
-        wait_until(lambda: service.reap(), STARTUP_SECONDS)
-        or service.status(handle["jobId"])["status"] != "running"
-    )
-    assert service.status(handle["jobId"])["status"] == "succeeded"
+    reaped: list[JobHandle] = []
+    assert wait_until(lambda: reaped.extend(service.reap()) or reaped, STARTUP_SECONDS)
+    assert [(h.job_id, h.status) for h in reaped] == [(handle.job_id, JobStatus.succeeded)]
 
 
 def test_closing_the_service_cancels_running_jobs(project: Path, pids: Pids) -> None:
@@ -160,19 +156,19 @@ def test_closing_the_service_cancels_running_jobs(project: Path, pids: Pids) -> 
         handle = service.start(JobSpec("kernel/build", python(FAMILY, str(marker))))
         child, grandchild = pids.family(marker)
     pids.assert_gone(child, grandchild)
-    assert JobService(project).status(handle["jobId"])["status"] == "cancelled"
+    assert JobService(project).status(handle.job_id).status == JobStatus.cancelled
 
 
 def test_list_jobs_and_unknown_ids(service: JobService) -> None:
     first = service.start(JobSpec("kernel/build", python("pass")))
     second = service.start(JobSpec("kernel/build", python("pass")))
-    assert {h["jobId"] for h in service.list_jobs()} == {first["jobId"], second["jobId"]}
+    assert {h.job_id for h in service.list_jobs()} == {first.job_id, second.job_id}
     with pytest.raises(UnknownJob):
         service.status("nonexistent")
 
 
 def test_concurrent_starts_get_distinct_records(service: JobService, project: Path) -> None:
-    handles: list[dict] = []
+    handles: list[JobHandle] = []
 
     def start() -> None:
         handles.append(service.start(JobSpec("kernel/build", python("pass"))))
@@ -182,7 +178,7 @@ def test_concurrent_starts_get_distinct_records(service: JobService, project: Pa
         thread.start()
     for thread in threads:
         thread.join()
-    assert len({h["jobId"] for h in handles}) == 6
+    assert len({h.job_id for h in handles}) == 6
     assert len(list((project / ".benchhand" / "runs").glob("*.json"))) == 6
 
 
@@ -194,7 +190,7 @@ def test_a_program_that_cannot_start_leaves_no_record(service: JobService, proje
 
 
 def test_a_job_needs_a_valid_kind_and_a_command(service: JobService, project: Path) -> None:
-    with pytest.raises(Exception, match="Render"):
+    with pytest.raises(ValueError, match="kind"):
         service.start(JobSpec("Render", python("pass")))
     with pytest.raises(ValueError):
         service.start(JobSpec("kernel/build", []))
@@ -207,5 +203,53 @@ def test_a_job_it_does_not_own_cannot_be_cancelled_while_its_owner_runs(
     handle = service.start(JobSpec("kernel/build", python("import time; time.sleep(600)")))
     other = JobService(project)
     with pytest.raises(JobError, match="owned by process"):
-        other.cancel(handle["jobId"])
+        other.cancel(handle.job_id)
     assert other.recovery.removed == ()
+
+
+def test_progress_after_the_command_exited_is_dropped_even_if_nobody_reaped_it(
+    service: JobService, project: Path
+) -> None:
+    handle = service.start(JobSpec("kernel/build", python("pass")))
+    supervisor = json.loads((project / ".benchhand" / "runs" / f"{handle.job_id}.json").read_text())
+    assert wait_until(lambda: not running(supervisor["process"]["pid"]), STARTUP_SECONDS)
+    after = service.report_progress(handle.job_id, fraction=0.9)
+    assert (after.status, after.progress.fraction) == (JobStatus.succeeded, None)
+
+
+def test_a_failed_final_write_is_retried_with_the_same_outcome(
+    service: JobService, project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    handle = service.start(JobSpec("kernel/build", python("import time; time.sleep(600)")))
+    write = service._store.write
+    broken = [True]
+
+    def flaky(record: JobRecord) -> None:
+        if broken[0] and record.status is JobStatus.cancelled:
+            raise OSError("disk full")
+        write(record)
+
+    monkeypatch.setattr(service._store, "write", flaky)
+    with pytest.raises(OSError, match="disk full"):
+        service.cancel(handle.job_id)
+    with pytest.raises(OSError, match="disk full"):
+        service.status(handle.job_id)  # the outcome is kept, and written again on every ask
+    broken[0] = False
+    assert service.status(handle.job_id).status == JobStatus.cancelled  # not failed by the signal
+
+
+def test_a_directory_is_no_result(service: JobService, project: Path) -> None:
+    target = project / "out"
+    target.mkdir()
+    handle = service.start(JobSpec("kernel/build", python("pass"), result_path=target))
+    assert finished(service, handle.job_id).result_path is None
+    with pytest.raises(JobNotSucceeded):
+        service.result(handle.job_id)
+
+
+def test_a_job_id_that_is_a_path_names_no_job(service: JobService, project: Path) -> None:
+    (project / ".benchhand" / "secret.json").write_text("{}")
+    with pytest.raises(UnknownJob):
+        service.status("../secret")
+    with pytest.raises(UnknownJob):
+        service.cancel("../secret")

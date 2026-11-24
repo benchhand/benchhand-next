@@ -1,10 +1,11 @@
 """Process identity and pid-reuse safety.
 
 The kernel reuses process ids, so a pid alone proves nothing once its process is gone. A recorded
-process runs only while some process has that pid and that identity. A recorded process group is
-still ours while its leader has the recorded identity, or while no process holds the leader's id
-at all: the kernel never hands out an id that is still in use as a process group id, so the
-group's survivors keep it reserved.
+process runs only while some process has that pid and that identity.
+
+Nothing here lets a caller signal a recorded process or group: checking an identity and then
+signalling leaves a window in which the pid can be reused. Only a process's own parent, which
+has not reaped it, may signal it, and only a supervisor signals the group it holds.
 
 POSIX only (Linux, macOS). A guarantee this platform cannot give raises `Unsupported`.
 """
@@ -78,35 +79,6 @@ def process_identity(pid: int) -> str | None:
     return _ps_identity(pid)
 
 
-def pid_exists(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:  # another user's process holds the id
-        return True
-    return True
-
-
-def group_exists(pgid: int) -> bool:
-    try:
-        os.killpg(pgid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
 def process_runs(pid: int, recorded_identity: str) -> bool:
     """Whether the recorded process still runs: some process has its pid and its identity."""
     return process_identity(pid) == recorded_identity
-
-
-def group_survives(pgid: int, leader_identity: str) -> bool:
-    """Whether the recorded process group still has members. When another process holds the
-    leader's id, the recorded group is gone."""
-    current = process_identity(pgid)
-    if current is not None and current != leader_identity:
-        return False
-    return group_exists(pgid)

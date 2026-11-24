@@ -1,25 +1,33 @@
 """The run records of one project: <project>/.benchhand/runs/<jobId>.json.
 
-Each record is a JobRecord of contracts/jobs/job.schema.json, validated on every read and write.
-Files are replaced atomically. `locked` serialises record creation and cleanup across processes.
+Each record is a JobRecord of contracts/jobs/job.schema.json, parsed into the generated model on
+every read. Files are replaced atomically. `locked` serialises record creation and cleanup across
+processes. A job id becomes part of a path only after it matches the contract's JobId, and a
+record belongs to the file that holds it only if its jobId is the file's name.
 """
 
 from __future__ import annotations
 
 import fcntl
-import json
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
 
-from jsonschema import ValidationError
+from benchhand_contracts import ContractViolation, validate
+from benchhand_contracts.models.jobs.job_schema import JobRecord
 
 from benchhand_core.jobs.errors import RecordError, UnknownJob
-from benchhand_core.jobs.schema import validate_record
 
-Record = dict[str, Any]
+JOB_CONTRACT = "https://benchhand.github.io/benchhand/contracts/jobs/job.schema.json"
+
+
+def _checked(job_id: str) -> str:
+    try:
+        validate(f"{JOB_CONTRACT}#/$defs/JobId", job_id)
+    except ContractViolation:
+        raise UnknownJob(f"no job {job_id!r}") from None
+    return job_id
 
 
 class RecordStore:
@@ -33,13 +41,13 @@ class RecordStore:
             ignore.write_text("*\n", encoding="utf-8")
 
     def record_path(self, job_id: str) -> Path:
-        return self.runs_dir / f"{job_id}.json"
+        return self.runs_dir / f"{_checked(job_id)}.json"
 
     def log_path(self, job_id: str) -> Path:
-        return self.runs_dir / f"{job_id}.log"
+        return self.runs_dir / f"{_checked(job_id)}.log"
 
     def default_result_path(self, job_id: str) -> Path:
-        return self.runs_dir / f"{job_id}.result"
+        return self.runs_dir / f"{_checked(job_id)}.result"
 
     def paths(self) -> list[Path]:
         return sorted(self.runs_dir.glob("*.json"))
@@ -54,24 +62,26 @@ class RecordStore:
             finally:
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
-    def write(self, record: Record) -> None:
-        validate_record(record)
-        path = self.record_path(record["jobId"])
+    def write(self, record: JobRecord) -> None:
+        path = self.record_path(record.job_id)
         temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-        temporary.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        temporary.write_text(record.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8")
         os.replace(temporary, path)
 
-    def read_path(self, path: Path) -> Record:
+    def read_path(self, path: Path) -> JobRecord:
+        """Raises RecordError for a file that is no JobRecord or holds another job's id, and
+        FileNotFoundError for a file that is gone."""
         try:
-            record = json.loads(path.read_text(encoding="utf-8"))
-            validate_record(record)
+            record = JobRecord.model_validate_json(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             raise
-        except (OSError, ValueError, ValidationError) as error:
+        except (OSError, ValueError) as error:  # a pydantic ValidationError is a ValueError
             raise RecordError(f"unreadable run record {path} ({type(error).__name__}: {error})") from error
+        if record.job_id != path.stem:
+            raise RecordError(f"run record {path} holds job {record.job_id!r}, not {path.stem!r}")
         return record
 
-    def read(self, job_id: str) -> Record:
+    def read(self, job_id: str) -> JobRecord:
         try:
             return self.read_path(self.record_path(job_id))
         except FileNotFoundError:

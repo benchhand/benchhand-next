@@ -3,7 +3,7 @@ name = "benchhand-core"
 version = "0.0.0"
 description = "benchhand core: flow engine, guide, record service, jobs, middleware and provider host. No CAD dependencies."
 requires-python = ">=3.12"
-dependencies = ["benchhand-contracts", "benchhand-provider", "pyyaml>=6.0", "jsonschema>=4.23", "referencing>=0.35"]
+dependencies = ["benchhand-contracts", "benchhand-provider", "pyyaml>=6.0", "pydantic>=2.9"]
 
 [tool.uv.sources]
 benchhand-contracts = { workspace = true }

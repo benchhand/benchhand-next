@@ -17,9 +17,7 @@ from pathlib import Path
 import pytest
 from benchhand_core.jobs.process import SupervisedProcess
 from conftest import Pids
-from job_support import FAMILY, LINGERER, python, wait_until
-
-pytestmark = pytest.mark.usefixtures("waitid_variant")
+from job_support import FAMILY, LEAVER, LINGERER, python, wait_until
 
 
 def spawn(argv: list[str], tmp_path: Path, grace_seconds: float = 0.5) -> SupervisedProcess:
@@ -35,7 +33,7 @@ def test_terminating_the_group_kills_a_family_that_ignores_sigterm(tmp_path: Pat
     process = spawn(python(FAMILY, str(marker)), tmp_path)
     child, grandchild = pids.family(marker)
     started = time.monotonic()
-    code = process.terminate(grace_seconds=0.5)
+    code = process.terminate()
     assert time.monotonic() - started < 5
     assert code == -signal.SIGKILL
     pids.assert_gone(child, grandchild)
@@ -46,9 +44,20 @@ def test_a_group_that_outlives_its_supervisor_is_killed(tmp_path: Path, pids: Pi
     marker = tmp_path / "pids"
     process = spawn(python(LINGERER, str(marker)), tmp_path)
     child, grandchild = pids.family(marker)
-    code = process.terminate(grace_seconds=5)
+    code = process.terminate()
     assert code == -signal.SIGTERM  # the command's own status: its child died of SIGTERM
     pids.assert_gone(child, grandchild)
+
+
+def test_a_process_left_by_a_command_that_ended_dies_without_the_owner_doing_anything(
+    tmp_path: Path, pids: Pids
+) -> None:
+    marker = tmp_path / "grandchild"
+    spawn(python(LEAVER, str(marker)), tmp_path)  # nobody polls, reaps or terminates it
+    assert wait_until(marker.exists, 30)
+    grandchild = int(marker.read_text())
+    pids.known.append(grandchild)
+    pids.assert_gone(grandchild)
 
 
 def test_the_group_dies_when_its_parent_is_killed_outright(tmp_path: Path, pids: Pids) -> None:
@@ -81,10 +90,10 @@ def test_the_group_dies_when_its_parent_is_killed_outright(tmp_path: Path, pids:
 def test_a_command_that_ends_by_itself_reports_its_status(tmp_path: Path) -> None:
     process = spawn(python("import sys; sys.exit(3)"), tmp_path)
     assert wait_until(process.exited, 30)
-    assert process.terminate(grace_seconds=0) == 3
+    assert process.terminate() == 3
     killed = spawn(python("import os, signal; os.kill(os.getpid(), signal.SIGUSR1)"), tmp_path)
     assert wait_until(killed.exited, 30)
-    assert killed.terminate(grace_seconds=0) == -signal.SIGUSR1
+    assert killed.terminate() == -signal.SIGUSR1
 
 
 def test_a_missing_program_raises_like_subprocess(tmp_path: Path) -> None:
@@ -96,3 +105,20 @@ def test_a_missing_program_raises_like_subprocess(tmp_path: Path) -> None:
     script.write_text("not a program")
     with pytest.raises(PermissionError):
         spawn([str(script)], tmp_path)
+
+
+def test_a_program_is_found_through_a_relative_path_entry_of_the_jobs_cwd(tmp_path: Path) -> None:
+    cwd = tmp_path / "work"
+    (cwd / "bin").mkdir(parents=True)
+    tool = cwd / "bin" / "tool"
+    tool.write_text(f"#!{sys.executable}\nimport sys; sys.exit(7)\n")
+    tool.chmod(0o755)
+    log = open(tmp_path / "out.log", "ab")  # noqa: SIM115 - the child holds its own copy
+    try:
+        process = SupervisedProcess(
+            ["tool"], cwd=cwd, env={**os.environ, "PATH": "bin"}, output=log, grace_seconds=0.5
+        )
+    finally:
+        log.close()
+    assert wait_until(process.exited, 30)
+    assert process.terminate() == 7

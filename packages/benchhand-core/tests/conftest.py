@@ -69,11 +69,3 @@ def project(tmp_path: Path) -> Path:
 def service(project: Path) -> Iterator[JobService]:
     with JobService(project, grace_seconds=0.5) as jobs:
         yield jobs
-
-
-@pytest.fixture(params=["with-waitid", "without-waitid"])
-def waitid_variant(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
-    """The same groups where os has no waitid: macOS before Python 3.13."""
-    if request.param == "without-waitid":
-        monkeypatch.delattr(os, "waitid", raising=False)
-    return request.param

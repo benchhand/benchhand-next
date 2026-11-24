@@ -158,18 +158,16 @@ source = { editable = "packages/benchhand-core" }
 dependencies = [
     { name = "benchhand-contracts" },
     { name = "benchhand-provider" },
-    { name = "jsonschema" },
+    { name = "pydantic" },
     { name = "pyyaml" },
-    { name = "referencing" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "benchhand-contracts", editable = "packages/benchhand-contracts" },
     { name = "benchhand-provider", editable = "packages/benchhand-provider" },
-    { name = "jsonschema", specifier = ">=4.23" },
+    { name = "pydantic", specifier = ">=2.9" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "referencing", specifier = ">=0.35" },
 ]
 
 [[package]]
