@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths-ignore: ["reference/**", "**/*.md"]
+    paths-ignore: ["reference/**"]
 
 concurrency:
   group: ci-${{ github.ref }}
