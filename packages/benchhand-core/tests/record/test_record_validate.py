@@ -408,6 +408,19 @@ def test_a_coupling_names_a_driver_profile_or_mechanism_the_assembly_has(
     assert message in findings[0].message
 
 
+def test_a_coupling_cycle_is_rejected_by_name(lamp_arm: Path) -> None:
+    def couple_elbow_and_head(assembly: dict[str, Any]) -> None:
+        elbow, head = assembly["joints"][1:3]
+        for joint, driver in ((elbow, head["id"]), (head, elbow["id"])):
+            del joint["nominal"]
+            joint["coupling"] = {"type": "linear", "driver": driver, "ratio": 1}
+
+    edit(lamp_arm, "assembly.yaml", couple_elbow_and_head)
+    [finding] = [finding for finding in validate(lamp_arm) if finding.code == "assembly.coupling"]
+    assert finding.message.startswith("coupling cycle: J-00")
+    assert finding.message.endswith("(each joint drives the next)")
+
+
 # --- interfaces -----------------------------------------------------------------------------------------
 
 

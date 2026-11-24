@@ -8,6 +8,7 @@ occurrence.
 
 from __future__ import annotations
 
+import graphlib
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -225,12 +226,38 @@ def _coupling(joint: Joint, index: int, assembly: Assembly) -> list[Finding]:
     ]
 
 
+def _coupling_cycle(assembly: Assembly) -> list[Finding]:
+    """A coupling cycle: following each joint's driver leads back to it. A self-coupling is reported by
+    `_coupling` instead."""
+    mechanisms = {mechanism.id: mechanism.driver for mechanism in assembly.mechanisms or []}
+    joint_ids = {joint.id for joint in assembly.joints}
+    drivers: dict[str, set[str]] = {}
+    for joint in assembly.joints:
+        coupling = joint.coupling
+        if isinstance(coupling, assembly_schema.Coupling1 | assembly_schema.Coupling2):
+            driver = coupling.driver
+        elif isinstance(coupling, assembly_schema.Coupling3):
+            driver = mechanisms.get(coupling.mechanism)
+        else:
+            continue
+        if driver in joint_ids and driver != joint.id:
+            drivers[joint.id] = {driver}
+    try:
+        tuple(graphlib.TopologicalSorter(drivers).static_order())
+    except graphlib.CycleError as error:
+        cycle = error.args[1]
+        index = next(index for index, joint in enumerate(assembly.joints) if joint.id == cycle[0])
+        message = f"coupling cycle: {' -> '.join(cycle)} (each joint drives the next)"
+        return [_error("assembly.coupling", message, "joints", index, "coupling")]
+    return []
+
+
 def joints(assembly: Assembly, placed: Inventory) -> list[Finding]:
     """Each joint's parent and child resolve to two occurrences, its nominal lies within its limits, and a
-    coupling names a driver, profile or mechanism the assembly has."""
+    coupling names a driver, profile or mechanism the assembly has, in no cycle of drivers."""
     findings: list[Finding] = []
     for index, joint in enumerate(assembly.joints):
         findings.extend(
             [*_ends(joint, index, placed), *_limits(joint, index), *_coupling(joint, index, assembly)]
         )
-    return findings
+    return findings + _coupling_cycle(assembly)
