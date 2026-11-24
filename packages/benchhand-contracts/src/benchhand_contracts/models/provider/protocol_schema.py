@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
-from pydantic import BaseModel, ConfigDict, Field, RootModel, StringConstraints
+from pydantic import ConfigDict, Field, RootModel, StringConstraints
 from enum import Enum
+from benchhand_contracts.base import ContractModel
 
 
 class RequestId(RootModel[int]):
@@ -25,7 +26,7 @@ class HookKind(Enum):
     cli = "cli"
 
 
-class HookDecl(BaseModel):
+class HookDecl(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -49,7 +50,7 @@ class Code(Enum):
     external_missing = "external-missing"
 
 
-class Supported(BaseModel):
+class Supported(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -58,7 +59,7 @@ class Supported(BaseModel):
     max: Annotated[int, Field(ge=1)]
 
 
-class Data(BaseModel):
+class Data(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -69,7 +70,7 @@ class Data(BaseModel):
     detail: Any | None = None
 
 
-class ErrorObject(BaseModel):
+class ErrorObject(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -79,7 +80,7 @@ class ErrorObject(BaseModel):
     data: Data
 
 
-class Limits(BaseModel):
+class Limits(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -88,7 +89,7 @@ class Limits(BaseModel):
     max_in_flight: Annotated[int | None, Field(alias="maxInFlight", ge=1, le=16)] = None
 
 
-class Host(BaseModel):
+class Host(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -97,7 +98,7 @@ class Host(BaseModel):
     version: str
 
 
-class Capabilities(BaseModel):
+class Capabilities(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -106,7 +107,7 @@ class Capabilities(BaseModel):
     features: list[Annotated[str, StringConstraints(pattern=r"^([a-z][a-z0-9-]*|x-[a-z0-9-]+)$")]]
 
 
-class InitializeParams(BaseModel):
+class InitializeParams(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -122,7 +123,7 @@ class InitializeParams(BaseModel):
     """
 
 
-class Provider(BaseModel):
+class Provider(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -131,7 +132,7 @@ class Provider(BaseModel):
     version: str
 
 
-class Features(BaseModel):
+class Features(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -140,7 +141,7 @@ class Features(BaseModel):
     optional: list[Annotated[str, StringConstraints(pattern=r"^([a-z][a-z0-9-]*|x-[a-z0-9-]+)$")]]
 
 
-class Needs(BaseModel):
+class Needs(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -150,7 +151,7 @@ class Needs(BaseModel):
     network: bool
 
 
-class CancelParams(BaseModel):
+class CancelParams(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -158,7 +159,7 @@ class CancelParams(BaseModel):
     id: Annotated[int, Field(ge=1, le=9007199254740991)]
 
 
-class ProgressParams(BaseModel):
+class ProgressParams(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -176,7 +177,7 @@ class Level(Enum):
     error = "error"
 
 
-class LogParams(BaseModel):
+class LogParams(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -186,7 +187,7 @@ class LogParams(BaseModel):
     data: Any | None = None
 
 
-class Artifact(BaseModel):
+class Artifact(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -207,7 +208,7 @@ class Status(Enum):
     unknown = "unknown"
 
 
-class Coverage(BaseModel):
+class Coverage(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -216,7 +217,7 @@ class Coverage(BaseModel):
     reason: str | None = None
 
 
-class HookParamsBase(BaseModel):
+class HookParamsBase(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -232,7 +233,7 @@ class HookParamsBase(BaseModel):
     input: dict[str, Any]
 
 
-class HookResultBase(BaseModel):
+class HookResultBase(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -243,7 +244,7 @@ class HookResultBase(BaseModel):
     output: dict[str, Any] | None = None
 
 
-class KernelBuildPart(BaseModel):
+class KernelBuildPart(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -269,18 +270,18 @@ class KernelBuildParams(RootModel[HookParamsBase]):
     root: HookParamsBase
 
 
-class Status1(Enum):
+class Status9(Enum):
     pass_ = "pass"
     fail = "fail"
 
 
-class KernelBuildPartResult(BaseModel):
+class KernelBuildPartResult(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
     pn: Annotated[str, Field(pattern="^[A-Z0-9][A-Z0-9-]{1,31}$")]
-    status: Status1
+    status: Status9
     error: str | None = None
     seconds: Annotated[float | None, Field(ge=0.0)] = None
 
@@ -471,7 +472,7 @@ class Method(Enum):
     cli_run = "cli/run"
 
 
-class Request(BaseModel):
+class Request(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -482,7 +483,7 @@ class Request(BaseModel):
     params: Any | None = None
 
 
-class Notification(BaseModel):
+class Notification(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -492,7 +493,7 @@ class Notification(BaseModel):
     params: Any | None = None
 
 
-class SuccessResponse(BaseModel):
+class SuccessResponse(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -502,7 +503,7 @@ class SuccessResponse(BaseModel):
     result: Any
 
 
-class ErrorResponse(BaseModel):
+class ErrorResponse(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -566,7 +567,7 @@ class BenchhandProviderProtocol(RootModel[Request | Notification | SuccessRespon
     """
 
 
-class InitializeResult(BaseModel):
+class InitializeResult(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

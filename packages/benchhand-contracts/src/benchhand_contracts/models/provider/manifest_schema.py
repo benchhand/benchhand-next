@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import ConfigDict, Field, StringConstraints
+from benchhand_contracts.base import ContractModel
 from typing_extensions import TypeAliasType
 from . import protocol_schema
 
 
-class Protocol(BaseModel):
+class Protocol(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -21,7 +22,7 @@ class Protocol(BaseModel):
 TimeoutsAdditionalProperty = TypeAliasType("TimeoutsAdditionalProperty", Annotated[int, Field(ge=1)])
 
 
-class Environment(BaseModel):
+class Environment(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -31,7 +32,7 @@ class Environment(BaseModel):
     dependencies: list[str]
 
 
-class Environment1(BaseModel):
+class Environment1(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -39,7 +40,7 @@ class Environment1(BaseModel):
     kind: Literal["freecad"]
 
 
-class Environment2(BaseModel):
+class Environment2(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -47,7 +48,7 @@ class Environment2(BaseModel):
     kind: Literal["system"]
 
 
-class CliItem(BaseModel):
+class CliItem(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -56,7 +57,7 @@ class CliItem(BaseModel):
     summary: str
 
 
-class BenchhandProviderToml(BaseModel):
+class BenchhandProviderToml(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

@@ -49,6 +49,7 @@ NEW_SCHEMA: dict[str, Any] = {
     "properties": {
         "part": {"$ref": "#/$defs/PartNumber"},
         "kind": {"$ref": "../provider/protocol.schema.json#/$defs/HookKind"},
+        "notes": {"type": "object", "properties": {"text": {"type": "string"}}},
     },
     "required": ["part"],
     "additionalProperties": False,
@@ -106,7 +107,14 @@ def test_python_models_cover_a_new_schema_without_generator_changes(
     # The module imports, so its $ref into ../provider/protocol became a working cross-package import.
     monkeypatch.syspath_prepend(str(out.parent))
     try:
-        importlib.import_module(f"generated_models.{SYNTHETIC_PACKAGE}.widget_schema")
+        widget = importlib.import_module(f"generated_models.{SYNTHETIC_PACKAGE}.widget_schema").Widget
+        # An object the schema leaves open keeps the keys it doesn't name; a closed one refuses them.
+        notes = {"text": "keep", "author": "sjors"}
+        assert widget.model_validate({"part": "LMP-0003", "notes": notes}).model_dump(
+            mode="json", exclude_unset=True
+        ) == {"part": "LMP-0003", "notes": notes}
+        with pytest.raises(ValueError, match="Extra inputs"):
+            widget.model_validate({"part": "LMP-0003", "colour": "red"})
     finally:
         for name in [name for name in sys.modules if name.startswith("generated_models")]:
             del sys.modules[name]

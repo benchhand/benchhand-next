@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/record/verification-row.schema.json",
+  "title": "benchhand verification matrix row (hw/verification.csv)",
+  "description": "One hw/verification.csv row; the column order is the property order",
+  "x-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requirement",
+    "method",
+    "criteria",
+    "result",
+    "evidence"
+  ],
+  "properties": {
+    "requirement": {
+      "$ref": "common.schema.json#/$defs/requirement_id"
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "I",
+        "A",
+        "D",
+        "T"
+      ]
+    },
+    "criteria": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "pass",
+        "fail",
+        "waived",
+        "not_assessed"
+      ]
+    },
+    "evidence": {
+      "type": "string"
+    }
+  },
+  "examples": [
+    {
+      "requirement": "REQ-001",
+      "method": "T",
+      "criteria": "Measure head travel on both sides of nominal; each direction is at least 45 degrees.",
+      "result": "planned",
+      "evidence": ""
+    },
+    {
+      "requirement": "REQ-002",
+      "method": "T",
+      "criteria": "Sweep the elbow joint and verify both endpoints.",
+      "result": "planned",
+      "evidence": ""
+    }
+  ]
+}

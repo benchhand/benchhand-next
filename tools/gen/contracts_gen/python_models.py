@@ -22,6 +22,10 @@ DATAMODEL_CODEGEN_OPTIONS = (
     "--disable-timestamp",
     "--use-schema-description",
     "--use-field-description",
+    # A schema object without additionalProperties is open; pydantic's default (ignore) would drop its
+    # extra keys, so every model extends a base that keeps them. Closed objects still forbid them.
+    "--base-class",
+    "benchhand_contracts.base.ContractModel",
 )
 SOURCE_MARKER = "@@contracts-gen-source@@"
 RUFF_CONFIG = 'line-length = 110\ntarget-version = "py312"\n'

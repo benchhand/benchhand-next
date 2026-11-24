@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Annotated
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
+from benchhand_contracts.base import ContractModel
 
 
 class Severity(Enum):
@@ -14,7 +15,7 @@ class Severity(Enum):
     info = "info"
 
 
-class BenchhandFinding(BaseModel):
+class BenchhandFinding(ContractModel):
     """
     One problem a service reports, such as a record validation finding. code is stable and names the rule; message is for people and may change. error blocks; warning and info never do
     """
