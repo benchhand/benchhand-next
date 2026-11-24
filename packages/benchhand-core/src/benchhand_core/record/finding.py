@@ -34,3 +34,8 @@ class Finding:
         if self.subject is not None:
             data["subject"] = self.subject
         return data
+
+
+def pointer(*parts: str | int) -> str:
+    """The JSON Pointer (RFC 6901) of the path `parts` into a document."""
+    return "".join("/" + str(part).replace("~", "~0").replace("/", "~1") for part in parts)

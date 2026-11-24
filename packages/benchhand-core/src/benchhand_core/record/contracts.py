@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import functools
 import json
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,6 +14,8 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError, best_match
 from referencing import Registry, Resource
+
+from benchhand_core.record.finding import pointer
 
 MESSAGE_LIMIT = 300
 
@@ -58,10 +59,6 @@ def _validator(contract: str) -> Draft202012Validator:
     return Draft202012Validator(schema(contract), registry=_registry())
 
 
-def _pointer(parts: Iterable[Any]) -> str:
-    return "".join("/" + str(part).replace("~", "~0").replace("/", "~1") for part in parts)
-
-
 def _clip(text: str) -> str:
     return text if len(text) <= MESSAGE_LIMIT else text[: MESSAGE_LIMIT - 1] + "…"
 
@@ -69,8 +66,8 @@ def _clip(text: str) -> str:
 def _violation(contract: str, error: ValidationError) -> SchemaViolation:
     precise = best_match([error])
     return SchemaViolation(
-        pointer=_pointer(precise.absolute_path),
-        schema_path=f"{contract}.schema.json#{_pointer(precise.absolute_schema_path)}",
+        pointer=pointer(*precise.absolute_path),
+        schema_path=f"{contract}.schema.json#{pointer(*precise.absolute_schema_path)}",
         message=_clip(precise.message),
     )
 
