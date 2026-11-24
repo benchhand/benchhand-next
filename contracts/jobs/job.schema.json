@@ -133,7 +133,7 @@
           "$ref": "#/$defs/ProcessIdentity"
         },
         "process": {
-          "description": "The supervisor that leads the job's process group, so its pid is also the group id. Null while queued.",
+          "description": "The job's supervisor: it starts the command in a process group of its own, ends that group when the command ends or its owner does, and exits with the command's status. Null while queued.",
           "oneOf": [
             {
               "$ref": "#/$defs/ProcessIdentity"
