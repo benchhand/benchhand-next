@@ -160,5 +160,14 @@ def probe_prompt() -> str:
     return "benchhand probe prompt: if you see this as a command, prompts work."
 
 
+@server.tool()
+async def probe_report(ctx: Context, report: str) -> str:
+    """Save the agent's final report of the probe run, verbatim, next to the probe results."""
+    _record("report", ctx, report=report)
+    path = OUT.with_suffix(".report.md")
+    path.write_text(report)
+    return f"saved to {path}"
+
+
 if __name__ == "__main__":
     server.run()
