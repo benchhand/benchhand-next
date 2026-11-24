@@ -32,6 +32,31 @@ from mcp.types import ImageContent, ResourceLink, TextContent
 from pydantic import BaseModel
 
 OUT = Path(os.environ.get("BENCHHAND_PROBE_OUT", "probe-results.jsonl")).resolve()
+
+
+def _force_handshake_protocol() -> None:
+    """BENCHHAND_PROBE_LEGACY=1 hides 2026-07-28, so a host negotiates 2025-11-25 or older.
+
+    Dev-only diagnosis for hosts that connect on 2026-07-28 but never surface the tools.
+    The SDK copies the version tuple into several modules, so each copy is replaced.
+    """
+    import importlib
+
+    for name in (
+        "mcp_types.version",
+        "mcp.server.runner",
+        "mcp.server.session",
+        "mcp.server.connection",
+        "mcp.server.lowlevel.server",
+        "mcp.shared.inbound",
+    ):
+        module = importlib.import_module(name)
+        if hasattr(module, "MODERN_PROTOCOL_VERSIONS"):
+            module.MODERN_PROTOCOL_VERSIONS = ()
+
+
+if os.environ.get("BENCHHAND_PROBE_LEGACY") == "1":
+    _force_handshake_protocol()
 APP_URI = "ui://benchhand-probe/app"
 
 server = MCPServer(
