@@ -2,7 +2,8 @@
 
 `read_record` is lenient: it reads every document it can and keeps each problem as a typed error, so
 validation can report them all. `load_record` is strict: it raises the first error. `save_record` and
-`save_document` validate every document before any file is touched, then replace each file atomically.
+`save_document` validate every document before any file is touched, then replace each changed file
+atomically. A saved file keeps the key order it had, and a file whose content is unchanged is not rewritten.
 """
 
 from __future__ import annotations
@@ -10,9 +11,12 @@ from __future__ import annotations
 import os
 import re
 import tempfile
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from benchhand_contracts import ContractViolation
+from benchhand_contracts.base import ContractModel
 
 from benchhand_core.record import contracts, documents
 from benchhand_core.record.documents import DocumentSpec
@@ -27,32 +31,51 @@ from benchhand_core.record.errors import (
 from benchhand_core.record.formats import (
     FormatError,
     join_front_matter,
+    ordered_like,
     parse_csv,
     parse_yaml,
     render_csv,
     render_yaml,
+    same,
     split_front_matter,
 )
-from benchhand_core.record.model import MANUFACTURING_DOCUMENTS, Decision, JsonObject, Record
+from benchhand_core.record.model import (
+    MANUFACTURING_DOCUMENTS,
+    Assembly,
+    BomRow,
+    Decision,
+    DecisionFrontMatter,
+    Guideline,
+    Interfaces,
+    Part,
+    Policy,
+    Product,
+    Record,
+    Requirements,
+    VerificationRow,
+    as_json,
+)
 
 DECISION_FILE = re.compile(r"(?P<id>DR-[0-9]{3})-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.md")
+
+Document = ContractModel | list[ContractModel]
 
 
 @dataclass
 class RecordRead:
     """What `read_record` could read: each document that passed its contract, and every error met."""
 
-    product: JsonObject | None = None
-    requirements: JsonObject | None = None
-    interfaces: JsonObject | None = None
-    assembly: JsonObject | None = None
-    bom: list[JsonObject] | None = None
-    verification: list[JsonObject] | None = None
-    parts: dict[str, JsonObject] = field(default_factory=dict)
+    product: Product | None = None
+    requirements: Requirements | None = None
+    interfaces: Interfaces | None = None
+    assembly: Assembly | None = None
+    bom: list[BomRow] | None = None
+    verification: list[VerificationRow] | None = None
+    parts: dict[str, Part] = field(default_factory=dict)
     decisions: dict[str, Decision] = field(default_factory=dict)
-    manufacturing: dict[str, JsonObject] = field(default_factory=dict)
-    guidelines: dict[str, JsonObject] = field(default_factory=dict)
-    policy: JsonObject | None = None
+    manufacturing: dict[str, ContractModel] = field(default_factory=dict)
+    guidelines: dict[str, Guideline] = field(default_factory=dict)
+    policy: Policy | None = None
     errors: list[RecordError] = field(default_factory=list)
 
     def record(self) -> Record:
@@ -80,24 +103,34 @@ class RecordRead:
 # --- validation -----------------------------------------------------------------------------------------
 
 
-def check_document(spec: DocumentSpec, document: Any) -> None:
-    """Raise RecordSchemaError when `document` (a mapping, or the rows of a CSV file) breaks its contract."""
+def check_document(spec: DocumentSpec, data: Any) -> None:
+    """Raise RecordSchemaError when `data` (a document's JSON, or the rows of a CSV file) breaks its
+    contract; for product.yaml, RecordVersionError first when its record_version is not this release's."""
+    if spec == documents.PRODUCT:
+        check_version(spec.path, data)
     if spec.format == "csv":
-        found = _row_violations(spec.contract, document)
+        found = _row_violations(spec.contract, data)
     else:
-        found = contracts.violations(spec.contract, document)
+        found = contracts.violations(spec.contract, data)
     if found:
         raise RecordSchemaError(spec.path, found)
 
 
-def _row_violations(contract: str, rows: Any) -> tuple[contracts.SchemaViolation, ...]:
+def _row_violations(contract: str, rows: Any) -> list[ContractViolation]:
     if not isinstance(rows, list):
-        return (contracts.SchemaViolation("", "", "rows must be a list"),)
+        return [ContractViolation(contracts.schema_id(contract), "", "", "rows must be a list")]
     found = []
     for index, row in enumerate(rows):
         for violation in contracts.violations(contract, row):
-            found.append(replace(violation, pointer=f"/{index}{violation.pointer}"))
-    return tuple(found)
+            found.append(
+                ContractViolation(
+                    violation.schema_id,
+                    f"/{index}{violation.pointer}",
+                    violation.schema_path,
+                    violation.message,
+                )
+            )
+    return found
 
 
 def check_version(path: str, product: Any) -> None:
@@ -106,23 +139,27 @@ def check_version(path: str, product: Any) -> None:
         raise RecordVersionError(path, found)
 
 
-def check_decision(path: str, decision: Decision) -> None:
-    contract_violations = contracts.violations(documents.DECISION_CONTRACT, decision.front)
-    if contract_violations:
-        raise RecordSchemaError(path, contract_violations)
-    match = DECISION_FILE.fullmatch(decision.file_name)
-    if match is None:
+def _check_decision_name(path: str, slug: str) -> None:
+    if DECISION_FILE.fullmatch(f"DR-000-{slug}.md") is None:
         raise RecordReadError(
-            path, f"slug {decision.slug!r} is not lowercase words joined by -", code="decision.file_name"
+            path, f"slug {slug!r} is not lowercase words joined by -", code="decision.file_name"
         )
+
+
+def _decision_front(path: str, data: Any) -> Any:
+    found = contracts.violations(documents.DECISION_CONTRACT, data)
+    if found:
+        raise RecordSchemaError(path, found)
+    return DecisionFrontMatter.model_validate(data).root
 
 
 # --- reading -----------------------------------------------------------------------------------------
 
 
 def _text(root: Path, path: str) -> str:
+    """The file's text with its line endings as written."""
     try:
-        return (root / path).read_text(encoding="utf-8")
+        return (root / path).read_bytes().decode("utf-8")
     except FileNotFoundError:
         raise RecordMissingError(path) from None
     except (OSError, UnicodeDecodeError) as error:
@@ -139,12 +176,13 @@ def _parse(spec: DocumentSpec, text: str) -> Any:
 
 
 def read_document(root: Path, spec: DocumentSpec) -> Any:
-    """One document, checked against its contract; product.yaml also against the record version."""
-    document = _parse(spec, _text(root, spec.path))
-    if spec == documents.PRODUCT:
-        check_version(spec.path, document)
-    check_document(spec, document)
-    return document
+    """One document as its model (a CSV file as a list of row models), checked against its contract;
+    product.yaml also against the record version."""
+    data = _parse(spec, _text(root, spec.path))
+    check_document(spec, data)
+    if spec.format == "csv":
+        return [spec.model.model_validate(row) for row in data]
+    return spec.model.model_validate(data)
 
 
 def read_decision(root: Path, file_name: str) -> Decision:
@@ -156,8 +194,7 @@ def read_decision(root: Path, file_name: str) -> Decision:
         front, body = split_front_matter(_text(root, path))
     except FormatError as error:
         raise RecordReadError(path, str(error)) from error
-    decision = Decision(slug=match["slug"], front=front, body=body)
-    check_decision(path, decision)
+    decision = Decision(slug=match["slug"], front=_decision_front(path, front), body=body)
     if decision.id != match["id"]:
         raise RecordReadError(
             path, f"front matter id {decision.id} does not match the file name", code="decision.id_mismatch"
@@ -200,8 +237,8 @@ class _Reader:
             name = part_file.parent.name
             part = self.attempt(documents.part(name))
             if part is not None:
-                found.setdefault(part["PN"], []).append(name)
-                if part["PN"] == name:
+                found.setdefault(part.pn, []).append(name)
+                if part.pn == name:
                     self.read.parts[name] = part
         for pn, names in found.items():
             for name in names:
@@ -268,36 +305,81 @@ def load_record(root: Path) -> Record:
 # --- writing -----------------------------------------------------------------------------------------
 
 
-def _render(spec: DocumentSpec, document: Any) -> str:
-    if spec == documents.PRODUCT:
-        check_version(spec.path, document)
-    check_document(spec, document)
+def _as_data(spec: DocumentSpec, document: Document) -> Any:
+    if isinstance(document, list):
+        return [as_json(row) for row in document]
+    return as_json(document)
+
+
+def _on_disk(root: Path, spec: DocumentSpec) -> Any:
+    """What the file at `spec` states now, or None if it is absent or unreadable."""
+    try:
+        return _parse(spec, _text(root, spec.path))
+    except RecordError:
+        return None
+
+
+def _render(root: Path, spec: DocumentSpec, document: Document) -> str | None:
+    """The new text of `spec`'s file, after checking `document`; None when the file already states it."""
+    data = _as_data(spec, document)
+    check_document(spec, data)
+    current = _on_disk(root, spec)
+    if current is not None and same(data, current):
+        return None
     if spec.format == "csv":
-        return render_csv(document, contracts.schema(spec.contract))
-    return render_yaml(document)
+        return render_csv(data, contracts.schema(spec.contract))
+    return render_yaml(ordered_like(data, current))
 
 
-def _record_files(record: Record) -> list[tuple[str, str]]:
-    files = [
-        (documents.PRODUCT.path, _render(documents.PRODUCT, record.product)),
-        (documents.REQUIREMENTS.path, _render(documents.REQUIREMENTS, record.requirements)),
-        (documents.INTERFACES.path, _render(documents.INTERFACES, record.interfaces)),
-        (documents.ASSEMBLY.path, _render(documents.ASSEMBLY, record.assembly)),
-        (documents.BOM.path, _render(documents.BOM, record.bom)),
-        (documents.VERIFICATION.path, _render(documents.VERIFICATION, record.verification)),
+def _render_part(root: Path, pn: str, part: Part) -> str | None:
+    spec = documents.part(pn)
+    text = _render(root, spec, part)
+    if part.pn != pn:
+        message = f"PN {part.pn} is saved under {pn}; a part directory is named after its PN"
+        raise RecordError(spec.path, message, code="part.directory_mismatch")
+    return text
+
+
+def _render_decision(root: Path, key: str, decision: Decision) -> tuple[str, str | None]:
+    """The decision file's path and new text (None when unchanged), after checking its front matter and
+    that its id is `key`, the id the record holds it under."""
+    path = documents.decision_path(f"{key}-{decision.slug}.md")
+    _check_decision_name(path, decision.slug)
+    front = as_json(decision.front)
+    _decision_front(path, front)
+    if decision.id != key:
+        raise RecordError(
+            path, f"front matter id {decision.id} is saved as {key}", code="decision.id_mismatch"
+        )
+    try:
+        current_front, current_body = split_front_matter(_text(root, path))
+    except (RecordError, FormatError):
+        current_front, current_body = None, None
+    if current_body == decision.body and same(front, current_front):
+        return path, None
+    return path, join_front_matter(ordered_like(front, current_front), decision.body)
+
+
+def _record_documents(record: Record) -> list[tuple[DocumentSpec, Document]]:
+    found: list[tuple[DocumentSpec, Document]] = [
+        (documents.PRODUCT, record.product),
+        (documents.REQUIREMENTS, record.requirements),
+        (documents.INTERFACES, record.interfaces),
+        (documents.ASSEMBLY, record.assembly),
+        (documents.BOM, list(record.bom)),
+        (documents.VERIFICATION, list(record.verification)),
     ]
     if record.policy is not None:
-        files.append((documents.POLICY.path, _render(documents.POLICY, record.policy)))
-    for pn, part in record.parts.items():
-        files.append((documents.part(pn).path, _render(documents.part(pn), part)))
-    for name, document in record.manufacturing.items():
-        files.append((documents.manufacturing(name).path, _render(documents.manufacturing(name), document)))
-    for stem, document in record.guidelines.items():
-        files.append((documents.guideline(stem).path, _render(documents.guideline(stem), document)))
-    for decision in record.decisions.values():
-        path = documents.decision_path(decision.file_name)
-        check_decision(path, decision)
-        files.append((path, join_front_matter(decision.front, decision.body)))
+        found.append((documents.POLICY, record.policy))
+    found.extend((documents.manufacturing(name), document) for name, document in record.manufacturing.items())
+    found.extend((documents.guideline(stem), document) for stem, document in record.guidelines.items())
+    return found
+
+
+def _record_files(root: Path, record: Record) -> list[tuple[str, str | None]]:
+    files = [(spec.path, _render(root, spec, document)) for spec, document in _record_documents(record)]
+    files.extend((documents.part(pn).path, _render_part(root, pn, part)) for pn, part in record.parts.items())
+    files.extend(_render_decision(root, key, decision) for key, decision in record.decisions.items())
     return files
 
 
@@ -314,20 +396,25 @@ def _replace(root: Path, path: str, text: str) -> None:
         raise
 
 
-def save_document(root: Path, spec: DocumentSpec, document: Any) -> None:
+def save_document(root: Path, spec: DocumentSpec, document: Document) -> None:
     """Write one YAML document or the rows of one CSV file, after checking it against its contract."""
-    _replace(root, spec.path, _render(spec, document))
+    text = _render(root, spec, document)
+    if text is not None:
+        _replace(root, spec.path, text)
 
 
 def save_decision(root: Path, decision: Decision) -> None:
     """Write one decision record file, after checking its front matter and file name."""
-    path = documents.decision_path(decision.file_name)
-    check_decision(path, decision)
-    _replace(root, path, join_front_matter(decision.front, decision.body))
+    path, text = _render_decision(root, decision.id, decision)
+    if text is not None:
+        _replace(root, path, text)
 
 
 def save_record(root: Path, record: Record) -> None:
     """Write every document of `record` under `root/hw`. Every document is checked first, so a violation
     leaves every file as it was. Files the record does not hold are left alone; nothing is deleted."""
-    for path, text in _record_files(record):
-        _replace(root, path, text)
+    files = _record_files(root, record)
+    (root / documents.PARTS_DIR).mkdir(parents=True, exist_ok=True)
+    for path, text in files:
+        if text is not None:
+            _replace(root, path, text)

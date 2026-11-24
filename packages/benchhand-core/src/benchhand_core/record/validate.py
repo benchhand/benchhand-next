@@ -8,14 +8,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from benchhand_core.record import contracts, documents
+from benchhand_contracts.models.record.common_schema import Stage
+
+from benchhand_core.record import documents
 from benchhand_core.record.errors import RecordMissingError
-from benchhand_core.record.finding import Finding
+from benchhand_core.record.finding import Finding, error
 from benchhand_core.record.rules import bom, decisions, drawing, interfaces, verification
 from benchhand_core.record.rules.assembly import Inventory, inventory, joints
 from benchhand_core.record.store import RecordRead, read_record
 
-PARTS_FROM_STAGE = "layout"
+PARTS_FROM_STAGE = Stage.layout
+STAGES = list(Stage)
 
 
 def _no_parts(read: RecordRead) -> list[Finding]:
@@ -23,18 +26,17 @@ def _no_parts(read: RecordRead) -> list[Finding]:
     parts_unread = any(error.path.startswith(documents.PARTS_DIR) for error in read.errors)
     if read.parts or read.product is None or parts_unread:
         return []
-    stages = contracts.schema("common")["$defs"]["stage"]["enum"]
-    stage = read.product["flow"]["stage"]
-    if stages.index(stage) < stages.index(PARTS_FROM_STAGE):
+    stage = read.product.flow.stage
+    if STAGES.index(stage) < STAGES.index(PARTS_FROM_STAGE):
         return []
-    message = f"no part records found; the {stage} stage needs {documents.PARTS_DIR}/<PN>/part.yaml"
-    return [Finding("record.no_parts", documents.PARTS_DIR, message)]
+    message = f"no part records found; the {stage.value} stage needs {documents.PARTS_DIR}/<PN>/part.yaml"
+    return [error("record.no_parts", documents.PARTS_DIR, message)]
 
 
 def _placement(read: RecordRead) -> tuple[Inventory | None, list[Finding]]:
     if read.assembly is None:
         return None, []
-    placed, findings = inventory(read.assembly, frozenset(read.parts))
+    placed, findings = inventory(read.assembly, read.parts)
     return placed, findings + joints(read.assembly, placed)
 
 

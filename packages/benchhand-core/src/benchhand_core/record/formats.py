@@ -45,7 +45,11 @@ _StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _c
 
 
 def parse_yaml(text: str) -> Any:
-    loader = _StrictLoader(text)
+    try:
+        # The loader reads the stream as it is built, so a forbidden character fails here already.
+        loader = _StrictLoader(text)
+    except yaml.YAMLError as error:
+        raise FormatError(str(error)[:300]) from error
     try:
         return loader.get_single_data()
     except FormatError:
@@ -85,9 +89,12 @@ class Column:
             return float(cell)
         return cell
 
-    @staticmethod
-    def write(value: Any) -> str:
-        return "" if value is None else str(value)
+    def write(self, value: Any) -> str:
+        if value is None:
+            return ""
+        if self.numeric == "integer" and isinstance(value, float) and value.is_integer():
+            return str(int(value))  # JSON Schema counts 1.0 as an integer; the reader wants 1
+        return str(value)
 
 
 def _types(property_schema: dict[str, Any]) -> set[Any]:
@@ -116,8 +123,16 @@ def accepted_headers(row_schema: dict[str, Any]) -> tuple[tuple[str, ...], ...]:
     return (required,) if required == every else (required, every)
 
 
+def _csv_rows(text: str) -> list[list[str]]:
+    reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+    try:
+        return list(reader)
+    except csv.Error as error:
+        raise FormatError(f"line {reader.line_num}: {error}") from error
+
+
 def parse_csv(text: str, row_schema: dict[str, Any]) -> list[dict[str, Any]]:
-    rows = list(csv.reader(io.StringIO(text, newline="")))
+    rows = _csv_rows(text)
     headers = accepted_headers(row_schema)
     header = tuple(rows[0]) if rows else ()
     if header not in headers:
@@ -140,18 +155,20 @@ def render_csv(rows: list[dict[str, Any]], row_schema: dict[str, Any]) -> str:
     out = io.StringIO()
     writer = csv.writer(out, lineterminator="\n")
     writer.writerow(header)
+    by_name = {column.name: column for column in columns(row_schema)}
     for row in rows:
-        writer.writerow([Column.write(row.get(name)) for name in header])
+        writer.writerow([by_name[name].write(row.get(name)) for name in header])
     return out.getvalue()
 
 
 # --- decision files --------------------------------------------------------------------------------------
 
-FRONT_MATTER = re.compile(r"\A---\n(?P<front>.*?\n)?---\n(?P<body>.*)\Z", re.DOTALL)
+FRONT_MATTER = re.compile(r"\A---\r?\n(?P<front>.*?\n)?---\r?\n(?P<body>.*)\Z", re.DOTALL)
 
 
 def split_front_matter(text: str) -> tuple[Any, str]:
-    """The parsed YAML front matter and the verbatim Markdown body of a decision file."""
+    """The parsed YAML front matter and the verbatim Markdown body of a decision file; the delimiter lines
+    end in LF or CRLF."""
     match = FRONT_MATTER.match(text)
     if match is None:
         raise FormatError("no YAML front matter between --- lines at the top of the file")
@@ -160,3 +177,28 @@ def split_front_matter(text: str) -> tuple[Any, str]:
 
 def join_front_matter(front: dict[str, Any], body: str) -> str:
     return f"---\n{render_yaml(front)}---\n{body}"
+
+
+# --- rewriting -------------------------------------------------------------------------------------------
+
+
+def same(left: Any, right: Any) -> bool:
+    """Whether two parsed documents state the same JSON: 2 and 2.0 are one number, true and 1 are not."""
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(same(left[key], right[key]) for key in left)
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(same(a, b) for a, b in zip(left, right, strict=True))
+    numbers = all(isinstance(value, int | float) and not isinstance(value, bool) for value in (left, right))
+    return (numbers or type(left) is type(right)) and left == right
+
+
+def ordered_like(new: Any, old: Any) -> Any:
+    """`new` laid out as `old` was: each mapping's keys in `old`'s order, keys `old` lacks after them in
+    `new`'s order, and a value `old` states the same way kept as `old` wrote it (2, not 2.0)."""
+    if isinstance(new, dict) and isinstance(old, dict):
+        keys = [key for key in old if key in new] + [key for key in new if key not in old]
+        return {key: ordered_like(new[key], old.get(key)) for key in keys}
+    if isinstance(new, list) and isinstance(old, list):
+        olds = [*old, *[None] * (len(new) - len(old))]
+        return [ordered_like(item, previous) for item, previous in zip(new, olds, strict=False)]
+    return old if not isinstance(new, dict | list) and same(new, old) else new

@@ -1,14 +1,16 @@
 """Drawing intent references: tolerance policies against product.yaml, and datum labels against each part
-drawing's datum_features."""
+drawing's datum_features. The references sit at many optional places of a drawing, so these rules walk each
+document's JSON, keyed as in the file."""
 
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 from benchhand_core.record import documents
-from benchhand_core.record.finding import Finding, pointer
+from benchhand_core.record.finding import Finding, error, pointer
+from benchhand_core.record.model import Part, Product, as_json
 
 PRODUCT = documents.PRODUCT.path
 DATUM_LABEL = re.compile(r"[A-HJ-NPR-Z]{1,2}")
@@ -31,15 +33,15 @@ def _general_tolerance(product: dict[str, Any], drawing: dict[str, Any]) -> Find
     if policy is None:
         message = f"general_tolerance_policy {name} is not in drawing/tolerance_policies"
         where = pointer("drawing", "general_tolerance_policy")
-        return Finding("drawing.policy", PRODUCT, message, pointer=where)
+        return error("drawing.policy", PRODUCT, message, pointer=where)
     tolerance = product["general_tolerance"]
     if isinstance(tolerance, dict):
         message = f"general_tolerance is unknown: the {name} policy cannot state it until the user records it"
-        return Finding("drawing.general_tolerance", PRODUCT, message, pointer="/general_tolerance")
+        return error("drawing.general_tolerance", PRODUCT, message, pointer="/general_tolerance")
     if tolerance != stated_general_tolerance(policy):
         expected = stated_general_tolerance(policy)
         message = f"general_tolerance {tolerance!r} does not state the {name} policy; expected {expected!r}"
-        return Finding("drawing.general_tolerance", PRODUCT, message, pointer="/general_tolerance")
+        return error("drawing.general_tolerance", PRODUCT, message, pointer="/general_tolerance")
     return None
 
 
@@ -101,7 +103,7 @@ def _part_policies(part: dict[str, Any], policies: dict[str, Any], path: str) ->
             message = f"tolerance policy {name} applies to {applies}, not {part['process']}"
         else:
             continue
-        yield Finding("drawing.policy", path, message, pointer=pointer("drawing", *where), subject=part["PN"])
+        yield error("drawing.policy", path, message, pointer=pointer("drawing", *where), subject=part["PN"])
 
 
 def _part_datums(part: dict[str, Any], path: str) -> Iterator[Finding]:
@@ -110,7 +112,7 @@ def _part_datums(part: dict[str, Any], path: str) -> Iterator[Finding]:
         if isinstance(ref, str) and DATUM_LABEL.fullmatch(ref) and ref not in declared:
             message = f"datum {ref} is not declared in drawing/datum_features"
             at = pointer("drawing", *where)
-            yield Finding("drawing.datum", path, message, pointer=at, subject=part["PN"])
+            yield error("drawing.datum", path, message, pointer=at, subject=part["PN"])
 
 
 def _part(part: dict[str, Any], product: dict[str, Any]) -> list[Finding]:
@@ -119,16 +121,17 @@ def _part(part: dict[str, Any], product: dict[str, Any]) -> list[Finding]:
     findings = [*_part_policies(part, policies, path), *_part_datums(part, path)]
     if part["drawing"]["type"] not in VENDOR_DRAWINGS and isinstance(product["general_tolerance"], dict):
         message = f"{PRODUCT} general_tolerance is unknown; record it before a drawing states one"
-        finding = Finding("drawing.general_tolerance", path, message, pointer="/drawing", subject=part["PN"])
+        finding = error("drawing.general_tolerance", path, message, pointer="/drawing", subject=part["PN"])
         findings.append(finding)
     return findings
 
 
-def check(product: dict[str, Any], parts: dict[str, Any]) -> list[Finding]:
+def check(product_model: Product, parts: Mapping[str, Part]) -> list[Finding]:
+    product = as_json(product_model)
     findings: list[Finding] = []
     if "drawing" in product and (finding := _general_tolerance(product, product["drawing"])) is not None:
         findings.append(finding)
-    for part in parts.values():
+    for part in map(as_json, parts.values()):
         if "drawing" in part:
             findings.extend(_part(part, product))
     return findings

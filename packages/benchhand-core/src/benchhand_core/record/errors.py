@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from benchhand_core.record.contracts import SchemaViolation
-from benchhand_core.record.finding import Finding
+from benchhand_contracts import ContractViolation
+
+from benchhand_core.record.contracts import shown_location
+from benchhand_core.record.finding import Finding, Severity, error
 
 RECORD_VERSION = 3
+MESSAGE_LIMIT = 300
 
 
 class RecordError(Exception):
@@ -21,7 +24,7 @@ class RecordError(Exception):
             self.code = code
 
     def findings(self) -> list[Finding]:
-        return [Finding(code=self.code, path=self.path, message=self.message)]
+        return [error(self.code, self.path, self.message)]
 
 
 class RecordMissingError(RecordError):
@@ -52,28 +55,37 @@ class RecordVersionError(RecordError):
         action = "Use the benchhand release that wrote this record, or migrate it; nothing was changed."
         return [
             Finding(
-                code=self.code, path=self.path, pointer="/record_version", message=self.message, action=action
+                code=self.code,
+                severity=Severity.error,
+                path=self.path,
+                pointer="/record_version",
+                message=self.message,
+                action=action,
             )
         ]
 
 
 class RecordSchemaError(RecordError):
-    """A document that breaks its contract; each violation carries its document and schema pointers."""
+    """A document that breaks its contract; each violation carries its document pointer and the location of
+    the failing keyword in the contracts."""
 
     code = "record.schema"
 
-    def __init__(self, path: str, violations: tuple[SchemaViolation, ...]) -> None:
+    def __init__(self, path: str, violations: list[ContractViolation]) -> None:
         first = violations[0]
-        super().__init__(path, f"{first.pointer or '/'}: {first.message} ({first.schema_path})")
+        super().__init__(path, f"{first.pointer or '/'}: {_described(first)}")
         self.violations = violations
 
     def findings(self) -> list[Finding]:
         return [
-            Finding(
-                code=self.code,
-                path=self.path,
-                pointer=violation.pointer,
-                message=f"{violation.message} ({violation.schema_path})",
-            )
+            error(self.code, self.path, _described(violation), pointer=violation.pointer)
             for violation in self.violations
         ]
+
+
+def _described(violation: ContractViolation) -> str:
+    message = violation.message
+    if len(message) > MESSAGE_LIMIT:
+        message = message[: MESSAGE_LIMIT - 1] + "…"
+    where = f" ({shown_location(violation.schema_path)})" if violation.schema_path else ""
+    return f"{message}{where}"

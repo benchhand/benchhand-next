@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import prototype_v2
 import pytest
 import yaml
-from benchhand_core.record import documents, store
+from benchhand_contracts.models.record.part_schema import FormClass, ModelFrame
+from benchhand_core.record import contracts, documents, store
 from benchhand_core.record.errors import (
+    RecordError,
     RecordMissingError,
     RecordReadError,
     RecordSchemaError,
     RecordVersionError,
 )
+from benchhand_core.record.model import Policy
 
 
 def tree(root: Path) -> dict[str, bytes]:
@@ -29,8 +31,8 @@ def test_the_lamp_arm_record_round_trips_through_save_and_load(lamp_arm: Path, t
     assert sorted(record.parts) == [f"LMP-{n:04d}" for n in range(1, 12)]
     assert sorted(record.decisions) == ["DR-001", "DR-002", "DR-003", "DR-004", "DR-005", "DR-010"]
     assert sorted(record.manufacturing) == ["capabilities", "materials", "selection"]
-    assert record.product["record_version"] == 3
-    assert record.verification[0]["requirement"] == "REQ-001"
+    assert record.product.record_version == 3
+    assert record.verification[0].requirement == "REQ-001"
 
     copy = tmp_path / "copy"
     store.save_record(copy, record)
@@ -41,14 +43,50 @@ def test_the_lamp_arm_record_round_trips_through_save_and_load(lamp_arm: Path, t
     assert tree(copy) == first  # saving what was read rewrites the same bytes
 
 
+def test_saving_what_was_loaded_leaves_every_file_as_it_was(lamp_arm: Path) -> None:
+    before = tree(lamp_arm)
+    store.save_record(lamp_arm, store.load_record(lamp_arm))
+    assert tree(lamp_arm) == before
+
+
+def test_a_saved_change_keeps_the_file_key_order_and_adds_new_keys_after_it(lamp_arm: Path) -> None:
+    path = lamp_arm / "hw/parts/LMP-0001/part.yaml"
+    keys = list(yaml.safe_load(path.read_text(encoding="utf-8")))
+    record = store.load_record(lamp_arm)
+    part = record.parts["LMP-0001"]
+    part.title = "Base plate, revised"
+    part.form_class = FormClass.plate
+    part.model_frame = ModelFrame.assembly_zero
+    store.save_record(lamp_arm, record)
+
+    saved = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert "model_frame" not in keys and "form_class" not in keys
+    assert list(saved) == [*keys, "model_frame", "form_class"]  # new keys in the contract's order
+    assert saved["title"] == "Base plate, revised"
+
+
 def test_reading_keeps_decision_bodies_and_csv_cells_as_written(lamp_arm: Path) -> None:
     record = store.load_record(lamp_arm)
     source = next((lamp_arm / "hw/decisions").glob("DR-004-*.md"))
     assert source.read_text(encoding="utf-8").endswith(record.decisions["DR-004"].body)
-    assert record.decisions["DR-003"].front["status"] == "superseded"
-    bushing = next(row for row in record.bom if row["PN"] == "LMP-0008")
-    assert bushing["mass"] == 2.0 and bushing["qty"] == 1 and bushing["supplier"] is None
-    assert bushing["specification_revision"] == "01/24"
+    assert record.decisions["DR-003"].front.status.value == "superseded"
+    bushing = next(row for row in record.bom if row.pn == "LMP-0008")
+    assert bushing.mass == 2.0 and bushing.qty == 1 and bushing.supplier is None
+    assert bushing.specification_revision == "01/24"
+
+
+def test_a_crlf_decision_body_round_trips_byte_for_byte(lamp_arm: Path, tmp_path: Path) -> None:
+    source = next((lamp_arm / "hw/decisions").glob("DR-004-*.md"))
+    text = source.read_bytes().replace(b"\n", b"\r\n")
+    source.write_bytes(text)
+    body = text.split(b"---\r\n", 2)[2]
+
+    record = store.load_record(lamp_arm)
+    assert record.decisions["DR-004"].body.encode() == body
+    copy = tmp_path / "copy"
+    store.save_record(copy, record)
+    assert (copy / source.relative_to(lamp_arm)).read_bytes().endswith(b"---\n" + body)
+    assert store.load_record(copy).decisions["DR-004"] == record.decisions["DR-004"]
 
 
 @pytest.mark.parametrize("version", [2, 4, "3", True, None])
@@ -90,7 +128,11 @@ def test_a_schema_violation_names_the_document_pointer_and_the_schema_path(lamp_
     assert raised.value.path == "hw/parts/LMP-0001/part.yaml"
     [violation] = raised.value.violations
     assert violation.pointer == "/rev"
-    assert violation.schema_path == "part.schema.json#/properties/rev/pattern"
+    # The location is the keyword that failed, past the $ref that led there, and it resolves.
+    resource, _, keyword = violation.schema_path.partition("#")
+    assert resource == contracts.schema_id("common")
+    assert keyword == "/$defs/revision/pattern"
+    assert isinstance(contracts.schema("common")["$defs"]["revision"]["pattern"], str)
 
 
 def test_a_bad_csv_row_is_pointed_to_by_its_row_index_and_column(lamp_arm: Path) -> None:
@@ -171,8 +213,8 @@ def test_a_decision_without_front_matter_is_unreadable(lamp_arm: Path) -> None:
 def test_saving_an_invalid_record_touches_no_file(lamp_arm: Path) -> None:
     record = store.load_record(lamp_arm)
     before = tree(lamp_arm)
-    record.product["flow"]["stage"] = "finished"
-    record.requirements["requirements"][0]["priority"] = "maybe"
+    record.product = record.product.model_copy(update={"id": "Not A Slug"})
+    record.requirements.requirements[0] = record.requirements.requirements[0].model_copy(update={"id": "R1"})
 
     with pytest.raises(RecordSchemaError) as raised:
         store.save_record(lamp_arm, record)
@@ -183,19 +225,22 @@ def test_saving_an_invalid_record_touches_no_file(lamp_arm: Path) -> None:
 
 def test_saving_refuses_a_record_version_other_than_3(lamp_arm: Path) -> None:
     record = store.load_record(lamp_arm)
-    record.product["record_version"] = 2
+    product = record.product.model_copy(update={"record_version": 2})
     with pytest.raises(RecordVersionError):
-        store.save_document(lamp_arm, documents.PRODUCT, record.product)
+        store.save_document(lamp_arm, documents.PRODUCT, product)
 
 
 def test_save_document_writes_one_validated_document(lamp_arm: Path) -> None:
     record = store.load_record(lamp_arm)
-    policy = {"policy_version": 1, "default": "ask", "gates": {"layout_freeze": {"mode": "chat"}}}
+    policy = Policy.model_validate(
+        {"policy_version": 1, "default": "ask", "gates": {"layout_freeze": {"mode": "chat"}}}
+    )
     with pytest.raises(RecordSchemaError, match="decision"):
         store.save_document(lamp_arm, documents.POLICY, policy)
     assert not (lamp_arm / "hw/policy.yaml").exists()
 
-    policy["gates"]["layout_freeze"]["decision"] = "DR-010"
+    assert policy.gates is not None
+    policy.gates["layout_freeze"].decision = "DR-010"
     store.save_document(lamp_arm, documents.POLICY, policy)
     assert store.load_record(lamp_arm).policy == policy
     assert store.load_record(lamp_arm).parts == record.parts
@@ -204,15 +249,69 @@ def test_save_document_writes_one_validated_document(lamp_arm: Path) -> None:
 def test_the_converted_template_loads_with_no_parts(template: Path) -> None:
     record = store.load_record(template)
     assert record.parts == {} and record.decisions == {}
-    assert record.product["flow"]["stage"] == "ground"
+    assert record.product.flow.stage == "ground"
 
 
-def test_the_fixture_converter_only_renames_what_the_migration_page_lists() -> None:
-    migration = (Path(__file__).resolve().parents[4] / "docs/contract/record-migration.md").read_text()
-    renames = {
-        **prototype_v2.HEAT_SET_RENAMES,
-        **prototype_v2.BOM_COLUMN_RENAMES,
-        **prototype_v2.VERIFICATION_COLUMN_RENAMES,
-    }
-    for old, new in renames.items():
-        assert f"| `{old}` | `{new}` |" in migration
+def test_the_empty_template_saves_into_a_new_root_that_loads(template: Path, tmp_path: Path) -> None:
+    fresh = tmp_path / "fresh"
+    record = store.load_record(template)
+    store.save_record(fresh, record)
+    assert store.load_record(fresh) == record
+
+
+@pytest.mark.filterwarnings("ignore:Pydantic serializer warnings")
+def test_a_csv_integer_given_as_a_float_is_written_as_an_integer(lamp_arm: Path) -> None:
+    record = store.load_record(lamp_arm)
+    record.bom[1].qty = 1.0  # type: ignore[assignment]  # JSON Schema counts 1.0 as an integer
+    store.save_record(lamp_arm, record)
+    assert store.load_record(lamp_arm).bom[1].qty == 1
+
+
+def test_an_empty_text_cell_is_refused_because_a_blank_cell_reads_as_null(lamp_arm: Path) -> None:
+    record = store.load_record(lamp_arm)
+    before = tree(lamp_arm)
+    record.bom[1].title = ""
+    with pytest.raises(RecordSchemaError) as raised:
+        store.save_record(lamp_arm, record)
+    assert [violation.pointer for violation in raised.value.violations] == ["/1/title"]
+    assert tree(lamp_arm) == before
+
+
+def test_a_part_saved_under_another_pn_or_a_bad_decision_id_touches_no_file(lamp_arm: Path) -> None:
+    record = store.load_record(lamp_arm)
+    before = tree(lamp_arm)
+    record.parts["LMP-0012"] = record.parts.pop("LMP-0011")
+    with pytest.raises(RecordError) as raised:
+        store.save_record(lamp_arm, record)
+    assert raised.value.code == "part.directory_mismatch"
+    assert raised.value.path == "hw/parts/LMP-0012/part.yaml"
+    assert tree(lamp_arm) == before
+
+    record = store.load_record(lamp_arm)
+    record.decisions["DR-001"].front.id = "DR-1"
+    with pytest.raises(RecordSchemaError) as raised:
+        store.save_record(lamp_arm, record)
+    assert "/id" in [violation.pointer for violation in raised.value.violations]
+    assert tree(lamp_arm) == before
+
+
+def test_a_non_finite_number_is_refused_with_its_pointer(lamp_arm: Path) -> None:
+    path = lamp_arm / "hw/assembly.yaml"
+    path.write_text(path.read_text(encoding="utf-8").replace("[0, 0, 21.495]", "[0, 0, .nan]"))
+    with pytest.raises(RecordSchemaError) as raised:
+        store.load_record(lamp_arm)
+    [violation] = raised.value.violations
+    assert violation.pointer.startswith("/occurrences/") and violation.pointer.endswith("/translation_mm/2")
+
+
+@pytest.mark.parametrize(
+    ("name", "text"),
+    [
+        ("interfaces.yaml", "interfaces: []\x07\n"),  # a control character YAML forbids
+        ("verification.csv", 'requirement,method,criteria,result,evidence\nREQ-001,T,"unterminated\n'),
+    ],
+)
+def test_malformed_text_is_an_unreadable_finding_not_a_crash(lamp_arm: Path, name: str, text: str) -> None:
+    (lamp_arm / "hw" / name).write_text(text, encoding="utf-8")
+    read = store.read_record(lamp_arm)
+    assert [(error.code, error.path) for error in read.errors] == [("record.unreadable", f"hw/{name}")]

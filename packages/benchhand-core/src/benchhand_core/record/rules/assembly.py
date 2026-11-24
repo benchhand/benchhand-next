@@ -2,19 +2,27 @@
 
 An occurrence is one placement of one part. `assembly.yaml` lists explicit occurrences under `occurrences`
 and joins them to subassemblies by `@id`. A PN in a subassembly's `parts` list is one implicit occurrence
-whose id is the PN. A reference is `@id`, or a bare PN that has exactly one occurrence.
+at the identity placement, whose id is the PN. A reference is `@id`, or a bare PN that has exactly one
+occurrence.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+
+from benchhand_contracts.models.record import assembly_schema
+from benchhand_contracts.models.record.part_schema import ModelFrame
 
 from benchhand_core.record import documents
-from benchhand_core.record.finding import Finding, pointer
+from benchhand_core.record.finding import Finding, error, pointer
+from benchhand_core.record.model import Assembly, Part
 
 ASSEMBLY = documents.ASSEMBLY.path
+
+Joint = assembly_schema.Joints | assembly_schema.Joints1
+Subassembly = assembly_schema.Subassemblies | assembly_schema.Subassemblies1
 
 
 @dataclass(frozen=True)
@@ -22,6 +30,7 @@ class Occurrence:
     id: str
     pn: str
     explicit: bool  # listed under occurrences; False for a PN in a subassembly's parts list (id == PN)
+    identity: bool = True  # placed with no translation and no rotation
 
     @property
     def ref(self) -> str:
@@ -64,13 +73,23 @@ class Inventory:
 
 
 def _error(code: str, message: str, *parts: str | int, subject: str | None = None) -> Finding:
-    return Finding(code=code, path=ASSEMBLY, pointer=pointer(*parts), message=message, subject=subject)
+    return error(code, ASSEMBLY, message, pointer=pointer(*parts), subject=subject)
 
 
-def _explicit(assembly: Any, part_numbers: frozenset[str], findings: list[Finding]) -> dict[str, Occurrence]:
+def _is_identity(placement: assembly_schema.Placement | None) -> bool:
+    if placement is None:
+        return True
+    still = placement.translation_mm is None or all(value == 0 for value in placement.translation_mm)
+    turned = placement.rotation is not None and math.remainder(placement.rotation.angle_deg, 360.0) != 0
+    return still and not turned
+
+
+def _explicit(
+    assembly: Assembly, part_numbers: frozenset[str], findings: list[Finding]
+) -> dict[str, Occurrence]:
     explicit: dict[str, Occurrence] = {}
-    for index, raw in enumerate(assembly.get("occurrences", [])):
-        occurrence = Occurrence(raw["id"], raw["PN"], explicit=True)
+    for index, raw in enumerate(assembly.occurrences or []):
+        occurrence = Occurrence(raw.id, raw.pn, explicit=True, identity=_is_identity(raw.placement))
         if occurrence.id in explicit:
             message = f"occurrence id {occurrence.id} is used twice"
             findings.append(_error("assembly.occurrence", message, "occurrences", index, "id"))
@@ -87,20 +106,20 @@ def _explicit(assembly: Any, part_numbers: frozenset[str], findings: list[Findin
 Members = tuple[list[Occurrence], list[Finding]]
 
 
-def _members(subassembly: Any, index: int, explicit: dict[str, Occurrence]) -> Members:
+def _members(subassembly: Subassembly, index: int, explicit: dict[str, Occurrence]) -> Members:
     """The occurrences a subassembly holds. A PN in its parts list needs no part record yet: the project
     template's placeholder has none until the parts stage."""
     members: list[Occurrence] = []
     findings: list[Finding] = []
     explicit_pns = {occurrence.pn for occurrence in explicit.values()}
-    for position, pn in enumerate(subassembly.get("parts", [])):
+    for position, pn in enumerate(subassembly.parts or []):
         where = ("subassemblies", index, "parts", position)
         if pn in explicit_pns:
             message = f"{pn} has explicit occurrences; list them under occurrences instead of parts"
             findings.append(_error("assembly.occurrence", message, *where, subject=pn))
         else:
             members.append(Occurrence(pn, pn, explicit=False))
-    for position, ref in enumerate(subassembly.get("occurrences", [])):
+    for position, ref in enumerate(subassembly.occurrences or []):
         if ref[1:] in explicit:
             members.append(explicit[ref[1:]])
         else:
@@ -109,55 +128,109 @@ def _members(subassembly: Any, index: int, explicit: dict[str, Occurrence]) -> M
     return members, findings
 
 
-def inventory(assembly: Any, part_numbers: frozenset[str]) -> tuple[Inventory, list[Finding]]:
-    """The inventory of a contract-valid assembly.yaml, and each problem that leaves a reference open."""
+def _frames(placed: Inventory, parts: Mapping[str, Part]) -> list[Finding]:
+    """A part modelled in assembly_zero (the default) is already in assembly coordinates, so it is placed
+    once, at the identity placement; a placed or repeated part is modelled part_local."""
     findings: list[Finding] = []
-    explicit = _explicit(assembly, part_numbers, findings)
+    for pn, part in parts.items():
+        occurrences = placed.of(pn)
+        if part.model_frame is ModelFrame.part_local or not occurrences:
+            continue
+        path = documents.part(pn).path
+        if len(occurrences) > 1:
+            message = (
+                f"{pn} is placed {len(occurrences)} times but its model_frame is assembly_zero; "
+                "a repeated part is modelled part_local"
+            )
+            findings.append(error("assembly.model_frame", path, message, subject=pn))
+        elif not occurrences[0].identity:
+            message = (
+                f"{occurrences[0].ref} has a non-identity placement but {pn}'s model_frame is assembly_zero; "
+                "a placed part is modelled part_local"
+            )
+            findings.append(error("assembly.model_frame", path, message, subject=pn))
+    return findings
+
+
+def inventory(assembly: Assembly, parts: Mapping[str, Part]) -> tuple[Inventory, list[Finding]]:
+    """The inventory of a contract-valid assembly.yaml, and each problem that leaves a reference open or
+    places a part its model frame does not allow."""
+    findings: list[Finding] = []
+    explicit = _explicit(assembly, frozenset(parts), findings)
     occurrences: dict[str, Occurrence] = {}
     group_of: dict[str, str] = {}
-    for index, subassembly in enumerate(assembly["subassemblies"]):
+    for index, subassembly in enumerate(assembly.subassemblies):
         members, problems = _members(subassembly, index, explicit)
         findings.extend(problems)
         for occurrence in members:
             if occurrence.explicit and occurrence.id in group_of:
-                message = (
-                    f"{occurrence.ref} belongs to both {group_of[occurrence.id]} and {subassembly['id']}"
-                )
+                message = f"{occurrence.ref} belongs to both {group_of[occurrence.id]} and {subassembly.id}"
                 findings.append(_error("assembly.occurrence", message, "subassemblies", index, "occurrences"))
-            group_of.setdefault(occurrence.id, subassembly["id"])
+            group_of.setdefault(occurrence.id, subassembly.id)
             occurrences.setdefault(occurrence.id, occurrence)
-    for index, raw in enumerate(assembly.get("occurrences", [])):
-        if raw["id"] not in group_of:
-            message = f"@{raw['id']} belongs to no subassembly"
+    for index, raw in enumerate(assembly.occurrences or []):
+        if raw.id not in group_of:
+            message = f"@{raw.id} belongs to no subassembly"
             findings.append(_error("assembly.occurrence", message, "occurrences", index))
-    return Inventory(occurrences, part_numbers), findings
+    placed = Inventory(occurrences, frozenset(parts))
+    return placed, findings + _frames(placed, parts)
 
 
-def _joint(joint: Any, index: int, placed: Inventory) -> list[Finding]:
+def _ends(joint: Joint, index: int, placed: Inventory) -> list[Finding]:
     findings: list[Finding] = []
     ends: list[Occurrence] = []
     for end in ("parent", "child"):
-        found = placed.resolve(joint[end])
+        found = placed.resolve(getattr(joint, end))
         if isinstance(found, str):
             findings.append(
-                _error("assembly.joint_reference", f"{joint['id']} {end}: {found}", "joints", index, end)
+                _error("assembly.joint_reference", f"{joint.id} {end}: {found}", "joints", index, end)
             )
         else:
             ends.append(found)
     if len(ends) == 2 and ends[0] == ends[1]:
-        message = f"{joint['id']}: parent and child are both {ends[0].ref}"
+        message = f"{joint.id}: parent and child are both {ends[0].ref}"
         findings.append(_error("assembly.joint_reference", message, "joints", index, "child"))
-    if joint["min"] > joint["max"]:
-        message = f"{joint['id']}: minimum {joint['min']} exceeds maximum {joint['max']}"
-        findings.append(_error("assembly.joint_limits", message, "joints", index, "min"))
-    elif "nominal" in joint and not joint["min"] <= joint["nominal"] <= joint["max"]:
-        message = f"{joint['id']}: nominal {joint['nominal']} is outside [{joint['min']}, {joint['max']}]"
-        findings.append(_error("assembly.joint_limits", message, "joints", index, "nominal"))
     return findings
 
 
-def joints(assembly: Any, placed: Inventory) -> list[Finding]:
-    """Each joint's parent and child resolve to two occurrences, and its nominal lies within its limits."""
+def _limits(joint: Joint, index: int) -> list[Finding]:
+    if joint.min > joint.max:
+        message = f"{joint.id}: minimum {joint.min} exceeds maximum {joint.max}"
+        return [_error("assembly.joint_limits", message, "joints", index, "min")]
+    if joint.nominal is not None and not joint.min <= joint.nominal <= joint.max:
+        message = f"{joint.id}: nominal {joint.nominal} is outside [{joint.min}, {joint.max}]"
+        return [_error("assembly.joint_limits", message, "joints", index, "nominal")]
+    return []
+
+
+def _coupling(joint: Joint, index: int, assembly: Assembly) -> list[Finding]:
+    """A coupled joint's driver is another joint, and the profile or mechanism it names exists."""
+    coupling = joint.coupling
+    where = ("joints", index, "coupling")
+    problems: list[tuple[str, str]] = []
+    if isinstance(coupling, assembly_schema.Coupling1 | assembly_schema.Coupling2):
+        if coupling.driver == joint.id:
+            problems.append(("driver", f"{joint.id} is coupled to itself"))
+        elif coupling.driver not in {other.id for other in assembly.joints}:
+            problems.append(("driver", f"driver {coupling.driver} is not a joint of this assembly"))
+    if isinstance(coupling, assembly_schema.Coupling2) and coupling.profile not in (assembly.profiles or {}):
+        problems.append(("profile", f"profile {coupling.profile!r} is not in `profiles`"))
+    if isinstance(coupling, assembly_schema.Coupling3) and coupling.mechanism not in {
+        mechanism.id for mechanism in assembly.mechanisms or []
+    }:
+        problems.append(("mechanism", f"mechanism {coupling.mechanism!r} is not in `mechanisms`"))
     return [
-        finding for index, joint in enumerate(assembly["joints"]) for finding in _joint(joint, index, placed)
+        _error("assembly.coupling", f"{joint.id} coupling: {message}", *where, key)
+        for key, message in problems
     ]
+
+
+def joints(assembly: Assembly, placed: Inventory) -> list[Finding]:
+    """Each joint's parent and child resolve to two occurrences, its nominal lies within its limits, and a
+    coupling names a driver, profile or mechanism the assembly has."""
+    findings: list[Finding] = []
+    for index, joint in enumerate(assembly.joints):
+        findings.extend(
+            [*_ends(joint, index, placed), *_limits(joint, index), *_coupling(joint, index, assembly)]
+        )
+    return findings

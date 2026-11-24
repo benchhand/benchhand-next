@@ -1,39 +1,20 @@
-"""A finding: one problem a service reports (contracts/common/finding.schema.json)."""
+"""Findings: the generated model of contracts/common/finding.schema.json, and JSON Pointers into documents."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Literal
+from benchhand_contracts import Finding
+from benchhand_contracts.models.common.finding_schema import Severity
 
-# Hand-written until the codegen lane lands; its generated model replaces this class at merge.
-
-Severity = Literal["error", "warning", "info"]
+__all__ = ["Finding", "Severity", "error", "pointer"]
 
 
-@dataclass(frozen=True)
-class Finding:
-    code: str
-    path: str
-    message: str
-    severity: Severity = "error"
-    pointer: str | None = None
-    action: str | None = None
-    subject: str | None = None
-
-    @property
-    def blocking(self) -> bool:
-        return self.severity == "error"
-
-    def to_json(self) -> dict[str, Any]:
-        data: dict[str, Any] = {"code": self.code, "severity": self.severity, "path": self.path}
-        if self.pointer is not None:
-            data["pointer"] = self.pointer
-        data["message"] = self.message
-        if self.action is not None:
-            data["action"] = self.action
-        if self.subject is not None:
-            data["subject"] = self.subject
-        return data
+def error(
+    code: str, path: str, message: str, *, pointer: str | None = None, subject: str | None = None
+) -> Finding:
+    """A blocking finding; pointer and subject left None are absent, as the contract has no null for them."""
+    optional = {"pointer": pointer, "subject": subject}
+    present = {name: value for name, value in optional.items() if value is not None}
+    return Finding(code=code, severity=Severity.error, path=path, message=message, **present)
 
 
 def pointer(*parts: str | int) -> str:

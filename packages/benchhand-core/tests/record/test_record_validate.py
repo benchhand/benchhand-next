@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
-from benchhand_core.record.finding import Finding
+from benchhand_contracts import validate as validate_contract
+from benchhand_core.record.finding import Finding, Severity
 from benchhand_core.record.validate import validate
-from jsonschema import Draft202012Validator
 
-FINDING_SCHEMA = Path(__file__).resolve().parents[4] / "contracts/common/finding.schema.json"
+FINDING_ID = "https://benchhand.github.io/benchhand/contracts/common/finding.schema.json"
 
 
 def edit(root: Path, path: str, change: Callable[[Any], None]) -> None:
@@ -77,7 +76,6 @@ def test_an_unsupported_record_version_is_named_with_the_other_findings_and_noth
 
 
 def test_every_finding_meets_the_finding_contract(prototype_lamp_arm: Path, lamp_arm: Path) -> None:
-    validator = Draft202012Validator(json.loads(FINDING_SCHEMA.read_text(encoding="utf-8")))
     (lamp_arm / "hw/parts/LMP-0011").rename(lamp_arm / "hw/parts/LMP-0099")
     edit_csv(lamp_arm, "bom.csv", lambda lines: lines.append(lines[1].replace("LMP-0001", "LMP-0098")))
     edit(lamp_arm, "parts/LMP-0001/part.yaml", lambda part: part["decisions"].append("DR-099"))
@@ -97,8 +95,8 @@ def test_every_finding_meets_the_finding_contract(prototype_lamp_arm: Path, lamp
         "decision.reference",
     } <= codes
     for finding in findings:
-        validator.validate(finding.to_json())
-        assert finding.blocking
+        validate_contract(FINDING_ID, finding.model_dump(mode="json", exclude_unset=True))
+        assert finding.severity is Severity.error
 
 
 # --- decisions -----------------------------------------------------------------------------------------
@@ -190,6 +188,22 @@ def test_an_approved_gate_records_its_approval_unless_its_policy_mode_is_auto(
     assert found(validate(lamp_arm)) == expected
 
 
+@pytest.mark.parametrize("policy", [None, {"policy_version": 1, "default": "chat", "decision": "DR-010"}])
+def test_an_automatic_approval_does_not_pass_a_gate_that_asks(
+    lamp_arm: Path, policy: dict[str, Any] | None
+) -> None:
+    if policy is not None:
+        (lamp_arm / "hw/policy.yaml").write_text(yaml.safe_dump(policy), encoding="utf-8")
+    gate = {"kind": "gate", "status": "approved", "gate": "layout_freeze", "stage": "layout"}
+    approval = {"approval": {"channel": "auto"}}
+    write_decision(
+        lamp_arm, {"id": "DR-021", "title": "Layout freeze", "date": "2026-11-21", **gate, **approval}
+    )
+    assert found(validate(lamp_arm)) == {
+        ("decision.approval_channel", "hw/decisions/DR-021-test.md", "/approval/channel")
+    }
+
+
 def test_supersedes_must_name_another_existing_decision(lamp_arm: Path) -> None:
     gate = {"kind": "gate", "status": "void", "gate": "layout_freeze", "stage": "layout"}
     write_decision(
@@ -245,6 +259,13 @@ def test_the_bom_quantity_matches_the_number_of_occurrences(lamp_arm: Path) -> N
     assert "@ring-base, @ring-elbow, @ring-head" in finding.message
 
 
+def test_deleting_the_only_bom_row_of_a_placed_part_counts_zero(lamp_arm: Path) -> None:
+    edit_csv(lamp_arm, "bom.csv", lambda lines: lines.__delitem__(9))  # LMP-0011, placed three times
+    [finding] = validate(lamp_arm)
+    assert (finding.code, finding.pointer, finding.subject) == ("bom.quantity", None, "LMP-0011")
+    assert "BOM quantity of LMP-0011 is 0" in finding.message
+
+
 # --- verification ---------------------------------------------------------------------------------------
 
 
@@ -259,6 +280,16 @@ def test_each_requirement_has_one_verification_row_and_each_row_a_requirement(la
         ("verification.duplicate", "hw/verification.csv", "/6/requirement"),
         ("verification.unknown_requirement", "hw/verification.csv", "/7/requirement"),
         ("verification.missing", "hw/verification.csv", None),
+    }
+
+
+def test_a_requirement_id_given_twice_is_reported_at_the_later_requirement(lamp_arm: Path) -> None:
+    def duplicate(requirements: dict[str, Any]) -> None:
+        requirements["requirements"][1]["id"] = requirements["requirements"][0]["id"]
+
+    edit(lamp_arm, "requirements.yaml", duplicate)
+    assert found(validate(lamp_arm)) >= {
+        ("requirements.duplicate", "hw/requirements.yaml", "/requirements/1/id"),
     }
 
 
@@ -310,6 +341,71 @@ def test_every_explicit_occurrence_has_a_part_and_one_subassembly(lamp_arm: Path
         ("assembly.occurrence", "hw/assembly.yaml", "/subassemblies/0/occurrences/1"),
         ("assembly.occurrence", "hw/assembly.yaml", "/subassemblies/1/occurrences"),
     }
+
+
+def test_a_part_modelled_in_assembly_coordinates_is_placed_once_at_the_identity(lamp_arm: Path) -> None:
+    ring = lamp_arm / "hw/parts/LMP-0011/part.yaml"
+    ring.write_text(
+        ring.read_text(encoding="utf-8").replace("model_frame: part_local\n", ""), encoding="utf-8"
+    )
+
+    def place_insert(assembly: dict[str, Any]) -> None:
+        assembly["subassemblies"][1]["parts"].remove("LMP-0010")
+        assembly["subassemblies"][1]["occurrences"].append("@insert")
+        assembly["occurrences"].append(
+            {"id": "insert", "PN": "LMP-0010", "placement": {"translation_mm": [0, 0, 0]}}
+        )
+        assembly["joints"][8]["child"] = "@insert"
+
+    edit(lamp_arm, "assembly.yaml", place_insert)
+    assert found(validate(lamp_arm)) == {("assembly.model_frame", "hw/parts/LMP-0011/part.yaml", None)}
+    assert "LMP-0011 is placed 3 times but its model_frame is assembly_zero" in validate(lamp_arm)[0].message
+
+    edit(
+        lamp_arm,
+        "assembly.yaml",
+        lambda assembly: assembly["occurrences"][3]["placement"].update(
+            rotation={"axis": [0, 0, 1], "angle_deg": 90}
+        ),
+    )
+    assert found(validate(lamp_arm)) == {
+        ("assembly.model_frame", "hw/parts/LMP-0011/part.yaml", None),
+        ("assembly.model_frame", "hw/parts/LMP-0010/part.yaml", None),
+    }
+
+
+@pytest.mark.parametrize(
+    ("coupling", "key", "message"),
+    [
+        (
+            {"type": "linear", "driver": "J-099", "ratio": 1},
+            "driver",
+            "driver J-099 is not a joint of this assembly",
+        ),
+        ({"type": "linear", "driver": "J-003", "ratio": 1}, "driver", "J-003 is coupled to itself"),
+        (
+            {"type": "periodic_table", "driver": "J-002", "profile": "tilt"},
+            "profile",
+            "profile 'tilt' is not in",
+        ),
+        (
+            {"type": "slider_crank", "mechanism": "crank", "output": "rod_angle"},
+            "mechanism",
+            "mechanism 'crank'",
+        ),
+    ],
+)
+def test_a_coupling_names_a_driver_profile_or_mechanism_the_assembly_has(
+    lamp_arm: Path, coupling: dict[str, Any], key: str, message: str
+) -> None:
+    def couple_head(assembly: dict[str, Any]) -> None:
+        del assembly["joints"][2]["nominal"]
+        assembly["joints"][2]["coupling"] = coupling
+
+    edit(lamp_arm, "assembly.yaml", couple_head)
+    findings = validate(lamp_arm)
+    assert found(findings) == {("assembly.coupling", "hw/assembly.yaml", f"/joints/2/coupling/{key}")}
+    assert message in findings[0].message
 
 
 # --- interfaces -----------------------------------------------------------------------------------------
