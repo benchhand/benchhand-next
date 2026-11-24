@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.nozzle.d0_6
+revision: 1
+title: FDM 0.6 mm nozzle
+scope:
+  process: fdm
+  nozzle_diameter:
+    lower: 0.6
+    upper: 0.6
+    units: mm
+limits:
+- characteristic: min_wall
+  operator: '>='
+  relative:
+    relative_to: line_width
+    factor: 3
+    floor:
+      value: 0.8
+      units: mm
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Modeling with 3D printing in mind
+    url: https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135
+    accessed: '2026-11-18'
+    locator: 'Fine details and wall thickness table, 0.4 mm nozzle: 1, 2, 3 and 4 perimeters are about 0.45, 0.9, 1.35 and 1.8 mm'
+  - kind: supplier
+    reference: Protolabs, Fused deposition modeling (FDM)
+    url: https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/
+    accessed: '2026-11-18'
+    locator: 'FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm (the floor)'

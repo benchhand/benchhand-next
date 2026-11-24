@@ -1,0 +1,16 @@
+# >>> cad storage: written by cad-flow setup.py from product.yaml storage.results_in_git; do not edit
+/versions/
+/checks/
+/drawings/
+/renders/
+/captures/
+/motion/v*/
+/analysis/v*/
+/concept/screenshots/
+/releases/
+# <<< cad storage
+# versions/v1 is the dev-built version EV-001 (manufacturing/evidence.yaml) cites, committed whole; it is rebuilt only
+# when the model changes. The rest of versions/ stays ignored.
+!/versions/
+/versions/*
+!/versions/v1/

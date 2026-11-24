@@ -1,0 +1,42 @@
+entries:
+- id: EV-001
+  requirement: REQ-001
+  subject:
+    product: true
+    requirements:
+    - REQ-001
+  level: cad_valid
+  result: pass
+  method: Read the bounding box of the built block from the v1 metrics and compare
+    it with the 20 x 20 x 10 mm envelope
+  criterion:
+    property: envelope_height
+    operator: <=
+    value: 10
+    units: mm
+    source:
+      kind: user
+      reference: REQ-001
+      origin: Verify fixture brief
+  configuration:
+    version: v1
+    manifest_sha256: 8dbf15c1b19eefb13a28916e81fd70eb2d7bf3d18b211b528be8c4311e66bc09
+  artifacts:
+  - path: hw/manufacturing/sources/block-bbox-v1.json
+    sha256: 46c129209c729bb5dfa15cd1e30fa531475365fd775d601284f50c343b642c55
+  fingerprints:
+    use_case: b7ebb97d8181e5c8e049b46d72dab2e9d4e5816029f7eb155e4d7623621da864
+    load: 5966448bde7a52ed1af9eb1fa09d6880c917b80739f390f6f9b5bf8e46461b98
+    environment: 1c9047611972bb6b5c0a6f896b105dadf5037cf037903ea617e4ad5e69fb62ff
+    material: 8e6c8969729b2666d2ea05a4f49ab09e08fd2858b761929bbcdc486759b9486f
+    condition: 82dceb98a29dfbd6fc6f9263eb2236db32a7ab836f74c6d8ca77be8b55584c95
+    process: 54319a4d8ab001d89f5ac9000a7e27dacc1507154b7bd4eea73e961a6505392e
+    route: b177aad7d14e00491363cd1520613c9cd8e0651e9b86f11d23d815739e90c1d5
+    capability: 6687d5fe5b746275332fc4e921e022912fb937449e3ae6539fa5101ba848f453
+    setup: 8e1deb38524afb985c006e6037459cae946294e8f391fb049360f74e52e36b17
+    orientation: f8b877f73796ba10169be9c8ac4c8aafde2e35a445934041f269d9a03e7d8ad2
+    finish: c062c53df55a56fb0dac47386e0cf4d93bd0d37989b54947346e98f4bd031e3c
+    geometry: 4c4228f4de541a1561d78c9ba8645b23077b6a517980fb24f6db9b1c815ac78b
+    interface: e83d403a8e4141d8ab7200d123d5103c5a16d6408493d7a680215f57f9e879eb
+    criterion: dc0ca4eeae6ec7ec35c9f011a35216cad58743b5542b115e56eb532659ab5a5a
+    source: 8a7d68755267ae911c7d109a3780d22166e74fed17f4faf3da395a20f9cd3658

@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://srobroek.com/cad/schemas/interfaces.schema.json",
+  "title": "CAD interfaces record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["interfaces"],
+  "properties": {
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "from", "to", "type", "description"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^IF-[0-9]{3}$"},
+          "from": {"type": "string", "minLength": 1},
+          "to": {"type": "string", "minLength": 1},
+          "type": {"type": "string", "enum": ["mounting", "motion", "electrical", "thermal", "clearance", "other"]},
+          "description": {"type": "string", "minLength": 1},
+          "pair": {
+            "description": "A clearance requirement's two parts, each a PN placed at most once or an @occurrence reference",
+            "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true,
+            "items": {"$ref": "assembly.schema.json#/$defs/part_ref"}
+          },
+          "min_clearance_mm": {
+            "description": "The smallest distance the pair may come to, at the nominal pose and at every swept pose",
+            "type": "number", "exclusiveMinimum": 0, "maximum": 5, "x-plausible": {"max": 1}
+          },
+          "margin_mm": {
+            "description": "This requirement's margin above min_clearance_mm, overriding product.yaml design.clearance_margin_mm",
+            "type": "number", "minimum": 0, "maximum": 1, "x-plausible": {"max": 0.5}
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "press_fit": {"$ref": "drawing.schema.json#/$defs/fit"},
+              "running_fit": {"$ref": "drawing.schema.json#/$defs/fit"},
+              "locating_fit": {"$ref": "drawing.schema.json#/$defs/fit"},
+              "heat_set": {"type": "array", "minItems": 1, "items": {"$ref": "drawing.schema.json#/$defs/heat_set"}}
+            }
+          },
+          "functional": {"$ref": "#/$defs/functional"}
+        },
+        "dependentRequired": {"pair": ["min_clearance_mm"], "min_clearance_mm": ["pair"], "margin_mm": ["min_clearance_mm"]},
+        "if": {"required": ["pair"]},
+        "then": {"properties": {"type": {"const": "clearance"}}}
+      }
+    }
+  },
+  "$defs": {
+    "face": {
+      "description": "One face of a part, by its semantic feature id",
+      "type": "object", "additionalProperties": false, "required": ["PN", "feature"],
+      "properties": {
+        "PN": {"$ref": "manufacturing.schema.json#/$defs/pn"},
+        "occurrence": {"$ref": "manufacturing.schema.json#/$defs/occurrence_ref"},
+        "component": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+        "feature": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+        "region": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"}
+      }
+    },
+    "functional": {
+      "description": "Record version 2 functional contract of an interface. Desired fit limits (limits), calibrated process precision (capability profiles) and inspected finished dimensions (acceptance) stay three distinct things; no tolerance is inferred from a fit name",
+      "type": "object", "additionalProperties": false, "required": ["critical", "functions"],
+      "properties": {
+        "critical": {"$ref": "manufacturing.schema.json#/$defs/boolean_fact"},
+        "functions": {"oneOf": [{"type": "array", "minItems": 1, "items": {"$ref": "manufacturing.schema.json#/$defs/function_entry"}},
+                                {"$ref": "manufacturing.schema.json#/$defs/fact_unknown"}]},
+        "requirements": {"$ref": "manufacturing.schema.json#/$defs/requirement_ids"},
+        "failure_consequence": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
+        "loads": {"description": "product.yaml use_case.loads ids", "$ref": "manufacturing.schema.json#/$defs/semantic_ids"},
+        "environment": {"$ref": "manufacturing.schema.json#/$defs/text"},
+        "surfaces": {"type": "array", "minItems": 1, "items": {
+          "type": "object", "additionalProperties": false, "required": ["PN", "feature", "role", "dimension_state"],
+          "properties": {
+            "PN": {"$ref": "manufacturing.schema.json#/$defs/pn"},
+            "occurrence": {"$ref": "manufacturing.schema.json#/$defs/occurrence_ref"},
+            "component": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+            "feature": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+            "region": {"$ref": "manufacturing.schema.json#/$defs/semantic_id"},
+            "role": {"enum": ["datum", "bore", "seat", "journal", "running", "sliding", "flank", "cam", "seal", "fastener", "locating", "optical", "other"]},
+            "datum": {"$ref": "drawing.schema.json#/$defs/datum_label"},
+            "source": {"$ref": "manufacturing.schema.json#/$defs/source"},
+            "dimension_state": {"$ref": "manufacturing.schema.json#/$defs/dimension_state"}
+          }}},
+        "acceptance": {"type": "array", "minItems": 1, "items": {
+          "type": "object", "additionalProperties": false, "required": ["criterion", "verification"],
+          "properties": {
+            "criterion": {"$ref": "manufacturing.schema.json#/$defs/criterion"},
+            "verification": {
+              "type": "object", "additionalProperties": false, "required": ["method", "evidence_required", "stage"],
+              "properties": {
+                "method": {"enum": ["I", "A", "D", "T"]},
+                "evidence_required": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/evidence_level"}},
+                "stage": {"$ref": "manufacturing.schema.json#/$defs/stage"}
+              }
+            }
+          }}},
+        "variation": {
+          "description": "The tolerance stack: its managed analysis case, the contributors it includes and the governing method; RSS needs the decision that justifies its statistical assumptions",
+          "type": "object", "additionalProperties": false, "required": ["stack_case", "contributors", "method"],
+          "properties": {
+            "stack_case": {"description": "an hw/analysis/cases/<ID> case id", "type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+            "contributors": {"type": "array", "minItems": 1, "uniqueItems": true,
+                             "items": {"enum": ["manufacture", "assembly", "thermal", "moisture", "wear", "deformation", "coating", "adhesive", "joining"]}},
+            "method": {"enum": ["worst_case", "justified_rss"]},
+            "decision": {"$ref": "manufacturing.schema.json#/$defs/decision"}
+          },
+          "if": {"properties": {"method": {"const": "justified_rss"}}}, "then": {"required": ["decision"]}
+        },
+        "contact": {
+          "type": "object", "additionalProperties": false, "required": ["materials"],
+          "properties": {
+            "materials": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"oneOf": [
+              {"$ref": "manufacturing.schema.json#/$defs/profile_id"}, {"$ref": "manufacturing.schema.json#/$defs/fact_open"}]}},
+            "finish": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
+            "lubrication": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
+            "load": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "speed": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "duty": {"$ref": "manufacturing.schema.json#/$defs/text_fact"},
+            "life": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "evidence": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/evidence_id"}}
+          }
+        },
+        "play": {
+          "description": "The joint's free movement at this interface: each component the total play about the nominal, centred pose (an interval's upper bound governs the extremes), axial along the joint axis, radial across it, angular as tilt of the axis, backlash along the joint's own coordinate; compliance the elastic displacement under the interface's declared loads (spring preload, operating loads), sourced from a calculation or test, added to the play at the extremes. A component the interface function needs and the record does not declare is unknown, never zero. scenario_cases name the motion cases evaluated under play",
+          "type": "object", "additionalProperties": false, "minProperties": 1,
+          "properties": {
+            "axial": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "radial": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "angular": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "backlash": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+            "compliance": {
+              "type": "object", "additionalProperties": false, "minProperties": 1,
+              "properties": {
+                "axial": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+                "radial": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"},
+                "angular": {"$ref": "manufacturing.schema.json#/$defs/quantity_fact"}
+              }
+            },
+            "scenario_cases": {"description": "hw/motion/cases/<ID> case ids", "type": "array", "minItems": 1, "uniqueItems": true,
+                               "items": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"}}
+          }
+        },
+        "assembly_operations": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/assembly_operation_id"}},
+        "print_in_place": {
+          "description": "The joints at this interface that print already assembled: each joint's kind, the joint value it prints at, the face pairs its gap separates and how it breaks free after printing. min_clearance_mm must be at least the governing product.yaml flow.profile processes.fdm.pip_clearance_mm",
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["joint", "print_pose", "gap_features", "break_free"],
+            "properties": {
+              "joint": {"enum": ["hinge", "pin", "ball", "captive", "living_hinge"]},
+              "print_pose": {"description": "the value each assembly.yaml joint prints at, in that joint's units",
+                             "type": "object", "minProperties": 1, "propertyNames": {"pattern": "^J-[0-9]{3}$"},
+                             "additionalProperties": {"type": "number"}},
+              "gap_features": {"type": "array", "minItems": 1, "items": {
+                "type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/face"}}},
+              "break_free": {
+                "type": "object", "additionalProperties": false, "required": ["method"],
+                "properties": {"method": {"$ref": "manufacturing.schema.json#/$defs/text"},
+                               "force_n": {"type": "number", "exclusiveMinimum": 0}}
+              }
+            }
+          }
+        },
+        "inspections": {"$ref": "manufacturing.schema.json#/$defs/semantic_ids"},
+        "decisions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "manufacturing.schema.json#/$defs/decision"}}
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+interfaces:
+  - id: IF-001
+    from: base_sub
+    to: lower_link
+    type: motion
+    description: "Base pivot axis; M5 shoulder pin LMP-0005 pressed into the lower-link hub turns in the LMP-0008 brass bushing heat-set into the base boss, retained by the DIN 471 ring LMP-0011 (occurrence @ring-base) under the bushing's lower end (DR-004)."
+    limits:
+      rotation_deg: [-10, 80]
+      press_fit: {fit: 5 H7/p6, engagement_length_mm: 20.0, hole: {PN: LMP-0002, feature: hub_bore}, shaft: {PN: LMP-0005, feature: press_band}, axial_retainer: {type: press_fit}}
+      running_fit: {fit: 5 f7, hole: {PN: LMP-0008, feature: bore}, shaft: {PN: LMP-0005, feature: journal}, note: "pin journal 5 f7 in the SPIROL CL8000 bore 5.05/5.15 (vendor limits, not ISO 286): diametral clearance 0.060/0.172 (cad-fits STK-101, DR-004)"}
+      heat_set:
+        - {pair: [LMP-0001, LMP-0008], engagement_length_mm: 8.0, hole_d: 7.77, hole_tol: [-0.04, 0.04], depth_min: 8.0, insert: "SPIROL CMPL 4 X 8 EK CL8000", source: "https://www.spirol.com/assets/files/cmpl-cl8000-cl8100-specification-flyer-us.pdf", note: "knurl 7.97 nominal in the 7.73/7.81 recommended hole: 0.16/0.24 diametral embedment (STK-102)", feature: seat}
+      retaining_ring: {pair: [LMP-0005, "@ring-base"], ring: "DIN 471 - 5x0.6", groove_d: 4.8 h10, groove_w: 0.7 H13, source: "https://www.beneri.com/en/prodotto/din-471", feature: groove}
+    functional:
+      critical: {status: unknown, reason: not recorded before record version 2, question: Q-023}
+      functions: {status: unknown, reason: not recorded before record version 2, question: Q-023}
+  - id: IF-002
+    from: lower_link
+    to: upper_link
+    type: motion
+    description: "Elbow hinge axis; M5 shoulder pin LMP-0006 pressed into the lower link's +Y clevis cheek carries the upper-link tongue, retained by the DIN 471 ring LMP-0011 (occurrence @ring-elbow) outside the -Y cheek."
+    limits:
+      rotation_deg: [-120, 0]
+      press_fit: {fit: 5 H7/p6, engagement_length_mm: 5.8, hole: {PN: LMP-0002, feature: elbow_bore, region: head_side_cheek}, shaft: {PN: LMP-0006, feature: press_band}, axial_retainer: {type: press_fit}}
+      running_fit: {fit: 5 H8/f7, hole: {PN: LMP-0003, feature: elbow_bore}, shaft: {PN: LMP-0006, feature: journal}}
+      locating_fit: {fit: 5 H7/f7, hole: {PN: LMP-0002, feature: elbow_bore, region: far_cheek}, shaft: {PN: LMP-0006, feature: journal}, note: "far-cheek support of the journal, locating clearance 0.010/0.034 (DR-003, DR-004)", axial_retainer: {type: circlip, parts: ["@ring-elbow"]}}
+      retaining_ring: {pair: [LMP-0006, "@ring-elbow"], ring: "DIN 471 - 5x0.6", groove_d: 4.8 h10, groove_w: 0.7 H13, source: "https://www.beneri.com/en/prodotto/din-471", feature: groove}
+    functional:
+      critical: {status: unknown, reason: not recorded before record version 2, question: Q-024}
+      functions: {status: unknown, reason: not recorded before record version 2, question: Q-024}
+  - id: IF-003
+    from: upper_link
+    to: head
+    type: motion
+    description: "Head tilt axis; M5 shoulder pin LMP-0007 pressed into the upper link's +Y clevis cheek carries the head knuckle on the LMP-0009 headed brass bushing heat-set into it, retained by the DIN 471 ring LMP-0011 (occurrence @ring-head) outside the -Y cheek (DR-004)."
+    limits:
+      rotation_deg: [-45, 45]
+      press_fit: {fit: 5 H7/p6, engagement_length_mm: 4.8, hole: {PN: LMP-0003, feature: tip_bore, region: head_side_cheek}, shaft: {PN: LMP-0007, feature: press_band}, axial_retainer: {type: press_fit}}
+      running_fit: {fit: 5 f7, hole: {PN: LMP-0009, feature: bore}, shaft: {PN: LMP-0007, feature: journal}, note: "pin journal 5 f7 in the SPIROL CL8100 bore 5.05/5.15 (vendor limits, not ISO 286): diametral clearance 0.060/0.172 (cad-fits STK-101, DR-004)"}
+      locating_fit: {fit: 5 H7/f7, hole: {PN: LMP-0003, feature: tip_bore, region: far_cheek}, shaft: {PN: LMP-0007, feature: journal}, note: "far-cheek support of the journal, locating clearance 0.010/0.034 (DR-003, DR-004)", axial_retainer: {type: circlip, parts: ["@ring-head"]}}
+      heat_set:
+        - {pair: [LMP-0004, LMP-0009], engagement_length_mm: 6.0, hole_d: 7.77, hole_tol: [-0.04, 0.04], depth_min: 6.0, insert: "SPIROL CMPL 4 X 6 EK CL8100", source: "https://www.spirol.com/assets/files/cmpl-cl8000-cl8100-specification-flyer-us.pdf", note: "knurl 7.97 nominal in the 7.73/7.81 recommended hole: 0.16/0.24 diametral embedment (STK-102); head seats in a 10.0 x 1.0 counterbore on the +Y face", feature: seat}
+      retaining_ring: {pair: [LMP-0007, "@ring-head"], ring: "DIN 471 - 5x0.6", groove_d: 4.8 h10, groove_w: 0.7 H13, source: "https://www.beneri.com/en/prodotto/din-471", feature: groove}
+    functional:
+      critical: {status: unknown, reason: not recorded before record version 2, question: Q-025}
+      functions: {status: unknown, reason: not recorded before record version 2, question: Q-025}
+  - id: IF-004
+    from: base_plate
+    to: work_surface
+    type: mounting
+    description: "Base fixed using two M6 fasteners through slotted mounting holes."
+    functional:
+      critical: {status: unknown, reason: not recorded before record version 2, question: Q-026}
+      functions: {status: unknown, reason: not recorded before record version 2, question: Q-026}
+  - id: IF-005
+    from: head
+    to: lampholder
+    type: mounting
+    description: "Lampholder nipple thread M10x1 into the LMP-0010 brass heat-set insert in the head's socket boss; the lampholder itself is out of the mechanical scope (DR-004)."
+    limits:
+      thread: M10x1-6H
+      heat_set:
+        - {pair: [LMP-0004, LMP-0010], engagement_length_mm: 12.7, hole_d: 11.95, hole_tol: [-0.05, 0.05], depth_min: 13.7, insert: "heat-set insert M10x1-6H, L 12.7, OD 12.6 (LMP-0010; no catalogue part identified)", source: "https://www.cnckitchen.com/s/CNCKitchen_Heat-Set-Insert-Dimensions-and-Design-Guidelines.pdf", note: "Source of hole_d 11.95 +/-0.05 and of the 0.48/0.82 diametral embedment (STK-103): UNKNOWN. Derived from In-saiL QT-M10x12.7-OD12.6 (M10x1.5), which LMP-0010 no longer cites. The source URL is CNC Kitchen's M10 row (L 12.7, insert diameter D1 12.6, hole diameter D2 12.0, wall W 6.0; blind hole min. L+1). It states no pitch and matches In-saiL's M10x1.5 insert in L, OD and W, with D2 12.0 inside In-saiL's 11.9/12.0, so it most likely describes the same M10x1.5 part. These values size an M10 insert of unknown pitch; they are not confirmed for the decided M10x1 insert, which no maker searched lists", feature: insert_hole}
+    functional:
+      critical: {status: unknown, reason: not recorded before record version 2, question: Q-027}
+      functions: {status: unknown, reason: not recorded before record version 2, question: Q-027}

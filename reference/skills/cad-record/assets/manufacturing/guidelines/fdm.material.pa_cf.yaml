@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.pa_cf
+revision: 1
+title: FDM carbon fiber filled polyamide (PA-CF)
+extends:
+- fdm.material.pa
+- fdm.filler.cf
+scope:
+  process: fdm
+  material_family:
+  - pa
+  filler:
+  - cf
+limits:
+- characteristic: enclosure
+  operator: equals
+  value: true
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Polyamide (PA)
+    url: https://help.prusa3d.com/article/pa_167188
+    accessed: '2026-11-18'
+    locator: 'Warping: carbon-filled polyamides do not warp as much and can be printed without an enclosure'
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 1, Printer: ABS, ASA, PC, PA and their CF/GF reinforced materials require an enclosed printer'
+  disputed: true

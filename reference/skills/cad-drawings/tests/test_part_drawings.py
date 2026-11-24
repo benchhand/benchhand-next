@@ -1,0 +1,551 @@
+#!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+"""Part drawings: annotation-class layout rules, and the completeness gate on real lamp template parts.
+
+Run: uv run --with pyyaml --with defusedxml --with jsonschema python -m unittest discover -s cad/skills/cad-drawings/tests
+The gate tests build the lamp template through ``cad_model.py run`` (CadQuery runner, needs ``uv``;
+a cold OCP import can take minutes) and draw the LMP-0005 pin and the catalogue parts in FreeCAD's freecadcmd.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from dataclasses import replace
+from decimal import Decimal
+from pathlib import Path
+
+SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+import completeness  # noqa: E402
+import drawing_document  # noqa: E402
+import freecad_runtime  # noqa: E402
+from drawing_document import SvgAnnotation  # noqa: E402
+from drawing_intent import Characteristic, Measured, Tolerance  # noqa: E402
+from feature_geometry import Binding  # noqa: E402
+from layout_check import Box, SheetRegions, check_layout  # noqa: E402
+from sheet import Linear, Presentation, TextureSymbol, edge_lines, edge_note, edge_size  # noqa: E402
+
+SKILLS = SCRIPTS.parents[1]
+TEMPLATE = SKILLS.parent / "examples" / "lamp-arm" / "hw"
+CAD_MODEL = SKILLS / "cad-model" / "scripts" / "cad_model.py"
+DRAWING = SCRIPTS / "drawing.py"
+FREECADCMD = freecad_runtime.find_freecadcmd()
+FREECAD_PRESENT = FREECADCMD is not None and FREECADCMD.is_file()
+UV = shutil.which("uv")
+ENV = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "PAGER": "cat"}
+
+REGIONS = SheetRegions(frame=Box(10, 10, 190, 140), title_block=Box(100, 110, 190, 140), symbol_cell=Box(170, 110, 190, 120))
+SYMBOL = '<g id="projection-symbol"><circle cx="180" cy="115" r="3"/></g>'
+VIEW = '<g id="view-front"><path d="M 40 40 L 80 40 L 80 70 L 40 70 Z"/></g>'
+
+# The fixture copy's routes for the drawn made parts (never examples/), each drawn fit inspected in the state
+# its route leaves it. LMP-0005 is turned, then its press band and journal are ground: the groove is inspected
+# as turned, the band and journal after grinding. LMP-0002 is machined, then its elbow bore is reamed through
+# both cheeks (its process note): the hub bore is inspected as machined, the elbow bore after reaming. The
+# capabilities stay unknown; the drawing gate judges the finished state only.
+FINISHED_ROUTES = {
+    "LMP-0005": """\
+  route:
+    - id: turn
+      kind: cnc
+      provider: outsourced
+      capability: {status: unknown, reason: the supplier's turning capability is not recorded in this fixture}
+      inspection:
+        - {id: groove_check, feature: groove, method: groove width and diameter gauges, state: as_manufactured}
+    - id: grind
+      kind: finishing
+      provider: outsourced
+      capability: {status: unknown, reason: the supplier's grinding capability is not recorded in this fixture}
+      targets: [{feature: press_band}, {feature: journal}]
+      inspection:
+        - {id: press_band_check, feature: press_band, method: micrometer, state: after_finish}
+        - {id: journal_check, feature: journal, method: micrometer, state: after_finish}
+""",
+    "LMP-0002": """\
+  route:
+    - id: machine
+      kind: cnc
+      provider: outsourced
+      capability: {status: unknown, reason: the supplier's machining capability is not recorded in this fixture}
+      inspection:
+        - {id: hub_bore_check, feature: hub_bore, method: plug gauge, state: as_manufactured}
+    - id: ream
+      kind: reaming
+      provider: outsourced
+      capability: {status: unknown, reason: the supplier's reaming capability is not recorded in this fixture}
+      targets: [{feature: elbow_bore}]
+      inspection:
+        - {id: elbow_bore_check, feature: elbow_bore, method: plug gauge, state: after_finish}
+""",
+}
+
+
+def with_finished_route(text: str, route: str) -> str:
+    """A migrated part.yaml whose route is replaced by `route`, the rest unchanged."""
+    lines = text.splitlines(keepends=True)
+    index = next(i for i, line in enumerate(lines) if line.startswith("  route:"))
+    end = next((i for i in range(index + 1, len(lines)) if not lines[i].startswith("    ")), len(lines))
+    return "".join(lines[:index]) + route + "".join(lines[end:])
+
+
+def sheet(*annotations: str) -> str:
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">{SYMBOL}{VIEW}'
+            f'<g id="cad-annotations">{"".join(annotations)}</g></svg>')
+
+
+class AnnotationClasses(unittest.TestCase):
+    """layout_check: overlay classes may cross views; dimension lines, frames and text may not."""
+
+    def test_extension_and_leader_lines_may_cross_a_view(self) -> None:
+        dimension = ('<g id="dim-a" class="dimension"><line x1="40" y1="30" x2="80" y2="30"/>'
+                     '<text x="60" y="29" font-size="2.5" text-anchor="middle">40</text>'
+                     '<g class="extension"><line x1="40" y1="60" x2="40" y2="28"/></g></g>')
+        leader = ('<g id="callout-b" class="leader"><text x="20" y="50" font-size="2.5" text-anchor="end">⌀5 H7</text>'
+                  '<g class="leader-line"><line x1="21" y1="49" x2="60" y2="55"/></g></g>')
+        self.assertEqual(check_layout(sheet(dimension, leader), REGIONS, []), [])
+
+    def test_dimension_line_and_frame_over_a_view_fail(self) -> None:
+        crossing = '<g id="dim-c" class="dimension"><line x1="30" y1="50" x2="90" y2="50"/></g>'
+        frame = '<g id="callout-d" class="leader"><g class="fcf"><rect x="50" y="45" width="10" height="5"/></g></g>'
+        problems = check_layout(sheet(crossing, frame), REGIONS, [])
+        self.assertEqual(sum("crosses view-front geometry" in p for p in problems), 2, problems)
+
+    def test_text_over_another_annotations_dimension_line_fails(self) -> None:
+        dimension = '<g id="dim-e" class="dimension"><line x1="20" y1="20" x2="35" y2="20"/></g>'
+        text = '<g id="callout-f" class="leader"><text x="22" y="21" font-size="2.5">R3</text></g>'
+        problems = check_layout(sheet(dimension, text), REGIONS, [])
+        self.assertIn("annotation text 'R3' overlaps the dimension line or frame of dim-e", problems)
+
+
+def run(*args: str, timeout: float = 3600, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run([*args], capture_output=True, text=True, env={**ENV, **(env or {})}, timeout=timeout,
+                          check=False)
+
+
+class RepeatedDimensions(unittest.TestCase):
+    """The gate fails a sheet that dimensions one coordinate twice; features sharing that dimension pass."""
+
+    def test_two_dimension_lines_for_one_coordinate_fail(self) -> None:
+        tolerance = Tolerance("general", Decimal("-0.2"), Decimal("0.2"))
+        chars = [Characteristic(id=f"{name}.axis_location.y", feature=name, operation="axis_location", value=-3.5,
+                                faces=(index,), quantity=1, axis="y", tolerance=tolerance, presentation="auto",
+                                details={}) for index, name in enumerate(("neck", "cable_run"))]
+
+        def line(number: int, ids: list[str]) -> Linear:
+            return Linear(id=f"dim-{number}", view="plan", origin=(0.0, 0.0), target=(0.0, 3.5), horizontal=False,
+                          text="3.5", boxed=False, reference=False, characteristics=ids)
+
+        repeated = Presentation(linears=[line(0, [chars[0].id]), line(1, [chars[1].id])])
+        shared = Presentation(linears=[line(0, [c.id for c in chars])])
+        for presentation, expected in ((repeated, 1), (shared, 0)):
+            measured = Measured(frame=None)
+            measured.characteristics.extend(chars)
+            report = completeness.evaluate("TST-0001", {"drawing": {}}, [], Binding({}, {}, ()), measured,
+                                           presentation, "0" * 64)
+            self.assertEqual(sum(f["code"] == "dimension_conflict" for f in report.findings), expected, report.findings)
+
+
+class PrintedTolerances(unittest.TestCase):
+    """Coverage agrees with the sheet: an individual tolerance the rows count must be in its annotation's text."""
+
+    def evaluate(self, char: Characteristic, markup: str, regime: str = "iso") -> tuple[set[str], str]:
+        presentation = Presentation(placed={char.id: {"annotation": "dim-hole", "view": "front", "anchor": [0, 0]}})
+        text = completeness.SheetText(regime, drawing_document.printed_lines(
+            [SvgAnnotation("dim-hole", "dimension", markup)], []))
+        report = completeness.evaluate("TST-0001", {"drawing": {}}, [], Binding({}, {}, ()),
+                                       Measured(frame=None, characteristics=[char]), presentation, "0" * 64, text=text)
+        return {f["code"] for f in report.findings}, report.rows[0]["status"]
+
+    def test_a_counted_tolerance_missing_from_its_annotation_fails(self) -> None:
+        char = Characteristic("foot_x_near", "foot_recess", "distance", 7.0, (), axis="x",
+                              tolerance=Tolerance("explicit", Decimal("-0.2"), Decimal("0.2")))
+        self.assertEqual(self.evaluate(char, '<text x="0" y="0">7</text>'), ({"datum_invalid", "tolerance_not_printed"},
+                                                                           "fail"))
+        self.assertEqual(self.evaluate(char, '<text x="0" y="0">7 ±0.2</text>'), ({"datum_invalid"}, "pass"))
+        policy = replace(char, tolerance=Tolerance("policy", Decimal("-0.2"), Decimal("0.2"), source="foot_location"))
+        self.assertIn("tolerance_not_printed", self.evaluate(policy, '<text x="0" y="0">7</text>')[0])
+        general = replace(char, tolerance=Tolerance("general", Decimal("-0.2"), Decimal("0.2")))
+        self.assertEqual(self.evaluate(general, '<text x="0" y="0">7</text>'), ({"datum_invalid"}, "pass"))
+
+    def test_the_sheet_regime_formats_the_expected_tolerance(self) -> None:
+        fit = Characteristic("bore_fit", "bore", "diameter", 5.006, (),
+                             tolerance=Tolerance("fit", Decimal("0"), Decimal("0.012"), Decimal("5"), "H7"))
+        self.assertEqual(self.evaluate(fit, '<text x="0" y="0">⌀5.012/5.000 (5 H7)</text>', "asme")[1], "pass")
+        self.assertEqual(self.evaluate(fit, '<text x="0" y="0">⌀5.012/5.000 (5 H7)</text>', "iso")[1], "fail")
+
+
+class EdgeAndTextureIndications(unittest.TestCase):
+    """ISO 13715 edge sizes and their ASME notes, ISO 21920-1 symbols, and the gate's edge and texture rows."""
+
+    def test_edge_sizes_follow_the_iso_13715_signs(self) -> None:
+        sizes = [edge_size(v) for v in ([-0.3, 0.0], [0.0, 0.3], [-0.3, -0.1], [-0.05, 0.05], [-0.1, 0.2])]
+        self.assertEqual(sizes, ["−0.3", "+0.3", "−0.1/−0.3", "±0.05", "+0.2/−0.1"])
+
+    def test_general_edge_note_per_regime(self) -> None:
+        edges = {"external": [-0.3, 0.0], "internal": [0.0, 0.3]}
+        self.assertEqual(edge_note(edges, "iso", True),
+                         "Edges of undefined shape ISO 13715: external −0.3, internal +0.3; exceptions as indicated.")
+        self.assertEqual(edge_note(edges, "asme", False), "UNDEFINED EDGES: REMOVE ALL BURRS, EDGE BREAK 0.3 MAX; "
+                                                          "INTERNAL CORNERS R0.3 MAX, NO UNDERCUT.")
+        groove = {"external": [-0.02, 0.0], "internal": [0.0, 0.06]}
+        self.assertEqual(edge_lines(groove, "iso"), ["external edges −0.02", "internal edges +0.06"])
+        self.assertEqual(edge_lines({"external": [-0.3, -0.1], "internal": [0.0, 0.06]}, "asme"),
+                         ["BREAK EDGES 0.1-0.3", "CORNERS R0.06 MAX"])
+
+    def test_texture_symbol_shows_the_process_and_the_requirement(self) -> None:
+        markups = {process: TextureSymbol("Ra 0.8", process).markup(0.0, 0.0, 2.5)
+                   for process in ("any", "removal_required", "removal_prohibited")}
+        self.assertEqual(markups["removal_required"].count("<line"), markups["any"].count("<line") + 1)
+        self.assertIn("<circle", markups["removal_prohibited"])
+        self.assertTrue(all(">Ra 0.8<" in m for m in markups.values()))
+        self.assertEqual(TextureSymbol("Ra 0.8", "any").size(2.5)[1], 7.5)   # the long leg: three lettering heights
+        plain, others = TextureSymbol("Ra 1.6", "any"), TextureSymbol("Ra 1.6", "any", others=True)
+        self.assertGreater(others.size(2.5)[0], plain.size(2.5)[0])
+        self.assertEqual(others.markup(0.0, 0.0, 2.5).count("<path"), 2)     # the parentheses round the basic symbol
+
+    def test_a_texture_symbol_over_a_view_fails_layout_check(self) -> None:
+        mark = (f'<g id="callout-t" class="leader"><g class="texture">'
+                f'{TextureSymbol("Ra 1.6", "any").markup(45.0, 45.0, 2.5)}</g></g>')
+        problems = check_layout(sheet(mark), REGIONS, [])
+        self.assertTrue(any("crosses view-front geometry" in p for p in problems), problems)
+
+    def test_detail_drawing_needs_edges_and_texture_and_an_open_texture_blocks_release(self) -> None:
+        part = {"rev": "X1", "make_buy": "make", "drawing": {"type": "detail",
+                                                             "notes": [{"kind": "finish", "text": "As machined."}]}}
+
+        def missing() -> list[str]:
+            report = completeness.evaluate("TST-0001", part, [], Binding({}, {}, ()), Measured(frame=None), None, "0" * 64)
+            return [f["message"] for f in report.findings if f["code"] == "drawing_intent_missing"]
+
+        self.assertEqual(len(missing()), 2, missing())
+        part["drawing"].update(edges={"external": [-0.3, 0.0], "internal": [0.0, 0.3]},
+                               surface_texture={"open": "no basis for a value yet"})
+        self.assertEqual(missing(), [])
+        self.assertIn("surface_texture_open", [b["code"] for b in completeness.release_blockers(part)])
+
+
+@unittest.skipUnless(FREECAD_PRESENT and UV, "the gate tests need uv and FreeCAD's freecadcmd")
+class PinDrawingGate(unittest.TestCase):
+    """LMP-0005 and the catalogue parts: measured values, fits from cad-fits, vendor limits and failing removals."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmp = tempfile.TemporaryDirectory(prefix="cad-part-drawing-")
+        cls.hw = Path(cls.tmp.name) / "hw"
+        cls.fx().migrated_copy(TEMPLATE, cls.hw)  # the example migrated to record version 2 (the current record)
+        for pn, route in FINISHED_ROUTES.items():
+            part = cls.hw / "parts" / pn / "part.yaml"
+            part.write_text(with_finished_route(part.read_text(encoding="utf-8"), route), encoding="utf-8")
+        build = run(UV, "run", "--script", str(CAD_MODEL), "run", str(cls.hw), "--label", "v1", "--kernel", "auto")
+        if build.returncode != 0:
+            raise AssertionError(f"lamp template build failed: {build.stdout[-2000:]} {build.stderr[-2000:]}")
+
+    @staticmethod
+    def fx() -> object:
+        """cad-record's manufacturing-intent fixture builder (migrated_copy)."""
+        name = "cad_record_mi_fixtures"
+        if name not in sys.modules:
+            spec = importlib.util.spec_from_file_location(
+                name, SKILLS / "cad-record" / "tests" / "fixtures" / "manufacturing_intent.py")
+            assert spec and spec.loader
+            sys.modules[name] = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(sys.modules[name])
+        return sys.modules[name]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def draw(self, label: str, out: str, pn: str = "LMP-0005", *, output: bool = True, hw: Path | None = None,
+             env: dict[str, str] | None = None, extra: tuple[str, ...] = ()) -> tuple[int, dict]:
+        command = [UV, "run", "--script", str(DRAWING), str(hw or self.hw), "--version", label, "--part", pn, *extra]
+        if output:
+            command += ["--output-dir", str(Path(self.tmp.name) / ".cad-work" / out)]
+        proc = run(*command, timeout=900, env=env)
+        try:
+            result = json.loads(proc.stdout)["parts"][0]
+        except json.JSONDecodeError as exc:
+            raise AssertionError(f"drawing CLI returned no JSON (exit {proc.returncode}): {proc.stderr[-3000:]}") from exc
+        return proc.returncode, result
+
+    def test_default_output_publishes_and_reuses_the_bundle(self) -> None:
+        code, result = self.draw("v1", "unused", output=False)
+        self.assertEqual((code, result["status"]), (0, "pass"), result.get("findings"))
+        package = Path(result["output_dir"])
+        self.assertEqual(package, (self.hw / "drawings" / "v1" / "LMP-0005").resolve())
+        manifest = (package / "manifest.json").read_bytes()
+        self.assertEqual(json.loads(manifest)["status"], "pass")  # release.py accepts only a passing bundle
+        package_json = json.loads((package / "package.json").read_text(encoding="utf-8"))
+        self.assertEqual(package_json["output_dir"], "hw/drawings/v1/LMP-0005")
+        self.assertTrue(all((self.hw.parent / path).is_file() for sheet in package_json["sheets"]
+                            for path in sheet["files"].values()))
+        code, reused = self.draw("v1", "unused", output=False)
+        self.assertEqual((code, reused.get("cache"), reused["output_dir"]), (0, "hit", str(package)))
+        self.assertEqual((package / "manifest.json").read_bytes(), manifest)
+
+    def test_a_published_bundle_is_not_reused_under_another_source_date_epoch(self) -> None:
+        hw = Path(self.tmp.name) / "epoch" / "hw"
+        shutil.copytree(self.hw, hw)
+        first_env, second_env = {"SOURCE_DATE_EPOCH": "1700000000"}, {"SOURCE_DATE_EPOCH": "1700003600"}
+        code, first = self.draw("v1", "unused", output=False, hw=hw, env=first_env)
+        self.assertEqual((code, first["status"]), (0, "pass"), first.get("findings"))
+        package = Path(first["output_dir"])
+        self.assertRegex((package / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114221320(?:Z|\+00'00')\)")
+        code, again = self.draw("v1", "unused", output=False, hw=hw, env=first_env)
+        self.assertEqual((code, again.get("cache")), (0, "hit"))
+        code, refused = self.draw("v1", "unused", output=False, hw=hw, env=second_env)
+        self.assertEqual((code, refused["error"]["code"]), (2, "publish_conflict"), refused)
+        self.assertIn(b"D:20231114221320", (package / "sheet-1.pdf").read_bytes())   # the sealed bundle is untouched
+        code, replaced = self.draw("v1", "unused", output=False, hw=hw, env=second_env, extra=("--replace",))
+        self.assertEqual((code, replaced["status"], replaced.get("cache")), (0, "pass", None), replaced.get("findings"))
+        self.assertRegex((Path(replaced["output_dir"]) / "sheet-1.pdf").read_bytes(), rb"/CreationDate \(D:20231114231320(?:Z|\+00'00')\)")
+
+    RECORDER = """#!/usr/bin/env python3
+import os, subprocess, sys, time
+log = os.environ["FREECAD_LAUNCH_LOG"]
+script = os.path.basename(sys.argv[1])
+alive = os.path.join(os.environ["FREECAD_ALIVE_DIR"], str(os.getpid()))
+with open(log, "a") as stream:
+    stream.write(f"start {os.getpid()} {script} {time.time()!r}\\n")
+if script == "export_job.py":   # a bounded rendezvous: hold until enough exports are alive, or give up after a while
+    open(alive, "w").close()
+    deadline = time.time() + float(os.environ["FREECAD_RENDEZVOUS_WAIT"])
+    while time.time() < deadline and len(os.listdir(os.environ["FREECAD_ALIVE_DIR"])) < int(os.environ["FREECAD_RENDEZVOUS"]):
+        time.sleep(0.05)
+code = subprocess.call([os.environ["FREECAD_REAL"], *sys.argv[1:]])
+with open(log, "a") as stream:
+    stream.write(f"end {os.getpid()} {script} {time.time()!r}\\n")
+if os.path.exists(alive):
+    os.remove(alive)
+sys.exit(code)
+"""
+
+    def recorded_run(self, name: str, parts: list[str], jobs: int, rendezvous: int, wait: float) -> tuple[list[tuple[str, float, float]], dict]:
+        """Draw the parts with every part's second view on a second sheet, through a recording stand-in for freecadcmd
+        that holds each sheet export until `rendezvous` exports are alive (or `wait` seconds pass). Returns every
+        FreeCAD process as (script, start, end) and the parsed output."""
+        recorder = Path(self.tmp.name) / "recorder.py"
+        recorder.write_text(self.RECORDER, encoding="utf-8")
+        recorder.chmod(0o755)
+        hw = Path(self.tmp.name) / f"{name}" / "hw"
+        shutil.copytree(self.hw, hw)
+        shutil.rmtree(hw / "drawings", ignore_errors=True)   # bundles that earlier tests published would conflict
+        for pn, view in (("LMP-0005", "{id: head_end, kind: orthographic, along_axis: A, toward: head_top}"),
+                         ("LMP-0002", "{id: underside, kind: orthographic, opposite: plan}")):
+            part = hw / "parts" / pn / "part.yaml"
+            text = part.read_text(encoding="utf-8")
+            self.assertIn(view, text)
+            part.write_text(text.replace(view, view[:-1] + ", sheet: 2}"), encoding="utf-8")
+        alive = Path(self.tmp.name) / f"alive-{name}"
+        alive.mkdir()
+        log = Path(self.tmp.name) / f"launches-{name}.log"
+        env = {"FREECADCMD": str(recorder), "FREECAD_REAL": str(FREECADCMD), "FREECAD_LAUNCH_LOG": str(log),
+               "FREECAD_ALIVE_DIR": str(alive), "FREECAD_RENDEZVOUS": str(rendezvous), "FREECAD_RENDEZVOUS_WAIT": str(wait)}
+        command = [UV, "run", "--script", str(DRAWING), str(hw), "--version", "v1", "--jobs", str(jobs), "--timeout", "900"]
+        for pn in parts:
+            command += ["--part", pn]
+        proc = subprocess.run(command, capture_output=True, text=True, env={**ENV, **env}, timeout=1800, check=False)
+        output = json.loads(proc.stdout)
+        self.assertEqual(proc.returncode, 0, proc.stdout[-2000:])
+        self.assertEqual([(r["pn"], r["status"], r["sheets"]) for r in output["parts"]],
+                         [(pn, "pass", 2) for pn in parts], output)
+        starts: dict[str, tuple[str, float]] = {}
+        runs: list[tuple[str, float, float]] = []
+        for line in log.read_text(encoding="utf-8").splitlines():
+            kind, pid, script, stamp = line.split()
+            if kind == "start":
+                starts[pid] = (script, float(stamp))
+            else:
+                runs.append((starts[pid][0], starts[pid][1], float(stamp)))
+        return runs, output
+
+    @staticmethod
+    def overlap(runs: list[tuple[float, float]]) -> int:
+        """The most runs in progress at the same moment."""
+        events = sorted([(start, 1) for start, _ in runs] + [(end, -1) for _, end in runs], key=lambda e: (e[0], e[1]))
+        peak = running = 0
+        for _, step in events:
+            running += step
+            peak = max(peak, running)
+        return peak
+
+    def test_a_two_sheet_part_exports_its_sheets_together_within_the_job_budget(self) -> None:
+        """With --jobs 2 the two sheet exports of one part run together (each waits for the other, so slow scheduling
+        cannot hide the overlap). With --jobs 1 nothing overlaps, the sheet exports included."""
+        for jobs in (1, 2):
+            with self.subTest(jobs=jobs):
+                runs, _ = self.recorded_run(f"one-part-{jobs}", ["LMP-0005"], jobs, rendezvous=jobs, wait=30)
+                exports = [(start, end) for script, start, end in runs if script == "export_job.py"]
+                self.assertGreaterEqual(len(exports), 2)
+                self.assertLessEqual(self.overlap([(s, e) for _, s, e in runs]), jobs)
+                self.assertEqual(self.overlap(exports), jobs)
+
+    def test_several_two_sheet_parts_never_run_more_than_jobs_freecad_processes_together(self) -> None:
+        """The run-wide cap: two parts with two sheets each, --jobs 2. Each part's own sheet pool already holds two
+        exports, so without the shared launch budget up to four would run. Each export waits (bounded) for a third
+        to join, which only an over-budget run can supply."""
+        runs, _ = self.recorded_run("two-parts", ["LMP-0005", "LMP-0002"], 2, rendezvous=3, wait=3)
+        exports = [(start, end) for script, start, end in runs if script == "export_job.py"]
+        self.assertGreaterEqual(len(exports), 4)
+        self.assertLessEqual(self.overlap([(s, e) for _, s, e in runs]), 2)
+        self.assertEqual(self.overlap(exports), 2)
+
+    def test_explicit_output_outside_cad_work_is_refused(self) -> None:
+        outside = Path(self.tmp.name) / "outside"
+        proc = run(UV, "run", "--script", str(DRAWING), str(self.hw), "--version", "v1", "--part", "LMP-0005",
+                   "--output-dir", str(outside))
+        self.assertEqual(proc.returncode, 2)
+        self.assertFalse(outside.exists())
+        self.assertIn("--output-dir must be under", proc.stdout)
+
+    def test_existing_explicit_output_is_never_overwritten(self) -> None:
+        output = Path(self.tmp.name) / ".cad-work" / "preserved"
+        output.mkdir(parents=True)
+        marker = output / "keep.txt"
+        marker.write_text("untouched\n", encoding="utf-8")
+        proc = run(UV, "run", "--script", str(DRAWING), str(self.hw), "--version", "v1", "--part", "LMP-0005",
+                   "--output-dir", str(output))
+        self.assertEqual(proc.returncode, 2)
+        self.assertEqual(marker.read_text(encoding="utf-8"), "untouched\n")
+
+    def test_pin_passes_with_measured_values_and_fit_limits(self) -> None:
+        code, result = self.draw("v1", "pass")
+        self.assertEqual((code, result["status"]), (0, "pass"), result.get("findings"))
+        package = Path(result["output_dir"])
+        coverage = json.loads((package / "coverage.json").read_text(encoding="utf-8"))
+        values = {row["characteristic"]: row.get("value_mm") for row in coverage["rows"]}
+        self.assertAlmostEqual(abs(values["tip_face.location"]), 30.0, places=6)
+        self.assertAlmostEqual(abs(values["press_step.location"]), 20.3, places=6)
+        self.assertAlmostEqual(values["press_band.diameter"], 5.016, places=6)  # the model's p6 mid-limit
+        self.assertTrue(all(row["status"] == "pass" and row["annotation"] for row in coverage["rows"]), coverage["rows"])
+        svg = (package / "sheet-1.svg").read_text(encoding="utf-8")
+        texts = re.findall(r"<text[^>]*>([^<]*)</text>", svg)
+        self.assertIn("⌀5 p6 (+0.020/+0.012)", texts)     # nominal, class and cad-fits limits
+        self.assertFalse(any("5.016" in text for text in texts), texts)  # never the modelled midpoint
+        package_json = json.loads((package / "package.json").read_text(encoding="utf-8"))
+        self.assertFalse(package_json["release"]["ready"])  # X1 is a prototype revision
+
+    def test_one_part_failure_does_not_prevent_other_requested_parts(self) -> None:
+        part = self.hw / "parts" / "LMP-0005" / "part.yaml"
+        original = part.read_text(encoding="utf-8")
+        try:
+            part.write_text(original.replace("    press_step: {size: general}\n", "").replace(
+                "    - {id: head_chamfer_size, operation: chamfer, features: [head_chamfer], "
+                "tolerance: {deviation_mm: [-0.1, 0.1]}}\n", ""), encoding="utf-8")
+            self.assertNotEqual(part.read_text(encoding="utf-8"), original)
+            proc = run(UV, "run", "--script", str(DRAWING), str(self.hw), "--version", "v1",
+                       "--part", "LMP-0005", "--part", "LMP-0002", "--output-dir",
+                       str(Path(self.tmp.name) / ".cad-work" / "isolate-failure"), "--timeout", "900", "--jobs", "2")
+        finally:
+            part.write_text(original, encoding="utf-8")
+        self.assertEqual(proc.returncode, 1)
+        results = json.loads(proc.stdout)["parts"]
+        self.assertEqual([result["pn"] for result in results], ["LMP-0005", "LMP-0002"])
+        self.assertEqual([result["status"] for result in results], ["fail", "pass"], results[1].get("findings"))
+        retained = Path(self.tmp.name) / ".cad-work" / "rejected-drawings"
+        self.assertTrue(any(path.is_dir() for path in retained.iterdir()))
+        passed = Path(results[1]["output_dir"])
+        self.assertTrue((passed / "sheet-1.pdf").is_file())
+
+    def test_removed_dimension_intent_fails_the_gate(self) -> None:
+        part = self.hw / "parts" / "LMP-0005" / "part.yaml"
+        original = part.read_text(encoding="utf-8")
+        try:
+            part.write_text(original.replace("    press_step: {size: general}\n", "").replace(
+                "    - {id: head_chamfer_size, operation: chamfer, features: [head_chamfer], "
+                "tolerance: {deviation_mm: [-0.1, 0.1]}}\n", ""), encoding="utf-8")
+            code, result = self.draw("v1", "fail")
+        finally:
+            part.write_text(original, encoding="utf-8")
+        codes = [f["code"] for f in result["findings"]]
+        self.assertEqual((code, result["status"]), (1, "fail"))
+        self.assertIn("dimension_coverage_incomplete", codes)   # press_step and the band/journal ends it located
+        self.assertIn("tolerance_missing", codes)               # a 0.4 chamfer is below ISO 2768-1's range
+        self.assertFalse((Path(result["output_dir"]) / "package.json").exists())
+
+    def test_a_drawn_fit_without_an_inspection_of_its_finished_state_is_refused(self) -> None:
+        """A fit on the drawing is a desired limit: with the journal's inspection gone and the press band's
+        inspection of the turned rather than the ground state, the gate refuses both fits."""
+        part = self.hw / "parts" / "LMP-0005" / "part.yaml"
+        original = part.read_text(encoding="utf-8")
+        journal = "        - {id: journal_check, feature: journal, method: micrometer, state: after_finish}\n"
+        band = "{id: press_band_check, feature: press_band, method: micrometer, state: after_finish}"
+        changed = original.replace(journal, "").replace(band, band.replace("after_finish", "as_manufactured"))
+        try:
+            part.write_text(changed, encoding="utf-8")
+            self.assertNotEqual(changed, original)
+            code, result = self.draw("v1", "unverified-fit")
+        finally:
+            part.write_text(original, encoding="utf-8")
+        found = {(f["code"], f.get("feature")) for f in result["findings"]}
+        self.assertEqual((code, result["status"]), (1, "fail"))
+        self.assertIn(("fit_unverified", "journal"), found)
+        self.assertIn(("fit_state_mismatch", "press_band"), found)
+        self.assertNotIn(("fit_unverified", "groove"), found)
+
+    def test_changing_a_model_parameter_changes_the_dimension_without_yaml(self) -> None:
+        model = self.hw / "parts" / "LMP-0005" / "model.py"
+        original = model.read_text(encoding="utf-8")
+        model.write_text(original.replace('"length": 30.0,', '"length": 31.0,'), encoding="utf-8")
+        try:
+            build = run(UV, "run", "--script", str(CAD_MODEL), "run", str(self.hw), "--label", "v2", "--kernel", "auto")
+            self.assertEqual(build.returncode, 0, build.stdout[-2000:])
+            code, result = self.draw("v2", "longer")
+        finally:
+            model.write_text(original, encoding="utf-8")
+        self.assertEqual(code, 0, result.get("findings"))
+        coverage = json.loads((Path(result["output_dir"]) / "coverage.json").read_text(encoding="utf-8"))
+        tip = next(row for row in coverage["rows"] if row["characteristic"] == "tip_face.location")
+        self.assertAlmostEqual(abs(tip["value_mm"]), 31.0, places=6)
+
+    def test_vendor_sheet_controls_only_the_specification_limits(self) -> None:
+        code, result = self.draw("v1", "vendor", "LMP-0009")
+        self.assertEqual((code, result["status"], result["type"]), (0, "pass", "vendor_specification"),
+                         result.get("findings"))
+        package = Path(result["output_dir"])
+        rows = {row["characteristic"]: row for row in json.loads((package / "coverage.json").read_text())["rows"]}
+        self.assertEqual(set(rows), {"bore_diameter", "head_diameter", "body_length", "overall_length",
+                                     "head_thickness", "knurl_diameter"})   # no general-tolerance envelope sizes
+        self.assertEqual(rows["bore_diameter"]["tolerance"]["kind"], "vendor")
+        self.assertTrue(rows["head_thickness"]["reference"] and rows["head_thickness"]["tolerance"] is None)
+        texts = re.findall(r"<text[^>]*>([^<]*)</text>", (package / "sheet-1.svg").read_text(encoding="utf-8"))
+        self.assertIn("⌀5.1 ±0.05", texts)
+        self.assertIn("(⌀7.97)", texts)
+        self.assertFalse(any("2768" in text for text in texts), texts)   # a bought item takes no general tolerance
+        package_json = json.loads((package / "package.json").read_text(encoding="utf-8"))
+        sourcing = package_json["provenance"]["sourcing_inputs"]
+        self.assertEqual([s["url"].startswith("https://") for s in sourcing], [True])  # the PDF stays outside hw/
+
+    def test_open_procurement_fields_block_release_and_a_standard_designation_orders(self) -> None:
+        code, result = self.draw("v1", "insert", "LMP-0010")
+        self.assertEqual((code, result["status"]), (0, "pass"), result.get("findings"))
+        blockers = [b["message"] for b in result["release"]["blockers"]]
+        self.assertTrue(any(m.startswith("manufacturer_part_number is open") for m in blockers), blockers)
+        code, result = self.draw("v1", "ring", "LMP-0011")
+        self.assertEqual((code, result["status"]), (0, "not_required"))   # a standard part needs no sheet
+        blockers = [b["message"] for b in result["release"]["blockers"]]
+        self.assertFalse(any(" is open: " in m for m in blockers), blockers)   # DIN 471 - 5x0.6 identifies it
+        part = self.hw / "parts" / "LMP-0011" / "part.yaml"
+        original = part.read_text(encoding="utf-8")
+        try:
+            part.write_text(original.replace("  standard: DIN 471\n", ""), encoding="utf-8")
+            code, result = self.draw("v1", "ring-unstandard", "LMP-0011")
+        finally:
+            part.write_text(original, encoding="utf-8")
+        self.assertEqual(result["status"], "fail")
+        self.assertIn("procurement_incomplete", [f["code"] for f in result["findings"]])
+
+if __name__ == "__main__":
+    unittest.main()

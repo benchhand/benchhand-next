@@ -1,0 +1,106 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.generic
+revision: 2
+title: FDM generic design-for-manufacturing guidance
+scope:
+  process: fdm
+limits:
+- characteristic: overhang_angle
+  operator: <=
+  quantity:
+    value: 45
+    units: deg
+  citations:
+  - kind: supplier
+    reference: Hubs, How to design parts for FDM 3D printing
+    url: https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/
+    accessed: '2026-11-18'
+    locator: 'Overhangs: an overhang can usually be printed up to 45 degrees without compromising quality'
+  - kind: supplier
+    reference: Hubs, Key design considerations for 3D printing
+    url: https://www.hubs.com/knowledge-base/key-design-considerations-3d-printing/
+    accessed: '2026-11-18'
+    locator: 'FAQ on overhangs: try not to design parts with angles over 45 degrees'
+- characteristic: bridge_span
+  operator: "<"
+  quantity:
+    value: 5
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Hubs, How to design parts for FDM 3D printing
+    url: https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/
+    accessed: '2026-11-18'
+    locator: 'Bridging, key design consideration: sagging or support marks unless the bridge is less than 5 mm'
+- characteristic: min_wall
+  operator: '>='
+  quantity:
+    value: 0.8
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Hubs, Key design considerations for 3D printing
+    url: https://www.hubs.com/knowledge-base/key-design-considerations-3d-printing/
+    accessed: '2026-11-18'
+    locator: 'FAQ on minimal wall thickness: wall thicknesses of 0.8 mm and over'
+  - kind: supplier
+    reference: Protolabs, Fused deposition modeling (FDM)
+    url: https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/
+    accessed: '2026-11-18'
+    locator: 'FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm'
+- characteristic: min_wall
+  operator: '>='
+  relative:
+    relative_to: line_width
+    factor: 3
+    floor:
+      value: 0.8
+      units: mm
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Modeling with 3D printing in mind
+    url: https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135
+    accessed: '2026-11-18'
+    locator: 'Fine details and wall thickness table, 0.4 mm nozzle: 1, 2, 3 and 4 perimeters are about 0.45, 0.9, 1.35 and 1.8 mm'
+  - kind: supplier
+    reference: Protolabs, Fused deposition modeling (FDM)
+    url: https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/
+    accessed: '2026-11-18'
+    locator: 'FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm (the floor)'
+- characteristic: min_feature
+  operator: '>='
+  quantity:
+    value: 2.0
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Protolabs, Fused deposition modeling (FDM)
+    url: https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/
+    accessed: '2026-11-18'
+    locator: 'FDM specifications table, Minimum Feature Size: 2.0 mm'
+- characteristic: min_hole
+  operator: '>='
+  quantity:
+    value: 2.0
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Protolabs, Fused deposition modeling (FDM)
+    url: https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/
+    accessed: '2026-11-18'
+    locator: 'FDM specifications table, Minimum Hole Diameter: 2.0 mm'
+- characteristic: sliding_clearance
+  operator: '>='
+  quantity:
+    value: 0.3
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Modeling with 3D printing in mind
+    url: https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135
+    accessed: '2026-11-20'
+    locator: 'Tolerances: an initial good measurement for movable parts is at least 0.3 mm. The source does not say per side or diametral; this set reads it per side, the stricter reading'

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://srobroek.com/cad/schemas/stackup.schema.json",
+  "title": "CAD tolerance stack-up bounds (cad-fits stackup.py, legacy and intent stack files)",
+  "description": "The numeric bounds of a stack file; stackup.py checks its structure. The contributor tolerances are magnitudes in mm. Hard bounds are errors; x-plausible bands are warnings (plausibility.<field>)",
+  "type": "object",
+  "properties": {
+    "contributors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tol": {"description": "Symmetric +/- tolerance, mm", "type": "number", "minimum": 0, "maximum": 5, "x-plausible": {"max": 1}},
+          "tol_plus": {"description": "Upper tolerance magnitude, mm", "type": "number", "minimum": 0, "maximum": 5, "x-plausible": {"max": 1}},
+          "tol_minus": {"description": "Lower tolerance magnitude, mm", "type": "number", "minimum": 0, "maximum": 5, "x-plausible": {"max": 1}}
+        }
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "properties": {
+        "coverage_factor": {"description": "k of a justified RSS. The default 2 follows the GUM convention (JCGM 100:2008, ISO/IEC Guide 98-3, section 6.3.3): k = 2 gives about 95 percent coverage for a normal distribution. stackup.py still requires an explicit k with an approving decision, so the default is the loader's starting value", "type": "number", "minimum": 1, "maximum": 6, "default": 2, "x-plausible": {"min": 1.96, "max": 3.5}}
+      }
+    }
+  }
+}

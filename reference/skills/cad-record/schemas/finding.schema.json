@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://srobroek.com/cad/schemas/finding.schema.json",
+  "title": "CAD finding",
+  "description": "One finding as a CAD tool reports it in the tool-result envelope. The stable `code` is the rule identity (a later SARIF ruleId). `severity` is critical, major, minor or info",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "message"],
+  "if": {"properties": {"outcome": {"const": "not_assessed"}}, "required": ["outcome"]},
+  "then": {"required": ["reason"]}, "else": {"not": {"required": ["reason"]}},
+  "properties": {
+    "code": {"description": "A stable finding code such as process.fdm.overhang or fit_unverified: lower-case words joined by underscores, optionally dotted into a namespace", "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$", "examples": ["process.fdm.overhang", "fit_unverified"]},
+    "severity": {"description": "How bad the finding is, not whether it blocks: one shared blocking rule that every gate calls decides that, and under it minor and info are the non-blocking set. Canonical words only. Target mapping for the producers: error to major, layout stage to major or minor by layout_strict, no severity to major, warning to minor (warning is retired). That mapping keeps today's blocking effect only once the shared rule and the producers have migrated. Until then the only stand-alone same-effect mapping is warning to info", "enum": ["critical", "major", "minor", "info"]},
+    "outcome": {"description": "A check's result; unknown is never a pass, and not_assessed (calibration off, or no capability profile) is not a pass either", "enum": ["pass", "fail", "unknown", "not_applicable", "not_assessed"]},
+    "reason": {"description": "Why a not_assessed finding was not assessed: its calibration is off, or no capability profile exists for it. Only a not_assessed finding carries one", "enum": ["calibration_off", "no_capability_profile"]},
+    "subject": {
+      "description": "The part and feature the finding is about",
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": {
+        "PN": {"type": "string", "pattern": "^[A-Z]{2,5}-[0-9]{4}$"},
+        "feature": {"description": "the semantic feature id", "type": "string", "minLength": 1}
+      }
+    },
+    "location": {
+      "description": "Where in the project the finding applies: a project-relative file and, when known, a 1-based line",
+      "type": "object", "additionalProperties": false, "required": ["file"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "line": {"type": "integer", "minimum": 1}
+      }
+    },
+    "message": {"description": "What is wrong, in one sentence", "type": "string", "minLength": 1},
+    "remedy": {"description": "What to change to clear the finding", "type": "string", "minLength": 1},
+    "pointer": {"description": "Where inside the document the finding applies, as the producer writes it, such as parts/0/rev", "type": "string"},
+    "value": {"description": "The offending or measured value, of any type"},
+    "source": {"description": "What produced the finding when the code alone does not say, such as step or kernel", "type": "string", "minLength": 1}
+  },
+  "examples": [
+    {"code": "fit_unverified", "message": "bore: H7 is a desired limit and no inspection verifies it"},
+    {
+      "code": "process.fdm.overhang", "severity": "major", "outcome": "fail",
+      "subject": {"PN": "TST-0001", "feature": "mount_slot"},
+      "location": {"file": "hw/parts/TST-0001/part.yaml", "line": 12},
+      "message": "the overhang exceeds the printable angle", "remedy": "add a chamfer or split the part",
+      "pointer": "drawing/features/mount_slot", "value": {"angle_deg": 62.5, "max_deg": 45}, "source": "step"
+    }
+  ]
+}

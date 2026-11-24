@@ -1,0 +1,131 @@
+{
+  "schema_version": 2,
+  "label": "v1",
+  "frame": "parts: each PN's model_frame (assembly_zero: assembly coordinates at the zero pose); occurrences: assembly coordinates at the built (nominal) pose",
+  "units": {
+    "length": "mm",
+    "mass": "g"
+  },
+  "mass_source": "material_profiles",
+  "parts": {
+    "FXT-0001": {
+      "product": "FXT-0001 Test block",
+      "model_frame": "assembly_zero",
+      "material": "Aluminum 6061-T6",
+      "density_g_cm3": null,
+      "volume_mm3": 3999.999999999999,
+      "area_mm2": 1599.9999999999998,
+      "mass_g": null,
+      "mass_target_g": null,
+      "centre_of_volume_mm": [
+        -1.1356932185013036e-16,
+        6.217248937900869e-17,
+        5.0
+      ],
+      "centre_of_mass_mm": null,
+      "mass": {
+        "source": "material_profiles",
+        "basis": "calculated",
+        "method": "volume x density: every solid uniform and fully dense, so infill and porosity are not modelled",
+        "densities": [
+          {
+            "component": null,
+            "profile": null,
+            "status": "unknown",
+            "reasons": [
+              "the material profile is unknown: no material is chosen for the verify fixture"
+            ]
+          }
+        ],
+        "status": "unknown",
+        "reasons": [
+          "the material profile is unknown: no material is chosen for the verify fixture"
+        ]
+      },
+      "bbox_mm": {
+        "min": [
+          -10.0,
+          -10.0,
+          0.0
+        ],
+        "max": [
+          10.0,
+          10.0,
+          10.0
+        ],
+        "size": [
+          20.0,
+          20.0,
+          10.0
+        ]
+      },
+      "solids": 1,
+      "shells": 1,
+      "faces": 6,
+      "holes": []
+    }
+  },
+  "occurrences": {
+    "block": {
+      "PN": "FXT-0001",
+      "transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "centre_of_volume_mm": [
+        -1.1356932185013036e-16,
+        6.217248937900869e-17,
+        5.0
+      ],
+      "centre_of_mass_mm": null,
+      "bbox_mm": {
+        "min": [
+          -10.0,
+          -10.0,
+          0.0
+        ],
+        "max": [
+          10.0,
+          10.0,
+          10.0
+        ],
+        "size": [
+          20.0,
+          20.0,
+          10.0
+        ]
+      },
+      "holes": []
+    }
+  },
+  "totals": {
+    "volume_mm3": 3999.999999999999,
+    "mass_g": 0,
+    "centre_of_mass_mm": null,
+    "quantity": {
+      "FXT-0001": 1
+    },
+    "parts_without_density": [
+      "FXT-0001"
+    ],
+    "occurrences_without_density": [
+      "block"
+    ]
+  }
+}

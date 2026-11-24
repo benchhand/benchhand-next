@@ -1,0 +1,16 @@
+PN: FXT-0001
+rev: X1
+title: Test block
+material: Aluminum 6061-T6
+process: cnc
+finish: As machined
+mass_target: null
+make_buy: make
+supplier: null
+intent:
+  functions: [{function: cosmetic}]
+  material_profile: {status: unknown, reason: no material is chosen for the verify fixture, question: Q-012}
+  service: {status: not_applicable, reason: a fixture block has no service}
+  critical_surfaces: {status: not_applicable, reason: a fixture block has no critical surface}
+  route:
+    - {id: mill, kind: cnc, title: Mill the block from bar stock, capability: {status: unknown, reason: no capability profile is recorded, question: Q-010}}

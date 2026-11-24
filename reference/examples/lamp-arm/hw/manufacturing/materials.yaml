@@ -1,0 +1,19 @@
+# Material profiles: family or grade, form, process state and sourced properties with their conditions
+# (schemas/manufacturing-materials.schema.json). part.yaml material strings stay declarations.
+# petg is family guidance, not a grade: no filament grade is chosen, so it holds no properties (DR-005).
+profiles:
+  - id: petg
+    revision: 1
+    title: PETG, printed (family)
+    level: family
+    family: PETG
+    grade:
+      status: not_applicable
+      reason: family guidance only; no filament grade is selected
+    form: printed
+    process_state:
+      process: fdm
+      conditioning: unknown
+      notes: no filament lot, drying or print orientation is recorded, so no property is stated
+    typical_not_allowable: true
+    properties: []

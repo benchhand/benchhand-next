@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.pc
+revision: 1
+title: FDM polycarbonate (PC)
+scope:
+  process: fdm
+  material_family:
+  - pc
+limits:
+- characteristic: enclosure
+  operator: equals
+  value: true
+  citations:
+  - kind: supplier
+    reference: Prusa Knowledge Base, Polycarbonate (PC)
+    url: https://help.prusa3d.com/article/pc_165812
+    accessed: '2026-11-18'
+    locator: 'Tips for successful printing: consider using an enclosure, PC warps a lot'
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 1, Printer: ABS, ASA, PC, PA and their CF/GF reinforced materials require an enclosed printer'
+- characteristic: nozzle_diameter
+  operator: '>='
+  quantity:
+    value: 0.4
+    units: mm
+  citations:
+  - kind: supplier
+    reference: 'Bambu Lab Wiki, Filament guide: material table'
+    url: https://wiki.bambulab.com/en/general/filament-guide-material-table
+    accessed: '2026-11-18'
+    locator: 'section 2, nozzle table, PC row, 0.2 mm nozzle: Not Recommended'

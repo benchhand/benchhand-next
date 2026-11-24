@@ -1,0 +1,56 @@
+PN: LMP-0010
+rev: X1
+title: Heat-set insert M10x1 x 12.7 OD 12.6
+material: Brass
+process: purchased
+finish: Cleaned
+mass_target: 6.7
+make_buy: buy
+supplier: null
+decisions: [DR-004]
+procurement:
+  mode: catalog
+  designation: "Heat-set insert, brass, thread M10x1-6H, L 12.7, OD 12.6 (no catalogue part identified)"
+  specification:
+    reference: LMP-0010 insert requirement (user decision of DR-004)
+    revision: "2026-10-27"
+    artifact: parts/LMP-0010/sources/lampholder-insert-requirement.md
+    sha256: c113b676a25cda537635651373807ca2bc142acc76625e07945a4c08183e008d
+  open:
+    manufacturer: "no catalogue M10x1 heat-set insert found; searched In-saiL, Tappex (Bossard), KerbKonus, Böllhoff, SPIROL, PEM, McMaster-Carr, E-Z LOK, ruthex and CNC Kitchen on 2026-11-18"
+    manufacturer_part_number: "no catalogue M10x1 heat-set insert found; searched In-saiL, Tappex (Bossard), KerbKonus, Böllhoff, SPIROL, PEM, McMaster-Carr, E-Z LOK, ruthex and CNC Kitchen on 2026-11-18"
+drawing:
+  type: vendor_specification
+  datum_features:
+    A: {feature: installed_end, role: plane}
+    B: {feature: thread_bore, role: axis}
+  coordinate_frame:
+    origin: {intersection: [A, B]}
+    z: {parallel_to: B, toward: blind_end}
+  views:
+    - {id: elevation, kind: orthographic, perpendicular_to: B}
+    - {id: end, kind: orthographic, along_axis: B, toward: installed_end}
+  features:
+    thread_bore: {thread: {designation: M10x1-6H, standard: ISO 965-1, operation: vendor}}
+  dimensions:
+    - {id: length, operation: plane_separation, features: [installed_end, blind_end], reference: true}
+    - {id: knurl_diameter, operation: diameter, features: [knurl], reference: true}
+  notes:
+    - {kind: general, text: "The thread is the ordering requirement; length L and the knurl diameter OD are the DR-004 design values, reference dimensions because no catalogue part gives their limits. The envelope does not model the insert's pilot."}
+    - {kind: inspection, text: "Heat-set into the LMP-0004 insert hole, flush with the socket-boss face (DR-004)."}
+  sheet: {sizes: [A4, A3], scale: auto}
+intent:
+  functions: {status: unknown, reason: not recorded before record version 2, question: Q-021}
+  material_profile: {status: unknown, reason: 'not recorded before record version 2; the legacy material Brass is a declaration, not a sourced grade', question: Q-021}
+  service: {status: unknown, reason: not recorded before record version 2, question: Q-021}
+  critical_surfaces: {status: unknown, reason: not recorded before record version 2, question: Q-021}
+  route:
+    - id: buy
+      kind: purchased
+      title: Buy a brass heat-set insert with an M10x1-6H thread, L 12.7, OD 12.6
+      output_state: installed
+      purchase:
+        identity: {status: unknown, reason: "no catalogue M10x1 heat-set insert found; searched In-saiL, Tappex (Bossard), KerbKonus, Böllhoff, SPIROL, PEM, McMaster-Carr, E-Z LOK, ruthex and CNC Kitchen on 2026-11-18 (DR-004, procurement.open)", question: Q-021}
+        specification: {status: unknown, reason: "no catalogue part defines it; the requirement is the DR-004 lampholder insert (thread M10x1-6H, L 12.7, OD 12.6)", question: Q-021}
+        ratings: {status: unknown, reason: "no load, speed or temperature rating is recorded for this item; DR-004 cites none", question: Q-021}
+        availability: {status: unknown, reason: "no supplier is selected (DR-004 open items)", question: Q-021}

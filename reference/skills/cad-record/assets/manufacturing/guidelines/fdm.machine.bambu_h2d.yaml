@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.machine.bambu_h2d
+revision: 1
+abstract: true
+title: 'Bambu Lab H2D (SAMPLE, reached only through a profile pin): states the supported nozzle diameters; Bambu publishes no overhang, bridge, wall, feature or hole figure'
+scope:
+  process: fdm
+limits:
+- characteristic: nozzle_diameter
+  operator: one_of
+  quantities:
+  - value: 0.2
+    units: mm
+  - value: 0.4
+    units: mm
+  - value: 0.6
+    units: mm
+  - value: 0.8
+    units: mm
+  citations:
+  - kind: supplier
+    reference: Bambu Lab H2D, Technical Specifications
+    url: https://bambulab.com/en/h2d/tech-specs
+    accessed: '2026-11-19'
+    locator: 'Toolhead table, Supported Nozzle Diameter: 0.2 mm, 0.4 mm, 0.6 mm, 0.8 mm'

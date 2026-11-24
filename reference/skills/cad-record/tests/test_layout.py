@@ -1,0 +1,819 @@
+#!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+"""The hw/ layout contract: layout.json, the resolver, bundle publication, the tree audit and its
+enforcement in validate.py."""
+
+from __future__ import annotations
+
+import fcntl
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+import unittest
+from pathlib import Path
+from typing import Any
+from unittest import mock
+
+import yaml
+
+SKILL = Path(__file__).resolve().parents[1]
+SCRIPTS = SKILL / "scripts"
+VALIDATOR = SCRIPTS / "validate.py"
+LAMP = SKILL.parent.parent / "examples" / "lamp-arm" / "hw"
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from modload import load_module as load, result_payload  # noqa: E402
+
+
+layout = load("cad_record_layout", SCRIPTS / "layout.py")
+validate = load("cad_record_validate", VALIDATOR)
+
+
+def sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write(path: Path, text: str = "x\n") -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def seal_version(hw: Path, label: str) -> Path:
+    """A version folder whose manifest inventories every file below it, as cad-model run writes it.
+    A version is sealed once; sealing it again keeps the first manifest."""
+    folder = hw / "versions" / label
+    folder.mkdir(parents=True, exist_ok=True)
+    if not (folder / "manifest.json").exists():
+        files = {p.relative_to(folder).as_posix(): sha(p) for p in sorted(folder.rglob("*")) if p.is_file()}
+        (folder / "manifest.json").write_text(json.dumps({"label": label, "files": files}), encoding="utf-8")
+    return folder
+
+
+def publish(hw: Path, entry_id: str, params: dict[str, str], files: dict[str, str],
+            recipe: dict[str, Any] | None = None, replace: bool = False) -> Any:
+    staged = layout.staging(hw, entry_id)
+    for name, text in files.items():
+        write(staged / name, text)
+    return layout.publish(hw, entry_id, params, staged, recipe=recipe or {"views": sorted(files)},
+                          producer="test", status="pass", replace=replace)
+
+
+def canonical_tree(hw: Path) -> None:
+    """One example of every canonical layout row, sealed directories sealed, bundles published."""
+    lay = layout.load()
+    for entry in lay.entries:
+        if entry.kind == "scratch" or entry.manifest == "bundle":
+            continue
+        for name in [spec.name for spec in entry.files if spec.name != "manifest.json"] or [None]:
+            write(layout.locate(hw, lay.example(entry, name)))
+    write(hw / "versions" / "latest.json", json.dumps({"label": "v3"}))
+    seal_version(hw, "v3")
+    release = hw / "releases" / "A"
+    package = {p.relative_to(release).as_posix(): {"sha256": sha(p), "original": "hw/bom.csv"}
+               for p in sorted(release.rglob("*")) if p.is_file()}
+    write(release / "manifest.json", json.dumps({"schema_version": 2, "files": package}))
+    for entry in lay.entries:
+        if entry.manifest != "bundle":
+            continue
+        base = lay.example(entry)
+        params = dict(lay.classify(lay.example(entry, "manifest.json")).params)
+        files = {lay.example(entry, spec.name)[len(base) + 1:]: f"{spec.name}\n"
+                 for spec in entry.files if spec.name != "manifest.json"}
+        publish(hw, entry.id, params, files)
+
+
+class TempProject(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="cad-layout-test-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.project = self.root / "project"
+        self.hw = self.project / "hw"
+
+
+class LayoutData(TempProject):
+    def test_layout_json_matches_its_schema(self) -> None:
+        schemas = load("cad_record_schema_registry", SCRIPTS / "schema_registry.py")
+        schemas.check_schema(schemas.schema(SKILL / "schemas", "layout.schema.json"))
+        errors = list(schemas.document_validator(SKILL / "schemas", "layout.schema.json").iter_errors(layout.load().data))
+        self.assertEqual([e.message for e in errors], [])
+
+    def test_layout_md_is_generated_from_layout_json(self) -> None:
+        self.assertEqual((SKILL / "references" / "layout.md").read_text(encoding="utf-8"), layout.markdown(),
+                         "regenerate: python3 cad/skills/cad-record/scripts/layout.py --markdown "
+                         "> cad/skills/cad-record/references/layout.md")
+
+    def test_every_canonical_row_classifies_as_its_entry(self) -> None:
+        lay = layout.load()
+        for entry in lay.entries:
+            for name in [spec.name for spec in entry.files] or [None]:
+                example = lay.example(entry, name)
+                with self.subTest(entry=entry.id, path=example):
+                    match = layout.classify(example)
+                    self.assertIsNotNone(match)
+                    self.assertEqual((match.entry.id, match.name), (entry.id, name))
+
+    def test_wrong_pn_version_or_nested_name_is_rejected(self) -> None:
+        for path in ("hw/parts/LMP-001/part.yaml", "hw/parts/lmp-0001/part.yaml", "hw/parts/LMP-0001/print/flat.step",
+                     "hw/versions/v0/assembly.step", "hw/versions/3/assembly.step", "hw/versions/v03/assembly.step",
+                     "hw/versions/v3/parts/LMP-0001/part.step", "hw/versions/v3/parts/LMP-0001.stl",
+                     "hw/versions/v3/manufacturing/LMP-0001/flat.step",
+                     "hw/versions/v3/manufacturing/LMP-0001/stl/part.stl", "hw/versions/v3/manufacturing/lmp/part.step",
+                     "hw/drawings/v3/LMP-0001/sheet-0.svg", "hw/drawings/v3/LMP-0001/old/sheet-1.svg",
+                     "hw/drawings/LMP-0001/sheet-1.svg", "hw/print/LMP-0001_flat.step", "hw/docs/flat.step",
+                     "hw/docs/notes/export.py", "hw/decisions/DR-01.md", "hw/releases/I/manifest.json",
+                     "hw/renders/v3/iso.png", "hw/checks/v3/LMP-0001/result.json.bak",
+                     "hw/versions/v3/manufacturing/LMP-0001/components/Left/part.step",
+                     "hw/versions/v3/manufacturing/LMP-0001/components/left/manufacturing.json",
+                     "hw/versions/v3/record/manufacturing/findings.yaml", "hw/versions/v3/record/manufacturing/evidence.yaml",
+                     "hw/manufacturing/notes.yaml"):
+            with self.subTest(path=path):
+                self.assertIsNone(layout.classify(path))
+
+    def test_decision_files_are_slugged_madr_records_and_the_index(self) -> None:
+        for rel in ("DR-004-bushings-and-rings.md", "index.md"):
+            with self.subTest(rel):
+                match = layout.classify(f"hw/decisions/{rel}")
+                self.assertIsNotNone(match)
+                self.assertEqual(match.entry.id, "record.decision_index" if rel == "index.md" else "record.decision")
+        for rel in ("DR-001.md", "DR-001-Upper.md", "DR-001-.md", "DR-1-x.md", "DR-1000-x.md", "DR-001-x/y.md",
+                    "notes.md"):
+            with self.subTest(rel):
+                self.assertIsNone(layout.classify(f"hw/decisions/{rel}"))
+
+    def test_decision_file_finds_the_slugged_file_of_an_id(self) -> None:
+        decisions = self.hw / "decisions"
+        write(decisions / "DR-001.md")
+        write(decisions / "DR-002-press-fit-pins.md")
+        write(decisions / "DR-0021-other.md")
+        self.assertEqual(layout.decision_file(self.hw, "DR-002"), decisions / "DR-002-press-fit-pins.md")
+        for ident in ("DR-001", "DR-003"):
+            with self.subTest(ident):
+                self.assertIsNone(layout.decision_file(self.hw, ident))
+        self.assertEqual(layout.decision_files(self.hw), [decisions / "DR-002-press-fit-pins.md"])
+
+    def test_decision_file_refuses_a_bad_id_and_two_files_with_one_id(self) -> None:
+        write(self.hw / "decisions" / "DR-001-one.md")
+        write(self.hw / "decisions" / "DR-001-also.md")
+        for ident in ("DR-1", "dr-001", "DR-001-also", "../DR-001"):
+            with self.subTest(ident), self.assertRaises(layout.LayoutError):
+                layout.decision_file(self.hw, ident)
+        with self.assertRaisesRegex(layout.LayoutError, "DR-001"):
+            layout.decision_file(self.hw, "DR-001")
+
+    def test_resolvers_build_paths_and_refuse_bad_tokens(self) -> None:
+        self.assertEqual(layout.version_dir(self.hw, "v3"), self.hw / "versions" / "v3")
+        self.assertEqual(layout.manufacturing_dir(self.hw, "v3", "LMP-0001"),
+                         self.hw / "versions" / "v3" / "manufacturing" / "LMP-0001")
+        self.assertEqual(layout.bundle_dir(self.hw, "drawings", "v3", "LMP-0001"), self.hw / "drawings" / "v3" / "LMP-0001")
+        self.assertEqual(layout.resolve(self.hw, "record.part_sources", PN="LMP-0005"),
+                         self.hw / "parts" / "LMP-0005" / "sources")
+        self.assertEqual(layout.manufacturing_component_dir(self.hw, "v3", "LMP-0001", "left_cheek"),
+                         self.hw / "versions" / "v3" / "manufacturing" / "LMP-0001" / "components" / "left_cheek")
+        for rel, entry in (("hw/manufacturing/capabilities.yaml", "record.manufacturing_capabilities"),
+                           ("hw/manufacturing/sources/datasheets/sheet.pdf", "record.manufacturing_sources"),
+                           ("hw/manufacturing/evidence.yaml", "record.manufacturing_evidence"),
+                           ("hw/versions/v3/record/requirements.yaml", "version.record"),
+                           ("hw/versions/v3/record/manufacturing/sources/sheet.pdf", "version.record"),
+                           ("hw/versions/v3/manufacturing-features.json", "version.core"),
+                           ("hw/versions/v3/manufacturing/LMP-0001/components/left/part.stl", "version.manufacturing"),
+                           ("hw/versions/v3/manufacturing/LMP-0001/part.3mf", "version.manufacturing"),
+                           ("hw/versions/v3/manufacturing/LMP-0001/components/left/part.3mf", "version.manufacturing"),
+                           ("hw/checks/v3/LMP-0001/evidence/coupon.csv", "bundle.checks"),
+                           ("hw/releases/A/acceptance/evidence.yaml", "release.package")):
+            with self.subTest(rel=rel):
+                self.assertEqual(layout.classify(rel).entry.id, entry)
+        self.assertEqual(layout.bundle_kinds(), ("checks", "drawings", "renders", "captures", "motion", "analysis"))
+        self.assertEqual(layout.classify(self.hw / "versions" / "v3" / "parts" / "LMP-0001.step", self.hw).entry.id,
+                         "version.core")
+        for call in (lambda: layout.version_dir(self.hw, "v0"), lambda: layout.version_dir(self.hw, "latest"),
+                     lambda: layout.manufacturing_dir(self.hw, "v3", "lmp-1"),
+                     lambda: layout.bundle_dir(self.hw, "print", "v3", "LMP-0001"),
+                     lambda: layout.bundle_dir(self.hw, "drawings", "v3", "../x"),
+                     lambda: layout.resolve(self.hw, "bundle.renders", V="v3"),
+                     lambda: layout.relative(self.hw, self.root / "elsewhere"),
+                     lambda: layout.manufacturing_component_dir(self.hw, "v3", "LMP-0001", "Left"),
+                     lambda: layout.manufacturing_component_dir(self.hw, "v3", "LMP-0001", "../x")):
+            with self.assertRaises(layout.LayoutError):
+                call()
+
+    def test_versions_latest_and_next_version(self) -> None:
+        self.assertEqual((layout.versions(self.hw), layout.latest(self.hw), layout.next_version(self.hw)), ([], None, "v1"))
+        seal_version(self.hw, "v2")
+        seal_version(self.hw, "v10")
+        (self.hw / "versions" / ".v11.partial-7").mkdir()
+        (self.hw / "versions" / "v11").mkdir()  # an unsealed folder still takes its label
+        write(self.hw / "versions" / "latest.json", json.dumps({"label": "v10"}))
+        self.assertEqual((layout.versions(self.hw), layout.latest(self.hw), layout.next_version(self.hw)),
+                         (["v2", "v10"], "v10", "v12"))
+        write(self.hw / "versions" / "latest.json", json.dumps({"label": "v11"}))
+        with self.assertRaisesRegex(layout.LayoutError, "not a built version"):
+            layout.latest(self.hw)
+
+    def test_custom_made_predicate_and_manufacture_policy(self) -> None:
+        printed = {"PN": "LMP-0001", "process": "fdm", "make_buy": "make"}
+        pin = {"PN": "LMP-0005", "process": "purchased", "make_buy": "buy", "procurement": {"mode": "made_to_drawing"}}
+        catalogue = {"PN": "LMP-0008", "process": "purchased", "make_buy": "buy", "procurement": {"mode": "catalog"}}
+        self.assertEqual([layout.custom_made(p) for p in (printed, pin, catalogue)], [True, True, False])
+        same = layout.manufacture_policy(printed)
+        self.assertEqual((same.relationship, same.outputs, same.linear_deflection_mm, same.angular_deflection_rad),
+                         ("same", ("part.step", "part.stl", "part.3mf", "manufacturing.json"), 0.05, 0.1))
+        self.assertAlmostEqual(same.volume_tolerance_mm3(1000.0), 1e-6)
+        self.assertEqual(layout.manufacture_policy(pin).outputs, ("part.step", "manufacturing.json"))
+        flat = layout.manufacture_policy({**printed, "manufacture": {
+            "relationship": "different", "state": "flat", "reason": "elastic_bending", "decision": "DR-002",
+            "volume_rel_tolerance": 0.002, "volume_abs_tolerance_mm3": 0.5, "mesh": {"linear_deflection_mm": 0.02}}})
+        self.assertEqual((flat.relationship, flat.state, flat.linear_deflection_mm, flat.angular_deflection_rad),
+                         ("different", "flat", 0.02, 0.1))
+        self.assertAlmostEqual(flat.volume_tolerance_mm3(1000.0), 2.0)
+        self.assertAlmostEqual(flat.volume_tolerance_mm3(10.0), 0.5)
+        with self.assertRaises(layout.LayoutError):
+            layout.manufacture_policy(catalogue)
+        with self.assertRaisesRegex(layout.LayoutError, "without a volume tolerance"):
+            layout.manufacture_policy({**printed, "manufacture": {"relationship": "different"}})
+        self.assertEqual(layout.manufacture_policy({**printed, "process": "resin"}).outputs,
+                         ("part.step", "part.stl", "manufacturing.json"), "a resin part gets its STL, not a 3MF")
+        self.assertEqual(layout.manufacture_policy({**printed, "process": "laser"}).outputs, ("part.step", "manufacturing.json"))
+        with self.assertRaisesRegex(layout.UnsupportedProcess, "no manufacturing output contract"):
+            layout.manufacture_policy({**printed, "process": "other"})
+        self.assertTrue(issubclass(layout.UnsupportedProcess, layout.LayoutError), "existing callers still catch it")
+
+    def test_snapshot_names_include_the_project_guideline_sets(self) -> None:
+        for rel in ("product.yaml", "manufacturing/guidelines/generic.yaml", "manufacturing/guidelines/nested/pa.yaml"):
+            write(self.hw / rel)
+        self.assertEqual(layout.snapshot_names(self.hw, []), [
+            "manufacturing/guidelines/generic.yaml", "manufacturing/guidelines/nested/pa.yaml", "product.yaml"])
+
+    def test_snapshot_names_follow_the_version_record_entry(self) -> None:
+        for rel in ("product.yaml", "requirements.yaml", "interfaces.yaml", "assembly.yaml", "parts/LMP-0001/part.yaml",
+                    "parts/LMP-0002/part.yaml", "manufacturing/capabilities.yaml", "manufacturing/materials.yaml",
+                    "manufacturing/selection.yaml", "manufacturing/findings.yaml", "manufacturing/evidence.yaml",
+                    "manufacturing/sources/a/sheet.pdf", "manufacturing/sources/coupon.csv", "bom.csv", "verification.csv"):
+            write(self.hw / rel)
+        (self.hw / "manufacturing" / "sources" / "link.pdf").symlink_to(self.hw / "bom.csv")
+        self.assertEqual(layout.snapshot_names(self.hw, ["LMP-0001"]), [
+            "assembly.yaml", "interfaces.yaml", "manufacturing/capabilities.yaml", "manufacturing/materials.yaml",
+            "manufacturing/selection.yaml", "manufacturing/sources/a/sheet.pdf", "manufacturing/sources/coupon.csv",
+            "parts/LMP-0001/part.yaml", "product.yaml", "requirements.yaml"],
+            "design inputs only: never the evidence or finding ledgers, the BOM or verification, or a symlink")
+        with self.assertRaises(layout.LayoutError):
+            layout.snapshot_names(self.hw, ["lmp-1"])
+
+
+class Publication(TempProject):
+    def setUp(self) -> None:
+        super().setUp()
+        seal_version(self.hw, "v1")
+        self.target = self.hw / "renders" / "v1" / "assembly"
+        self.params = {"V": "v1", "S": "assembly"}
+
+    def test_publish_seals_a_bundle_and_reuses_an_identical_one(self) -> None:
+        first = publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"})
+        self.assertEqual((first.path, first.reused, first.replaced), (self.target, False, None))
+        manifest = json.loads((self.target / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual((manifest["layout"], manifest["path"], manifest["files"], manifest["replaces"]),
+                         ("bundle.renders", "hw/renders/v1/assembly", {"iso.png": sha(self.target / "iso.png")}, None))
+        self.assertEqual(manifest["version_manifest_sha256"], sha(self.hw / "versions" / "v1" / "manifest.json"))
+        self.assertEqual(layout.verify(self.target), [])
+        before = (self.target / "manifest.json").read_bytes()
+        again = publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"})
+        self.assertTrue(again.reused)
+        self.assertEqual((self.target / "manifest.json").read_bytes(), before)
+        self.assertEqual(list((self.project / ".cad-work" / "publication").iterdir()), [])
+        check = load("cad_record_schema_registry", SCRIPTS / "schema_registry.py").document_validator(
+            SKILL / "schemas", "bundle-manifest.schema.json")
+        self.assertEqual([e.message for e in check.iter_errors(manifest)], [])
+
+    def test_a_different_recipe_needs_replace_and_the_manifest_records_what_it_replaced(self) -> None:
+        old = publish(self.hw, "bundle.renders", self.params, {"iso.png": "old\n"}, recipe={"size": 800})
+        old_manifest_sha = sha(self.target / "manifest.json")
+        with self.assertRaisesRegex(layout.PublishConflict, "--replace"):
+            publish(self.hw, "bundle.renders", self.params, {"iso.png": "new\n"}, recipe={"size": 1600})
+        self.assertEqual((self.target / "iso.png").read_text(encoding="utf-8"), "old\n")
+        new = publish(self.hw, "bundle.renders", self.params, {"iso.png": "new\n"}, recipe={"size": 1600}, replace=True)
+        replaces = new.manifest["replaces"]
+        self.assertEqual((replaces["manifest_sha256"], replaces["recipe_sha256"]),
+                         (old_manifest_sha, old.manifest["recipe_sha256"]))
+        self.assertEqual(self.project / replaces["moved_to"], new.replaced)
+        self.assertEqual((new.replaced / "iso.png").read_text(encoding="utf-8"), "old\n")
+        self.assertEqual((self.target / "iso.png").read_text(encoding="utf-8"), "new\n")
+        self.assertEqual(layout.audit(self.hw).problems, ())
+
+    def test_a_writer_that_lands_first_during_replace_keeps_the_replaced_bundle_named(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "old\n"}, recipe={"size": 800})
+        claim = layout.claim
+
+        def racing(staged: Path, target: Path, target_rel: str) -> None:
+            target.mkdir()  # another writer claims the path after the old bundle moved away
+            claim(staged, target, target_rel)
+
+        layout.claim = racing
+        self.addCleanup(setattr, layout, "claim", claim)
+        with self.assertRaisesRegex(layout.PublishConflict, "another writer published hw/renders/v1/assembly first; "
+                                                            "the bundle it replaced is kept at .cad-work/replaced/"):
+            publish(self.hw, "bundle.renders", self.params, {"iso.png": "new\n"}, recipe={"size": 1600}, replace=True)
+        staged = list((self.project / ".cad-work" / "publication").iterdir())
+        self.assertEqual([sorted(p.name for p in s.iterdir()) for s in staged], [["iso.png"]])
+
+    def test_a_bundle_with_a_changed_member_is_stale_and_its_producer_reruns(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(self.target / "iso.png", "edited\n")
+        self.assertEqual(layout.stale(self.target), "stale: iso.png changed after it was sealed")
+        self.assertIsNone(layout.reusable(self.hw, "bundle.renders", self.params, {"size": 800}), "the producer runs")
+        rerun = publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        self.assertFalse(rerun.reused)
+        self.assertEqual((self.target / "iso.png").read_text(encoding="utf-8"), "png\n")
+        self.assertIsNone(layout.stale(self.target))
+
+    def test_a_bundle_with_a_missing_member_is_stale(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        (self.target / "iso.png").unlink()
+        self.assertEqual(layout.stale(self.target), "stale: iso.png is listed but missing")
+        self.assertIsNone(layout.reusable(self.hw, "bundle.renders", self.params, {"size": 800}))
+
+    def test_stale_names_the_first_reason_and_counts_the_rest(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(self.target / "iso.png", "edited\n")
+        write(self.target / "extra.png")
+        self.assertEqual(layout.stale(self.target), "stale: iso.png changed after it was sealed (+1 more)")
+
+    def test_a_populated_bundle_without_a_readable_manifest_is_stale_and_reruns(self) -> None:
+        for damage in ("missing", "directory"):
+            with self.subTest(damage):
+                publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+                (self.target / "manifest.json").unlink()
+                if damage == "directory":
+                    write(self.target / "manifest.json" / "inner.txt")
+                self.assertTrue(layout.stale(self.target).startswith("stale: cannot read"), damage)
+                self.assertIsNone(layout.reusable(self.hw, "bundle.renders", self.params, {"size": 800}))
+                rerun = publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+                self.assertFalse(rerun.reused)
+                self.assertEqual(layout.verify(self.target), [])
+                shutil.rmtree(self.target)
+
+    def test_a_writer_that_repaired_a_stale_bundle_is_not_moved_aside_by_a_slower_writer(self) -> None:
+        publish(self.hw, "bundle.renders", self.params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(self.target / "iso.png", "edited\n")
+        a_paused, b_trying, release_a = threading.Event(), threading.Event(), threading.Event()
+        guard = 30  # seconds: only a hang guard, never part of the logic
+        outcome: dict[str, Any] = {}
+        real, hooked = layout._stale_bundle, []
+
+        def stale_then_pause(target: Path) -> bool:
+            found = real(target)
+            if found and not hooked:  # writer A has seen the stale bundle and waits here
+                hooked.append(True)
+                a_paused.set()
+                release_a.wait(guard)
+            return found
+
+        def writer_a() -> None:
+            with mock.patch.object(layout, "_stale_bundle", stale_then_pause):
+                outcome["a"] = publish(self.hw, "bundle.renders", self.params, {"iso.png": "a\n"}, recipe={"size": 800})
+
+        def writer_b() -> None:
+            b_trying.set()
+            try:
+                outcome["b"] = publish(self.hw, "bundle.renders", self.params, {"iso.png": "b\n"}, recipe={"size": 1600})
+            except layout.PublishConflict as error:
+                outcome["b"] = error
+
+        a, b = threading.Thread(target=writer_a, daemon=True), threading.Thread(target=writer_b, daemon=True)
+        a.start()
+        try:
+            self.assertTrue(a_paused.wait(guard), "writer A never reached its pause")
+            lock = layout._lock_path(self.hw, "hw/renders/v1/assembly")
+            with lock.parent.joinpath(lock.name).open("a") as probe:
+                with self.assertRaises(BlockingIOError, msg="writer A holds no lock on the bundle while it is paused"):
+                    fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            b.start()
+            self.assertTrue(b_trying.wait(guard))
+        finally:
+            release_a.set()
+            a.join(guard)
+            if b.ident is not None:
+                b.join(guard)
+        self.assertFalse(a.is_alive() or b.is_alive(), "a writer hung")
+        self.assertIsInstance(outcome["b"], layout.PublishConflict, "B finds A's sound bundle and another recipe")
+        self.assertEqual(layout.verify(self.target), [])
+        moved = [p for p in (self.project / ".cad-work" / "replaced").rglob("manifest.json")]
+        self.assertTrue(all(layout.verify(p.parent) for p in moved), "no sound bundle was moved aside")
+
+    def test_a_long_subject_still_publishes_and_repairs_a_stale_bundle(self) -> None:
+        subject = "s" * 240  # a valid folder name whose flattened lock name would pass 255 characters
+        params = {"V": "v1", "S": subject}
+        target = self.hw / "renders" / "v1" / subject
+        publish(self.hw, "bundle.renders", params, {"iso.png": "png\n"}, recipe={"size": 800})
+        write(target / "iso.png", "edited\n")
+        rerun = publish(self.hw, "bundle.renders", params, {"iso.png": "png\n"}, recipe={"size": 800})
+        self.assertFalse(rerun.reused)
+        self.assertEqual(layout.verify(target), [])
+
+    def test_a_sealed_v2_release_verifies_and_an_edited_copy_is_reported(self) -> None:
+        release = self.hw / "releases" / "A"
+        write(release / "bom.csv", "level,PN\n")
+        write(release / "manufacturing" / "LMP-0001" / "part.step", "step\n")
+        files = {p.relative_to(release).as_posix(): {"sha256": sha(p), "original": "hw/bom.csv"}
+                 for p in sorted(release.rglob("*")) if p.is_file()}
+        write(release / "manifest.json", json.dumps({"schema_version": 2, "files": files}))
+        self.assertEqual(layout.verify(release), [])
+        write(release / "manufacturing" / "LMP-0001" / "part.step", "edited\n")
+        self.assertEqual(layout.verify(release), ["manufacturing/LMP-0001/part.step changed after it was sealed"])
+
+    def test_claim_renames_onto_a_free_target_and_never_onto_a_taken_one(self) -> None:
+        staged = write(self.project / ".cad-work" / "stage" / "bom.csv").parent
+        target = self.hw / "releases" / "A"
+        layout.claim(staged, target, "hw/releases/A")
+        self.assertEqual((sorted(p.name for p in target.iterdir()), staged.exists()), (["bom.csv"], False))
+        again = write(self.project / ".cad-work" / "again" / "bom.csv", "other\n").parent
+        with self.assertRaisesRegex(layout.PublishConflict, "another writer published hw/releases/A first"):
+            layout.claim(again, target, "hw/releases/A")
+        self.assertEqual(((target / "bom.csv").read_text(encoding="utf-8"), again.is_dir()), ("x\n", True))
+
+    def test_publish_refuses_foreign_names_missing_files_and_staging_outside_scratch(self) -> None:
+        cases = {"foreign name": ("bundle.renders", {"iso.png": "x", "notes.txt": "x"}, "not a file a bundle.renders"),
+                 "nested name": ("bundle.renders", {"old/iso.png": "x"}, "not a file a bundle.renders"),
+                 "own manifest": ("bundle.renders", {"iso.png": "x", "manifest.json": "{}"}, "publish writes it"),
+                 "required file": ("bundle.checks", {}, "is empty"),
+                 "drawing without package": ("bundle.drawings", {"sheet-1.svg": "x", "sheet-1.pdf": "x",
+                                                                 "sheet-1.png": "x", "coverage.json": "{}"}, "needs")}
+        for label, (entry_id, files, message) in cases.items():
+            with self.subTest(label):
+                staged = layout.staging(self.hw, entry_id)
+                for name, text in files.items():
+                    write(staged / name, text)
+                with self.assertRaisesRegex(layout.LayoutError, message):
+                    layout.publish(self.hw, entry_id, {"V": "v1", "S": "LMP-0001"}, staged, recipe={}, producer="test")
+                self.assertTrue(staged.is_dir(), "a failed publication keeps its staging as scratch")
+        outside = self.root / "outside"
+        write(outside / "iso.png")
+        with self.assertRaisesRegex(layout.LayoutError, "under"):
+            layout.publish(self.hw, "bundle.renders", self.params, outside, recipe={}, producer="test")
+        with self.assertRaisesRegex(layout.LayoutError, "not a bundle"):
+            layout.staging(self.hw, "version.core")
+
+    def test_publish_never_clobbers_an_existing_directory(self) -> None:
+        self.target.mkdir(parents=True)  # another writer's claim, not yet renamed onto
+        staged = layout.staging(self.hw, "bundle.renders")
+        write(staged / "iso.png")
+        with self.assertRaises(layout.PublishConflict):
+            layout.publish(self.hw, "bundle.renders", self.params, staged, recipe={}, producer="test")
+        self.assertEqual(list(self.target.iterdir()), [])
+        self.assertEqual(sorted(p.name for p in staged.iterdir()), ["iso.png"])
+
+    def test_publish_refuses_an_unbuilt_version(self) -> None:
+        with self.assertRaisesRegex(layout.LayoutError, "v2 is not a built version"):
+            publish(self.hw, "bundle.renders", {"V": "v2", "S": "assembly"}, {"iso.png": "x"})
+
+    def test_reusable_answers_before_a_producer_runs(self) -> None:
+        params = self.params
+        self.assertIsNone(layout.reusable(self.hw, "bundle.renders", params, {"size": 800}))
+        publish(self.hw, "bundle.renders", params, {"iso.png": "png\n"}, recipe={"size": 800})
+        self.assertEqual(layout.reusable(self.hw, "bundle.renders", params, {"size": 800}), self.target)
+        with self.assertRaisesRegex(layout.PublishConflict, "--replace"):
+            layout.reusable(self.hw, "bundle.renders", params, {"size": 1600})
+        self.assertIsNone(layout.reusable(self.hw, "bundle.renders", params, {"size": 1600}, replace=True))
+
+    def test_built_version_needs_a_verified_manifest_and_a_record_snapshot(self) -> None:
+        write(self.hw / "versions" / "v2" / "record" / "product.yaml")
+        seal_version(self.hw, "v2")
+        write(self.hw / "versions" / "latest.json", json.dumps({"label": "v2"}))
+        self.assertEqual(layout.built_version(self.hw, "latest"),
+                         ("v2", self.hw / "versions" / "v2", self.hw / "versions" / "v2" / "record"))
+        with self.assertRaisesRegex(layout.LayoutError, "no record snapshot"):
+            layout.built_version(self.hw, "v1")
+        with self.assertRaisesRegex(layout.LayoutError, "v3 is not a built version"):
+            layout.built_version(self.hw, "v3")
+        write(self.hw / "versions" / "v2" / "record" / "product.yaml", "edited\n")
+        with self.assertRaisesRegex(layout.LayoutError, "v2: stale: record/product.yaml changed"):
+            layout.built_version(self.hw, "v2")
+
+    def test_scratch_path_accepts_only_cad_work(self) -> None:
+        inside = self.project / ".cad-work" / "unit" / "out.json"
+        self.assertEqual(layout.scratch_path(self.hw, inside, "--out"), inside.resolve())
+        for outside in (self.hw / "motion" / "out.json", self.project / ".cad-work", self.root / "elsewhere"):
+            with self.subTest(str(outside)), self.assertRaisesRegex(layout.LayoutError, "--out must be under"):
+                layout.scratch_path(self.hw, outside, "--out")
+
+
+class TreeAudit(TempProject):
+    def codes(self, **references: str) -> dict[str, str]:
+        return {p.path: p.code for p in layout.audit(self.hw, references).problems}
+
+    def test_canonical_tree_has_no_problems(self) -> None:
+        canonical_tree(self.hw)
+        self.assertEqual(layout.audit(self.hw).problems, ())
+        self.assertEqual(len(layout.audit(self.hw).bundles), 7)
+
+    def test_sealed_directories_neither_gain_nor_lose_files(self) -> None:
+        write(self.hw / "versions" / "v1" / "parts" / "LMP-0001.step")
+        write(self.hw / "versions" / "v1" / "assembly.step")
+        seal_version(self.hw, "v1")
+        write(self.hw / "versions" / "v1" / "parts" / "LMP-0002.step")  # added after sealing
+        (self.hw / "versions" / "v1" / "assembly.step").unlink()
+        write(self.hw / "versions" / "v2" / "assembly.step")  # never sealed
+        problems = {p.path: (p.code, p.severity) for p in layout.audit(self.hw).problems}
+        self.assertEqual(problems, {"hw/versions/v1/parts/LMP-0002.step": ("layout.unlisted", "error"),
+                                    "hw/versions/v1/assembly.step": ("layout.missing", "error"),
+                                    "hw/versions/v2": ("layout.unsealed", "stage")})
+
+    def test_listed_foreign_files_and_malformed_manifests(self) -> None:
+        write(self.hw / "versions" / "v1" / "notes.txt")
+        seal_version(self.hw, "v1")
+        write(self.hw / "versions" / "v2" / "manifest.json", json.dumps({"label": "v3", "files": {}}))
+        seal_version(self.hw, "v4")
+        publish(self.hw, "bundle.checks", {"V": "v4", "S": "LMP-0001"}, {"result.json": "{}"})
+        bundle = self.hw / "checks" / "v4" / "LMP-0001" / "manifest.json"
+        bundle.write_text(bundle.read_text(encoding="utf-8").replace("hw/checks/v4/LMP-0001", "hw/checks/v4/LMP-0009"),
+                          encoding="utf-8")
+        self.assertEqual(self.codes(), {"hw/versions/v1/notes.txt": "layout.foreign",
+                                        "hw/versions/v2/manifest.json": "layout.malformed_manifest",
+                                        "hw/checks/v4/LMP-0001/manifest.json": "layout.malformed_manifest"})
+
+    def test_exceptions_rules_and_strays(self) -> None:
+        for rel in ("versions/.v2.partial-41/parts/LMP-0001.step", "versions/.latest.json.tmp", ".cad/.recheck.json.tmp",
+                    "docs/.DS_Store", "parts/LMP-0001/__pycache__/model.cpython-312.pyc", ".gitignore",
+                    "parts/LMP-0001/.cad-work/hw/part.yaml", "notes.md", "parts/LMP-0001/helper.py", "print/flat.dat",
+                    "specs/datasheet.pdf"):
+            write(self.hw / rel)
+        self.assertEqual(self.codes(**{"hw/specs/datasheet.pdf": "LMP-0008"}), {
+            "hw/versions/.v2.partial-41": "layout.transient", "hw/versions/.latest.json.tmp": "layout.transient",
+            "hw/.cad/.recheck.json.tmp": "layout.transient", "hw/docs/.DS_Store": "layout.metadata",
+            "hw/parts/LMP-0001/__pycache__": "layout.metadata",
+            "hw/parts/LMP-0001/.cad-work": "layout.nested_scratch", "hw/notes.md": "layout.stray",
+            "hw/parts/LMP-0001/helper.py": "layout.stray", "hw/print/flat.dat": "layout.stray",
+            "hw/specs/datasheet.pdf": "layout.misplaced"})
+        canonical = {p.path: p.canonical_location for p in layout.audit(self.hw, {"hw/specs/datasheet.pdf": "LMP-0008"}).problems}
+        self.assertEqual(canonical["hw/notes.md"], "hw/docs/notes.md")
+        self.assertEqual(canonical["hw/specs/datasheet.pdf"], "hw/parts/LMP-0008/sources/datasheet.pdf")
+        self.assertEqual(canonical["hw/parts/LMP-0001/helper.py"], ".cad-work/migration/parts/LMP-0001/helper.py")
+
+    def test_the_pair_cache_and_run_records_are_accepted_disposable_files(self) -> None:
+        """The SQLite cache, its WAL and SHM, run records and their lock are accepted where their writers put
+        them, are not sealed, earn no geometry or release role, and are disposable; interrupted claims and
+        an earlier release's sweep lock are reported as transient."""
+        accepted = (".cad/recheck.json", ".cad/.gitignore", ".cad/pairs-v2.sqlite", ".cad/pairs-v2.sqlite-wal",
+                    ".cad/pairs-v2.sqlite-shm", ".cad/runs/.gitignore", ".cad/runs/.lock",
+                    ".cad/runs/3f2b9c1e8d7a4b6c9e0f1a2b3c4d5e6f.json", ".cad/runs/sweep-v3.case_1.json")
+        for rel in (*accepted, ".cad/runs/.3f2b9c1e.json.4242.tmp", "motion/v3/.sweep-sweep.json"):
+            write(self.hw / rel)
+        self.assertEqual(self.codes(), {"hw/.cad/runs/.3f2b9c1e.json.4242.tmp": "layout.transient",
+                                        "hw/motion/v3/.sweep-sweep.json": "layout.transient"})
+        for rel in accepted[2:]:
+            if rel.endswith(".gitignore"):
+                continue
+            with self.subTest(rel):
+                match = layout.classify(f"hw/{rel}")
+                self.assertEqual((match.entry.kind, match.entry.manifest, match.entry.mutability),
+                                 ("generated", None, "scratch"))
+                self.assertNotIn(match.role, ("definition", "manufacture", "evidence"))
+        self.assertIsNone(layout.classify("hw/.cad/pairs.sqlite"))  # the old global cache never lived in hw/
+
+    def test_the_part_store_is_accepted_disposable_and_never_a_result(self) -> None:
+        """Stored objects and build records sit where cad-model run writes them, are not sealed, earn no
+        geometry role, and are no generated result for git; a half-written one is transient."""
+        digest = "a" * 64
+        accepted = (".cad/cache/.gitignore", f".cad/cache/objects/{digest}", f".cad/cache/locks/{digest}.lock",
+                    f".cad/cache/records/{digest}.json")
+        leftovers = (f".cad/cache/objects/.{digest}.4242.8417272384.tmp", f".cad/cache/records/.{digest}.json.4242.8417272384.tmp",
+                     ".cad/cache/.gitignore.4242.8417272384.tmp")  # store.py's staging names: pid, then thread id
+        for rel in (*accepted, *leftovers):
+            write(self.hw / rel)
+        self.assertEqual(self.codes(), {f"hw/{rel}": "layout.transient" for rel in leftovers})
+        for rel in (accepted[1], accepted[3]):
+            with self.subTest(rel):
+                match = layout.classify(f"hw/{rel}")
+                self.assertEqual((match.entry.kind, match.entry.manifest, match.entry.mutability),
+                                 ("generated", None, "scratch"))
+                self.assertNotIn(match.role, ("definition", "manufacture", "evidence"))
+                self.assertIsNone(layout.result_root(rel))
+        for bad in (".cad/cache/objects/abc", f".cad/cache/objects/{digest}.step", f".cad/cache/records/{digest}"):
+            self.assertIsNone(layout.classify(f"hw/{bad}"), bad)
+
+
+class GitStorage(unittest.TestCase):
+    """layout.json `storage`: which generated results git tracks, by the user's answer."""
+
+    def test_every_sealed_output_is_a_result_and_nothing_else_is(self) -> None:
+        lay = layout.load()
+        for entry in lay.entries:
+            for name in [spec.name for spec in entry.files] or [None]:
+                rel = lay.example(entry, name).removeprefix("hw/")
+                with self.subTest(entry=entry.id, path=rel):
+                    if entry.kind == "generated" and entry.mutability in ("immutable", "pointer"):
+                        self.assertIsNotNone(layout.result_root(rel))
+                    else:  # the record, the BOM, the concept handoff, the recheck stamp, caches and scratch
+                        self.assertIsNone(layout.result_root(rel))
+        self.assertEqual(layout.result_root("motion/v3/assembly/pose.step"), "motion/v3")
+        self.assertIsNone(layout.result_root("motion/cases/arm-load/plan.yaml"))
+        self.assertIsNone(layout.result_root("analysis/cases/arm-load/case.yaml"))
+
+    def test_unapproved_results_are_ignored_and_approved_ones_tracked_with_lfs(self) -> None:
+        roots = layout.load().storage["results"]
+        for answer in (None, False):
+            with self.subTest(answer=answer):
+                self.assertEqual(layout.git_storage(answer), {".gitignore": [f"/{root}/" for root in roots],
+                                                              ".gitattributes": []})
+        approved = layout.git_storage(True)
+        self.assertEqual(approved[".gitignore"], [])
+        self.assertEqual(len(approved[".gitattributes"]), 2 * len(roots))
+        self.assertIn("versions/**/*.step filter=lfs diff=lfs merge=lfs -text", approved[".gitattributes"])
+        self.assertIn("motion/v*/**/*.glb filter=lfs diff=lfs merge=lfs -text", approved[".gitattributes"])
+        self.assertTrue(all(rule.split("/", 1)[0] in {r.split("/", 1)[0] for r in roots}
+                            for rule in approved[".gitattributes"]))
+
+
+class ValidatorLayout(TempProject):
+    """validate.py on a copy of the lamp example: layout findings, their severity and the exit code."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        load("cad_record_mi_fixtures", Path(__file__).resolve().parent / "fixtures" / "manufacturing_intent.py").migrated_copy(LAMP, self.hw)
+
+    def set_flow(self, **flow: Any) -> None:
+        path = self.hw / "product.yaml"
+        product = yaml.safe_load(path.read_text(encoding="utf-8"))
+        product["flow"].update(flow)
+        path.write_text(yaml.safe_dump(product, sort_keys=False), encoding="utf-8")
+
+    def freeze(self, stage: str) -> None:
+        """A record version 2 freeze of v1: its manifest and its acceptance digest (evidence.py digest)."""
+        manifest = seal_version(self.hw, "v1") / "manifest.json"
+        evidence = sys.modules["cad_record_evidence"]
+        record = sys.modules["cad_record_manufacturing_intent"].load_record(self.hw)
+        anchor = evidence.acceptance_digest(evidence.acceptance_inventory(self.hw, record))
+        self.set_flow(stage=stage, frozen={"version": "v1", "manifest_sha256": sha(manifest), "decision": "DR-001",
+                                           "evidence_sha256": anchor})
+
+    def run_validator(self) -> tuple[int, dict[str, Any]]:
+        result = subprocess.run([sys.executable, str(VALIDATOR), str(self.project)], capture_output=True, text=True,
+                                timeout=60, check=False)
+        return result.returncode, result_payload(result.stdout)
+
+    def layout_findings(self) -> tuple[int, dict[str, dict[str, Any]]]:
+        code, report = self.run_validator()
+        found = {item["path"]: item for item in report["findings"] if "code" in item}
+        others = [item for item in report["findings"] if "code" not in item]
+        self.assertEqual(others, [], "only layout findings are expected")
+        return code, found
+
+    GUIDELINE = (
+        "schema_version: 1\nid: fdm.generic\nrevision: 1\ntitle: TST guideline\nscope: {process: fdm}\nlimits:\n"
+        "  - characteristic: min_wall\n    operator: \">=\"\n    quantity: {value: 0.8, units: mm}\n    citations:\n"
+        "      - {kind: datasheet, reference: TST guide, url: \"https://example.invalid/g\", accessed: \"2026-01-01\"}\n")
+
+    def test_a_valid_project_guideline_set_is_managed_and_accepted_at_design_freeze(self) -> None:
+        write(self.hw / "manufacturing" / "guidelines" / "generic.yaml", self.GUIDELINE)
+        self.set_flow(stage="design_freeze")
+        code, found = self.layout_findings()
+        self.assertEqual((code, found), (0, {}), "the authored guideline directory is a layout entry, not a stray")
+
+    def test_an_invalid_project_guideline_set_is_an_error_by_name(self) -> None:
+        bad = self.GUIDELINE.replace('">="', "min") + "bogus: 1\n"
+        path = write(self.hw / "manufacturing" / "guidelines" / "bad.yaml", bad)
+        code, report = self.run_validator()
+        errors = [item for item in report["findings"] if str(path.name) in json.dumps(item)]
+        self.assertEqual(code, 1, report["findings"])
+        self.assertTrue(errors, f"no finding names {path.name}: {report['findings']}")
+        self.assertTrue(any("bogus" in json.dumps(item) or "operator" in json.dumps(item) for item in errors), errors)
+
+    def test_stray_flat_print_step_warns_before_freeze_and_fails_from_freeze_on(self) -> None:
+        stray = write(self.hw / "print" / "LMP-0004_flat.step")
+        write(self.hw / "print" / "export_flat_plug.py")
+        code, found = self.layout_findings()
+        self.assertEqual(code, 0)
+        item = found[str(stray)]
+        self.assertEqual((item["code"], item["severity"], item["canonical_location"]),
+                         ("layout.stray", "warning", "hw/versions/v1/manufacturing/LMP-0004/part.step"))
+        self.assertIn("hw/print/LMP-0004_flat.step is not a managed CAD output", item["message"])
+        self.assertIn("hw/parts/LMP-0004/model.py", item["action"])
+        self.assertEqual(found[str(self.hw / "print" / "export_flat_plug.py")]["canonical_location"],
+                         ".cad-work/migration/print/export_flat_plug.py")
+        for label, setup in (("design_freeze", lambda: self.set_flow(stage="design_freeze")),
+                             ("release", lambda: self.set_flow(stage="release")),
+                             ("ECO at parts after a freeze", lambda: self.freeze("parts"))):
+            with self.subTest(label):
+                setup()
+                code, found = self.layout_findings()
+                self.assertEqual(code, 1)
+                self.assertEqual(found[str(stray)]["severity"], "error")
+                self.assertTrue(found[str(stray)]["canonical_location"].endswith("/manufacturing/LMP-0004/part.step"))
+
+    def test_a_stray_3mf_names_part_3mf_as_its_canonical_file(self) -> None:
+        stray = write(self.hw / "print" / "LMP-0004_flat.3mf")
+        code, found = self.layout_findings()
+        self.assertEqual(code, 0)
+        item = found[str(stray)]
+        self.assertEqual((item["code"], item["severity"], item["canonical_location"]),
+                         ("layout.stray", "warning", "hw/versions/v1/manufacturing/LMP-0004/part.3mf"))
+
+    def test_symlink_escape_is_an_error_at_every_stage(self) -> None:
+        outside = write(self.root / "outside.md")
+        (self.hw / "docs").mkdir(exist_ok=True)  # the migration note already lives there
+        (self.hw / "docs" / "outside.md").symlink_to(outside)
+        (self.hw / "docs" / "inside.md").symlink_to(self.hw / "bom.csv")
+        (self.hw / "docs" / "escape").symlink_to(self.root, target_is_directory=True)
+        code, found = self.layout_findings()
+        self.assertEqual(code, 1)
+        self.assertEqual({path[len(str(self.hw)) + 1:]: (item["code"], item["severity"]) for path, item in found.items()},
+                         {"docs/outside.md": ("layout.symlink_escape", "error"),
+                          "docs/escape": ("layout.symlink_escape", "error"),
+                          "docs/inside.md": ("layout.symlink", "warning")})
+
+    def test_empty_unknown_directory_is_reported(self) -> None:
+        (self.hw / "print").mkdir()
+        (self.hw / "decisions" / "drafts").mkdir()
+        (self.hw / "manufacturing" / "sources").mkdir()  # an empty canonical folder is fine
+        code, found = self.layout_findings()
+        self.assertEqual(code, 0)
+        self.assertEqual({path: item["code"] for path, item in found.items()},
+                         {str(self.hw / "print"): "layout.empty_directory",
+                          str(self.hw / "decisions" / "drafts"): "layout.empty_directory"})
+
+    def test_unsafe_names_are_errors_before_freeze(self) -> None:
+        write(self.hw / "docs" / "bad\nname.md")
+        write(self.hw / "docs" / "trailing.md ")
+        code, found = self.layout_findings()
+        self.assertEqual(code, 1)
+        self.assertEqual(sorted(item["code"] for item in found.values()), ["layout.unsafe_path"] * 2)
+
+    def test_lamp_with_canonical_outputs_validates_clean_before_and_after_freeze(self) -> None:
+        write(self.hw / "versions" / "v1" / "parts" / "LMP-0001.step")
+        write(self.hw / "versions" / "v1" / "manufacturing" / "LMP-0001" / "part.step")
+        seal_version(self.hw, "v1")
+        write(self.hw / "versions" / "latest.json", json.dumps({"label": "v1"}))
+        publish(self.hw, "bundle.renders", {"V": "v1", "S": "assembly"}, {"iso.png": "png\n"})
+        write(self.hw / "docs" / "assembly-notes.md")
+        write(self.hw / "parts" / "LMP-0005" / "sources" / "pin-quote.pdf")
+        write(self.hw / ".cad" / "recheck.json", "{}")
+        self.assertEqual(self.run_validator(), (0, {"ok": True, "findings": []}))
+        self.freeze("design_freeze")
+        self.assertEqual(self.run_validator(), (0, {"ok": True, "findings": []}))
+
+    def test_frozen_anchor_must_name_the_exact_built_version(self) -> None:
+        self.freeze("design_freeze")
+        seal = self.hw / "versions" / "v1" / "manifest.json"
+        seal.write_text(seal.read_text(encoding="utf-8") + " ", encoding="utf-8")
+        self.set_flow(change={"decision": "DR-009", "baseline_version": "v2", "affected_parts": ["LMP-0099"]})
+        code, report = self.run_validator()
+        messages = [item["message"] for item in report["findings"]]
+        self.assertEqual(code, 1)
+        for expected in ("flow/frozen/manifest_sha256 is not the sha256 of versions/v1/manifest.json",
+                         "flow/change/decision DR-009 has no record: expected hw/decisions/DR-009-<slug>.md",
+                         "flow/change/baseline_version v2 is not the frozen",
+                         "flow/change/affected_parts: LMP-0099 has no parts/LMP-0099/part.yaml"):
+            self.assertTrue(any(expected in m for m in messages), (expected, messages))
+
+    def test_manufacture_belongs_to_custom_made_parts_with_a_volume_tolerance(self) -> None:
+        def edit(pn: str, block: dict[str, Any]) -> None:
+            path = self.hw / "parts" / pn / "part.yaml"
+            path.write_text(path.read_text(encoding="utf-8") + yaml.safe_dump({"manufacture": block}), encoding="utf-8")
+        edit("LMP-0001", {"relationship": "different", "state": "flat", "reason": "elastic_bending", "decision": "DR-002",
+                          "volume_rel_tolerance": 0.002})
+        edit("LMP-0005", {"relationship": "same", "mesh": {"linear_deflection_mm": 0.02}})
+        self.assertEqual(self.run_validator(), (0, {"ok": True, "findings": []}))
+        edit("LMP-0002", {"relationship": "different", "state": "flat", "reason": "elastic_bending", "decision": "DR-002"})
+        edit("LMP-0008", {"relationship": "same"})
+        edit("LMP-0003", {"relationship": "same", "volume_rel_tolerance": 0.1})
+        code, report = self.run_validator()
+        text = json.dumps(report["findings"])
+        self.assertEqual(code, 1)
+        self.assertIn("LMP-0002/part.yaml", text)
+        self.assertIn("manufacture: only a custom-made part", text)
+        self.assertIn("LMP-0003/part.yaml", text)
+
+
+class Severity(unittest.TestCase):
+    def test_blocking_fails_errors_and_unknown_severities_and_keeps_warnings(self) -> None:
+        findings = [{"severity": "error"}, {"severity": "warning"}, {"severity": "info"}, {"severity": "fatal"}, {}]
+        self.assertEqual(validate.blocking(findings), [{"severity": "error"}, {"severity": "fatal"}, {}])
+        self.assertEqual(validate.blocking([{"severity": "warning"}, {"severity": "info"}]), [])
+
+    def test_layout_strictness_follows_stage_frozen_anchor_and_releases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            hw = Path(directory)
+            def product(**flow: Any) -> dict[str, Any]:
+                return {"flow": {"stage": "layout", "recheck_from": "layout", **flow}}
+            self.assertFalse(validate.layout_strict(product(), hw))
+            self.assertFalse(validate.layout_strict(product(stage="reconcile"), hw))
+            self.assertTrue(validate.layout_strict(product(stage="design_freeze"), hw))
+            self.assertTrue(validate.layout_strict(product(stage="unknown"), hw))
+            self.assertTrue(validate.layout_strict(None, hw))
+            self.assertTrue(validate.layout_strict(product(frozen={"version": "v1"}), hw))
+            write(hw / "releases" / "A" / "manifest.json", "{}")
+            self.assertTrue(validate.layout_strict(product(), hw))
+
+
+if __name__ == "__main__":
+    unittest.main()

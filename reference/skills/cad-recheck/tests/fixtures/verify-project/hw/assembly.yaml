@@ -1,0 +1,12 @@
+occurrences:
+  - id: block
+    PN: FXT-0001
+    placement:
+      translation_mm: [0, 0, 0]
+      rotation: {axis: [1, 0, 0], angle_deg: 0}
+subassemblies:
+  - id: main
+    title: Main assembly
+    occurrences: ["@block"]
+joints: []
+operations: []

@@ -1,0 +1,12 @@
+schema_version: 1
+id: fdm.invalid
+revision: 1
+title: A guideline set that uses an operator the schema does not define
+scope:
+  process: fdm
+limits:
+  - characteristic: min_wall
+    operator: min
+    quantity: {value: 0.8, units: mm}
+    citations:
+      - {kind: datasheet, reference: Synthetic fixture, url: "https://example.invalid/guide", accessed: "2026-01-01"}

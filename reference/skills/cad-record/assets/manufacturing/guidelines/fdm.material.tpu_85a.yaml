@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+schema_version: 1
+id: fdm.material.tpu_85a
+revision: 1
+title: FDM TPU 85A
+extends:
+- fdm.compat.tpu_85a
+scope:
+  process: fdm
+  material_family:
+  - tpu
+  shore:
+  - 85a
+limits: []

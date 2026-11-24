@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://srobroek.com/cad/schemas/evidence-run.schema.json",
+  "title": "CAD evidence run report (evidence.py run)",
+  "description": "One evidence run of a built version: the producer steps the scope ran, each with its command, exit status and status, the step that stopped the run, and the evidence packet of evidence.py check, or null when the run stopped or was refused",
+  "type": "object", "additionalProperties": false,
+  "required": ["kind", "schema_version", "status", "scope", "stage", "version", "version_manifest_sha256", "record_sha256", "steps", "stopped_at", "packet"],
+  "properties": {
+    "kind": {"const": "cad-evidence-run"},
+    "schema_version": {"const": 1},
+    "status": {"description": "pass: every step passed (and, in the full scope, the packet's gate); fail: a step or the full scope's gate blocked; no_result: a producer gave no result or a stray run was found; refused: the version is not built or the record is not record version 2", "enum": ["pass", "fail", "no_result", "refused"]},
+    "scope": {"enum": ["commit", "full"]},
+    "stage": {"description": "the gate the packet applies; null only when the run was refused before reading it", "type": ["string", "null"]},
+    "version": {"type": "string"},
+    "version_manifest_sha256": {"$ref": "#/$defs/sha256_or_null"},
+    "record_sha256": {"description": "the record inputs digest when the run started (the packet records its own)", "$ref": "#/$defs/sha256_or_null"},
+    "steps": {"type": "array", "items": {"$ref": "#/$defs/step"}},
+    "stopped_at": {"description": "the step whose result stopped the run", "type": ["string", "null"]},
+    "packet": {"description": "the evidence packet evidence.py check prints for the same inputs", "type": ["object", "null"]},
+    "findings": {"description": "why the run was refused", "type": "array", "items": {"type": "object"}},
+    "strays": {"description": "recorded runs that ended and left processes behind, or cannot be verified (process_lifecycle strays)", "type": "array", "items": {"type": "object"}},
+    "stop_commands": {"description": "the commands that stop the strays", "type": "array", "items": {"type": "string"}}
+  },
+  "$defs": {
+    "sha256_or_null": {"anyOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]},
+    "step": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "argv", "exit", "status", "result", "seconds"],
+      "properties": {
+        "id": {"enum": ["validate", "form", "static.changed", "static.all", "sweep.smoke", "sweep.full", "render", "motion.default"]},
+        "argv": {"description": "the producer command; null for the in-process validator", "anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "null"}]},
+        "exit": {"description": "the exit status; null for a step that did not run", "type": ["integer", "null"]},
+        "status": {"enum": ["pass", "fail", "no_result", "skipped", "stopped"]},
+        "result": {"description": "what the step reported: the validator's blocking findings, a producer's stdout file and status, why a step was skipped or could not start", "type": ["object", "null"]},
+        "seconds": {"type": ["number", "null"], "minimum": 0}
+      }
+    }
+  }
+}
