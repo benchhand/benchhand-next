@@ -14,9 +14,8 @@ class Producer(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
-    bundle: Annotated[str, Field(pattern="^hw/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$")]
+    bundle: Annotated[str, Field(pattern="^hw/[^\\\\]+$")]
     """
     the producer bundle directory, project-relative
     """

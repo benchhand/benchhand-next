@@ -45,14 +45,18 @@ class GateDecision(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
     id: Annotated[str, Field(pattern="^DR-[0-9]{3}$")]
     """
     A decision record id; hw/decisions/DR-###-<slug>.md holds it
     """
     kind: Literal["gate"]
-    title: Annotated[str, Field(pattern="^[^\\n]*\\S[^\\n]*$")]
+    title: Annotated[
+        str,
+        Field(
+            pattern="^[^\\n]*[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n]*$"
+        ),
+    ]
     """
     One line of text
     """
@@ -71,8 +75,7 @@ class GateDecision(ContractModel):
     The built version the gate decided on
     """
     evidence: Annotated[
-        list[Annotated[str, StringConstraints(pattern=r"^hw/(?!(.*/)?\.{1,2}(/|$))[^\\]+$")]] | None,
-        Field(min_length=1),
+        list[Annotated[str, StringConstraints(pattern=r"^hw/[^\\]+$")]] | None, Field(min_length=1)
     ] = None
     """
     The result files the gate decided on
@@ -104,7 +107,12 @@ class DesignDecision(ContractModel):
     A decision record id; hw/decisions/DR-###-<slug>.md holds it
     """
     kind: Literal["design"]
-    title: Annotated[str, Field(pattern="^[^\\n]*\\S[^\\n]*$")]
+    title: Annotated[
+        str,
+        Field(
+            pattern="^[^\\n]*[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n]*$"
+        ),
+    ]
     """
     One line of text
     """
@@ -114,13 +122,40 @@ class DesignDecision(ContractModel):
         list[Annotated[str, StringConstraints(pattern=r"^DR-[0-9]{3}$")]] | None, Field(min_length=1)
     ] = None
     decision_makers: Annotated[
-        list[Annotated[str, StringConstraints(pattern=r"^[^\n]*\S[^\n]*$")]] | None, Field(min_length=1)
+        list[
+            Annotated[
+                str,
+                StringConstraints(
+                    pattern=r"^[^\n]*[^\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff][^\n]*$"
+                ),
+            ]
+        ]
+        | None,
+        Field(min_length=1),
     ] = None
     consulted: Annotated[
-        list[Annotated[str, StringConstraints(pattern=r"^[^\n]*\S[^\n]*$")]] | None, Field(min_length=1)
+        list[
+            Annotated[
+                str,
+                StringConstraints(
+                    pattern=r"^[^\n]*[^\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff][^\n]*$"
+                ),
+            ]
+        ]
+        | None,
+        Field(min_length=1),
     ] = None
     informed: Annotated[
-        list[Annotated[str, StringConstraints(pattern=r"^[^\n]*\S[^\n]*$")]] | None, Field(min_length=1)
+        list[
+            Annotated[
+                str,
+                StringConstraints(
+                    pattern=r"^[^\n]*[^\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff][^\n]*$"
+                ),
+            ]
+        ]
+        | None,
+        Field(min_length=1),
     ] = None
 
 

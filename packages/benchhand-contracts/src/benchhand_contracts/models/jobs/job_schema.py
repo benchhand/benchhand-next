@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 from typing import Annotated
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AwareDatetime, ConfigDict, Field, RootModel
 from enum import Enum
+from benchhand_contracts.base import ContractModel
 
 
 class JobStatus(Enum):
@@ -20,7 +21,7 @@ class JobStatus(Enum):
     cancelled = "cancelled"
 
 
-class JobProgress(BaseModel):
+class JobProgress(ContractModel):
     """
     The last progress the job reported: the same fraction and message as a provider $/progress notification. Both are null until the first report.
     """
@@ -33,7 +34,7 @@ class JobProgress(BaseModel):
     message: Annotated[str | None, Field(max_length=500)]
 
 
-class ProcessIdentity(BaseModel):
+class ProcessIdentity(ContractModel):
     """
     A process id with its start identity. The kernel reuses ids, so a pid proves nothing once its process is gone: the process runs only while some process has that pid and that identity. On Linux the identity is the boot id and the start time, elsewhere ps lstart.
     """
@@ -46,7 +47,7 @@ class ProcessIdentity(BaseModel):
     identity: Annotated[str, Field(min_length=1)]
 
 
-class JobRecord(BaseModel):
+class JobRecord(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
@@ -93,7 +94,7 @@ class JobRecord(BaseModel):
     finished_at: Annotated[AwareDatetime | None, Field(alias="finishedAt")]
 
 
-class JobHandle(BaseModel):
+class JobHandle(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

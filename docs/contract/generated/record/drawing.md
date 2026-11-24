@@ -80,7 +80,7 @@ An axis built from resolved datums or features: normal_to or parallel_to fixes t
 
 Type: object
 
-Constraints: `minProperties: 1`
+Constraints: `minProperties: 1`, `not: {"anyOf": [{"required": ["normal_to", "parallel_to"]}, {"required": ["toward", "toward_axis"]}]}`
 
 | Property | Type | Required | Description |
 |---|---|---|---|
@@ -431,7 +431,7 @@ Type: object
 | `min_depth_mm` | number | no | The minimum bore depth, in mm `exclusiveMinimum: 0`, `maximum: 100` |
 | `engagement_length_mm` | number | no | engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived. `exclusiveMinimum: 0` |
 | `insert` | string | yes | `minLength: 1` |
-| `source` | string | yes | `pattern: "^https?://\\S+$"` |
+| `source` | string | yes | `pattern: "^https?://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"` |
 | `note` | string | no | `minLength: 1` |
 | `feature` | [`semantic_id`](common.md#semantic_id) | no | the host part's bore feature that takes the insert |
 

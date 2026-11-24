@@ -128,12 +128,13 @@
     },
     "url": {
       "type": "string",
-      "pattern": "^https://\\S+$"
+      "pattern": "^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
     },
     "artifact_path": {
       "description": "A frozen supporting file, relative to hw/, under manufacturing/sources/ or a part's sources/",
       "type": "string",
-      "pattern": "^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$"
+      "pattern": "^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/[^\\\\]+$",
+      "not": {"pattern": "/\\.{1,2}(/|$)"}
     },
     "vector": {
       "type": "array",
@@ -1637,7 +1638,8 @@
     "project_path": {
       "description": "A file path relative to the project root, under hw/, with no . or .. segment",
       "type": "string",
-      "pattern": "^hw/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$"
+      "pattern": "^hw/[^\\\\]+$",
+      "not": {"pattern": "/\\.{1,2}(/|$)"}
     },
     "gate_id": {
       "description": "A flow gate id; flow.yaml names the gates",

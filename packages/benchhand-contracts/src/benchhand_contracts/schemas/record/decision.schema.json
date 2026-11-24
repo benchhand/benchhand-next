@@ -18,7 +18,7 @@
     "title": {
       "description": "One line of text",
       "type": "string",
-      "pattern": "^[^\\n]*\\S[^\\n]*$"
+      "pattern": "^[^\\n]*[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n]*$"
     },
     "decisions": {
       "type": "array",

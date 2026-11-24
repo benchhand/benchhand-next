@@ -630,15 +630,19 @@ class Specification(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
     reference: Annotated[str, Field(min_length=1)]
     revision: Annotated[str, Field(min_length=1)]
-    artifact: Annotated[str, Field(pattern="^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$")]
+    artifact: Annotated[str, Field(pattern="^[^/\\n\\r\\u2028\\u2029][^\\n\\r\\u2028\\u2029]*$")]
     """
     frozen copy of the specification, relative to hw/
     """
-    url: Annotated[str | None, Field(pattern="^https://\\S+$")] = None
+    url: Annotated[
+        str | None,
+        Field(
+            pattern="^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
+        ),
+    ] = None
     """
     where the publisher serves the specification
     """
@@ -653,15 +657,21 @@ class Specification1(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
     reference: Annotated[str, Field(min_length=1)]
     revision: Annotated[str, Field(min_length=1)]
-    artifact: Annotated[str | None, Field(pattern="^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$")] = None
+    artifact: Annotated[str | None, Field(pattern="^[^/\\n\\r\\u2028\\u2029][^\\n\\r\\u2028\\u2029]*$")] = (
+        None
+    )
     """
     frozen copy of the specification, relative to hw/
     """
-    url: Annotated[str, Field(pattern="^https://\\S+$")]
+    url: Annotated[
+        str,
+        Field(
+            pattern="^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
+        ),
+    ]
     """
     where the publisher serves the specification
     """
@@ -853,7 +863,12 @@ class HeatSet(ContractModel):
     engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived.
     """
     insert: Annotated[str, Field(min_length=1)]
-    source: Annotated[str, Field(pattern="^https?://\\S+$")]
+    source: Annotated[
+        str,
+        Field(
+            pattern="^https?://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
+        ),
+    ]
     note: Annotated[str | None, Field(min_length=1)] = None
     feature: Annotated[str | None, Field(pattern="^[a-z][a-z0-9_]*$")] = None
     """

@@ -23,11 +23,10 @@ class BenchhandFinding(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
     code: Annotated[str, Field(pattern="^[a-z][a-z0-9]*(\\.[a-z0-9_]+)+$")]
     severity: Severity
-    path: Annotated[str, Field(min_length=1, pattern="^(?!/)(?!.*(^|/)\\.\\.(/|$))[^\\\\]+$")]
+    path: Annotated[str, Field(min_length=1, pattern="^[^/\\\\][^\\\\]*$")]
     """
     The file the finding is about, relative to the project root, with / separators
     """

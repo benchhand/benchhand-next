@@ -24,6 +24,7 @@ CONSTRAINT_KEYWORDS = (
     "minProperties",
     "maxProperties",
     "format",
+    "not",
 )
 
 

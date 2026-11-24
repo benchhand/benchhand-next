@@ -1044,12 +1044,13 @@
             "artifact": {
               "description": "frozen copy of the specification, relative to hw/",
               "type": "string",
-              "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$"
+              "pattern": "^[^/\\n\\r\\u2028\\u2029][^\\n\\r\\u2028\\u2029]*$",
+              "not": {"pattern": "(^|/)\\.\\.(/|$)"}
             },
             "url": {
               "description": "where the publisher serves the specification",
               "type": "string",
-              "pattern": "^https://\\S+$"
+              "pattern": "^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
             },
             "sha256": {
               "$ref": "common.schema.json#/$defs/sha256"
@@ -1302,7 +1303,7 @@
         },
         "source": {
           "type": "string",
-          "pattern": "^https?://\\S+$"
+          "pattern": "^https?://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
         },
         "note": {
           "type": "string",

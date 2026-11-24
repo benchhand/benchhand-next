@@ -60,9 +60,8 @@ class Bundle(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
-    path: Annotated[str, Field(pattern="^hw/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$")]
+    path: Annotated[str, Field(pattern="^hw/[^\\\\]+$")]
     """
     A file path relative to the project root, under hw/, with no . or .. segment
     """

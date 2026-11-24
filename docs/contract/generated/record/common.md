@@ -185,7 +185,7 @@ Constraints: `pattern: "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"`
 
 Type: string
 
-Constraints: `pattern: "^https://\\S+$"`
+Constraints: `pattern: "^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"`
 
 ### `artifact_path`
 
@@ -193,7 +193,7 @@ A frozen supporting file, relative to hw/, under manufacturing/sources/ or a par
 
 Type: string
 
-Constraints: `pattern: "^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$"`
+Constraints: `pattern: "^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/[^\\\\]+$"`, `not: {"pattern": "/\\.{1,2}(/|$)"}`
 
 ### `vector`
 
@@ -1066,7 +1066,7 @@ A file path relative to the project root, under hw/, with no . or .. segment
 
 Type: string
 
-Constraints: `pattern: "^hw/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$"`
+Constraints: `pattern: "^hw/[^\\\\]+$"`, `not: {"pattern": "/\\.{1,2}(/|$)"}`
 
 ### `gate_id`
 

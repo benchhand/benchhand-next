@@ -14,7 +14,8 @@
       "description": "The file the finding is about, relative to the project root, with / separators",
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$))[^\\\\]+$"
+      "pattern": "^[^/\\\\][^\\\\]*$",
+      "not": {"pattern": "(^|/)\\.\\.(/|$)"}
     },
     "pointer": {
       "description": "A JSON Pointer (RFC 6901) into the document at path; for a CSV file /<row index>/<column>",

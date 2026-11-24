@@ -192,7 +192,6 @@ class Source(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
     kind: Kind
     reference: Annotated[str, Field(min_length=1)]
@@ -200,7 +199,12 @@ class Source(ContractModel):
     title, designation or description of the source
     """
     revision: Annotated[str | None, Field(min_length=1)] = None
-    url: Annotated[str | None, Field(pattern="^https://\\S+$")] = None
+    url: Annotated[
+        str | None,
+        Field(
+            pattern="^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
+        ),
+    ] = None
     accessed: Annotated[str | None, Field(pattern="^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")] = (
         None
     )
@@ -208,10 +212,7 @@ class Source(ContractModel):
     the date the url was retrieved
     """
     artifact: Annotated[
-        str | None,
-        Field(
-            pattern="^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$"
-        ),
+        str | None, Field(pattern="^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/[^\\\\]+$")
     ] = None
     """
     A frozen supporting file, relative to hw/, under manufacturing/sources/ or a part's sources/
@@ -900,10 +901,7 @@ class Revision(RootModel[str]):
 
 
 class ProjectPath(RootModel[str]):
-    model_config = ConfigDict(
-        regex_engine="python-re",
-    )
-    root: Annotated[str, Field(pattern="^hw/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$")]
+    root: Annotated[str, Field(pattern="^hw/[^\\\\]+$")]
     """
     A file path relative to the project root, under hw/, with no . or .. segment
     """
@@ -913,9 +911,8 @@ class FileHash(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
-        regex_engine="python-re",
     )
-    path: Annotated[str, Field(pattern="^hw/(?!(.*/)?\\.{1,2}(/|$))[^\\\\]+$")]
+    path: Annotated[str, Field(pattern="^hw/[^\\\\]+$")]
     """
     project-relative, under hw/
     """
