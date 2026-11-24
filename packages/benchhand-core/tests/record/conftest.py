@@ -5,8 +5,9 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-import prototype_v2
 import pytest
+
+from . import prototype_v2
 
 
 @pytest.fixture
