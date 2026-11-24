@@ -52,6 +52,7 @@ NEW_SCHEMA: dict[str, Any] = {
     },
     "required": ["part"],
     "additionalProperties": False,
+    "allOf": [{"if": {"required": ["kind"]}, "then": {"required": ["part"]}}],
     "$defs": {
         "PartNumber": {"type": "string", "pattern": "^[A-Z]{3}-[0-9]{4}$", "examples": ["LMP-0003"]},
         "PartAlias": {"$ref": "#/$defs/PartNumber"},
@@ -173,6 +174,8 @@ def test_docs_render_each_contract_and_an_index(contracts_dir: Path, tmp_path: P
     assert "| `part` | [`PartNumber`](#partnumber) | yes |" in page
     assert "| `kind` | [`HookKind`](../provider/protocol.md#hookkind) | no |" in page
     assert "### `Unused`" in page
+    assert "Type: object\n" in page  # the allOf of conditions doesn't hide the type
+    assert 'Condition:\n\n```json\n{\n  "if": {\n    "required": [\n      "kind"' in page
     assert f"[widget]({SYNTHETIC_DIR}/widget.md)" in (tmp_path / "README.md").read_text()
 
 

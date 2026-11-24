@@ -81,6 +81,8 @@ def _schema_body(schema: Any, contract: Contract) -> list[str]:
         lines += ["No other properties are allowed.", ""]
     elif isinstance(schema.get("additionalProperties"), dict):
         lines += [f"Other properties: {type_expr(schema['additionalProperties'], contract)}", ""]
+    for condition in _conditions(schema):
+        lines += ["Condition:", "", "```json", json.dumps(condition, indent=2, ensure_ascii=False), "```", ""]
     for example in schema.get("examples", []):
         lines += ["Example:", "", "```json", json.dumps(example, indent=2, ensure_ascii=False), "```", ""]
     return lines
@@ -96,6 +98,13 @@ def _properties_table(schema: dict[str, Any], contract: Contract) -> list[str]:
         cells = (f"`{name}`", type_expr(prop, contract), "yes" if name in required else "no", detail)
         lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
     return [*lines, ""]
+
+
+def _conditions(schema: dict[str, Any]) -> list[dict[str, Any]]:
+    """The ``if``/``then``/``else`` of ``schema`` and of its ``allOf`` branches, which a table can't show."""
+    own = {key: schema[key] for key in ("if", "then", "else") if key in schema}
+    branches = [branch for branch in schema.get("allOf", []) if isinstance(branch, dict) and "if" in branch]
+    return ([own] if own else []) + branches
 
 
 def _constraints(schema: dict[str, Any]) -> str:
@@ -115,7 +124,9 @@ def type_expr(schema: Any, contract: Contract) -> str:
         return "nothing"
     for keyword, render in _RENDERERS:
         if keyword in schema:
-            return render(schema, contract)
+            rendered = render(schema, contract)
+            if rendered != "any":
+                return rendered
     return "any"
 
 
@@ -139,7 +150,11 @@ def _enum(schema: dict[str, Any], _contract: Contract) -> str:
 
 def _combinator(keyword: str, joiner: str) -> Any:
     def render(schema: dict[str, Any], contract: Contract) -> str:
-        return joiner.join(type_expr(branch, contract) for branch in schema[keyword])
+        # A branch without a type of its own, such as a condition, leaves the type to the next renderer.
+        branches = [type_expr(branch, contract) for branch in schema[keyword]]
+        if all(branch == "any" for branch in branches):
+            return "any"
+        return joiner.join(branches)
 
     return render
 

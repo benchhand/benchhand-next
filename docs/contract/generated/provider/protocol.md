@@ -387,7 +387,7 @@ Example:
 
 ### `Coverage`
 
-Type: any
+Type: object
 
 | Property | Type | Required | Description |
 |---|---|---|---|
@@ -395,6 +395,25 @@ Type: any
 | `reason` | string | no |  |
 
 No other properties are allowed.
+
+Condition:
+
+```json
+{
+  "if": {
+    "properties": {
+      "status": {
+        "const": "unknown"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "reason"
+    ]
+  }
+}
+```
 
 Example:
 
