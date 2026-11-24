@@ -3,11 +3,15 @@
 default: check
 
 # Lint, type-check and test everything, and check the generated contract code.
-check: lint test contracts-check
+check: lint typecheck test contracts-check
 
 lint:
     uv run ruff check .
     uv run ruff format --check .
+
+# Type-check the TypeScript in ui/, the generated contract types included.
+typecheck:
+    pnpm --dir ui typecheck
 
 test:
     uv run pytest

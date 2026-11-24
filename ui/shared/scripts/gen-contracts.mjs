@@ -9,6 +9,7 @@ import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import standaloneCode from "ajv/dist/standalone/index.js";
 import { compile } from "json-schema-to-typescript";
+import { toSafeString } from "json-schema-to-typescript/dist/src/utils.js";
 
 const [contractsDir, outDir, ...relPaths] = process.argv.slice(2);
 
@@ -105,14 +106,41 @@ function stripWrapper(code) {
   return out.join("\n");
 }
 
+// The compiler names a $def's type after its title, or else its key, made a safe identifier:
+// `semantic_id` becomes `SemanticId`.
+function typeName(defs, key) {
+  return toSafeString(defs[key]?.title ?? key);
+}
+
+function declares(code, name) {
+  return new RegExp(`^export (type|interface|enum) ${name}\\b`, "m").test(code);
+}
+
 // A $def that is only a $ref to another local $def is folded into its target by the compiler,
-// so it gets an explicit alias here and every $def stays importable by name.
+// so it gets an explicit alias here and every $def stays importable by its type name.
+// An alias can target another alias, so they are resolved until none is left.
 function refAliases(schema, code) {
+  const defs = schema.$defs ?? {};
+  let declared = code;
   const aliases = [];
-  for (const [name, def] of Object.entries(schema.$defs ?? {})) {
-    const target = /^#\/\$defs\/(.+)$/.exec(def.$ref ?? "")?.[1];
-    const declared = new RegExp(`^export (type|interface) ${name}\\b`, "m");
-    if (target && !declared.test(code)) aliases.push(`export type ${name} = ${target};`);
+  let pending = Object.keys(defs).filter((key) => !declares(code, typeName(defs, key)));
+  while (pending.length) {
+    const unresolved = [];
+    for (const key of pending) {
+      const target = /^#\/\$defs\/([^/]+)$/.exec(defs[key].$ref ?? "")?.[1];
+      if (target && declares(declared, typeName(defs, target))) {
+        const alias = `export type ${typeName(defs, key)} = ${typeName(defs, target)};`;
+        aliases.push(alias);
+        declared += `\n${alias}`;
+      } else {
+        unresolved.push(key);
+      }
+    }
+    if (unresolved.length === pending.length) {
+      const names = unresolved.map((key) => `${key} (${typeName(defs, key)})`).join(", ");
+      throw new Error(`${schema.$id}: no TypeScript type for $defs ${names}`);
+    }
+    pending = unresolved;
   }
   return aliases.length ? `${aliases.join("\n")}\n` : "";
 }

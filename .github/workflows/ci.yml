@@ -38,6 +38,8 @@ jobs:
         working-directory: ui
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run pytest
+      - name: TypeScript types, the generated contract types included
+        run: just typecheck
       - name: Generated contract code is current; no breaking change without a major bump (ADR-0017)
         run: just contracts-check
       - name: Prose gate on changed Markdown
