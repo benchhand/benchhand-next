@@ -64,3 +64,11 @@ def test_violations_lists_every_violation_with_the_most_relevant_first() -> None
 def test_an_unknown_schema_id_is_an_error() -> None:
     with pytest.raises(UnknownSchemaError):
         validate(f"{MANIFEST_ID}#/$defs/NoSuchDefinition", {})
+
+
+def test_a_oneof_violation_is_listed_once() -> None:
+    gate = {"kind": "gate", "status": "provisional", "gate": "layout_freeze", "stage": "nowhere"}
+    front = {"id": "DR-021", "title": "Layout freeze", "date": "2026-11-21", **gate}
+    found = violations(f"{CONTRACTS}record/decision.schema.json", front)
+    listed = [(violation.pointer, violation.schema_path, violation.message) for violation in found]
+    assert len(listed) == len(set(listed)) >= 1

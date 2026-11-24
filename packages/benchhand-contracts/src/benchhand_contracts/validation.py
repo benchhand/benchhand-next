@@ -64,9 +64,13 @@ def violations(schema_id: str, instance: Any) -> list[ContractViolation]:
     if not errors:
         return []
     first = best_match(errors)
-    rest = [best_match([error]) for error in errors if error is not first]
+    rest = [best_match([error]) for error in errors]
     rest.sort(key=lambda error: _pointer(error.absolute_path))
-    return [_violation(schema_id, error) for error in [first, *rest]]
+    found: dict[tuple[str, str, str], ContractViolation] = {}
+    for error in [first, *rest]:  # best_match of a oneOf error and of its own best branch can agree
+        violation = _violation(schema_id, error)
+        found.setdefault((violation.pointer, violation.schema_path, violation.message), violation)
+    return list(found.values())
 
 
 @cache
