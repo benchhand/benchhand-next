@@ -25,9 +25,9 @@ import struct
 import time
 import zlib
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from mcp.server.mcpserver import Context, MCPServer
+from mcp.server.mcpserver import Context, Elicit, ElicitationResult, MCPServer, Resolve
 from mcp.types import ImageContent, ResourceLink, TextContent
 from pydantic import BaseModel
 
@@ -89,16 +89,17 @@ class GateAnswer(BaseModel):
     rationale: str = ""
 
 
+def _ask_gate() -> Elicit[GateAnswer]:
+    return Elicit("benchhand probe: do you see this form? Pick approve or changes.", GateAnswer)
+
+
 @server.tool()
-async def probe_form(ctx: Context) -> str:
-    """Ask the person a two-field form through form-mode elicitation."""
-    try:
-        result = await ctx.elicit(
-            "benchhand probe: do you see this form? Pick approve or changes.", GateAnswer
-        )
-        data = {"action": result.action, "content": getattr(result, "data", None)}
-    except Exception as error:
-        data = {"error": repr(error)}
+async def probe_form(
+    ctx: Context, answer: Annotated[ElicitationResult[GateAnswer], Resolve(_ask_gate)]
+) -> str:
+    """Ask the person a two-field form. Uses the transport the protocol revision requires:
+    multi round-trip (InputRequiredResult) on 2026-07-28, a mid-call request before it."""
+    data = {"action": answer.action, "content": getattr(answer, "data", None)}
     _record("form", ctx, **data)
     return json.dumps(data, default=str)
 
