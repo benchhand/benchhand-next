@@ -75,7 +75,13 @@
         "kind",
         "id"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "kind": "kernel",
+          "id": "build123d"
+        }
+      ]
     },
     "ErrorObject": {
       "type": "object",
@@ -137,7 +143,16 @@
         "message",
         "data"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "code": -32602,
+          "message": "params.input.parts is missing",
+          "data": {
+            "code": "invalid-params"
+          }
+        }
+      ]
     },
     "Limits": {
       "type": "object",
@@ -154,7 +169,13 @@
         }
       },
       "required": [],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "maxMessageBytes": 16777216,
+          "maxInFlight": 4
+        }
+      ]
     },
     "InitializeParams": {
       "type": "object",
@@ -218,7 +239,30 @@
         "capabilities",
         "limits"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "protocolVersion": 1,
+          "host": {
+            "name": "benchhand",
+            "version": "0.1.0"
+          },
+          "capabilities": {
+            "hooks": [
+              "kernel"
+            ],
+            "features": [
+              "progress",
+              "cancel"
+            ]
+          },
+          "limits": {
+            "maxMessageBytes": 16777216,
+            "maxInFlight": 16
+          },
+          "projectRoot": "/work/lamp"
+        }
+      ]
     },
     "InitializeResult": {
       "type": "object",
@@ -286,7 +330,36 @@
         "limits",
         "needs"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "protocolVersion": 1,
+          "provider": {
+            "name": "benchhand-build123d",
+            "version": "0.1.0"
+          },
+          "hooks": [
+            {
+              "kind": "kernel",
+              "id": "build123d"
+            }
+          ],
+          "features": {
+            "required": [],
+            "optional": [
+              "progress"
+            ]
+          },
+          "limits": {
+            "maxInFlight": 4
+          },
+          "needs": {
+            "freecad": false,
+            "chromium": false,
+            "network": false
+          }
+        }
+      ]
     },
     "Needs": {
       "type": "object",
@@ -306,7 +379,14 @@
         "chromium",
         "network"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "freecad": true,
+          "chromium": false,
+          "network": false
+        }
+      ]
     },
     "CancelParams": {
       "type": "object",
@@ -318,7 +398,12 @@
       "required": [
         "id"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "id": 7
+        }
+      ]
     },
     "ProgressParams": {
       "type": "object",
@@ -343,7 +428,15 @@
       "required": [
         "id"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "id": 7,
+          "fraction": 0.25,
+          "message": "LMP-0003 built",
+          "stage": "build"
+        }
+      ]
     },
     "LogParams": {
       "type": "object",
@@ -366,7 +459,16 @@
         "level",
         "message"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "level": "warning",
+          "message": "fillet radius clamped to 0.4 mm",
+          "data": {
+            "pn": "LMP-0003"
+          }
+        }
+      ]
     },
     "Artifact": {
       "type": "object",
@@ -396,7 +498,16 @@
         "bytes",
         "sha256"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "path": "/work/lamp/out/LMP-0003.step",
+          "mediaType": "model/step",
+          "role": "step",
+          "bytes": 48213,
+          "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      ]
     },
     "Coverage": {
       "type": "object",
@@ -431,6 +542,15 @@
             ]
           }
         }
+      ],
+      "examples": [
+        {
+          "status": "pass"
+        },
+        {
+          "status": "unknown",
+          "reason": "no mesh for LMP-0004"
+        }
       ]
     },
     "HookParamsBase": {
@@ -451,7 +571,18 @@
         "outDir",
         "input"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "projectRoot": "/work/lamp",
+          "outDir": "/work/lamp/out",
+          "input": {
+            "parts": [
+              "LMP-0003"
+            ]
+          }
+        }
+      ]
     },
     "HookResultBase": {
       "type": "object",
@@ -476,7 +607,24 @@
         "coverage",
         "artifacts"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "coverage": {
+            "status": "pass"
+          },
+          "artifacts": [
+            {
+              "path": "/work/lamp/out/LMP-0003.step",
+              "mediaType": "model/step",
+              "role": "step",
+              "bytes": 48213,
+              "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            }
+          ],
+          "output": {}
+        }
+      ]
     },
     "KernelBuildPart": {
       "type": "object",
@@ -506,7 +654,15 @@
         "model",
         "step"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "pn": "LMP-0003",
+          "name": "arm link",
+          "model": "/work/lamp/hw/parts/LMP-0003/model.py",
+          "step": "/work/lamp/out/LMP-0003.step"
+        }
+      ]
     },
     "KernelBuildParams": {
       "$ref": "#/$defs/HookParamsBase"
@@ -536,7 +692,19 @@
         "pn",
         "status"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "pn": "LMP-0003",
+          "status": "pass",
+          "seconds": 1.8
+        },
+        {
+          "pn": "LMP-0004",
+          "status": "fail",
+          "error": "fillet failed"
+        }
+      ]
     },
     "KernelBuildResult": {
       "$ref": "#/$defs/HookResultBase"
@@ -705,7 +873,19 @@
         "id",
         "method"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "method": "kernel/build",
+          "params": {
+            "projectRoot": "/work/lamp",
+            "outDir": "/work/lamp/out",
+            "input": {}
+          }
+        }
+      ]
     },
     "Notification": {
       "type": "object",
@@ -722,7 +902,16 @@
         "jsonrpc",
         "method"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "jsonrpc": "2.0",
+          "method": "$/cancelRequest",
+          "params": {
+            "id": 7
+          }
+        }
+      ]
     },
     "SuccessResponse": {
       "type": "object",
@@ -740,7 +929,19 @@
         "id",
         "result"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "result": {
+            "coverage": {
+              "status": "pass"
+            },
+            "artifacts": []
+          }
+        }
+      ]
     },
     "ErrorResponse": {
       "type": "object",
@@ -767,7 +968,20 @@
         "id",
         "error"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [
+        {
+          "jsonrpc": "2.0",
+          "id": null,
+          "error": {
+            "code": -32700,
+            "message": "invalid JSON",
+            "data": {
+              "code": "parse-error"
+            }
+          }
+        }
+      ]
     },
     "ErrorCodes": {
       "description": "Numeric code for each data.code.",

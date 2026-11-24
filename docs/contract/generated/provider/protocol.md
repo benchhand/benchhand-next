@@ -130,6 +130,15 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "kind": "kernel",
+  "id": "build123d"
+}
+```
+
 ### `ErrorObject`
 
 Type: object
@@ -142,6 +151,18 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "code": -32602,
+  "message": "params.input.parts is missing",
+  "data": {
+    "code": "invalid-params"
+  }
+}
+```
+
 ### `Limits`
 
 Type: object
@@ -152,6 +173,15 @@ Type: object
 | `maxInFlight` | integer | no | `minimum: 1`, `maximum: 16` |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "maxMessageBytes": 16777216,
+  "maxInFlight": 4
+}
+```
 
 ### `InitializeParams`
 
@@ -168,6 +198,32 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "protocolVersion": 1,
+  "host": {
+    "name": "benchhand",
+    "version": "0.1.0"
+  },
+  "capabilities": {
+    "hooks": [
+      "kernel"
+    ],
+    "features": [
+      "progress",
+      "cancel"
+    ]
+  },
+  "limits": {
+    "maxMessageBytes": 16777216,
+    "maxInFlight": 16
+  },
+  "projectRoot": "/work/lamp"
+}
+```
+
 ### `InitializeResult`
 
 Type: object
@@ -183,6 +239,38 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "protocolVersion": 1,
+  "provider": {
+    "name": "benchhand-build123d",
+    "version": "0.1.0"
+  },
+  "hooks": [
+    {
+      "kind": "kernel",
+      "id": "build123d"
+    }
+  ],
+  "features": {
+    "required": [],
+    "optional": [
+      "progress"
+    ]
+  },
+  "limits": {
+    "maxInFlight": 4
+  },
+  "needs": {
+    "freecad": false,
+    "chromium": false,
+    "network": false
+  }
+}
+```
+
 ### `Needs`
 
 Type: object
@@ -195,6 +283,16 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "freecad": true,
+  "chromium": false,
+  "network": false
+}
+```
+
 ### `CancelParams`
 
 Type: object
@@ -204,6 +302,14 @@ Type: object
 | `id` | [`RequestId`](#requestid) | yes |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "id": 7
+}
+```
 
 ### `ProgressParams`
 
@@ -218,6 +324,17 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "id": 7,
+  "fraction": 0.25,
+  "message": "LMP-0003 built",
+  "stage": "build"
+}
+```
+
 ### `LogParams`
 
 Type: object
@@ -229,6 +346,18 @@ Type: object
 | `data` | any | no |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "level": "warning",
+  "message": "fillet radius clamped to 0.4 mm",
+  "data": {
+    "pn": "LMP-0003"
+  }
+}
+```
 
 ### `Artifact`
 
@@ -244,6 +373,18 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "path": "/work/lamp/out/LMP-0003.step",
+  "mediaType": "model/step",
+  "role": "step",
+  "bytes": 48213,
+  "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+}
+```
+
 ### `Coverage`
 
 Type: any
@@ -254,6 +395,23 @@ Type: any
 | `reason` | string | no |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "status": "pass"
+}
+```
+
+Example:
+
+```json
+{
+  "status": "unknown",
+  "reason": "no mesh for LMP-0004"
+}
+```
 
 ### `HookParamsBase`
 
@@ -267,6 +425,20 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "projectRoot": "/work/lamp",
+  "outDir": "/work/lamp/out",
+  "input": {
+    "parts": [
+      "LMP-0003"
+    ]
+  }
+}
+```
+
 ### `HookResultBase`
 
 Type: object
@@ -279,6 +451,26 @@ Type: object
 | `output` | object | no |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "coverage": {
+    "status": "pass"
+  },
+  "artifacts": [
+    {
+      "path": "/work/lamp/out/LMP-0003.step",
+      "mediaType": "model/step",
+      "role": "step",
+      "bytes": 48213,
+      "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+    }
+  ],
+  "output": {}
+}
+```
 
 ### `KernelBuildPart`
 
@@ -294,6 +486,17 @@ Type: object
 | `manufactureStep` | [`AbsPath`](#abspath) | no |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "pn": "LMP-0003",
+  "name": "arm link",
+  "model": "/work/lamp/hw/parts/LMP-0003/model.py",
+  "step": "/work/lamp/out/LMP-0003.step"
+}
+```
 
 ### `KernelBuildParams`
 
@@ -311,6 +514,26 @@ Type: object
 | `seconds` | number | no | `minimum: 0` |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "pn": "LMP-0003",
+  "status": "pass",
+  "seconds": 1.8
+}
+```
+
+Example:
+
+```json
+{
+  "pn": "LMP-0004",
+  "status": "fail",
+  "error": "fillet failed"
+}
+```
 
 ### `KernelBuildResult`
 
@@ -485,6 +708,21 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "kernel/build",
+  "params": {
+    "projectRoot": "/work/lamp",
+    "outDir": "/work/lamp/out",
+    "input": {}
+  }
+}
+```
+
 ### `Notification`
 
 Type: object
@@ -496,6 +734,18 @@ Type: object
 | `params` | any | no |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "$/cancelRequest",
+  "params": {
+    "id": 7
+  }
+}
+```
 
 ### `SuccessResponse`
 
@@ -509,6 +759,21 @@ Type: object
 
 No other properties are allowed.
 
+Example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "coverage": {
+      "status": "pass"
+    },
+    "artifacts": []
+  }
+}
+```
+
 ### `ErrorResponse`
 
 Type: object
@@ -520,6 +785,22 @@ Type: object
 | `error` | [`ErrorObject`](#errorobject) | yes |  |
 
 No other properties are allowed.
+
+Example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": null,
+  "error": {
+    "code": -32700,
+    "message": "invalid JSON",
+    "data": {
+      "code": "parse-error"
+    }
+  }
+}
+```
 
 ### `ErrorCodes`
 

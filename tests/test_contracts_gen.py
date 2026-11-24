@@ -136,10 +136,32 @@ def test_fixtures_hold_valid_examples_and_rejected_mutations(contracts_dir: Path
     ]
 
 
-def test_an_invalid_example_fails_generation(contracts_dir: Path, tmp_path: Path) -> None:
-    schema = {**NEW_SCHEMA, "examples": [{"part": "lowercase"}]}
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"examples": [{"part": "lowercase"}]}, r"widget\.schema\.json: examples\[0\] doesn't validate"),
+        (
+            {"properties": {**NEW_SCHEMA["properties"], "note": {"type": "string", "examples": [3]}}},
+            r"widget\.schema\.json#/properties/note: examples\[0\] doesn't validate",
+        ),
+        (
+            {
+                "$defs": {
+                    **NEW_SCHEMA["$defs"],
+                    "Loose": {"anyOf": [{"type": "string"}, {}], "examples": ["x"]},
+                }
+            },
+            r"#/\$defs/Loose: no mutation of its examples is rejected",
+        ),
+    ],
+    ids=["invalid-root-example", "invalid-nested-example", "no-invalid-fixture"],
+)
+def test_examples_that_cant_be_fixtures_fail_generation(
+    contracts_dir: Path, tmp_path: Path, changes: dict[str, Any], message: str
+) -> None:
+    schema = {**NEW_SCHEMA, **changes}
     (contracts_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
-    with pytest.raises(ExampleError, match=r"widget\.schema\.json: examples\[0\]"):
+    with pytest.raises(ExampleError, match=message):
         write_examples(load_contracts(contracts_dir), tmp_path)
 
 

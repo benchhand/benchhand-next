@@ -23,7 +23,8 @@ Rules for schema authors:
 
 - Every file has a `$id` and an `x-version` (semver).
 - A `$ref` to another file is relative to the referring file, for example `protocol.schema.json#/$defs/HookKind`. The generator refuses absolute `$ref` URIs, because the tools would fetch them over the network.
-- Every `examples` entry must validate against its schema. The generator fails on one that doesn't.
+- Every `examples` entry must validate against its schema, wherever the `examples` block is: at the root, in a `$defs` entry or in a nested subschema. The generator fails on one that doesn't.
+- Every object shape in `provider/protocol.schema.json` has `examples`, so each message shape has conformance fixtures. A test enforces it.
 
 ## Conformance fixtures
 
@@ -33,7 +34,7 @@ Each `examples` block at a schema root or in a `$defs` entry becomes one case in
 - `add-unknown-property`: an extra `x-conformance-unknown` property, when the schema rejects it.
 - `wrong-type`: the first top-level value, or else the whole instance, replaced by a value of another JSON type.
 
-A variant is kept only if the schema rejects it, so every `invalid` entry is known to be invalid. Each entry records the index of its source example, the mutation and the JSON pointer of the changed location.
+A variant is kept only if the schema rejects it, so every `invalid` entry is known to be invalid. Each entry records the index of its source example, the mutation and the JSON pointer of the changed location. A case whose schema has a validation keyword must get at least one `invalid` entry; the generator fails when none of the mutations is rejected, and the fix is an example that a mutation can break. Nested `examples` blocks are validated but don't become cases, because only the root and the `$defs` entries have a TypeScript validator of their own.
 
 ## Drift check
 

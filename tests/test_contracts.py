@@ -47,3 +47,15 @@ def test_every_def_resolves(path: Path) -> None:
     for name in doc.get("$defs", {}):
         resolver = registry.resolver(base_uri=doc["$id"])
         resolver.lookup(f"#/$defs/{name}")
+
+
+def test_every_protocol_message_shape_has_examples() -> None:
+    """Each object shape gets valid and invalid conformance fixtures from its examples, which the
+    TypeScript validators are checked against; a $def that is only a $ref is covered by its target."""
+    doc = json.loads((CONTRACTS / "provider" / "protocol.schema.json").read_text())
+    missing = [
+        name
+        for name, definition in doc["$defs"].items()
+        if definition.get("type") == "object" and not definition.get("examples")
+    ]
+    assert missing == []

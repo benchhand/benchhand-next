@@ -2,7 +2,8 @@
 
 Each example at a schema root or in a ``$defs`` entry is a valid fixture. Each invalid fixture is a
 valid example with one mutation applied. A mutation is kept only when the schema rejects the result,
-so every invalid fixture is known to be invalid.
+so every invalid fixture is known to be invalid, and every fixture case has at least one. An
+``examples`` block anywhere else in a schema isn't a fixture, but it must validate too.
 """
 
 from __future__ import annotations
@@ -20,6 +21,12 @@ from .sources import GENERATED_NOTICE, Contract
 
 EXAMPLES_SUFFIX = ".examples.json"
 UNKNOWN_PROPERTY = "x-conformance-unknown"
+SCHEMA_MAPS = ("properties", "patternProperties", "$defs", "dependentSchemas")
+DATA_KEYWORDS = ("const", "enum", "examples", "default", "required", "dependentRequired")
+NON_VALIDATING = frozenset(
+    ("$schema", "$id", "$defs", "$comment", "title", "description", "examples", "default", "deprecated")
+    + ("readOnly", "writeOnly", "format")
+)
 
 
 class ExampleError(Exception):
@@ -36,7 +43,13 @@ def write_examples(contracts: list[Contract], out_dir: Path) -> None:
     """Write ``<stem>.examples.json`` into ``out_dir`` for each contract that has examples."""
     registry = contract_registry(contracts)
     for contract in contracts:
-        cases = [_case(target, examples, registry) for target, examples in _targets(contract)]
+        cases = []
+        for pointer, examples in _examples_blocks(contract.schema):
+            schema_id = f"{contract.schema_id}#{pointer}" if pointer else contract.schema_id
+            if _is_fixture_target(pointer):
+                cases.append(_case(schema_id, examples, registry, _constrains(contract.schema, pointer)))
+            else:
+                _check_examples(schema_id, examples, _validator(schema_id, registry))
         if not cases:
             continue
         document = {"$comment": f"{GENERATED_NOTICE} Source: {contract.source}", "cases": cases}
@@ -45,23 +58,62 @@ def write_examples(contracts: list[Contract], out_dir: Path) -> None:
         path.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def _targets(contract: Contract) -> Iterator[tuple[str, list[Any]]]:
-    if contract.schema.get("examples"):
-        yield contract.schema_id, contract.schema["examples"]
-    for name, definition in contract.schema.get("$defs", {}).items():
-        if isinstance(definition, dict) and definition.get("examples"):
-            yield f"{contract.schema_id}#/$defs/{name}", definition["examples"]
+def _examples_blocks(node: Any, pointer: str = "") -> Iterator[tuple[str, list[Any]]]:
+    """``(JSON pointer, examples)`` for every subschema of ``node`` that has an ``examples`` list."""
+    if isinstance(node, list):
+        for index, item in enumerate(node):
+            yield from _examples_blocks(item, f"{pointer}/{index}")
+        return
+    if not isinstance(node, dict):
+        return
+    if isinstance(node.get("examples"), list) and node["examples"]:
+        yield pointer, node["examples"]
+    for key, value in node.items():
+        if key in DATA_KEYWORDS or key.startswith("x-"):
+            continue
+        if key in SCHEMA_MAPS and isinstance(value, dict):
+            for name, schema in value.items():
+                yield from _examples_blocks(schema, f"{pointer}/{key}/{_escape(name)}")
+        else:
+            yield from _examples_blocks(value, f"{pointer}/{_escape(key)}")
 
 
-def _case(schema_id: str, examples: list[Any], registry: Registry) -> dict[str, Any]:
-    validator = ContractValidator({"$ref": schema_id}, registry=registry)
-    invalid: list[dict[str, Any]] = []
+def _is_fixture_target(pointer: str) -> bool:
+    """The contract root or a ``$defs`` entry: the schemas with a TypeScript validator of their own."""
+    parts = pointer.split("/")
+    return pointer == "" or (len(parts) == 3 and parts[1] == "$defs")
+
+
+def _validator(schema_id: str, registry: Registry) -> ContractValidator:
+    return ContractValidator({"$ref": schema_id}, registry=registry)
+
+
+def _check_examples(schema_id: str, examples: list[Any], validator: ContractValidator) -> None:
     for index, example in enumerate(examples):
         if not validator.is_valid(example):
             raise ExampleError(f"{schema_id}: examples[{index}] doesn't validate")
+
+
+def _constrains(schema: dict[str, Any], pointer: str) -> bool:
+    """Whether the fixture target has a validation keyword, so that some instance must fail it."""
+    target = schema if pointer == "" else schema["$defs"][_unescape(pointer.split("/")[2])]
+    if not isinstance(target, dict):
+        return target is False
+    return any(key not in NON_VALIDATING and not key.startswith("x-") for key in target)
+
+
+def _case(schema_id: str, examples: list[Any], registry: Registry, constrained: bool) -> dict[str, Any]:
+    validator = _validator(schema_id, registry)
+    _check_examples(schema_id, examples, validator)
+    invalid: list[dict[str, Any]] = []
+    for index, example in enumerate(examples):
         for fixture in _invalid_variants(example, validator):
             if all(fixture["instance"] != seen["instance"] for seen in invalid):
                 invalid.append({"example": index, **fixture})
+    if constrained and not invalid:
+        raise ExampleError(
+            f"{schema_id}: no mutation of its examples is rejected, so it has no invalid fixture"
+        )
     return {"schema_id": schema_id, "valid": examples, "invalid": invalid}
 
 
@@ -111,6 +163,10 @@ def _other_type(value: Any) -> Any:
 
 def _escape(token: str) -> str:
     return token.replace("~", "~0").replace("/", "~1")
+
+
+def _unescape(token: str) -> str:
+    return token.replace("~1", "/").replace("~0", "~")
 
 
 # Each mutation yields (JSON pointer of the change, mutated instance) candidates in a fixed order.

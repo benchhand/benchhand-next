@@ -248,6 +248,1146 @@
           }
         }
       ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/HookDecl",
+      "valid": [
+        {
+          "kind": "kernel",
+          "id": "build123d"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/kind",
+          "instance": {
+            "id": "build123d"
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "kind": "kernel",
+            "id": "build123d",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/kind",
+          "instance": {
+            "kind": 12345,
+            "id": "build123d"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/ErrorObject",
+      "valid": [
+        {
+          "code": -32602,
+          "message": "params.input.parts is missing",
+          "data": {
+            "code": "invalid-params"
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/code",
+          "instance": {
+            "message": "params.input.parts is missing",
+            "data": {
+              "code": "invalid-params"
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "code": -32602,
+            "message": "params.input.parts is missing",
+            "data": {
+              "code": "invalid-params"
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/code",
+          "instance": {
+            "code": "not-a-number",
+            "message": "params.input.parts is missing",
+            "data": {
+              "code": "invalid-params"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/Limits",
+      "valid": [
+        {
+          "maxMessageBytes": 16777216,
+          "maxInFlight": 4
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "maxMessageBytes": 16777216,
+            "maxInFlight": 4,
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/maxMessageBytes",
+          "instance": {
+            "maxMessageBytes": "not-a-number",
+            "maxInFlight": 4
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/InitializeParams",
+      "valid": [
+        {
+          "protocolVersion": 1,
+          "host": {
+            "name": "benchhand",
+            "version": "0.1.0"
+          },
+          "capabilities": {
+            "hooks": [
+              "kernel"
+            ],
+            "features": [
+              "progress",
+              "cancel"
+            ]
+          },
+          "limits": {
+            "maxMessageBytes": 16777216,
+            "maxInFlight": 16
+          },
+          "projectRoot": "/work/lamp"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/protocolVersion",
+          "instance": {
+            "host": {
+              "name": "benchhand",
+              "version": "0.1.0"
+            },
+            "capabilities": {
+              "hooks": [
+                "kernel"
+              ],
+              "features": [
+                "progress",
+                "cancel"
+              ]
+            },
+            "limits": {
+              "maxMessageBytes": 16777216,
+              "maxInFlight": 16
+            },
+            "projectRoot": "/work/lamp"
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "protocolVersion": 1,
+            "host": {
+              "name": "benchhand",
+              "version": "0.1.0"
+            },
+            "capabilities": {
+              "hooks": [
+                "kernel"
+              ],
+              "features": [
+                "progress",
+                "cancel"
+              ]
+            },
+            "limits": {
+              "maxMessageBytes": 16777216,
+              "maxInFlight": 16
+            },
+            "projectRoot": "/work/lamp",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/protocolVersion",
+          "instance": {
+            "protocolVersion": "not-a-number",
+            "host": {
+              "name": "benchhand",
+              "version": "0.1.0"
+            },
+            "capabilities": {
+              "hooks": [
+                "kernel"
+              ],
+              "features": [
+                "progress",
+                "cancel"
+              ]
+            },
+            "limits": {
+              "maxMessageBytes": 16777216,
+              "maxInFlight": 16
+            },
+            "projectRoot": "/work/lamp"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/InitializeResult",
+      "valid": [
+        {
+          "protocolVersion": 1,
+          "provider": {
+            "name": "benchhand-build123d",
+            "version": "0.1.0"
+          },
+          "hooks": [
+            {
+              "kind": "kernel",
+              "id": "build123d"
+            }
+          ],
+          "features": {
+            "required": [],
+            "optional": [
+              "progress"
+            ]
+          },
+          "limits": {
+            "maxInFlight": 4
+          },
+          "needs": {
+            "freecad": false,
+            "chromium": false,
+            "network": false
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/protocolVersion",
+          "instance": {
+            "provider": {
+              "name": "benchhand-build123d",
+              "version": "0.1.0"
+            },
+            "hooks": [
+              {
+                "kind": "kernel",
+                "id": "build123d"
+              }
+            ],
+            "features": {
+              "required": [],
+              "optional": [
+                "progress"
+              ]
+            },
+            "limits": {
+              "maxInFlight": 4
+            },
+            "needs": {
+              "freecad": false,
+              "chromium": false,
+              "network": false
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "protocolVersion": 1,
+            "provider": {
+              "name": "benchhand-build123d",
+              "version": "0.1.0"
+            },
+            "hooks": [
+              {
+                "kind": "kernel",
+                "id": "build123d"
+              }
+            ],
+            "features": {
+              "required": [],
+              "optional": [
+                "progress"
+              ]
+            },
+            "limits": {
+              "maxInFlight": 4
+            },
+            "needs": {
+              "freecad": false,
+              "chromium": false,
+              "network": false
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/protocolVersion",
+          "instance": {
+            "protocolVersion": "not-a-number",
+            "provider": {
+              "name": "benchhand-build123d",
+              "version": "0.1.0"
+            },
+            "hooks": [
+              {
+                "kind": "kernel",
+                "id": "build123d"
+              }
+            ],
+            "features": {
+              "required": [],
+              "optional": [
+                "progress"
+              ]
+            },
+            "limits": {
+              "maxInFlight": 4
+            },
+            "needs": {
+              "freecad": false,
+              "chromium": false,
+              "network": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/Needs",
+      "valid": [
+        {
+          "freecad": true,
+          "chromium": false,
+          "network": false
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/freecad",
+          "instance": {
+            "chromium": false,
+            "network": false
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "freecad": true,
+            "chromium": false,
+            "network": false,
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/freecad",
+          "instance": {
+            "freecad": "not-a-boolean",
+            "chromium": false,
+            "network": false
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/CancelParams",
+      "valid": [
+        {
+          "id": 7
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/id",
+          "instance": {}
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "id": 7,
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/id",
+          "instance": {
+            "id": "not-a-number"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/ProgressParams",
+      "valid": [
+        {
+          "id": 7,
+          "fraction": 0.25,
+          "message": "LMP-0003 built",
+          "stage": "build"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/id",
+          "instance": {
+            "fraction": 0.25,
+            "message": "LMP-0003 built",
+            "stage": "build"
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "id": 7,
+            "fraction": 0.25,
+            "message": "LMP-0003 built",
+            "stage": "build",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/id",
+          "instance": {
+            "id": "not-a-number",
+            "fraction": 0.25,
+            "message": "LMP-0003 built",
+            "stage": "build"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/LogParams",
+      "valid": [
+        {
+          "level": "warning",
+          "message": "fillet radius clamped to 0.4 mm",
+          "data": {
+            "pn": "LMP-0003"
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/level",
+          "instance": {
+            "message": "fillet radius clamped to 0.4 mm",
+            "data": {
+              "pn": "LMP-0003"
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "level": "warning",
+            "message": "fillet radius clamped to 0.4 mm",
+            "data": {
+              "pn": "LMP-0003"
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/level",
+          "instance": {
+            "level": 12345,
+            "message": "fillet radius clamped to 0.4 mm",
+            "data": {
+              "pn": "LMP-0003"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/Artifact",
+      "valid": [
+        {
+          "path": "/work/lamp/out/LMP-0003.step",
+          "mediaType": "model/step",
+          "role": "step",
+          "bytes": 48213,
+          "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/path",
+          "instance": {
+            "mediaType": "model/step",
+            "role": "step",
+            "bytes": 48213,
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "path": "/work/lamp/out/LMP-0003.step",
+            "mediaType": "model/step",
+            "role": "step",
+            "bytes": 48213,
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/path",
+          "instance": {
+            "path": 12345,
+            "mediaType": "model/step",
+            "role": "step",
+            "bytes": 48213,
+            "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/Coverage",
+      "valid": [
+        {
+          "status": "pass"
+        },
+        {
+          "status": "unknown",
+          "reason": "no mesh for LMP-0004"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/status",
+          "instance": {}
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "status": "pass",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/status",
+          "instance": {
+            "status": 12345
+          }
+        },
+        {
+          "example": 1,
+          "mutation": "remove-property",
+          "pointer": "/status",
+          "instance": {
+            "reason": "no mesh for LMP-0004"
+          }
+        },
+        {
+          "example": 1,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "status": "unknown",
+            "reason": "no mesh for LMP-0004",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 1,
+          "mutation": "wrong-type",
+          "pointer": "/status",
+          "instance": {
+            "status": 12345,
+            "reason": "no mesh for LMP-0004"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/HookParamsBase",
+      "valid": [
+        {
+          "projectRoot": "/work/lamp",
+          "outDir": "/work/lamp/out",
+          "input": {
+            "parts": [
+              "LMP-0003"
+            ]
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/projectRoot",
+          "instance": {
+            "outDir": "/work/lamp/out",
+            "input": {
+              "parts": [
+                "LMP-0003"
+              ]
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "projectRoot": "/work/lamp",
+            "outDir": "/work/lamp/out",
+            "input": {
+              "parts": [
+                "LMP-0003"
+              ]
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/projectRoot",
+          "instance": {
+            "projectRoot": 12345,
+            "outDir": "/work/lamp/out",
+            "input": {
+              "parts": [
+                "LMP-0003"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/HookResultBase",
+      "valid": [
+        {
+          "coverage": {
+            "status": "pass"
+          },
+          "artifacts": [
+            {
+              "path": "/work/lamp/out/LMP-0003.step",
+              "mediaType": "model/step",
+              "role": "step",
+              "bytes": 48213,
+              "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            }
+          ],
+          "output": {}
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/coverage",
+          "instance": {
+            "artifacts": [
+              {
+                "path": "/work/lamp/out/LMP-0003.step",
+                "mediaType": "model/step",
+                "role": "step",
+                "bytes": 48213,
+                "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+              }
+            ],
+            "output": {}
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "coverage": {
+              "status": "pass"
+            },
+            "artifacts": [
+              {
+                "path": "/work/lamp/out/LMP-0003.step",
+                "mediaType": "model/step",
+                "role": "step",
+                "bytes": 48213,
+                "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+              }
+            ],
+            "output": {},
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/coverage",
+          "instance": {
+            "coverage": [
+              "not-an-object"
+            ],
+            "artifacts": [
+              {
+                "path": "/work/lamp/out/LMP-0003.step",
+                "mediaType": "model/step",
+                "role": "step",
+                "bytes": 48213,
+                "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+              }
+            ],
+            "output": {}
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/KernelBuildPart",
+      "valid": [
+        {
+          "pn": "LMP-0003",
+          "name": "arm link",
+          "model": "/work/lamp/hw/parts/LMP-0003/model.py",
+          "step": "/work/lamp/out/LMP-0003.step"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/pn",
+          "instance": {
+            "name": "arm link",
+            "model": "/work/lamp/hw/parts/LMP-0003/model.py",
+            "step": "/work/lamp/out/LMP-0003.step"
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "pn": "LMP-0003",
+            "name": "arm link",
+            "model": "/work/lamp/hw/parts/LMP-0003/model.py",
+            "step": "/work/lamp/out/LMP-0003.step",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/pn",
+          "instance": {
+            "pn": 12345,
+            "name": "arm link",
+            "model": "/work/lamp/hw/parts/LMP-0003/model.py",
+            "step": "/work/lamp/out/LMP-0003.step"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/KernelBuildPartResult",
+      "valid": [
+        {
+          "pn": "LMP-0003",
+          "status": "pass",
+          "seconds": 1.8
+        },
+        {
+          "pn": "LMP-0004",
+          "status": "fail",
+          "error": "fillet failed"
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/pn",
+          "instance": {
+            "status": "pass",
+            "seconds": 1.8
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "pn": "LMP-0003",
+            "status": "pass",
+            "seconds": 1.8,
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/pn",
+          "instance": {
+            "pn": 12345,
+            "status": "pass",
+            "seconds": 1.8
+          }
+        },
+        {
+          "example": 1,
+          "mutation": "remove-property",
+          "pointer": "/pn",
+          "instance": {
+            "status": "fail",
+            "error": "fillet failed"
+          }
+        },
+        {
+          "example": 1,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "pn": "LMP-0004",
+            "status": "fail",
+            "error": "fillet failed",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 1,
+          "mutation": "wrong-type",
+          "pointer": "/pn",
+          "instance": {
+            "pn": 12345,
+            "status": "fail",
+            "error": "fillet failed"
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/Request",
+      "valid": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "method": "kernel/build",
+          "params": {
+            "projectRoot": "/work/lamp",
+            "outDir": "/work/lamp/out",
+            "input": {}
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "id": 7,
+            "method": "kernel/build",
+            "params": {
+              "projectRoot": "/work/lamp",
+              "outDir": "/work/lamp/out",
+              "input": {}
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "kernel/build",
+            "params": {
+              "projectRoot": "/work/lamp",
+              "outDir": "/work/lamp/out",
+              "input": {}
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "jsonrpc": 12345,
+            "id": 7,
+            "method": "kernel/build",
+            "params": {
+              "projectRoot": "/work/lamp",
+              "outDir": "/work/lamp/out",
+              "input": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/Notification",
+      "valid": [
+        {
+          "jsonrpc": "2.0",
+          "method": "$/cancelRequest",
+          "params": {
+            "id": 7
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "method": "$/cancelRequest",
+            "params": {
+              "id": 7
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "jsonrpc": "2.0",
+            "method": "$/cancelRequest",
+            "params": {
+              "id": 7
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "jsonrpc": 12345,
+            "method": "$/cancelRequest",
+            "params": {
+              "id": 7
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/SuccessResponse",
+      "valid": [
+        {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "result": {
+            "coverage": {
+              "status": "pass"
+            },
+            "artifacts": []
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "id": 7,
+            "result": {
+              "coverage": {
+                "status": "pass"
+              },
+              "artifacts": []
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "result": {
+              "coverage": {
+                "status": "pass"
+              },
+              "artifacts": []
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "jsonrpc": 12345,
+            "id": 7,
+            "result": {
+              "coverage": {
+                "status": "pass"
+              },
+              "artifacts": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json#/$defs/ErrorResponse",
+      "valid": [
+        {
+          "jsonrpc": "2.0",
+          "id": null,
+          "error": {
+            "code": -32700,
+            "message": "invalid JSON",
+            "data": {
+              "code": "parse-error"
+            }
+          }
+        }
+      ],
+      "invalid": [
+        {
+          "example": 0,
+          "mutation": "remove-property",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "id": null,
+            "error": {
+              "code": -32700,
+              "message": "invalid JSON",
+              "data": {
+                "code": "parse-error"
+              }
+            }
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": {
+              "code": -32700,
+              "message": "invalid JSON",
+              "data": {
+                "code": "parse-error"
+              }
+            },
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 0,
+          "mutation": "wrong-type",
+          "pointer": "/jsonrpc",
+          "instance": {
+            "jsonrpc": 12345,
+            "id": null,
+            "error": {
+              "code": -32700,
+              "message": "invalid JSON",
+              "data": {
+                "code": "parse-error"
+              }
+            }
+          }
+        }
+      ]
     }
   ]
 }
