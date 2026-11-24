@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
+from benchhand_contracts.validation import ContractValidator
 from referencing import Registry, Resource
 
 from .sources import GENERATED_NOTICE, Contract
@@ -54,7 +54,7 @@ def _targets(contract: Contract) -> Iterator[tuple[str, list[Any]]]:
 
 
 def _case(schema_id: str, examples: list[Any], registry: Registry) -> dict[str, Any]:
-    validator = Draft202012Validator({"$ref": schema_id}, registry=registry)
+    validator = ContractValidator({"$ref": schema_id}, registry=registry)
     invalid: list[dict[str, Any]] = []
     for index, example in enumerate(examples):
         if not validator.is_valid(example):
@@ -65,7 +65,7 @@ def _case(schema_id: str, examples: list[Any], registry: Registry) -> dict[str, 
     return {"schema_id": schema_id, "valid": examples, "invalid": invalid}
 
 
-def _invalid_variants(example: Any, validator: Draft202012Validator) -> Iterator[dict[str, Any]]:
+def _invalid_variants(example: Any, validator: ContractValidator) -> Iterator[dict[str, Any]]:
     """At most one fixture per mutation kind: the first candidate the schema rejects."""
     for name, mutation in MUTATIONS:
         for pointer, instance in mutation(example):

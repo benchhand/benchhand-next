@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -54,12 +55,19 @@ def load_contracts(contracts_dir: Path) -> list[Contract]:
     contracts = []
     for path in sorted(contracts_dir.rglob(f"*{SCHEMA_SUFFIX}")):
         rel_path = path.relative_to(contracts_dir).as_posix()
-        schema = json.loads(path.read_text(encoding="utf-8"))
+        schema = json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_constant(rel_path))
         _check_source(rel_path, schema)
         contracts.append(Contract(rel_path, schema))
     if not contracts:
         raise ContractSourceError(f"no *{SCHEMA_SUFFIX} files under {contracts_dir}")
     return contracts
+
+
+def _reject_constant(rel_path: str) -> Callable[[str], Any]:
+    def reject(constant: str) -> Any:
+        raise ContractSourceError(f"{rel_path}: {constant} is not valid JSON")
+
+    return reject
 
 
 def _check_source(rel_path: str, schema: dict[str, Any]) -> None:

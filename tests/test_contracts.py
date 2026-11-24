@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from benchhand_contracts.validation import ContractValidator
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
@@ -33,7 +34,7 @@ def test_schema_is_valid_and_versioned(path: Path) -> None:
 @pytest.mark.parametrize("path", SCHEMAS, ids=lambda p: str(p.relative_to(CONTRACTS)))
 def test_examples_validate(path: Path) -> None:
     doc = json.loads(path.read_text())
-    validator = Draft202012Validator(doc, registry=_registry())
+    validator = ContractValidator(doc, registry=_registry())
     assert doc.get("examples"), "each contract carries at least one example"
     for example in doc["examples"]:
         validator.validate(example)

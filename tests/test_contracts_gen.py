@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from benchhand_contracts import ContractViolation, validate
+from benchhand_contracts.validation import ContractValidator
 from contracts_gen.docs import write_docs
 from contracts_gen.examples import ExampleError, contract_registry, write_examples
 from contracts_gen.generate import drift, generate
@@ -27,7 +29,6 @@ from contracts_gen.sources import (
     load_contracts,
 )
 from contracts_gen.typescript import write_typescript
-from jsonschema import Draft202012Validator
 
 NODE_READY = shutil.which("node") is not None and all(
     (REPO_ROOT / "ui" / "shared" / "node_modules" / name).is_dir()
@@ -119,7 +120,7 @@ def test_fixtures_hold_valid_examples_and_rejected_mutations(contracts_dir: Path
     cases = {case["schema_id"]: case for case in document["cases"]}
     assert set(cases) == {NEW_ID, f"{NEW_ID}#/$defs/PartNumber"}
     for schema_id, case in cases.items():
-        validator = Draft202012Validator({"$ref": schema_id}, registry=registry)
+        validator = ContractValidator({"$ref": schema_id}, registry=registry)
         assert case["valid"] and all(validator.is_valid(example) for example in case["valid"])
         assert case["invalid"] and not any(
             validator.is_valid(fixture["instance"]) for fixture in case["invalid"]
@@ -214,6 +215,44 @@ console.log(JSON.stringify(results));
         for result in json.loads(output):
             assert all(result["valid"]), result
             assert not any(result["invalid"]), result
+
+
+PROTOCOL_ID = "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json"
+EDGE_CASES: list[tuple[str, Any, bool]] = [
+    ("HookId", "kernel", True),
+    ("HookId", "kernel\n", False),  # Python's re lets $ match before a final newline; ECMAScript doesn't
+    ("ProgressParams", {"id": 1, "fraction": 0.5}, True),
+    ("ProgressParams", {"id": 1, "fraction": 2}, False),
+    ("ProgressParams", {"id": 1, "fraction": float("nan")}, False),
+    ("ProgressParams", {"id": 1, "fraction": float("inf")}, False),
+]
+
+
+def _python_accepts(name: str, instance: Any) -> bool:
+    try:
+        validate(f"{PROTOCOL_ID}#/$defs/{name}", instance)
+    except ContractViolation:
+        return False
+    return True
+
+
+@needs_node
+def test_python_and_ajv_validators_agree_on_edge_cases(tmp_path: Path) -> None:
+    # json.dumps writes NaN and Infinity as the JavaScript literals, so the cases are a JS expression.
+    cases = json.dumps([[name, instance] for name, instance, _ in EDGE_CASES])
+    runner = tmp_path / "run.mjs"
+    runner.write_text(
+        "const validators = await import(process.argv[2]);\n"
+        f"const cases = {cases};\n"
+        "console.log(JSON.stringify(cases.map(([name, value]) => validators['validate' + name](value))));\n"
+    )
+    module = REPO_ROOT / TYPESCRIPT_OUT / "provider" / "protocol.validate.js"
+    output = subprocess.run(
+        ["node", str(runner), module.as_uri()], capture_output=True, text=True, check=True
+    ).stdout
+    expected = [valid for _, _, valid in EDGE_CASES]
+    assert json.loads(output) == expected
+    assert [_python_accepts(name, instance) for name, instance, _ in EDGE_CASES] == expected
 
 
 @needs_node
