@@ -74,6 +74,7 @@ assert store.load_record(root) == record
 """
 
 
+@pytest.mark.wheel
 @pytest.mark.skipif(UV is None, reason="needs uv")
 def test_the_installed_wheel_validates_without_a_checkout(tmp_path: Path) -> None:
     assert UV is not None
