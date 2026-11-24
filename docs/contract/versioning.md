@@ -44,7 +44,9 @@ A variant is kept only if the schema rejects it, so every `invalid` entry is kno
 
 ## What counts as breaking
 
-A change is breaking when the new schema can reject an instance that the old schema accepted, or when a published name disappears. The check walks the old and new schema in parallel through `properties`, `patternProperties`, `$defs`, `items`, `prefixItems`, `additionalProperties`, `allOf`, `anyOf`, `oneOf`, `not` and `if`/`then`/`else`, and reports these rules at each location:
+A change is breaking when the new schema can reject an instance that the old schema accepted, or when a published name disappears. The check is conservative: it accepts a change only when it can show that the change widens the schema, and reports every other change to a validation keyword. Annotations (`title`, `description`, `$comment`, `examples`, `default`, `deprecated`, `readOnly`, `writeOnly`, `format` and `x-*`) never count.
+
+The check walks the old and new schema in parallel through `properties`, `$defs`, `allOf`, `anyOf`, `items`, `additionalProperties`, `unevaluatedProperties`, `unevaluatedItems`, `propertyNames` and `then`/`else`. An absent subschema there counts as `true`, so adding `else: {"required": ["reason"]}` to a conditional is a `schema-constrained` change. It reports these rules at each location:
 
 | Rule | Breaking when |
 |---|---|
@@ -55,15 +57,18 @@ A change is breaking when the new schema can reject an instance that the old sch
 | `type-narrowed` | `type` drops a type that it allowed before. `integer` to `number` is a widening. |
 | `enum-added`, `enum-value-removed` | An `enum` is added, or loses a value. |
 | `ref-changed`, `const-changed`, `pattern-changed`, `multipleOf-changed`, `contentMediaType-changed`, `contentEncoding-changed` | The keyword is added or its value changes. A `$ref` to a different target counts, even if the targets look alike. |
-| `bound-tightened` | A `minimum`, `minLength`, `minItems` or other lower bound is added or raised; an upper bound is added or lowered; `uniqueItems` becomes `true`. |
-| `schema-constrained` | `additionalProperties`, `unevaluatedProperties`, `items` or `unevaluatedItems` is added with a value other than `true` or `{}`, or a `true` schema gets constraints. |
-| `schema-closed` | A schema becomes `false`. |
-| `branches-reduced` | `anyOf`, `oneOf` or `prefixItems` loses a branch, or is added where there was none. |
-| `constraint-added` | `allOf` gains a branch, or `not`, `if`, `contains`, `propertyNames` or `dependentSchemas` is added. |
+| `bound-tightened` | A `minimum`, `minLength`, `minItems` or other lower bound is added or raised (an absent `minContains` is 1); an upper bound is added or lowered; `uniqueItems` becomes `true`. |
+| `schema-constrained` | A subschema that accepted everything, or was absent, gets constraints, for example a new `allOf` branch, `then`, `else` or `additionalProperties` schema. |
+| `schema-closed` | A schema becomes `false`, for example `additionalProperties: false` is added. |
+| `branches-reduced` | `anyOf` loses a branch, or is added where there was none. |
+| `constraint-added` | `oneOf`, `not`, `if`, `contains` or `dependentSchemas` is added. |
+| `unproven-change` | Anything else changes, as described below. |
 
-Additive changes are minor: a new schema file, a new `$defs` entry, a new optional property, a new `enum` value, a wider type or a looser bound. This matches the compatibility rule of the [provider protocol](provider-protocol.md#9-compatibility): a new hook, feature, optional field or error code is a minor change.
+`oneOf`, `not`, `if`, `contains` and `dependentSchemas` are strict keywords. Removing one widens the schema, but any other change to it is `unproven-change`, even a wider subschema: a wider `oneOf` branch can overlap another, so an instance that matched one branch now matches two; `not` and `if` invert their subschema; `contains` is bounded by `maxContains`. A `$defs` entry referenced from under a strict keyword, and every entry it references in turn, must stay the same apart from annotations. The exception is a `oneOf` whose branches are provably disjoint: their types don't overlap, or one branch is an object that requires a property the other can't have, because the other forbids it with `additionalProperties: false` or gives it a different `const` or `enum`. Such a `oneOf` is compared like `anyOf`. The protocol envelopes are disjoint this way, so a new `Method` value is a minor change. A keyword without a rule, such as `prefixItems` or `patternProperties`, is `unproven-change` on any change.
 
-The check is conservative. It doesn't follow `$ref`s into other definitions, so a change inside a definition is reported where the definition is, not where it is used. A change it reports may be harmless in context; announce it with a major bump anyway, or argue it in review.
+Additive changes are minor: a new schema file, a new `$defs` entry, a new optional property, a new `enum` value, a wider type or a looser bound. A new optional property counts as additive even when the object accepted unknown properties before, unless `additionalProperties` gave those a schema. This matches the compatibility rule of the [provider protocol](provider-protocol.md#9-compatibility): a new hook, feature, optional field or error code is a minor change.
+
+The check doesn't follow `$ref`s into other definitions outside strict keywords, so a change inside a definition is reported where the definition is, not where it is used. A change it reports may be harmless in context; announce it with a major bump anyway, or argue it in review.
 
 ## Version bumps
 

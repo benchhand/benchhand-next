@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from contracts_gen.breaking import check_against, compare, last_release_tag
+from contracts_gen.breaking import check_against, compare, compare_contracts, last_release_tag
+from jsonschema import Draft202012Validator
 
 WIDGET_ID = "https://example.invalid/widget.schema.json"
 OBJECT: dict[str, Any] = {
@@ -50,7 +51,8 @@ def _with(**changes: Any) -> dict[str, Any]:
             "bound-tightened",
             "/properties/name/maxLength",
         ),
-        (_with(additionalProperties=False), "schema-constrained", "/additionalProperties"),
+        (_with(additionalProperties=False), "schema-closed", "/additionalProperties"),
+        (_with(additionalProperties={"type": "string"}), "schema-constrained", "/additionalProperties"),
     ],
     ids=lambda value: value if isinstance(value, str) and not value.startswith("/") else None,
 )
@@ -81,6 +83,152 @@ def test_compare_reports_a_breaking_change(new: dict[str, Any], rule: str, point
 )
 def test_compare_accepts_a_compatible_change(new: dict[str, Any]) -> None:
     assert list(compare(OBJECT, new)) == []
+
+
+COVERAGE: dict[str, Any] = {
+    "type": "object",
+    "properties": {"status": {"enum": ["pass", "fail", "unknown"]}, "reason": {"type": "string"}},
+    "required": ["status"],
+    "additionalProperties": False,
+    "allOf": [{"if": {"properties": {"status": {"const": "unknown"}}}, "then": {"required": ["reason"]}}],
+}
+
+
+def _kind(kind: str, **properties: Any) -> dict[str, Any]:
+    """An object told apart from the other branches of a oneOf by its required ``kind``."""
+    return {
+        "type": "object",
+        "properties": {"kind": {"const": kind}, "size": {"type": "integer"}, **properties},
+        "required": ["kind"],
+        "additionalProperties": False,
+    }
+
+
+def _changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str]]:
+    [report] = compare_contracts({"w.schema.json": old}, {"w.schema.json": new})
+    return [(change.rule, change.pointer) for change in report.changes]
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "instance", "rule", "pointer"),
+    [
+        (
+            COVERAGE,
+            {**COVERAGE, "allOf": [{**COVERAGE["allOf"][0], "else": {"required": ["reason"]}}]},
+            {"status": "pass"},
+            "schema-constrained",
+            "/allOf/0/else",
+        ),
+        (
+            {"oneOf": [{"type": "integer"}, {"type": "string"}]},
+            {"oneOf": [{"type": "integer"}, {"type": "string"}, {"type": "number"}]},
+            1,
+            "unproven-change",
+            "/oneOf",
+        ),
+        (
+            {
+                "oneOf": [{"$ref": "#/$defs/Count"}, {"type": "string"}],
+                "$defs": {"Count": {"type": "integer"}},
+            },
+            {"oneOf": [{"$ref": "#/$defs/Count"}, {"type": "string"}], "$defs": {"Count": {}}},
+            "text",
+            "unproven-change",
+            "/$defs/Count",
+        ),
+        (
+            {"not": {"type": "string", "maxLength": 1}},
+            {"not": {"type": "string"}},
+            "ab",
+            "unproven-change",
+            "/not",
+        ),
+        (
+            {"if": {"required": ["a"], "properties": {"a": {"const": 1}}}, "then": {"required": ["b"]}},
+            {"if": {"required": ["a"]}, "then": {"required": ["b"]}},
+            {"a": 2},
+            "unproven-change",
+            "/if",
+        ),
+        (
+            {"type": "object", "additionalProperties": {"type": "string"}},
+            {
+                "type": "object",
+                "properties": {"x": {"const": "y"}},
+                "additionalProperties": {"type": "string"},
+            },
+            {"x": "z"},
+            "const-changed",
+            "/properties/x/const",
+        ),
+        (
+            {"prefixItems": [{"type": "string"}]},
+            {"prefixItems": [{"type": "string"}, {"type": "integer"}]},
+            ["a", "b"],
+            "unproven-change",
+            "/prefixItems",
+        ),
+        (
+            {"contains": {"type": "string"}, "minContains": 0},
+            {"contains": {"type": "string"}},
+            [1],
+            "bound-tightened",
+            "/minContains",
+        ),
+    ],
+    ids=[
+        "else-added",
+        "overlapping-oneOf-branch",
+        "oneOf-target-widened",
+        "not-widened",
+        "if-widened",
+        "property-under-additionalProperties",
+        "prefixItems-extended",
+        "minContains-default",
+    ],
+)
+def test_a_change_that_rejects_an_old_valid_instance_is_reported(
+    old: dict[str, Any], new: dict[str, Any], instance: Any, rule: str, pointer: str
+) -> None:
+    assert Draft202012Validator(old).is_valid(instance)
+    assert not Draft202012Validator(new).is_valid(instance)
+    assert _changes(old, new) == [(rule, pointer)]
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ({"type": "integer", "oneOf": [{"minimum": 0}, {"maximum": -10}]}, {"type": "integer"}),
+        (COVERAGE, {**COVERAGE, "allOf": []}),
+        (
+            {"oneOf": [{"type": "integer", "description": "a count"}, {"type": "string"}]},
+            {"oneOf": [{"type": "integer", "description": "how many"}, {"type": "string"}]},
+        ),
+        (
+            {"properties": {"n": {"$ref": "#/$defs/Count"}}, "$defs": {"Count": {"type": "integer"}}},
+            {"properties": {"n": {"$ref": "#/$defs/Count"}}, "$defs": {"Count": {"type": "number"}}},
+        ),
+        (
+            {
+                "oneOf": [{"$ref": "#/$defs/A"}, {"$ref": "#/$defs/B"}],
+                "$defs": {"A": _kind("a"), "B": _kind("b")},
+            },
+            {
+                "oneOf": [{"$ref": "#/$defs/A"}, {"$ref": "#/$defs/B"}, {"$ref": "#/$defs/C"}],
+                "$defs": {"A": _kind("a", size={"type": "number"}), "B": _kind("b"), "C": _kind("c")},
+            },
+        ),
+    ],
+    ids=[
+        "oneOf-removed",
+        "conditional-removed",
+        "oneOf-description",
+        "def-widened-outside-oneOf",
+        "discriminated-oneOf-widened",
+    ],
+)
+def test_a_widening_change_is_accepted(old: dict[str, Any], new: dict[str, Any]) -> None:
+    assert _changes(old, new) == []
 
 
 def _git(repo: Path, *args: str) -> None:
