@@ -1,0 +1,7 @@
+dispositions:
+  - finding: MF-001
+    status: accepted_waiver
+    decision: DR-003
+    waiver:
+      decision: DR-003
+      valid_until: 2027-01-31 # review at the next build

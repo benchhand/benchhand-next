@@ -1,0 +1,11 @@
+entries:
+  - id: EV-001
+    requirement: REQ-001
+    result: pass
+    configuration:
+      part: LMP-0001
+      rev: X1 # the revision tested
+  - id: EV-002
+    requirement: REQ-002
+    result: pass
+    configuration: {part: LMP-0002, rev: "A"}

@@ -1,0 +1,9 @@
+record_version: 2
+flow:
+  stage: layout
+  profile:
+    decision: "DR-002"
+    # key lets a passing full check approve the middle gates
+    fea: {enabled: true, mode: "accurate"}
+    critique: "full"
+    asked: {fea: "asked-accepted-default"}

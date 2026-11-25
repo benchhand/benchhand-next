@@ -1,0 +1,1 @@
+info migrate.gate_decision hw/decisions/DR-024-layout-freeze-on-v4.md /gate

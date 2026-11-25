@@ -1,0 +1,5 @@
+entries:
+  - id: EV-001
+    requirement: REQ-001
+    result: waived
+    waiver: {decision: DR-003, expires: "2027-01-31", reason: first article}

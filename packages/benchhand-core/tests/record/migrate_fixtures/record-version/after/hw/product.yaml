@@ -1,0 +1,4 @@
+# The record of a small product.
+record_version: 3 # written by the prototype
+id: fixture-product
+units: mm
