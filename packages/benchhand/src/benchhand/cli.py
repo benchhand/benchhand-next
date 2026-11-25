@@ -1,8 +1,13 @@
-"""The benchhand CLI. Subcommands arrive with Phase 3 (ADR-0001)."""
+"""The benchhand CLI. Most subcommands arrive with Phase 3 (ADR-0001)."""
+
+from pathlib import Path
+from typing import Annotated
 
 import typer
 
 app = typer.Typer(no_args_is_help=True, help="benchhand: agent-guided mechanical CAD.")
+record = typer.Typer(no_args_is_help=True, help="Work on a project's hw/ record.")
+app.add_typer(record, name="record")
 
 
 @app.callback()
@@ -16,3 +21,29 @@ def version() -> None:
     from importlib.metadata import version as v
 
     typer.echo(v("benchhand"))
+
+
+@record.command("migrate")
+def record_migrate(
+    hw: Annotated[Path, typer.Argument(help="The project's hw/ directory.")],
+    apply: Annotated[bool, typer.Option("--apply", help="Write the changes; else print them.")] = False,
+) -> None:
+    """Migrate a prototype record (record_version 2) to record version 3. A dry run unless --apply."""
+    from benchhand_core.record.migrate import MigrationStatus, migrate
+
+    if hw.name != "hw":
+        typer.echo(f"{hw}: expected the project's hw/ directory", err=True)
+        raise typer.Exit(2)
+    result = migrate(hw.parent, apply=apply)
+    for change in result.changes:
+        typer.echo(f"# {change.path}: {', '.join(change.rules)}")
+        if not apply:
+            typer.echo(change.diff(), nl=False)
+    for finding in (*result.findings, *result.remaining):
+        where = f"{finding.path}{'#' + finding.pointer if finding.pointer else ''}"
+        typer.echo(f"{finding.severity.value} {finding.code} {where}: {finding.message}")
+        if finding.action:
+            typer.echo(f"  fix: {finding.action}")
+    typer.echo(f"{result.status.value}: {len(result.changes)} files")
+    if result.status == MigrationStatus.refused:
+        raise typer.Exit(1)
