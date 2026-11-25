@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/provider/manifest.schema.json",
   "title": "benchhand-provider.toml",
+  "description": "A provider's manifest, benchhand-provider.toml: its name and version, the protocol version and kinds it serves, its hooks, how to start it (command, environment, timeouts), what it needs, and its CLI.",
   "x-version": "1.0.0",
   "type": "object",
   "additionalProperties": false,

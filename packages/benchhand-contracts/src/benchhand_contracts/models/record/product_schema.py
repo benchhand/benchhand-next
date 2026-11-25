@@ -668,6 +668,10 @@ class Flow(ContractModel):
 
 
 class BenchhandProductRecordHwProductYaml(ContractModel):
+    """
+    The product record, hw/product.yaml: the product's identity, units, regime and general tolerance, its use case, the flow settings, and its design, manufacturing, storage and drawing defaults.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

@@ -6,6 +6,7 @@ using TypeSpec.JsonSchema;
 @baseUri("https://benchhand.github.io/benchhand/contracts/record/product/")
 namespace Records.Product;
 
+/** The product record, hw/product.yaml: the product's identity, units, regime and general tolerance, its use case, the flow settings, and its design, manufacturing, storage and drawing defaults. */
 @summary("benchhand product record (hw/product.yaml)")
 @id("https://benchhand.github.io/benchhand/contracts/record/product.schema.json")
 @extension("x-version", "1.0.0")

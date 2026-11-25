@@ -135,6 +135,9 @@ export type Fit = {
   [k: string]: unknown;
 };
 
+/**
+ * A library of definitions, with no document of its own: the drawing intent that the product, part and interface records state, such as sheets, views, tolerances and tolerance policies, dimension requests, fits and threads.
+ */
 export interface DrawingIntentDefinitionsSharedByTheProductPartAndInterfaceRecords {
   [k: string]: unknown;
 }

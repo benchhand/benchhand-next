@@ -969,7 +969,7 @@ Type: any and [`not_assessed_rule`](#not_assessed_rule)
 | `outcome` | [`outcome`](#outcome) | yes |  |
 | `reason` | [`not_assessed_reason`](#not_assessed_reason) | no |  |
 | `measured` | [`quantity`](#quantity) or object or [`fact_unknown`](#fact_unknown) | yes |  |
-| `measured.text` | [`text`](#text) | yes |  |
+| `measured.text` | [`text`](#text) | yes (oneOf branch 2 of 3) |  |
 | `criterion` | [`criterion_or_unknown`](#criterion_or_unknown) | yes |  |
 | `requirements` | [`requirement_ids`](#requirement_ids) | no |  |
 | `method` | object | yes |  |

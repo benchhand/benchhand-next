@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/record/part.schema.json",
   "title": "benchhand part record (hw/parts/<PN>/part.yaml)",
+  "description": "One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent.",
   "x-version": "1.0.0",
   "type": "object",
   "additionalProperties": false,

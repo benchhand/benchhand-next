@@ -607,6 +607,10 @@ class Intent(ContractModel):
 
 
 class BenchhandPartRecordHwPartsPnPartYaml(ContractModel):
+    """
+    One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

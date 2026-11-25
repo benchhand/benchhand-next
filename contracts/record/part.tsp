@@ -6,6 +6,7 @@ using TypeSpec.JsonSchema;
 @baseUri("https://benchhand.github.io/benchhand/contracts/record/part/")
 namespace Records.Part;
 
+/** One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent. */
 @summary("benchhand part record (hw/parts/<PN>/part.yaml)")
 @id("https://benchhand.github.io/benchhand/contracts/record/part.schema.json")
 @extension("x-version", "1.0.0")

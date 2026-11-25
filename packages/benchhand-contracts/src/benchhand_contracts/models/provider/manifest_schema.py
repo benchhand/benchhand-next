@@ -58,6 +58,10 @@ class CliItem(ContractModel):
 
 
 class BenchhandProviderToml(ContractModel):
+    """
+    A provider's manifest, benchhand-provider.toml: its name and version, the protocol version and kinds it serves, its hooks, how to start it (command, environment, timeouts), what it needs, and its CLI.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

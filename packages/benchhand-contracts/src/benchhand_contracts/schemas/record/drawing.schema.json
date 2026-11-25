@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/record/drawing.schema.json",
   "title": "Drawing intent definitions shared by the product, part and interface records",
+  "description": "A library of definitions, with no document of its own: the drawing intent that the product, part and interface records state, such as sheets, views, tolerances and tolerance policies, dimension requests, fits and threads.",
   "x-version": "1.0.0",
   "examples": [
     {

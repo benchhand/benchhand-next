@@ -50,7 +50,7 @@ ANY_TYPE = frozenset(
 TIMESTAMP = ("jobs/job.schema.json", "/$defs/Timestamp")
 EMPTY_SCHEMA_AS_TRUE = "changed: a property schema of {} is written true; both accept every value"
 ALLOWED: dict[tuple[str, str], str] = {
-    (TIMESTAMP[0], f"{TIMESTAMP[1]}/pattern"): "added: a date-time takes an uppercase T and Z (ADR-0017)",
+    (TIMESTAMP[0], f"{TIMESTAMP[1]}/pattern"): "added: an uppercase T and an explicit offset (ADR-0017)",
     (TIMESTAMP[0], f"{TIMESTAMP[1]}/description"): "changed: the description states the new pattern",
     ("provider/protocol.schema.json", "/$defs/Limits/required"): "removed: `required: []` requires nothing",
     **{

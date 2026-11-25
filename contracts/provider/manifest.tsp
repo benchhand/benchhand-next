@@ -7,6 +7,7 @@ using TypeSpec.JsonSchema;
 @extension("x-keyword-order", #["required", "additionalProperties"])
 namespace Provider.Manifest;
 
+/** A provider's manifest, benchhand-provider.toml: its name and version, the protocol version and kinds it serves, its hooks, how to start it (command, environment, timeouts), what it needs, and its CLI. */
 @summary("benchhand-provider.toml")
 @id("https://benchhand.github.io/benchhand/contracts/provider/manifest.schema.json")
 @extension("x-version", "1.0.0")

@@ -6,6 +6,7 @@ using TypeSpec.JsonSchema;
 @baseUri("https://benchhand.github.io/benchhand/contracts/record/assembly/")
 namespace Records.Assembly;
 
+/** The assembly record, hw/assembly.yaml: subassemblies and the joints between their parts, with occurrences, operations, coupling profiles and shared mechanisms, and the assembly drawing. */
 @summary("benchhand assembly record (hw/assembly.yaml)")
 @id("https://benchhand.github.io/benchhand/contracts/record/assembly.schema.json")
 @extension("x-version", "1.0.0")

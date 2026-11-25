@@ -291,6 +291,9 @@ export type Iso_52900Category = "mex" | "pbf" | "vpp" | "bjt" | "ded" | "mjt" | 
 export type Limit = number | ("calibrated" | "off");
 export type Clearance = number | "calibrated";
 
+/**
+ * The product record, hw/product.yaml: the product's identity, units, regime and general tolerance, its use case, the flow settings, and its design, manufacturing, storage and drawing defaults.
+ */
 export interface BenchhandProductRecordHwProductYaml {
   /**
    * The record format version these contracts describe. Any other value is refused, never guessed

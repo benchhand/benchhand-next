@@ -6,6 +6,7 @@ using TypeSpec.JsonSchema;
 @baseUri("https://benchhand.github.io/benchhand/contracts/record/interfaces/")
 namespace Records.Interfaces;
 
+/** The interfaces record, hw/interfaces.yaml: each interface between two parts, from one to the other, with its type and description. */
 @summary("benchhand interfaces record (hw/interfaces.yaml)")
 @id("https://benchhand.github.io/benchhand/contracts/record/interfaces.schema.json")
 @extension("x-version", "1.0.0")

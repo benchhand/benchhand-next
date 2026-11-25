@@ -128,7 +128,7 @@ No other properties are allowed.
 
 ### `Timestamp`
 
-UTC, RFC 3339, with an uppercase T and Z: the validators of each language disagree on a lowercase t or z, so the pattern refuses them.
+A date-time, RFC 3339-shaped with an explicit offset: Z or a numeric one, after an uppercase T. The pattern refuses a lowercase t or z, which the validators of each language disagree on; it doesn't check that the date exists. The job service writes UTC.
 
 Type: string
 

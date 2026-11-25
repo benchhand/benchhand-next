@@ -392,6 +392,9 @@ export type Coupling =
       output: "displacement" | "rod_angle";
     };
 
+/**
+ * The assembly record, hw/assembly.yaml: subassemblies and the joints between their parts, with occurrences, operations, coupling profiles and shared mechanisms, and the assembly drawing.
+ */
 export interface BenchhandAssemblyRecordHwAssemblyYaml {
   /**
    * Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded

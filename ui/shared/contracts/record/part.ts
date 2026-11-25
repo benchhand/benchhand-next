@@ -358,6 +358,9 @@ export type Supports = {
   inspection?: SemanticIds1;
 };
 
+/**
+ * One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent.
+ */
 export interface BenchhandPartRecordHwPartsPNPartYaml {
   /**
    * A part number

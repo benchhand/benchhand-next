@@ -6,6 +6,7 @@ using TypeSpec.JsonSchema;
 @baseUri("https://benchhand.github.io/benchhand/contracts/record/drawing/")
 namespace Records.Drawing;
 
+/** A library of definitions, with no document of its own: the drawing intent that the product, part and interface records state, such as sheets, views, tolerances and tolerance policies, dimension requests, fits and threads. */
 @summary("Drawing intent definitions shared by the product, part and interface records")
 @id("https://benchhand.github.io/benchhand/contracts/record/drawing.schema.json")
 @extension("x-version", "1.0.0")

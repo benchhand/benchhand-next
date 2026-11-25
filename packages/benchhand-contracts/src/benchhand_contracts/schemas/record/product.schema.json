@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/record/product.schema.json",
   "title": "benchhand product record (hw/product.yaml)",
+  "description": "The product record, hw/product.yaml: the product's identity, units, regime and general tolerance, its use case, the flow settings, and its design, manufacturing, storage and drawing defaults.",
   "x-version": "1.0.0",
   "type": "object",
   "additionalProperties": false,

@@ -25,6 +25,9 @@ class DrawingIntentDefinitionsSharedByTheProductPartAndInterfaceRecords(RootMode
             title="Drawing intent definitions shared by the product, part and interface records",
         ),
     ]
+    """
+    A library of definitions, with no document of its own: the drawing intent that the product, part and interface records state, such as sheets, views, tolerances and tolerance policies, dimension requests, fits and threads.
+    """
 
 
 class References1(

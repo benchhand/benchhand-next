@@ -1,4 +1,4 @@
-"""Command line: ``python -m contracts_gen {generate,check,breaking}`` (run by `just contracts`)."""
+"""Command line: ``python -m contracts_gen {generate,check,breaking,lint-allowed}`` (`just contracts`)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import sys
 
 from .breaking import check_against, last_release_tag
 from .generate import drift, generate
+from .lint import unexpected
 from .sources import REPO_ROOT
 
 
@@ -48,6 +49,18 @@ def _breaking(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _lint_allowed(_args: argparse.Namespace) -> int:
+    new, stale = unexpected(sys.stdin.read())
+    for line in new:
+        print(f"contracts: lint finding not in contracts_gen.lint.ALLOWED: {line}", file=sys.stderr)
+    for line in stale:
+        print(f"contracts: lint.ALLOWED lists a finding no longer reported: {line}", file=sys.stderr)
+    if new or stale:
+        return 1
+    print("contracts: every kept lint finding is listed, with its reason")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="contracts_gen", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -62,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     breaking.add_argument("--base", help="git revision to compare with (default: the last v* tag)")
     breaking.set_defaults(run=_breaking)
+    commands.add_parser(
+        "lint-allowed", help="compare a `jsonschema lint --json` report on stdin with the kept findings"
+    ).set_defaults(run=_lint_allowed)
     args = parser.parse_args(argv)
     return args.run(args)
 

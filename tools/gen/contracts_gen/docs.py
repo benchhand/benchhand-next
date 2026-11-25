@@ -95,32 +95,38 @@ def _properties_table(schema: dict[str, Any], contract: Contract) -> list[str]:
     return [*lines, *_property_rows(schema, contract, ""), ""]
 
 
-def _property_rows(schema: dict[str, Any], contract: Contract, prefix: str) -> list[str]:
+def _property_rows(schema: dict[str, Any], contract: Contract, prefix: str, branch: str = "") -> list[str]:
     """One row per property, followed by the rows of the inline objects under it, so that a nested
-    property's description is shown too: ``notes.text``, ``holes[].diameter``."""
+    property's description is shown too: ``notes.text``, ``holes[].diameter``. A property of a ``oneOf`` or
+    ``anyOf`` branch says which branch it is in, since it is required there and not in the others."""
     required = set(schema.get("required", []))
     rows = []
     for name, prop in schema["properties"].items():
         description = prop.get("description", "") if isinstance(prop, dict) else ""
         constraints = _constraints(prop) if isinstance(prop, dict) else ""
         detail = " ".join(part for part in (description, constraints) if part)
-        cells = (f"`{prefix}{name}`", type_expr(prop, contract), "yes" if name in required else "no", detail)
+        requirement = ("yes" if name in required else "no") + (f" ({branch})" if branch else "")
+        cells = (f"`{prefix}{name}`", type_expr(prop, contract), requirement, detail)
         rows.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
-        for nested in _inline_objects(prop):
-            rows += _property_rows(nested[1], contract, f"{prefix}{name}{nested[0]}.")
+        for suffix, nested, nested_branch in _inline_objects(prop):
+            inner = ", ".join(part for part in (branch, nested_branch) if part)
+            rows += _property_rows(nested, contract, f"{prefix}{name}{suffix}.", inner)
     return rows
 
 
-def _inline_objects(schema: Any, suffix: str = "") -> list[tuple[str, dict[str, Any]]]:
-    """``(path suffix, schema)`` of each object written inline in ``schema``: itself, its array items, and
-    the branches of its ``oneOf`` or ``anyOf``. A ``$ref`` target has a section of its own."""
+def _inline_objects(schema: Any, suffix: str = "", branch: str = "") -> list[tuple[str, dict[str, Any], str]]:
+    """``(path suffix, schema, branch)`` of each object written inline in ``schema``: itself, its array items,
+    and the branches of its ``oneOf`` or ``anyOf``, such as ``oneOf branch 1 of 2``. A ``$ref`` target has a
+    section of its own."""
     if not isinstance(schema, dict) or "$ref" in schema:
         return []
-    found = [(suffix, schema)] if isinstance(schema.get("properties"), dict) else []
-    found += _inline_objects(schema.get("items"), f"{suffix}[]")
+    found = [(suffix, schema, branch)] if isinstance(schema.get("properties"), dict) else []
+    found += _inline_objects(schema.get("items"), f"{suffix}[]", branch)
     for keyword in ("oneOf", "anyOf"):
-        for branch in schema.get(keyword, []):
-            found += _inline_objects(branch, suffix)
+        branches = schema.get(keyword, [])
+        for index, item in enumerate(branches):
+            label = f"{keyword} branch {index + 1} of {len(branches)}"
+            found += _inline_objects(item, suffix, ", ".join(part for part in (branch, label) if part))
     return found
 
 

@@ -52,18 +52,22 @@ contracts-format:
 #   what the breaking check compares; the emitter writes `type` beside every enum.
 # - orphan_definitions: record/common and record/drawing are libraries; their $defs are published API that
 #   other contracts refer to, and each has a validator of its own.
-# - required_properties_in_properties: the conditions require, in then/else, properties the object lists.
 # - simple_properties_identifiers: property names such as requires-python are part of the published shape.
-# - top_level_description: the def-only libraries and the titled documents have no root description yet.
+# required_properties_in_properties runs on its own: the findings it keeps are listed by location, each with
+# its reason, in tools/gen/contracts_gen/lint.py, and any other finding fails.
 contracts-lint:
-    cd contracts && ../{{bin}}/tsp compile . --warn-as-error --output-dir tsp-output > /dev/null
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd contracts && ../{{bin}}/tsp compile . --warn-as-error --output-dir tsp-output > /dev/null)
     {{bin}}/jsonschema metaschema contracts/tsp-output {{schemas}}
     {{bin}}/jsonschema lint --resolve {{schemas}} \
         --exclude description_trailing_period --exclude enum_with_type --exclude enum_to_const \
         --exclude oneof_to_anyof_disjoint_types --exclude unnecessary_allof_wrapper \
         --exclude unnecessary_allof_ref_wrapper_modern --exclude orphan_definitions \
-        --exclude required_properties_in_properties --exclude simple_properties_identifiers \
-        --exclude top_level_description {{schemas}}
+        --exclude required_properties_in_properties --exclude simple_properties_identifiers {{schemas}}
+    # The lint exits 2 when it reports a finding; lint-allowed decides whether that one is kept.
+    report=$({{bin}}/jsonschema lint --json --resolve {{schemas}} --only required_properties_in_properties {{schemas}} || [ $? -eq 2 ])
+    PYTHONPATH=tools/gen uv run python -m contracts_gen lint-allowed <<< "$report"
 
 # CI: regenerate in place and fail if any generated file changed. Locally `contracts-check` compares a fresh
 # run in a scratch directory instead, so it passes before the regenerated files are committed.

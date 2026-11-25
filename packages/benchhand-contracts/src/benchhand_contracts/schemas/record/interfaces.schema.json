@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/record/interfaces.schema.json",
   "title": "benchhand interfaces record (hw/interfaces.yaml)",
+  "description": "The interfaces record, hw/interfaces.yaml: each interface between two parts, from one to the other, with its type and description.",
   "x-version": "1.0.0",
   "type": "object",
   "additionalProperties": false,

@@ -375,6 +375,10 @@ class Interface(ContractModel):
 
 
 class BenchhandInterfacesRecordHwInterfacesYaml(ContractModel):
+    """
+    The interfaces record, hw/interfaces.yaml: each interface between two parts, from one to the other, with its type and description.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

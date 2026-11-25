@@ -408,6 +408,9 @@ export type Quantity = {
  */
 export type SemanticIds1 = [string, ...string[]];
 
+/**
+ * The interfaces record, hw/interfaces.yaml: each interface between two parts, from one to the other, with its type and description.
+ */
 export interface BenchhandInterfacesRecordHwInterfacesYaml {
   interfaces: {
     id: string;

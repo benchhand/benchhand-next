@@ -587,6 +587,10 @@ class Joints1(ContractModel):
 
 
 class BenchhandAssemblyRecordHwAssemblyYaml(ContractModel):
+    """
+    The assembly record, hw/assembly.yaml: subassemblies and the joints between their parts, with occurrences, operations, coupling profiles and shared mechanisms, and the assembly drawing.
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,

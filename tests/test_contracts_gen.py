@@ -325,6 +325,22 @@ def test_docs_show_every_description(tmp_path: Path) -> None:
     assert missing == []
 
 
+def test_docs_say_which_branch_requires_a_property(tmp_path: Path) -> None:
+    """A drawing's coordinate_frame origin is one of two objects, each requiring its own property; the table
+    says which, so a reader doesn't take both as required."""
+    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
+    write_docs(contracts, tmp_path)
+    rows = {
+        row.split(" | ")[0].strip("| `"): row.split(" | ")[2]
+        for row in (tmp_path / "record" / "drawing.md").read_text().splitlines()
+        if row.startswith("| `coordinate_frame")
+    }
+    assert rows["coordinate_frame.origin"] == "yes"
+    assert rows["coordinate_frame.origin.intersection"] == "yes (oneOf branch 1 of 2)"
+    assert rows["coordinate_frame.origin.at"] == "yes (oneOf branch 2 of 2)"
+    assert rows["coordinate_frame.x"] == "no"
+
+
 @needs_node
 def test_typescript_exports_a_type_and_a_validator_per_def(schemas_dir: Path, tmp_path: Path) -> None:
     """The generator fails on a $def without a type; the types it writes compile, aliases included."""
@@ -397,7 +413,7 @@ EDGE_CASES: list[tuple[str, str, Any, bool]] = [
     ("provider/protocol", "ProgressParams", {"id": 1, "fraction": 2}, False),
     ("provider/protocol", "ProgressParams", {"id": 1, "fraction": float("nan")}, False),
     ("provider/protocol", "ProgressParams", {"id": 1, "fraction": float("inf")}, False),
-    # A date-time takes an uppercase T and Z only (ADR-0017): some languages' parsers refuse t and z.
+    # A date-time has an uppercase T and an explicit offset (ADR-0017): some parsers refuse t and z.
     ("jobs/job", "Timestamp", "2026-11-25T05:08:13Z", True),
     ("jobs/job", "Timestamp", "2026-11-25T05:08:13.134+01:00", True),
     ("jobs/job", "Timestamp", "2026-11-25t05:08:13Z", False),

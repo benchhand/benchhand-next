@@ -1,12 +1,18 @@
 decoded comparison of 21 published schemas with contracts/ at 41598c2
-allowed: 8
-  jobs/job.schema.json#/$defs/Timestamp/pattern: added  [added: a date-time takes an uppercase T and Z (ADR-0017)]
-  jobs/job.schema.json#/$defs/Timestamp/description: "UTC, RFC 3339." -> "UTC, RFC 3339, with an uppercase T and Z: the validators of each language di...  [changed: the description states the new pattern]
+allowed: 14
+  jobs/job.schema.json#/$defs/Timestamp/pattern: added  [added: an uppercase T and an explicit offset (ADR-0017)]
+  jobs/job.schema.json#/$defs/Timestamp/description: "UTC, RFC 3339." -> "A date-time, RFC 3339-shaped with an explicit offset: Z or a numeric one, af...  [changed: the description states the new pattern]
+  provider/manifest.schema.json#/description: added  [added: a description at the contract root]
   provider/protocol.schema.json#/$defs/ErrorObject/properties/data/properties/detail: {} -> true  [changed: a property schema of {} is written true; both accept every value]
   provider/protocol.schema.json#/$defs/Limits/required: removed  [removed: `required: []` requires nothing]
   provider/protocol.schema.json#/$defs/LogParams/properties/data: {} -> true  [changed: a property schema of {} is written true; both accept every value]
   provider/protocol.schema.json#/$defs/Request/properties/params: {} -> true  [changed: a property schema of {} is written true; both accept every value]
   provider/protocol.schema.json#/$defs/Notification/properties/params: {} -> true  [changed: a property schema of {} is written true; both accept every value]
   provider/protocol.schema.json#/$defs/SuccessResponse/properties/result: {} -> true  [changed: a property schema of {} is written true; both accept every value]
+  record/assembly.schema.json#/description: added  [added: a description at the contract root]
+  record/drawing.schema.json#/description: added  [added: a description at the contract root]
+  record/interfaces.schema.json#/description: added  [added: a description at the contract root]
+  record/part.schema.json#/description: added  [added: a description at the contract root]
+  record/product.schema.json#/description: added  [added: a description at the contract root]
 unexpected: 0
 unused allowlist: 0
