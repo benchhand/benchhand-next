@@ -36,14 +36,19 @@ jobs:
       - run: uv sync --all-packages --locked
       - run: pnpm install --frozen-lockfile
         working-directory: ui
+      - name: Contract tools pinned in contracts/package.json
+        run: pnpm install --frozen-lockfile
+        working-directory: contracts
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run pytest
       - name: Built wheels run outside the checkout
         run: uv run pytest -m wheel
       - name: TypeScript types, the generated contract types included
         run: just typecheck
-      - name: Generated contract code is current; no breaking change without a major bump (ADR-0017)
+      - name: Contract format, schema lint and breaking changes (ADR-0017)
         run: just contracts-check
+      - name: Regenerated contracts match the commit (ADR-0017)
+        run: just contracts-drift
       - name: Prose gate on changed Markdown
         if: github.event_name == 'pull_request'
         run: |
