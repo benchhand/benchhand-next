@@ -103,6 +103,26 @@ def test_the_published_form_accepts_what_the_bundle_accepts(instance: Any) -> No
     assert published.is_valid(instance) == emitted.is_valid(instance)
 
 
+def test_inlining_a_local_def_leaves_instance_data_alone() -> None:
+    # A const, an example or a default that looks like a $ref to a local $defs entry is data, not a schema.
+    literal = {"$ref": "#/$defs/RecordString"}
+    widget = _decl(
+        ROOT_ID,
+        type="object",
+        properties={
+            "tags": {"$ref": "#/$defs/RecordString"},
+            "pointer": {"const": literal, "default": literal, "examples": [literal]},
+            "choice": {"enum": [literal]},
+        },
+        unevaluatedProperties=CLOSED,
+        **{"$defs": {"RecordString": {"type": "object", "unevaluatedProperties": {"type": "string"}}}},
+    )
+    properties = normalise(_bundle(widget), [ROOT_ID])["demo/widget.schema.json"]["properties"]
+    assert properties["tags"] == {"type": "object", "additionalProperties": {"type": "string"}}
+    assert properties["pointer"] == {"const": literal, "default": literal, "examples": [literal]}
+    assert properties["choice"] == {"enum": [literal]}
+
+
 def test_a_closed_object_beside_an_applicator_that_names_an_unlisted_property_is_refused() -> None:
     # unevaluatedProperties sees `colour` evaluated by the then branch; additionalProperties would refuse it.
     widget = _decl(

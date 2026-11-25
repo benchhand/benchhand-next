@@ -191,7 +191,8 @@ def _contracts(declarations: dict[str, _Declaration], order: list[str]) -> dict[
 
 
 def _inline_local_defs(schema: dict[str, Any], schema_id: str) -> dict[str, Any]:
-    """Replace each ``#/$defs/<name>`` ref to the declaration's own ``$defs`` with that entry."""
+    """Replace each ``#/$defs/<name>`` ref to the declaration's own ``$defs`` with that entry. Instance data
+    (``const``, ``enum``, ``examples``, ``default``) and ``x-*`` values are copied as they are."""
     local = schema.pop("$defs", None)
     if not local:
         return schema
@@ -203,7 +204,8 @@ def _inline_local_defs(schema: dict[str, Any], schema_id: str) -> dict[str, Any]
             return [substitute(item, depth) for item in node]
         if not isinstance(node, dict):
             return node
-        out = {key: substitute(value, depth) for key, value in node.items() if key != "$ref"}
+        rest = {key: value for key, value in node.items() if key != "$ref"}
+        out = _map_subschemas(rest, lambda value: substitute(value, depth), skip_extensions=True)
         ref = node.get("$ref")
         if isinstance(ref, str) and ref.startswith("#/$defs/") and ref.removeprefix("#/$defs/") in local:
             return _merge(out, substitute(local[ref.removeprefix("#/$defs/")], depth + 1), schema_id)
