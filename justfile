@@ -78,6 +78,20 @@ contracts-drift: contracts
     fi
     echo "contracts: no drift"
 
+# Migration evidence (ADR-0017): compare the published schemas with the hand-written ones at the migration
+# base, decoded, and replay the instances the tests validate, the fixtures and the examples, plus mutations
+# of each, in Python and Ajv. Takes about half an hour; writes tools/equiv/results/.
+contracts-equivalence:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    work=$(mktemp -d)
+    trap 'rm -rf "$work"' EXIT
+    EQUIV_LOG="$work/calls.jsonl" PYTHONPATH=tools/equiv uv run pytest -q -p record_plugin packages > /dev/null
+    PYTHONPATH=tools/equiv uv run python tools/equiv/cases.py "$work"
+    uv run python tools/equiv/decoded.py | tee tools/equiv/results/decoded.txt
+    PYTHONPATH=tools/equiv uv run python tools/equiv/replay.py "$work" | tee tools/equiv/results/python.txt
+    node tools/equiv/replay.mjs "$work" | tee tools/equiv/results/ajv.txt
+
 # List prototype PRs merged and commits landed since release.toml's reference_commit.
 reference-changes:
     #!/usr/bin/env bash

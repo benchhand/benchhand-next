@@ -180,6 +180,18 @@
             "$ref": "#/$defs/torque_path"
           }
         },
+        "oneOf": [
+          {
+            "required": [
+              "nominal"
+            ]
+          },
+          {
+            "required": [
+              "coupling"
+            ]
+          }
+        ],
         "allOf": [
           {
             "if": {
@@ -236,18 +248,6 @@
                 }
               }
             }
-          }
-        ],
-        "oneOf": [
-          {
-            "required": [
-              "nominal"
-            ]
-          },
-          {
-            "required": [
-              "coupling"
-            ]
           }
         ]
       }

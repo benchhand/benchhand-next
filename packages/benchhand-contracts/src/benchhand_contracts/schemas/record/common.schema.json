@@ -1128,20 +1128,28 @@
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
-      "dependentRequired": {
-        "occurrence": [
-          "PN"
-        ],
-        "component": [
-          "PN"
-        ],
-        "operation": [
-          "PN"
-        ],
-        "region": [
-          "feature"
-        ]
-      },
+      "anyOf": [
+        {
+          "required": [
+            "product"
+          ]
+        },
+        {
+          "required": [
+            "PN"
+          ]
+        },
+        {
+          "required": [
+            "interface"
+          ]
+        },
+        {
+          "required": [
+            "assembly_operation"
+          ]
+        }
+      ],
       "properties": {
         "product": {
           "const": true
@@ -1174,28 +1182,20 @@
           "$ref": "#/$defs/requirement_ids"
         }
       },
-      "anyOf": [
-        {
-          "required": [
-            "product"
-          ]
-        },
-        {
-          "required": [
-            "PN"
-          ]
-        },
-        {
-          "required": [
-            "interface"
-          ]
-        },
-        {
-          "required": [
-            "assembly_operation"
-          ]
-        }
-      ]
+      "dependentRequired": {
+        "occurrence": [
+          "PN"
+        ],
+        "component": [
+          "PN"
+        ],
+        "operation": [
+          "PN"
+        ],
+        "region": [
+          "feature"
+        ]
+      }
     },
     "target": {
       "description": "A feature of a part, by its semantic drawing-feature id, and optionally a region of it or the component it lies on",

@@ -6,10 +6,11 @@ published schema with ``contracts/<path>.schema.json`` at ``BASE``, after JSON d
 - every value must be equal, lists in order, and a ``required`` list in order, since the validator reports
   missing properties in that order;
 - at each schema node, two keywords that can both fail on one instance at the same place must come in the
-  same order. Python's validator reports the first of two such errors (``jsonschema.exceptions.relevance``
-  ties them), so the order decides the violation ``benchhand_contracts.validate`` raises and its
-  ``schema_path``. Keywords whose errors are always deeper in the instance (``properties``, ``items``) and
-  keywords of different JSON types (``minLength`` and ``minimum``) can't tie.
+  same order. ``benchhand_contracts.violations`` lists the violations at one place in the order of their
+  keywords, and Python's validator raises the first of two that ``jsonschema.exceptions.relevance`` ties,
+  so the order decides the violation ``validate`` raises, its ``schema_path``, and the order of the list.
+  Keywords whose errors are always deeper in the instance (``properties``, ``items``) and keywords of
+  different JSON types (``minLength`` and ``minimum``) never fail at the same place.
 
 Each intended difference is in ``ALLOWED`` with its reason, and anything else fails. ``just
 contracts-equivalence`` runs it; ``tools/equiv/results/decoded.txt`` holds the output.
@@ -41,10 +42,10 @@ TYPE_GROUPS = {
 }
 """Keywords that judge one JSON type and pass every other."""
 _GROUP = {keyword: group for group, keywords in TYPE_GROUPS.items() for keyword in keywords}
-ANY_TYPE = frozenset(("type", "const", "enum", "$ref", "allOf", "not", "then", "else", "dependentSchemas"))
+ANY_TYPE = frozenset(
+    ("type", "const", "enum", "$ref", "allOf", "anyOf", "oneOf", "not", "then", "else", "dependentSchemas")
+)
 """Keywords whose errors can be at the schema's own place in the instance, for any instance."""
-WEAK = frozenset(("anyOf", "oneOf"))
-"""``relevance`` ranks their errors below every other keyword's, so they tie only with each other."""
 
 TIMESTAMP = ("jobs/job.schema.json", "/$defs/Timestamp")
 EMPTY_SCHEMA_AS_TRUE = "changed: a property schema of {} is written true; both accept every value"
@@ -98,7 +99,7 @@ def _object_differences(old: dict[str, Any], new: dict[str, Any], pointer: str) 
         yield f"{pointer}/{_escape(key)}", "removed"
     for key in sorted(new.keys() - old.keys()):
         yield f"{pointer}/{_escape(key)}", "added"
-    for first, second in tie_order_changes(old, new):
+    for first, second in same_place_order_changes(old, new):
         yield pointer or "/", f"keyword order: {first} before {second} -> after it"
     for key in [key for key in old if key in new]:
         child = f"{pointer}/{_escape(key)}"
@@ -120,26 +121,24 @@ def _map_differences(old: dict[str, Any], new: dict[str, Any], pointer: str) -> 
         yield from differences(old[name], new[name], f"{pointer}/{_escape(name)}")
 
 
-def tie_order_changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str]]:
-    """Pairs of keywords that can tie for the first error, ``old`` lists first, and ``new`` reverses."""
+def same_place_order_changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str]]:
+    """Pairs of keywords that can fail at the same place, ``old`` lists first, and ``new`` reverses."""
     in_old = [key for key in old if key in new and _reports_here(key, old[key])]
     position = {key: index for index, key in enumerate(new)}
     return [
         (first, second)
         for first, second in itertools.combinations(in_old, 2)
-        if _can_tie(first, second) and position[first] > position[second]
+        if _same_place(first, second) and position[first] > position[second]
     ]
 
 
 def _reports_here(keyword: str, value: Any) -> bool:
     if keyword == "additionalProperties":
         return value is False  # a schema there reports at the extra property
-    return keyword in _GROUP or keyword in ANY_TYPE or keyword in WEAK
+    return keyword in _GROUP or keyword in ANY_TYPE
 
 
-def _can_tie(first: str, second: str) -> bool:
-    if (first in WEAK) != (second in WEAK):
-        return False
+def _same_place(first: str, second: str) -> bool:
     groups = {_GROUP.get("required" if k == "additionalProperties" else k) for k in (first, second)}
     return None in groups or len(groups) == 1
 

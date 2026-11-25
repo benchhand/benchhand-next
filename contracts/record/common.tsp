@@ -670,6 +670,7 @@ union criterion_or_unknown {
     region: #["feature"],
   }
 )
+@extension("x-keyword-order", #["anyOf", "dependentRequired"])
 model subject {
   product?: true;
   PN?: pn;

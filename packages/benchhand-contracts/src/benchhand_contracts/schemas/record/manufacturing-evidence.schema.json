@@ -284,6 +284,18 @@
           "$ref": "common.schema.json#/$defs/text"
         }
       },
+      "anyOf": [
+        {
+          "required": [
+            "requirement"
+          ]
+        },
+        {
+          "required": [
+            "obligation"
+          ]
+        }
+      ],
       "allOf": [
         {
           "if": {
@@ -355,18 +367,6 @@
               ]
             }
           }
-        }
-      ],
-      "anyOf": [
-        {
-          "required": [
-            "requirement"
-          ]
-        },
-        {
-          "required": [
-            "obligation"
-          ]
         }
       ]
     }

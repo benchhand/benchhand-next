@@ -65,6 +65,7 @@ union fingerprint_domain {
     }
   ]
 )
+@extension("x-keyword-order", #["anyOf", "allOf"])
 model entry {
   id: Common.evidence_id;
   requirement?: Common.requirement_id;

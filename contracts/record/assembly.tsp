@@ -100,6 +100,7 @@ enum AssemblyAssemblyJointsItemTorque {
     }
   ]
 )
+@extension("x-keyword-order", #["oneOf", "allOf"])
 model AssemblyJointsItem {
   id: joint_id;
   type: AssemblyAssemblyJointsItemType;

@@ -1,0 +1,24 @@
+ajv replay: 522 instances
+  valid hand-written/published: {"true/true":318,"false/false":197,"unresolvable/unresolvable":1,"true/false":6}
+  verdicts that differ: 6, of which the first error changed: 6
+  explained by the Timestamp pattern: 6
+  unexplained: 0
+    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-13-01T00:00:00Z"
+      hand-written: true
+      published:    / pattern #/pattern
+    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "not a time"
+      hand-written: true
+      published:    / pattern #/pattern
+    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25 05:08:13Z"
+      hand-written: true
+      published:    / pattern #/pattern
+    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25T05:08:13z"
+      hand-written: true
+      published:    / pattern #/pattern
+    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25t05:08:13Z"
+      hand-written: true
+      published:    / pattern #/pattern
+    explained: test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId":"badtime00001","kind":"collision/sweep","status":"r
+      hand-written: true
+      published:    /createdAt pattern #/$defs/Timestamp/pattern
+ajv and python disagree on 0 published verdicts
