@@ -86,6 +86,10 @@ model entry {
   /** sha256 of each normalized dependency the evidence relied on, by domain; a changed fingerprint makes the evidence stale until an impact assessment carries it forward */
   @minProperties(1)
   @extension("propertyNames", fingerprint_domain)
+  @extension(
+    "x-keyword-order",
+    #["minProperties", "propertyNames", "additionalProperties"]
+  )
   fingerprints?: Record<Common.sha256>;
 
   @minItems(1)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from decoded import ALLOWED, Difference, differences, reason
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import best_match
@@ -54,11 +55,39 @@ def test_sibling_properties_and_allof_that_both_refuse_a_property_must_keep_thei
     assert [error.validator for error in first if error] == ["type", "const"]
 
 
-def test_the_order_of_if_counts_and_keywords_that_judge_other_paths_are_not_compared() -> None:
-    """jsonschema reports then and else under if; properties a and an allOf about b never share a path."""
+def test_the_order_of_if_counts_and_any_two_reporting_keywords_are_compared() -> None:
+    """jsonschema reports then and else under if, so the position of if counts. Any two keywords that can
+    report count as able to share a path, so even an allOf about another property is compared."""
     condition = {"if": {"required": ["a"]}, "then": {"properties": {"a": {"const": 1}}}}
     old = {"properties": {"a": {"type": "string"}}, **condition}
     new = {**condition, "properties": {"a": {"type": "string"}}}
     assert _found(old, new) == [Difference("/", "keyword order", ["properties", "if"], ["if", "properties"])]
     apart = {"properties": {"a": {"type": "string"}}, "allOf": [{"properties": {"b": {"const": 1}}}]}
-    assert _found(apart, {"allOf": apart["allOf"], "properties": apart["properties"]}) == []
+    reordered = {"allOf": apart["allOf"], "properties": apart["properties"]}
+    assert _found(apart, reordered) == [
+        Difference("/", "keyword order", ["properties", "allOf"], ["allOf", "properties"])
+    ]
+
+
+@pytest.mark.parametrize(
+    ("schema", "instance"),
+    [
+        ({"properties": {"a": False}, "additionalProperties": False}, {"a": 1, "b": 2}),
+        ({"patternProperties": {"^a$": False}, "additionalProperties": False}, {"a": 1, "b": 2}),
+        ({"prefixItems": [False], "items": False}, [1, 2]),
+    ],
+)
+def test_keywords_about_different_members_still_report_at_one_path(
+    schema: dict[str, Any], instance: Any
+) -> None:
+    """A false subschema reports at the parent, as additionalProperties and items false do, so reversing
+    the two keywords reverses Python's errors at that one path; the check reports it."""
+    first, second = schema
+    reversed_schema = {second: schema[second], first: schema[first]}
+    assert _found(schema, reversed_schema) == [
+        Difference("/", "keyword order", [first, second], [second, first])
+    ]
+    errors = [list(Draft202012Validator(s).iter_errors(instance)) for s in (schema, reversed_schema)]
+    assert [[list(error.absolute_path) for error in found] for found in errors] == [[[], []], [[], []]]
+    keywords = [[error.schema_path[0] for error in found] for found in errors]
+    assert keywords == [[first, second], [second, first]]

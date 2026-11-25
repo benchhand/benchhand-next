@@ -18,64 +18,6 @@
     "supplier",
     "mass"
   ],
-  "dependentRequired": {
-    "unit": [
-      "designation",
-      "manufacturer",
-      "manufacturer_part_number",
-      "supplier_part_number",
-      "specification_reference",
-      "specification_revision"
-    ],
-    "designation": [
-      "unit",
-      "manufacturer",
-      "manufacturer_part_number",
-      "supplier_part_number",
-      "specification_reference",
-      "specification_revision"
-    ],
-    "manufacturer": [
-      "unit",
-      "designation",
-      "manufacturer_part_number",
-      "supplier_part_number",
-      "specification_reference",
-      "specification_revision"
-    ],
-    "manufacturer_part_number": [
-      "unit",
-      "designation",
-      "manufacturer",
-      "supplier_part_number",
-      "specification_reference",
-      "specification_revision"
-    ],
-    "supplier_part_number": [
-      "unit",
-      "designation",
-      "manufacturer",
-      "manufacturer_part_number",
-      "specification_reference",
-      "specification_revision"
-    ],
-    "specification_reference": [
-      "unit",
-      "designation",
-      "manufacturer",
-      "manufacturer_part_number",
-      "supplier_part_number",
-      "specification_revision"
-    ],
-    "specification_revision": [
-      "unit",
-      "designation",
-      "manufacturer",
-      "manufacturer_part_number",
-      "supplier_part_number",
-      "specification_reference"
-    ]
-  },
   "properties": {
     "level": {
       "type": "integer",
@@ -197,6 +139,64 @@
       ],
       "minLength": 1
     }
+  },
+  "dependentRequired": {
+    "unit": [
+      "designation",
+      "manufacturer",
+      "manufacturer_part_number",
+      "supplier_part_number",
+      "specification_reference",
+      "specification_revision"
+    ],
+    "designation": [
+      "unit",
+      "manufacturer",
+      "manufacturer_part_number",
+      "supplier_part_number",
+      "specification_reference",
+      "specification_revision"
+    ],
+    "manufacturer": [
+      "unit",
+      "designation",
+      "manufacturer_part_number",
+      "supplier_part_number",
+      "specification_reference",
+      "specification_revision"
+    ],
+    "manufacturer_part_number": [
+      "unit",
+      "designation",
+      "manufacturer",
+      "supplier_part_number",
+      "specification_reference",
+      "specification_revision"
+    ],
+    "supplier_part_number": [
+      "unit",
+      "designation",
+      "manufacturer",
+      "manufacturer_part_number",
+      "specification_reference",
+      "specification_revision"
+    ],
+    "specification_reference": [
+      "unit",
+      "designation",
+      "manufacturer",
+      "manufacturer_part_number",
+      "supplier_part_number",
+      "specification_revision"
+    ],
+    "specification_revision": [
+      "unit",
+      "designation",
+      "manufacturer",
+      "manufacturer_part_number",
+      "supplier_part_number",
+      "specification_reference"
+    ]
   },
   "examples": [
     {

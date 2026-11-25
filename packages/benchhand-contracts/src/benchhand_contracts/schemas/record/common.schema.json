@@ -280,14 +280,6 @@
         "kind",
         "reference"
       ],
-      "dependentRequired": {
-        "artifact": [
-          "sha256"
-        ],
-        "url": [
-          "accessed"
-        ]
-      },
       "properties": {
         "kind": {
           "enum": [
@@ -351,17 +343,25 @@
           "$ref": "#/$defs/text"
         }
       },
+      "dependentRequired": {
+        "artifact": [
+          "sha256"
+        ],
+        "url": [
+          "accessed"
+        ]
+      },
       "allOf": [
         {
           "if": {
-            "required": [
-              "kind"
-            ],
             "properties": {
               "kind": {
                 "const": "guideline"
               }
-            }
+            },
+            "required": [
+              "kind"
+            ]
           },
           "then": {
             "required": [
@@ -505,14 +505,6 @@
       "required": [
         "note"
       ],
-      "dependentRequired": {
-        "lower": [
-          "upper"
-        ],
-        "upper": [
-          "lower"
-        ]
-      },
       "properties": {
         "lower": {
           "type": "number"
@@ -531,6 +523,14 @@
         "note": {
           "$ref": "#/$defs/text"
         }
+      },
+      "dependentRequired": {
+        "lower": [
+          "upper"
+        ],
+        "upper": [
+          "lower"
+        ]
       }
     },
     "fact_known": {
@@ -850,14 +850,14 @@
     "not_assessed_rule": {
       "description": "A not_assessed outcome carries its reason; no other outcome does",
       "if": {
-        "required": [
-          "outcome"
-        ],
         "properties": {
           "outcome": {
             "const": "not_assessed"
           }
-        }
+        },
+        "required": [
+          "outcome"
+        ]
       },
       "then": {
         "required": [
@@ -1128,28 +1128,6 @@
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
-      "anyOf": [
-        {
-          "required": [
-            "product"
-          ]
-        },
-        {
-          "required": [
-            "PN"
-          ]
-        },
-        {
-          "required": [
-            "interface"
-          ]
-        },
-        {
-          "required": [
-            "assembly_operation"
-          ]
-        }
-      ],
       "properties": {
         "product": {
           "const": true
@@ -1182,6 +1160,28 @@
           "$ref": "#/$defs/requirement_ids"
         }
       },
+      "anyOf": [
+        {
+          "required": [
+            "product"
+          ]
+        },
+        {
+          "required": [
+            "PN"
+          ]
+        },
+        {
+          "required": [
+            "interface"
+          ]
+        },
+        {
+          "required": [
+            "assembly_operation"
+          ]
+        }
+      ],
       "dependentRequired": {
         "occurrence": [
           "PN"
@@ -1245,11 +1245,11 @@
         "direction": {
           "description": "The unit vector [x, y, z] along which the load acts (the force direction, or a torque's axis by the right-hand rule), in the model frame of the part that `application` names, or the assembly frame when `application` names the product, an interface or no part. Its norm must be 1 within 1e-6: validation reports load.direction_not_unit otherwise",
           "type": "array",
-          "minItems": 3,
-          "maxItems": 3,
           "items": {
             "type": "number"
-          }
+          },
+          "minItems": 3,
+          "maxItems": 3
         },
         "application": {
           "$ref": "#/$defs/subject"
@@ -1591,6 +1591,18 @@
         "consequence",
         "authority"
       ],
+      "anyOf": [
+        {
+          "required": [
+            "valid_until"
+          ]
+        },
+        {
+          "required": [
+            "until_change"
+          ]
+        }
+      ],
       "properties": {
         "decision": {
           "$ref": "#/$defs/decision"
@@ -1622,19 +1634,7 @@
         "authority": {
           "$ref": "#/$defs/text"
         }
-      },
-      "anyOf": [
-        {
-          "required": [
-            "valid_until"
-          ]
-        },
-        {
-          "required": [
-            "until_change"
-          ]
-        }
-      ]
+      }
     },
     "version": {
       "description": "A built version label",

@@ -193,6 +193,7 @@ model money {
   #[
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ kind: #{ `const`: "guideline" } },
         required: #["kind"],
       },
@@ -503,6 +504,7 @@ union not_assessed_reason {
 @extension(
   "if",
   #{
+    `x-keyword-order`: #["properties", "required"],
     properties: #{ outcome: #{ `const`: "not_assessed" } },
     required: #["outcome"],
   }
@@ -701,6 +703,7 @@ model load {
   /** The unit vector [x, y, z] along which the load acts (the force direction, or a torque's axis by the right-hand rule), in the model frame of the part that `application` names, or the assembly frame when `application` names the product, an interface or no part. Its norm must be 1 within 1e-6: validation reports load.direction_not_unit otherwise */
   @minItems(3)
   @maxItems(3)
+  @extension("x-keyword-order", #["items", "minItems", "maxItems"])
   direction: float64[];
 
   application?: subject;
@@ -840,6 +843,7 @@ model obligation_outcome {
   "anyOf",
   #[#{ required: #["valid_until"] }, #{ required: #["until_change"] }]
 )
+@extension("x-keyword-order", #["anyOf", "properties"])
 model waiver {
   decision: decision;
   subject: subject;

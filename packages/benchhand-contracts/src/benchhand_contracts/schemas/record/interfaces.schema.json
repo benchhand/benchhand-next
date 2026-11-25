@@ -22,17 +22,6 @@
           "type",
           "description"
         ],
-        "dependentRequired": {
-          "pair": [
-            "min_clearance_mm"
-          ],
-          "min_clearance_mm": [
-            "pair"
-          ],
-          "margin_mm": [
-            "min_clearance_mm"
-          ]
-        },
         "properties": {
           "id": {
             "$ref": "common.schema.json#/$defs/interface_id"
@@ -112,6 +101,17 @@
           "functional": {
             "$ref": "#/$defs/functional"
           }
+        },
+        "dependentRequired": {
+          "pair": [
+            "min_clearance_mm"
+          ],
+          "min_clearance_mm": [
+            "pair"
+          ],
+          "margin_mm": [
+            "min_clearance_mm"
+          ]
         },
         "if": {
           "required": [
@@ -657,12 +657,12 @@
               "print_pose": {
                 "description": "the value each assembly.yaml joint prints at, in that joint's units",
                 "type": "object",
-                "additionalProperties": {
-                  "type": "number"
-                },
                 "minProperties": 1,
                 "propertyNames": {
                   "pattern": "^J-[0-9]{3}$"
+                },
+                "additionalProperties": {
+                  "type": "number"
                 }
               },
               "gap_features": {

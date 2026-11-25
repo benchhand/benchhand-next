@@ -472,6 +472,7 @@ model ProductUseCaseCapabilityEquipment0 is Common.profile_id[];
   "anyOf",
   #[#{ required: #["requirement"] }, #{ required: #["subject"] }]
 )
+@extension("x-keyword-order", #["anyOf", "properties"])
 model ProductUseCaseEvidencePolicy1ObligationsItem {
   requirement?: Common.requirement_id;
   subject?: Common.subject;

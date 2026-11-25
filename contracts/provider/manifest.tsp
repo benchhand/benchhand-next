@@ -4,7 +4,17 @@ using TypeSpec.JsonSchema;
 
 @jsonSchema
 @baseUri("https://benchhand.github.io/benchhand/contracts/provider/manifest/")
-@extension("x-keyword-order", #["required", "additionalProperties"])
+@extension(
+  "x-keyword-order",
+  #[
+    "properties",
+    "required",
+    "additionalProperties",
+    "items",
+    "minItems",
+    "uniqueItems"
+  ]
+)
 namespace Provider.Manifest;
 
 /** A provider's manifest, benchhand-provider.toml: its name and version, the protocol version and kinds it serves, its hooks, how to start it (command, environment, timeouts), what it needs, and its CLI. */

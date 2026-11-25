@@ -54,16 +54,17 @@ REQUIRED_ORDER_KEY = "x-required-order"
 _EXTENSIONS = "x-*"
 KEYWORD_ORDER = (
     *("$schema", "$id", "title", "description", "$comment", _EXTENSIONS, "type"),
-    *("additionalProperties", "minProperties", "maxProperties", "propertyNames", "required"),
-    *("dependentRequired", "properties", "patternProperties"),
-    *("minItems", "maxItems", "uniqueItems", "contains", "minContains", "maxContains"),
-    *("items", "prefixItems"),
+    *("propertyNames", "additionalProperties", "minProperties", "maxProperties", "required"),
+    *("properties", "patternProperties", "dependentRequired"),
+    *("prefixItems", "minItems", "maxItems", "uniqueItems", "items"),
+    *("contains", "minContains", "maxContains"),
     *("minLength", "maxLength", "pattern", "format"),
     *("minimum", "exclusiveMinimum", "maximum", "exclusiveMaximum", "multipleOf"),
     *("const", "enum", "$ref", "allOf", "anyOf", "oneOf", "not", "if", "then", "else", "dependentSchemas"),
     *("default", "examples", "$defs"),
 )
-"""The order of the keywords in a published schema: the hand-written contracts' order, where they agreed.
+"""The order of the keywords in a published schema: for each pair, the order most of the hand-written
+contracts used. A schema or contract whose hand-written order differed says so with ``x-keyword-order``.
 A keyword not listed here comes last."""
 _RANK = {keyword: index for index, keyword in enumerate(KEYWORD_ORDER)}
 

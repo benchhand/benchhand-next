@@ -165,6 +165,7 @@ model RequirementsOpenQuestionsItem {
     "anyOf",
     #[#{ required: #["source"] }, #{ required: #["decision"] }]
   )
+  @extension("x-keyword-order", #["anyOf", "properties"])
   resolution?: {
     answer: Common.text;
     source?: Common.source;

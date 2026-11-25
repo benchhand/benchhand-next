@@ -785,6 +785,18 @@
       "required": [
         "id"
       ],
+      "oneOf": [
+        {
+          "required": [
+            "witness"
+          ]
+        },
+        {
+          "required": [
+            "locator"
+          ]
+        }
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -819,19 +831,7 @@
         "note": {
           "$ref": "common.schema.json#/$defs/text"
         }
-      },
-      "oneOf": [
-        {
-          "required": [
-            "witness"
-          ]
-        },
-        {
-          "required": [
-            "locator"
-          ]
-        }
-      ]
+      }
     },
     "critical_surface": {
       "type": "object",

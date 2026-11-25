@@ -394,24 +394,24 @@ Condition:
       ]
     },
     "if": {
-      "required": [
-        "characteristic"
-      ],
       "properties": {
         "characteristic": {
           "const": "nozzle_diameter"
         }
-      }
+      },
+      "required": [
+        "characteristic"
+      ]
     },
     "then": {
-      "required": [
-        "quantities"
-      ],
       "properties": {
         "operator": {
           "const": "one_of"
         }
       },
+      "required": [
+        "quantities"
+      ],
       "not": {
         "required": [
           "value"
@@ -510,14 +510,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "bridge_span"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -541,14 +541,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "overhang_angle"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -572,14 +572,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "min_wall"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -603,14 +603,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "nozzle_diameter"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -634,14 +634,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "min_feature"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -665,14 +665,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "min_hole"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -696,14 +696,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "sliding_clearance"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -727,9 +727,6 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "enum": [
@@ -738,7 +735,10 @@ Condition:
           "profile_deviation"
         ]
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -762,9 +762,6 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "enum": [
@@ -772,7 +769,10 @@ Condition:
           "nozzle_material"
         ]
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -792,14 +792,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "enclosure"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {
@@ -827,14 +827,14 @@ Condition:
 ```json
 {
   "if": {
-    "required": [
-      "characteristic"
-    ],
     "properties": {
       "characteristic": {
         "const": "nozzle_material"
       }
-    }
+    },
+    "required": [
+      "characteristic"
+    ]
   },
   "then": {
     "properties": {

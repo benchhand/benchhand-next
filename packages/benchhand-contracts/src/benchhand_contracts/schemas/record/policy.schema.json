@@ -25,11 +25,11 @@
     "gates": {
       "description": "Per-gate modes, keyed by the gate id flow.yaml declares",
       "type": "object",
-      "additionalProperties": {
-        "$ref": "#/$defs/gate"
-      },
       "propertyNames": {
         "$ref": "common.schema.json#/$defs/gate_id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/gate"
       }
     }
   },

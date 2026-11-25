@@ -441,16 +441,6 @@
           "then": {
             "properties": {
               "route": {
-                "contains": {
-                  "required": [
-                    "purchase"
-                  ],
-                  "properties": {
-                    "kind": {
-                      "const": "purchased"
-                    }
-                  }
-                },
                 "items": {
                   "properties": {
                     "kind": {
@@ -458,6 +448,16 @@
                         "purchased",
                         "inspection"
                       ]
+                    }
+                  }
+                },
+                "contains": {
+                  "required": [
+                    "purchase"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "purchased"
                     }
                   }
                 }

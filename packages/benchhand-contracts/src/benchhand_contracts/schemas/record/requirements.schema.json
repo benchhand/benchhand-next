@@ -178,17 +178,6 @@
             "required": [
               "answer"
             ],
-            "properties": {
-              "answer": {
-                "$ref": "common.schema.json#/$defs/text"
-              },
-              "source": {
-                "$ref": "common.schema.json#/$defs/source"
-              },
-              "decision": {
-                "$ref": "common.schema.json#/$defs/decision"
-              }
-            },
             "anyOf": [
               {
                 "required": [
@@ -200,7 +189,18 @@
                   "decision"
                 ]
               }
-            ]
+            ],
+            "properties": {
+              "answer": {
+                "$ref": "common.schema.json#/$defs/text"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/source"
+              },
+              "decision": {
+                "$ref": "common.schema.json#/$defs/decision"
+              }
+            }
           }
         },
         "if": {

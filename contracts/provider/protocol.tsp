@@ -4,7 +4,17 @@ using TypeSpec.JsonSchema;
 
 @jsonSchema
 @baseUri("https://benchhand.github.io/benchhand/contracts/provider/protocol/")
-@extension("x-keyword-order", #["required", "additionalProperties"])
+@extension(
+  "x-keyword-order",
+  #[
+    "properties",
+    "required",
+    "additionalProperties",
+    "items",
+    "minItems",
+    "uniqueItems"
+  ]
+)
 namespace Provider.Protocol;
 
 /** Message shapes of the benchhand provider protocol. Prose rules: docs/contract/provider-protocol.md. */

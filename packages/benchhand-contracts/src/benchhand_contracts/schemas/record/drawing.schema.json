@@ -281,13 +281,13 @@
         },
         "standards": {
           "type": "object",
+          "required": [
+            "dimensioning"
+          ],
           "additionalProperties": {
             "type": "string",
             "minLength": 1
-          },
-          "required": [
-            "dimensioning"
-          ]
+          }
         },
         "default_sheet": {
           "allOf": [
@@ -303,12 +303,12 @@
         },
         "tolerance_policies": {
           "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/tolerance_policy"
-          },
           "minProperties": 1,
           "propertyNames": {
             "$ref": "#/$defs/policy_name"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/tolerance_policy"
           }
         },
         "general_tolerance_policy": {
@@ -753,6 +753,10 @@
         },
         "datum_features": {
           "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/datum_label"
+          },
           "additionalProperties": {
             "type": "object",
             "additionalProperties": false,
@@ -775,10 +779,6 @@
                 ]
               }
             }
-          },
-          "minProperties": 1,
-          "propertyNames": {
-            "$ref": "#/$defs/datum_label"
           }
         },
         "coordinate_frame": {
@@ -859,12 +859,12 @@
         },
         "features": {
           "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/feature_intent"
-          },
           "minProperties": 1,
           "propertyNames": {
             "$ref": "common.schema.json#/$defs/semantic_id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/feature_intent"
           }
         },
         "dimensions": {
@@ -1034,6 +1034,18 @@
             "revision",
             "sha256"
           ],
+          "anyOf": [
+            {
+              "required": [
+                "artifact"
+              ]
+            },
+            {
+              "required": [
+                "url"
+              ]
+            }
+          ],
           "properties": {
             "reference": {
               "type": "string",
@@ -1059,19 +1071,7 @@
             "sha256": {
               "$ref": "common.schema.json#/$defs/sha256"
             }
-          },
-          "anyOf": [
-            {
-              "required": [
-                "artifact"
-              ]
-            },
-            {
-              "required": [
-                "url"
-              ]
-            }
-          ]
+          }
         },
         "open": {
           "description": "orderable identity fields deliberately left open, each with the reason; every one blocks release",

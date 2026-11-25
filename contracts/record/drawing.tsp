@@ -149,6 +149,7 @@ model product_drawing {
   `projection`: DrawingProductDrawingProjection;
 
   @extension("required", #["dimensioning"])
+  @extension("x-keyword-order", #["required", "additionalProperties"])
   standards: Record<DrawingProductDrawingStandardsValue>;
 
   @extension("allOf", #[#{ $ref: "#/$defs/sheet" }, #{ required: #["sizes"] }])
@@ -156,6 +157,10 @@ model product_drawing {
 
   @minProperties(1)
   @extension("propertyNames", policy_name)
+  @extension(
+    "x-keyword-order",
+    #["minProperties", "propertyNames", "additionalProperties"]
+  )
   tolerance_policies: Record<tolerance_policy>;
 
   general_tolerance_policy: policy_name;
@@ -405,6 +410,10 @@ model part_drawing {
 
   @minProperties(1)
   @extension("propertyNames", datum_label)
+  @extension(
+    "x-keyword-order",
+    #["minProperties", "propertyNames", "additionalProperties"]
+  )
   datum_features?: Record<{
     feature: Common.semantic_id;
     role: DrawingPartDrawingDatumFeaturesValueRole;
@@ -437,6 +446,10 @@ model part_drawing {
 
   @minProperties(1)
   @extension("propertyNames", Common.semantic_id)
+  @extension(
+    "x-keyword-order",
+    #["minProperties", "propertyNames", "additionalProperties"]
+  )
   features?: Record<feature_intent>;
 
   @minItems(1)
@@ -544,6 +557,7 @@ model procurement {
 
   /** the datasheet or standard that defines the item, identified by its sha256; with only a url the frozen copy is a sourcing input kept outside the record */
   @extension("anyOf", #[#{ required: #["artifact"] }, #{ required: #["url"] }])
+  @extension("x-keyword-order", #["anyOf", "properties"])
   specification?: {
     @minLength(1)
     reference: string;

@@ -26,6 +26,10 @@ model Assembly {
   /** Reusable periodic tables a periodic_table coupling evaluates, by name */
   @minProperties(1)
   @extension("propertyNames", #{ pattern: "^[a-z][a-z0-9_-]*$" })
+  @extension(
+    "x-keyword-order",
+    #["minProperties", "propertyNames", "additionalProperties"]
+  )
   profiles?: Record<assembly_profile>;
 
   /** Shared mechanism parameters whose outputs several slider_crank couplings follow */
@@ -44,6 +48,7 @@ model Assembly {
   "anyOf",
   #[#{ required: #["parts"] }, #{ required: #["occurrences"] }]
 )
+@extension("x-keyword-order", #["anyOf", "properties"])
 model AssemblySubassembliesItem {
   @pattern("^[a-z][a-z0-9_-]*$")
   id: string;

@@ -80,11 +80,6 @@
         "stage",
         "recheck_from"
       ],
-      "dependentRequired": {
-        "change": [
-          "frozen"
-        ]
-      },
       "properties": {
         "stage": {
           "$ref": "common.schema.json#/$defs/stage"
@@ -101,6 +96,11 @@
         "profile": {
           "$ref": "#/$defs/profile"
         }
+      },
+      "dependentRequired": {
+        "change": [
+          "frozen"
+        ]
       }
     },
     "build_volume": {
@@ -1449,6 +1449,18 @@
                     "required": [
                       "level"
                     ],
+                    "anyOf": [
+                      {
+                        "required": [
+                          "requirement"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "subject"
+                        ]
+                      }
+                    ],
                     "properties": {
                       "requirement": {
                         "$ref": "common.schema.json#/$defs/requirement_id"
@@ -1462,19 +1474,7 @@
                       "note": {
                         "$ref": "common.schema.json#/$defs/text"
                       }
-                    },
-                    "anyOf": [
-                      {
-                        "required": [
-                          "requirement"
-                        ]
-                      },
-                      {
-                        "required": [
-                          "subject"
-                        ]
-                      }
-                    ]
+                    }
                   }
                 },
                 "decision": {

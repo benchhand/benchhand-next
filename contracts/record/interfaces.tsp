@@ -219,6 +219,10 @@ model functional {
     /** the value each assembly.yaml joint prints at, in that joint's units */
     @minProperties(1)
     @extension("propertyNames", #{ pattern: "^J-[0-9]{3}$" })
+    @extension(
+      "x-keyword-order",
+      #["minProperties", "propertyNames", "additionalProperties"]
+    )
     print_pose: Record<float64>;
 
     @minItems(1)

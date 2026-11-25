@@ -52,12 +52,12 @@
     "profiles": {
       "description": "Reusable periodic tables a periodic_table coupling evaluates, by name",
       "type": "object",
-      "additionalProperties": {
-        "$ref": "#/$defs/profile"
-      },
       "minProperties": 1,
       "propertyNames": {
         "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/profile"
       }
     },
     "mechanisms": {
@@ -77,6 +77,18 @@
         "required": [
           "id",
           "title"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "parts"
+            ]
+          },
+          {
+            "required": [
+              "occurrences"
+            ]
+          }
         ],
         "properties": {
           "id": {
@@ -102,19 +114,7 @@
               "$ref": "common.schema.json#/$defs/occurrence_ref"
             }
           }
-        },
-        "anyOf": [
-          {
-            "required": [
-              "parts"
-            ]
-          },
-          {
-            "required": [
-              "occurrences"
-            ]
-          }
-        ]
+        }
       }
     },
     "joints": {
@@ -1100,8 +1100,6 @@
           "minItems": 2,
           "items": {
             "type": "array",
-            "minItems": 2,
-            "maxItems": 2,
             "prefixItems": [
               {
                 "type": "number"
@@ -1109,7 +1107,9 @@
               {
                 "type": "number"
               }
-            ]
+            ],
+            "minItems": 2,
+            "maxItems": 2
           }
         }
       }

@@ -13,10 +13,9 @@ published schema with ``contracts/<path>.schema.json`` at ``BASE``, after JSON d
   ``jsonschema.exceptions.best_match`` takes the first of two it ranks alike. So the order decides the
   violation ``validate`` raises, its ``schema_path``, and the order of the list.
 
-``places`` works out where a keyword can report: at the node's own instance path, under a named property,
-under any property or item, or anywhere. It follows inline subschemas; a ``$ref`` and a keyword it doesn't
-know count as anywhere, so an order change is skipped only when the two keywords provably can't report at
-one path.
+No model of where a keyword reports is trusted: every pair of keywords except the ``SILENT`` ones counts
+as able to report at one instance path, so the check can only over-report. An order change the source can
+express is restored there; one it can't is an ``Allowed`` entry.
 
 Each intended difference is an ``Allowed`` entry with its exact old value, new value, kind and reason,
 and anything else fails, as does an entry that matches nothing. ``just contracts-equivalence`` runs it;
@@ -83,26 +82,6 @@ class Allowed:
         )
 
 
-# Where a keyword reports, as a set of places: HERE (the node's own instance path), (PROPERTY, name) or
-# (PROPERTY, ANY_NAME) for that property and below, ITEM for an item and below, ANYWHERE when unknown.
-HERE, PROPERTY, ANY_NAME, ITEM, ANYWHERE = "here", "property", "*", ("item",), "anywhere"
-_TYPED_HERE = {
-    "object": ("required", "dependentRequired", "minProperties", "maxProperties", "propertyNames"),
-    "array": ("minItems", "maxItems", "uniqueItems", "contains", "minContains", "maxContains"),
-    "string": ("minLength", "maxLength", "pattern", "format"),
-    "number": ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf"),
-}
-JSON_TYPE = {keyword: kind for kind, keywords in _TYPED_HERE.items() for keyword in keywords} | {
-    **dict.fromkeys(("properties", "patternProperties", "additionalProperties"), "object"),
-    **dict.fromkeys(("unevaluatedProperties", "dependentSchemas"), "object"),
-    **dict.fromkeys(("items", "prefixItems", "unevaluatedItems"), "array"),
-}
-"""Keywords that judge one JSON type and pass every other."""
-HERE_ONLY = frozenset((*JSON_TYPE, "type", "const", "enum", "not")) - {
-    "properties", "patternProperties", "additionalProperties", "unevaluatedProperties", "dependentSchemas",
-    "items", "prefixItems", "unevaluatedItems",
-}  # fmt: skip
-"""Keywords that report at the node's own instance path only (``propertyNames`` and ``contains`` too)."""
 SILENT = frozenset(
     (
         "$schema", "$id", "$anchor", "$dynamicAnchor", "$comment", "$defs", "$vocabulary", "title",
@@ -111,17 +90,6 @@ SILENT = frozenset(
     )
 )  # fmt: skip
 """Keywords that never report on their own: annotations, and then/else, which jsonschema reports under if."""
-DISJOINT = frozenset(
-    frozenset(pair)
-    for pair in (
-        ("properties", "additionalProperties"),
-        ("patternProperties", "additionalProperties"),
-        ("prefixItems", "items"),
-    )
-)
-"""Pairs that judge disjoint properties or items of one instance: additionalProperties takes the names
-that properties and patternProperties don't, and items the items after prefixItems."""
-
 TIMESTAMP = ("jobs/job.schema.json", "/$defs/Timestamp")
 TIMESTAMP_PATTERN = (
     "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)"
@@ -256,76 +224,11 @@ def _literal_differences(old: Any, new: Any, pointer: str) -> Iterator[Differenc
 
 
 def same_path_order_changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str]]:
-    """Pairs of keywords that can report at the same instance path, ``old`` lists first, ``new`` reverses."""
-    shared = [key for key in old if key in new]
-    reach = {key: places(key, old[key], old) | places(key, new[key], new) for key in shared}
+    """Pairs of keywords ``old`` lists in one order and ``new`` in the other. Every keyword that can report
+    counts as able to report at any instance path, so this can only over-report an order change."""
+    shared = [key for key in old if key in new and key not in SILENT and not key.startswith("x-")]
     position = {key: index for index, key in enumerate(new)}
-    return [
-        (first, second)
-        for first, second in itertools.combinations(shared, 2)
-        if position[first] > position[second] and _can_share_a_path(first, second, reach)
-    ]
-
-
-def _can_share_a_path(first: str, second: str, reach: dict[str, frozenset[Any]]) -> bool:
-    types = {JSON_TYPE.get(first), JSON_TYPE.get(second)}
-    if None not in types and len(types) == 2:
-        return False  # they judge different JSON types, so one of them passes any instance
-    return frozenset((first, second)) not in DISJOINT and overlap(reach[first], reach[second])
-
-
-def overlap(first: frozenset[Any], second: frozenset[Any]) -> bool:
-    """Whether two sets of places share an instance path."""
-    if not first or not second:
-        return False
-    if ANYWHERE in first or ANYWHERE in second or first & second:
-        return True
-    names = [{place[1] for place in group if place[0] == PROPERTY} for group in (first, second)]
-    return all(names) and (ANY_NAME in names[0] | names[1] or bool(names[0] & names[1]))
-
-
-def places(keyword: str, value: Any, schema: dict[str, Any]) -> frozenset[Any]:
-    """Where ``keyword: value`` of ``schema`` can report a violation."""
-    if keyword in SILENT or keyword.startswith("x-"):
-        return frozenset()
-    if keyword in HERE_ONLY:
-        return frozenset((HERE,))
-    if keyword in ("properties", "patternProperties", "additionalProperties", "unevaluatedProperties"):
-        return _property_places(keyword, value)
-    if keyword in ("items", "prefixItems", "unevaluatedItems"):
-        return frozenset((HERE,)) if value is False else frozenset() if value is True else frozenset((ITEM,))
-    if keyword == "if":
-        return subschema_places(schema.get("then", True)) | subschema_places(schema.get("else", True))
-    return _applicator_places(keyword, value)
-
-
-def _property_places(keyword: str, value: Any) -> frozenset[Any]:
-    if keyword == "properties" and isinstance(value, dict):
-        return frozenset((PROPERTY, name) for name, sub in value.items() if sub is not True)
-    if value is True or value == {}:
-        return frozenset()
-    return frozenset((HERE,)) if value is False else frozenset(((PROPERTY, ANY_NAME),))
-
-
-def _applicator_places(keyword: str, value: Any) -> frozenset[Any]:
-    if keyword == "allOf" and isinstance(value, list):
-        return frozenset().union(*map(subschema_places, value))
-    if keyword in ("anyOf", "oneOf") and isinstance(value, list):
-        return frozenset((HERE,)).union(*map(subschema_places, value))
-    if keyword == "dependentSchemas" and isinstance(value, dict):
-        return frozenset().union(*map(subschema_places, value.values()))
-    return frozenset((ANYWHERE,))  # $ref, $dynamicRef, and any keyword not listed here
-
-
-def subschema_places(schema: Any) -> frozenset[Any]:
-    """Where a subschema applied at the node's own instance can report."""
-    if schema is True:
-        return frozenset()
-    if schema is False:
-        return frozenset((HERE,))
-    if not isinstance(schema, dict):
-        return frozenset((ANYWHERE,))
-    return frozenset().union(*(places(key, value, schema) for key, value in schema.items()))
+    return [(a, b) for a, b in itertools.combinations(shared, 2) if position[a] > position[b]]
 
 
 def reason(rel_path: str, difference: Difference, allowed: tuple[Allowed, ...] = ALLOWED) -> str | None:

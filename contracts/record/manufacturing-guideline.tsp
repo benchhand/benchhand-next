@@ -124,10 +124,12 @@ model relaxes {
           anyOf: #[#{ required: #["quantity"] }, #{ required: #["relative"] }],
         },
         `if`: #{
+          `x-keyword-order`: #["properties", "required"],
           properties: #{ characteristic: #{ `const`: "nozzle_diameter" } },
           required: #["characteristic"],
         },
         then: #{
+          `x-keyword-order`: #["properties", "required"],
           properties: #{ operator: #{ `const`: "one_of" } },
           required: #["quantities"],
           not: #{ required: #["value"] },
@@ -160,6 +162,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "bridge_span" } },
         required: #["characteristic"],
       },
@@ -180,6 +183,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "overhang_angle" } },
         required: #["characteristic"],
       },
@@ -200,6 +204,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "min_wall" } },
         required: #["characteristic"],
       },
@@ -220,6 +225,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "nozzle_diameter" } },
         required: #["characteristic"],
       },
@@ -240,6 +246,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "min_feature" } },
         required: #["characteristic"],
       },
@@ -260,6 +267,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "min_hole" } },
         required: #["characteristic"],
       },
@@ -280,6 +288,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "sliding_clearance" } },
         required: #["characteristic"],
       },
@@ -300,6 +309,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{
           characteristic: #{
             `enum`: #[
@@ -328,6 +338,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{
           characteristic: #{ `enum`: #["enclosure", "nozzle_material"] },
         },
@@ -337,6 +348,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "enclosure" } },
         required: #["characteristic"],
       },
@@ -354,6 +366,7 @@ model relaxes {
     },
     #{
       `if`: #{
+        `x-keyword-order`: #["properties", "required"],
         properties: #{ characteristic: #{ `const`: "nozzle_material" } },
         required: #["characteristic"],
       },

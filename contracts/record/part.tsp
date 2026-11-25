@@ -219,6 +219,7 @@ model PartIntentRoute0 is operation[];
 
 /** One disconnected solid of the part, bound by an interior witness point in the native manufacturing frame (mm) or a semantic locator; every solid binds exactly once. Equivalent members list their multiplicity */
 @extension("oneOf", #[#{ required: #["witness"] }, #{ required: #["locator"] }])
+@extension("x-keyword-order", #["oneOf", "properties"])
 model component {
   id: Common.semantic_id;
   witness?: Common.vector;

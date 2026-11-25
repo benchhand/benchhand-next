@@ -16,6 +16,10 @@ model ManufacturingCapabilities {
 
 /** Parameters by name. A named parameter that has a hard bound is checked in every unit of its dimension; the bounds are in the qty_* and fact_* definitions below and the plausibility band (x-plausible, a warning) beside them. layer_height at most nozzle_diameter compares two facts in possibly different units, so the config loader checks it */
 @extension("propertyNames", Common.semantic_id)
+@extension(
+  "x-keyword-order",
+  #["properties", "propertyNames", "additionalProperties"]
+)
 model parameters {
   @extension(
     "allOf",

@@ -169,12 +169,12 @@
         "fingerprints": {
           "description": "sha256 of each normalized dependency the evidence relied on, by domain; a changed fingerprint makes the evidence stale until an impact assessment carries it forward",
           "type": "object",
-          "additionalProperties": {
-            "$ref": "common.schema.json#/$defs/sha256"
-          },
           "minProperties": 1,
           "propertyNames": {
             "$ref": "#/$defs/fingerprint_domain"
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/sha256"
           }
         },
         "artifacts": {
