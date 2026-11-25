@@ -1,53 +1,51 @@
 cases by source: {'test-suite': 292, 'old-fixture': 212, 'new-fixture': 10, 'edge-timestamp': 8}
 replay: 522 instances
   valid hand-written/published: {'False/False': 197, 'True/False': 6, 'True/True': 318, 'unresolvable/unresolvable': 1}
-  verdicts that differ: 6, of which the first violation changed: 6
-  explained by the Timestamp pattern: 6
-  unexplained: 0
-    explained: test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "badtime00001", "kind": "collision/sweep", "status": "runnin
+  hand-written vs published: 6 differ, the first violation in 6
+  hand-written vs published without the Timestamp pattern: 0 differ
+    only with the pattern: test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "badtime00001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /createdAt by jobs/job.schema.json#/$defs/Timestamp/pattern: 'yesterday' does not match '^[0-9]{4}-(0[1-9]|1[0-
-    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25t05:08:13Z"
+    only with the pattern: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25t05:08:13Z"
       hand-written: valid
       published:    1 violation(s), first at / by jobs/job.schema.json#/$defs/Timestamp/pattern: '2026-11-25t05:08:13Z' does not match '^[0-9]{4}-(
-    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25T05:08:13z"
+    only with the pattern: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25T05:08:13z"
       hand-written: valid
       published:    1 violation(s), first at / by jobs/job.schema.json#/$defs/Timestamp/pattern: '2026-11-25T05:08:13z' does not match '^[0-9]{4}-(
-    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25 05:08:13Z"
+    only with the pattern: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-11-25 05:08:13Z"
       hand-written: valid
       published:    1 violation(s), first at / by jobs/job.schema.json#/$defs/Timestamp/pattern: '2026-11-25 05:08:13Z' does not match '^[0-9]{4}-(
-    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "not a time"
+    only with the pattern: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "not a time"
       hand-written: valid
       published:    1 violation(s), first at / by jobs/job.schema.json#/$defs/Timestamp/pattern: 'not a time' does not match '^[0-9]{4}-(0[1-9]|1[0
-    explained: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-13-01T00:00:00Z"
+    only with the pattern: edge-timestamp, jobs/job.schema.json#/$defs/Timestamp, "2026-13-01T00:00:00Z"
       hand-written: valid
       published:    1 violation(s), first at / by jobs/job.schema.json#/$defs/Timestamp/pattern: '2026-13-01T00:00:00Z' does not match '^[0-9]{4}-(
 mutations of each instance the published schemas accept: 185994 instances
   valid hand-written/published: {'False/False': 168980, 'True/False': 401, 'True/True': 16613}
-  verdicts that differ: 401, of which the first violation changed: 401
-  explained by the Timestamp pattern: 401
-  unexplained: 0
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+  hand-written vs published: 401 differ, the first violation in 401
+  hand-written vs published without the Timestamp pattern: 0 differ
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /createdAt by jobs/job.schema.json#/$defs/Timestamp/pattern: '' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /createdAt by jobs/job.schema.json#/$defs/Timestamp/pattern: 'Z' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /startedAt by jobs/job.schema.json#/$defs/Timestamp/pattern: '' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /startedAt by jobs/job.schema.json#/$defs/Timestamp/pattern: 'Z' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /finishedAt by jobs/job.schema.json#/$defs/Timestamp/pattern: 'n' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /finishedAt by jobs/job.schema.json#/$defs/Timestamp/pattern: '' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /finishedAt by jobs/job.schema.json#/$defs/Timestamp/pattern: 'Z' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1
-    explained: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
+    only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /createdAt by jobs/job.schema.json#/$defs/Timestamp/pattern: '' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-
