@@ -4,7 +4,7 @@ Decision: [ADR-0017](../adr/0017-contracts.md). The TypeSpec files under `contra
 
 ## Generated outputs
 
-`just contracts` compiles `contracts/main.tsp` with `tsp compile --warn-as-error` into one JSON Schema bundle, an unpublished intermediate. `tools/gen/contracts_gen/normalise.py` splits it into one published schema per contract and writes the emitter's idioms in plain form, for example `unevaluatedProperties` as `additionalProperties`. Every other output below is generated from the published schemas. A new `.tsp` file imported by `main.tsp` is picked up without a change to the generator. Everything is generated into a scratch directory first, and each output directory is then replaced as a whole, so the outputs of a deleted schema disappear too and a failed run leaves the previous outputs in place. Each generated file names its source and says that it must not be edited.
+`just contracts` compiles `contracts/main.tsp` with `tsp compile --warn-as-error` into one JSON Schema bundle, an unpublished intermediate. `tools/gen/contracts_gen/normalise.py` splits it into one published schema per contract and writes the emitter's idioms in plain form, for example `unevaluatedProperties` as `additionalProperties`. Every other output below is generated from the published schemas. A new `.tsp` file imported by `main.tsp` is picked up without a change to the generator. Everything is generated into a scratch directory first, and each output directory is then replaced as a whole, so the outputs of a deleted schema disappear too and a failed run leaves the previous outputs in place. Each generated file except the published schemas names its source and says that it must not be edited. A published schema carries only its `$id`, which names its source: `<dir>/<name>.schema.json` comes from `contracts/<dir>/<name>.tsp`.
 
 | Output | Location | Tool |
 |---|---|---|
@@ -42,7 +42,7 @@ A variant is kept only if the schema rejects it, so every `invalid` entry is kno
 `just contracts-check` runs these checks. CI runs it as a step of the `check` job, with full history so that the release tags are there.
 
 1. **Format.** `tsp format --check` on every `.tsp` file.
-2. **Schemas.** The Sourcemeta `jsonschema metaschema` on the bundle and the published schemas, and `jsonschema lint` on the published schemas. The `contracts-lint` recipe in the `justfile` lists each rule it leaves out, and why.
+2. **Schemas.** The Sourcemeta `jsonschema metaschema` on the bundle and the published schemas, and `jsonschema lint` on the published schemas. The `contracts-lint` recipe in the `justfile` lists each rule it leaves out, and why. The `required_properties_in_properties` findings that stay are listed by location in `tools/gen/contracts_gen/lint.py`, and any other finding fails.
 3. **Drift.** The generator writes every output into a temporary directory, and the check fails if any file there is missing from the tree, differs from it, or is absent while the tree has it. Fix it with `just contracts` and commit the result.
 4. **Breaking changes.** Each published schema is compared with its version at the release tag, which is the nearest `v*` tag reachable from `HEAD`. With no such tag, the check prints that it is skipping and passes. `python -m contracts_gen breaking --base <rev>` compares with another revision.
 
@@ -86,7 +86,7 @@ The check doesn't follow `$ref`s into other definitions outside strict keywords,
 
 ## Version bumps
 
-Before the first release nothing is published, so a narrowing keeps its version. `jobs/job.schema.json` 1.0.0 narrowed `Timestamp` this way when the contracts moved to TypeSpec: a `pattern` now refuses a lowercase `t` or `z` and a space for the `T` (ADR-0017), where `format: date-time` alone was an annotation that accepted any string.
+Before the first release nothing is published, so a narrowing keeps its version. `jobs/job.schema.json` 1.0.0 narrowed `Timestamp` this way when the contracts moved to TypeSpec: a `pattern` now refuses a lowercase `t` or `z` and a space for the `T` (ADR-0017), where `format: date-time` alone was an annotation that accepted any string. `just contracts-equivalence` shows that this is the only change in what the contracts accept; its results are in `tools/equiv/results/`.
 
 - A breaking change needs a higher major `x-version` than the schema had at the release tag, for example `1.4.0` to `2.0.0`. The check passes a schema whose major version went up, whatever else changed.
 - An additive change raises the minor version. A fix that changes no accepted instance, for example a description, raises the patch version. The check doesn't enforce minor and patch bumps.
