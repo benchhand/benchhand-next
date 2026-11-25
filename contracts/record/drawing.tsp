@@ -162,7 +162,7 @@ model product_drawing {
   default_sheet: unknown;
 
   @minProperties(1)
-  @extension("propertyNames", #{ $ref: "#/$defs/policy_name" })
+  @extension("propertyNames", policy_name)
   tolerance_policies: Record<tolerance_policy>;
 
   general_tolerance_policy: policy_name;
@@ -426,7 +426,7 @@ model part_drawing {
   tolerance_policy?: policy_name;
 
   @minProperties(1)
-  @extension("propertyNames", #{ $ref: "#/$defs/datum_label" })
+  @extension("propertyNames", datum_label)
   datum_features?: Record<{
     feature: Common.semantic_id;
     role: DrawingPartDrawingDatumFeaturesValueRole;
@@ -458,10 +458,7 @@ model part_drawing {
   views?: view[];
 
   @minProperties(1)
-  @extension(
-    "propertyNames",
-    #{ $ref: "common.schema.json#/$defs/semantic_id" }
-  )
+  @extension("propertyNames", Common.semantic_id)
   features?: Record<feature_intent>;
 
   @minItems(1)
@@ -497,7 +494,7 @@ model part_drawing {
     reference?: string;
   }[];
 
-  @extension("minProperties", 1)
+  @minProperties(1)
   manufacturing?: {
     build_direction?: direction;
     interface_condition?: DrawingPartDrawingManufacturingInterfaceCondition;
@@ -596,7 +593,7 @@ model procurement {
   };
 
   /** orderable identity fields deliberately left open, each with the reason; every one blocks release */
-  @extension("minProperties", 1)
+  @minProperties(1)
   open?: {
     @minLength(1)
     manufacturer?: string;
@@ -740,14 +737,11 @@ model heat_set {
   feature?: Common.semantic_id;
 }
 
-@@extension(
+@@example(
   Drawing,
-  "examples",
-  #[
-    #{
-      fit: "5 H7/p6",
-      hole: #{ PN: "LMP-0002", feature: "hub_bore" },
-      shaft: #{ PN: "LMP-0005", feature: "press_band" },
-    }
-  ]
+  #{
+    fit: "5 H7/p6",
+    hole: #{ PN: "LMP-0002", feature: "hub_bore" },
+    shaft: #{ PN: "LMP-0005", feature: "press_band" },
+  }
 );

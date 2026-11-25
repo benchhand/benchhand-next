@@ -71,34 +71,31 @@ scalar ManifestCommandItem extends string;
 @minValue(1)
 scalar ManifestTimeoutsValue extends integer;
 
-@@extension(
+@@example(
   Manifest,
-  "examples",
-  #[
-    #{
-      name: "kernel-build123d",
-      version: "1.0.0",
-      protocol: #{ min: 1, max: 1 },
-      kinds: #["kernel"],
-      hooks: #[
-        #{ kind: "kernel", id: "build" },
-        #{ kind: "kernel", id: "export" },
-        #{ kind: "kernel", id: "inspect" }
+  #{
+    name: "kernel-build123d",
+    version: "1.0.0",
+    protocol: #{ min: 1, max: 1 },
+    kinds: #["kernel"],
+    hooks: #[
+      #{ kind: "kernel", id: "build" },
+      #{ kind: "kernel", id: "export" },
+      #{ kind: "kernel", id: "inspect" }
+    ],
+    resident: false,
+    command: #["python", "-m", "benchhand_kernel_build123d"],
+    environment: #{
+      kind: "uv",
+      `requires-python`: ">=3.12,<3.13",
+      dependencies: #[
+        "build123d==0.13.0",
+        "cadquery-ocp-novtk==8.0.1.1.0",
+        "bd_warehouse==0.4.0",
+        "benchhand-provider"
       ],
-      resident: false,
-      command: #["python", "-m", "benchhand_kernel_build123d"],
-      environment: #{
-        kind: "uv",
-        `requires-python`: ">=3.12,<3.13",
-        dependencies: #[
-          "build123d==0.13.0",
-          "cadquery-ocp-novtk==8.0.1.1.0",
-          "bd_warehouse==0.4.0",
-          "benchhand-provider"
-        ],
-      },
-      needs: #{ freecad: false, chromium: false, network: false },
-      cli: #[#{ name: "probe", summary: "Check the build123d environment." }],
-    }
-  ]
+    },
+    needs: #{ freecad: false, chromium: false, network: false },
+    cli: #[#{ name: "probe", summary: "Check the build123d environment." }],
+  }
 );

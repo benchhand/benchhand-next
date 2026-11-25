@@ -120,59 +120,62 @@ model JobHandle {
   finishedAt: OptionalTimestamp;
 }
 
-@@extension(
+@@example(
   Job,
-  "examples",
-  #[
-    #{
-      jobId: "3f9c1a7b02de",
-      kind: "collision/sweep",
-      status: "running",
-      progress: #{ fraction: 0.4, message: "pair 12 of 30" },
-      argv: #["python3", "-m", "sweep", "--version", "LMP-0003"],
-      cwd: "/work/lamp",
-      host: "workstation",
-      owner: #{
-        pid: 4121,
-        identity: "6f3a0c1e-9d1b-4a52-8d0e-0b7d2f5f1c11:48213377",
-      },
-      process: #{
-        pid: 4188,
-        identity: "6f3a0c1e-9d1b-4a52-8d0e-0b7d2f5f1c11:48213391",
-      },
-      resultPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.result",
-      logPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.log",
-      exitCode: null,
-      error: null,
-      createdAt: "2026-03-02T09:14:07+00:00",
-      startedAt: "2026-03-02T09:14:07+00:00",
-      finishedAt: null,
+  #{
+    jobId: "3f9c1a7b02de",
+    kind: "collision/sweep",
+    status: "running",
+    progress: #{ fraction: 0.4, message: "pair 12 of 30" },
+    argv: #["python3", "-m", "sweep", "--version", "LMP-0003"],
+    cwd: "/work/lamp",
+    host: "workstation",
+    owner: #{
+      pid: 4121,
+      identity: "6f3a0c1e-9d1b-4a52-8d0e-0b7d2f5f1c11:48213377",
     },
-    #{
-      jobId: "3f9c1a7b02de",
-      kind: "collision/sweep",
-      status: "succeeded",
-      progress: #{ fraction: 1, message: "30 of 30 pairs" },
-      resultPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.result",
-      logPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.log",
-      exitCode: 0,
-      error: null,
-      createdAt: "2026-03-02T09:14:07+00:00",
-      startedAt: "2026-03-02T09:14:07+00:00",
-      finishedAt: "2026-03-02T09:16:41+00:00",
+    process: #{
+      pid: 4188,
+      identity: "6f3a0c1e-9d1b-4a52-8d0e-0b7d2f5f1c11:48213391",
     },
-    #{
-      jobId: "a81e5c0d77b4",
-      kind: "fem/solve",
-      status: "failed",
-      progress: #{ fraction: null, message: null },
-      resultPath: null,
-      logPath: "/work/lamp/.benchhand/runs/a81e5c0d77b4.log",
-      exitCode: 3,
-      error: "the job exited with status 3",
-      createdAt: "2026-03-02T09:20:00+00:00",
-      startedAt: "2026-03-02T09:20:00+00:00",
-      finishedAt: "2026-03-02T09:20:12+00:00",
-    }
-  ]
+    resultPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.result",
+    logPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.log",
+    exitCode: null,
+    error: null,
+    createdAt: "2026-03-02T09:14:07+00:00",
+    startedAt: "2026-03-02T09:14:07+00:00",
+    finishedAt: null,
+  }
+);
+@@example(
+  Job,
+  #{
+    jobId: "3f9c1a7b02de",
+    kind: "collision/sweep",
+    status: "succeeded",
+    progress: #{ fraction: 1, message: "30 of 30 pairs" },
+    resultPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.result",
+    logPath: "/work/lamp/.benchhand/runs/3f9c1a7b02de.log",
+    exitCode: 0,
+    error: null,
+    createdAt: "2026-03-02T09:14:07+00:00",
+    startedAt: "2026-03-02T09:14:07+00:00",
+    finishedAt: "2026-03-02T09:16:41+00:00",
+  }
+);
+@@example(
+  Job,
+  #{
+    jobId: "a81e5c0d77b4",
+    kind: "fem/solve",
+    status: "failed",
+    progress: #{ fraction: null, message: null },
+    resultPath: null,
+    logPath: "/work/lamp/.benchhand/runs/a81e5c0d77b4.log",
+    exitCode: 3,
+    error: "the job exited with status 3",
+    createdAt: "2026-03-02T09:20:00+00:00",
+    startedAt: "2026-03-02T09:20:00+00:00",
+    finishedAt: "2026-03-02T09:20:12+00:00",
+  }
 );

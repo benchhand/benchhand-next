@@ -38,25 +38,25 @@ model Finding {
   subject?: string;
 }
 
-@@extension(
+@@example(
   Finding,
-  "examples",
-  #[
-    #{
-      code: "record.version_unsupported",
-      severity: "error",
-      path: "hw/product.yaml",
-      pointer: "/record_version",
-      message: "record_version 2 is not supported; this release reads record_version 3",
-      action: "Migrate the record; nothing was changed.",
-    },
-    #{
-      code: "bom.unknown_part",
-      severity: "error",
-      path: "hw/bom.csv",
-      pointer: "/3/PN",
-      message: "BOM PN LMP-0099 has no hw/parts/LMP-0099/part.yaml and is not an assembly",
-      subject: "LMP-0099",
-    }
-  ]
+  #{
+    code: "record.version_unsupported",
+    severity: "error",
+    path: "hw/product.yaml",
+    pointer: "/record_version",
+    message: "record_version 2 is not supported; this release reads record_version 3",
+    action: "Migrate the record; nothing was changed.",
+  }
+);
+@@example(
+  Finding,
+  #{
+    code: "bom.unknown_part",
+    severity: "error",
+    path: "hw/bom.csv",
+    pointer: "/3/PN",
+    message: "BOM PN LMP-0099 has no hw/parts/LMP-0099/part.yaml and is not an assembly",
+    subject: "LMP-0099",
+  }
 );

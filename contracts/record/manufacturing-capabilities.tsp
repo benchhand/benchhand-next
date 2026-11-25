@@ -15,7 +15,7 @@ model ManufacturingCapabilities {
 }
 
 /** Parameters by name. A named parameter that has a hard bound is checked in every unit of its dimension; the bounds are in the qty_* and fact_* definitions below and the plausibility band (x-plausible, a warning) beside them. layer_height at most nozzle_diameter compares two facts in possibly different units, so the config loader checks it */
-@extension("propertyNames", #{ $ref: "common.schema.json#/$defs/semantic_id" })
+@extension("propertyNames", Common.semantic_id)
 model parameters {
   @extension(
     "allOf",
@@ -1474,192 +1474,189 @@ model calibration {
   decision?: Common.decision;
 }
 
-@@extension(
+@@example(
   ManufacturingCapabilities,
-  "examples",
-  #[
-    #{
-      profiles: #[
-        #{
-          id: "h2d",
-          revision: 1,
-          title: "Bambu Lab H2D, the user's own printer",
-          process: "fdm",
-          provider: "local",
-          machine: #{
-            identity: #{
-              status: "known",
-              value: "Bambu Lab H2D",
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "supplier",
-                  reference: "Bambu Lab H2D product page",
-                  url: "https://bambulab.com/en/h2d",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
+  #{
+    profiles: #[
+      #{
+        id: "h2d",
+        revision: 1,
+        title: "Bambu Lab H2D, the user's own printer",
+        process: "fdm",
+        provider: "local",
+        machine: #{
+          identity: #{
+            status: "known",
+            value: "Bambu Lab H2D",
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "supplier",
+                reference: "Bambu Lab H2D product page",
+                url: "https://bambulab.com/en/h2d",
+                accessed: "2026-11-18",
+              }
+            ],
           },
-          envelope: #{
-            x: #{
-              status: "known",
-              value: #{ value: 325, units: "mm" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
-            y: #{
-              status: "known",
-              value: #{ value: 320, units: "mm" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
-            z: #{
-              status: "known",
-              value: #{ value: 325, units: "mm" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
+        },
+        envelope: #{
+          x: #{
+            status: "known",
+            value: #{ value: 325, units: "mm" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
           },
-          parameters: #{
-            nozzle_diameter: #{
-              status: "known",
-              value: #{ value: 0.4, units: "mm" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Toolhead, Included Nozzle Diameter 0.4 mm",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
-            hotend_max_temperature: #{
-              status: "known",
-              value: #{ value: 350, units: "deg_C" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Toolhead, Max Nozzle Temperature 350 °C",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
-            bed_max_temperature: #{
-              status: "known",
-              value: #{ value: 120, units: "deg_C" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Heatbed, Max Heatbed Temperature 120 °C",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
-            max_speed: #{
-              status: "known",
-              value: #{ value: 1000, units: "mm_s" },
-              basis: "supplier_typical",
-              sources: #[
-                #{
-                  kind: "datasheet",
-                  reference: "Bambu Lab H2D tech specs, Speed, Max Speed of Toolhead 1000 mm/s",
-                  url: "https://bambulab.com/en/h2d/tech-specs",
-                  accessed: "2026-11-18",
-                }
-              ],
-            },
-            layer_height: #{
-              status: "unknown",
-              reason: "Bambu Lab publishes no layer-height range for the H2D (tech specs, accessed 2026-11-18); a calibration print would answer it",
-            },
+          y: #{
+            status: "known",
+            value: #{ value: 320, units: "mm" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
           },
-          tools: #[
-            #{
-              id: "nozzle_04_standard",
-              description: "Standard 0.4 mm hardened-steel hotend, supplied with the printer. Published max flow 40 mm3/s (tech specs, Speed; test: 250 mm round model, single outer wall, Bambu Lab ABS, 280 °C)",
-              parameters: #{
-                nozzle_diameter: #{
-                  status: "known",
-                  value: #{ value: 0.4, units: "mm" },
-                  basis: "supplier_typical",
-                  sources: #[
-                    #{
-                      kind: "datasheet",
-                      reference: "Bambu Lab H2D tech specs, Toolhead, Included Nozzle Diameter 0.4 mm",
-                      url: "https://bambulab.com/en/h2d/tech-specs",
-                      accessed: "2026-11-18",
-                    }
-                  ],
-                },
+          z: #{
+            status: "known",
+            value: #{ value: 325, units: "mm" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
+          },
+        },
+        parameters: #{
+          nozzle_diameter: #{
+            status: "known",
+            value: #{ value: 0.4, units: "mm" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Toolhead, Included Nozzle Diameter 0.4 mm",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
+          },
+          hotend_max_temperature: #{
+            status: "known",
+            value: #{ value: 350, units: "deg_C" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Toolhead, Max Nozzle Temperature 350 °C",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
+          },
+          bed_max_temperature: #{
+            status: "known",
+            value: #{ value: 120, units: "deg_C" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Heatbed, Max Heatbed Temperature 120 °C",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
+          },
+          max_speed: #{
+            status: "known",
+            value: #{ value: 1000, units: "mm_s" },
+            basis: "supplier_typical",
+            sources: #[
+              #{
+                kind: "datasheet",
+                reference: "Bambu Lab H2D tech specs, Speed, Max Speed of Toolhead 1000 mm/s",
+                url: "https://bambulab.com/en/h2d/tech-specs",
+                accessed: "2026-11-18",
+              }
+            ],
+          },
+          layer_height: #{
+            status: "unknown",
+            reason: "Bambu Lab publishes no layer-height range for the H2D (tech specs, accessed 2026-11-18); a calibration print would answer it",
+          },
+        },
+        tools: #[
+          #{
+            id: "nozzle_04_standard",
+            description: "Standard 0.4 mm hardened-steel hotend, supplied with the printer. Published max flow 40 mm3/s (tech specs, Speed; test: 250 mm round model, single outer wall, Bambu Lab ABS, 280 °C)",
+            parameters: #{
+              nozzle_diameter: #{
+                status: "known",
+                value: #{ value: 0.4, units: "mm" },
+                basis: "supplier_typical",
+                sources: #[
+                  #{
+                    kind: "datasheet",
+                    reference: "Bambu Lab H2D tech specs, Toolhead, Included Nozzle Diameter 0.4 mm",
+                    url: "https://bambulab.com/en/h2d/tech-specs",
+                    accessed: "2026-11-18",
+                  }
+                ],
               },
             },
-            #{
-              id: "nozzle_04_high_flow",
-              description: "Optional 0.4 mm high-flow hotend, sold separately. Published max flow 65 mm3/s (tech specs, Speed, Max Flow for Hotend (Optional High Flow Hotend); same test conditions; the product page says high-flow hotends are optional equipment)",
-              parameters: #{
-                nozzle_diameter: #{
-                  status: "known",
-                  value: #{ value: 0.4, units: "mm" },
-                  basis: "supplier_typical",
-                  sources: #[
-                    #{
-                      kind: "datasheet",
-                      reference: "Bambu Lab H2D tech specs, Toolhead, Supported Nozzle Diameter 0.2 mm, 0.4 mm, 0.6 mm, 0.8 mm",
-                      url: "https://bambulab.com/en/h2d/tech-specs",
-                      accessed: "2026-11-18",
-                    }
-                  ],
-                },
+          },
+          #{
+            id: "nozzle_04_high_flow",
+            description: "Optional 0.4 mm high-flow hotend, sold separately. Published max flow 65 mm3/s (tech specs, Speed, Max Flow for Hotend (Optional High Flow Hotend); same test conditions; the product page says high-flow hotends are optional equipment)",
+            parameters: #{
+              nozzle_diameter: #{
+                status: "known",
+                value: #{ value: 0.4, units: "mm" },
+                basis: "supplier_typical",
+                sources: #[
+                  #{
+                    kind: "datasheet",
+                    reference: "Bambu Lab H2D tech specs, Toolhead, Supported Nozzle Diameter 0.2 mm, 0.4 mm, 0.6 mm, 0.8 mm",
+                    url: "https://bambulab.com/en/h2d/tech-specs",
+                    accessed: "2026-11-18",
+                  }
+                ],
               },
-            }
-          ],
-          constraints: #[
-            "Dual-nozzle printing volume 300 x 320 x 320 mm (tech specs, Body, Build Volume, Dual Nozzle Printing, accessed 2026-11-18)",
-            "Total volume for two nozzles 350 x 320 x 320 mm, only with identical filament in both nozzles and printing with both (tech specs, Body, Build Volume; product page footnote, accessed 2026-11-18)",
-            "Active chamber heating supported, maximum chamber temperature 65 °C (tech specs, Chamber Temperature Control, accessed 2026-11-18)"
-          ],
-          materials: #[
-            #{
-              material: "petg",
-              status: "approved",
-              operations: #["print"],
-              source: #{
-                kind: "decision",
-                reference: "The user approved PETG on their own H2D on 2026-11-18; Bambu lists PETG as supported (tech specs, Supported Filament Type)",
-                decision: "DR-005",
-              },
-            }
-          ],
-          calibrations: #[],
-        }
-      ],
-    }
-  ]
+            },
+          }
+        ],
+        constraints: #[
+          "Dual-nozzle printing volume 300 x 320 x 320 mm (tech specs, Body, Build Volume, Dual Nozzle Printing, accessed 2026-11-18)",
+          "Total volume for two nozzles 350 x 320 x 320 mm, only with identical filament in both nozzles and printing with both (tech specs, Body, Build Volume; product page footnote, accessed 2026-11-18)",
+          "Active chamber heating supported, maximum chamber temperature 65 °C (tech specs, Chamber Temperature Control, accessed 2026-11-18)"
+        ],
+        materials: #[
+          #{
+            material: "petg",
+            status: "approved",
+            operations: #["print"],
+            source: #{
+              kind: "decision",
+              reference: "The user approved PETG on their own H2D on 2026-11-18; Bambu lists PETG as supported (tech specs, Supported Filament Type)",
+              decision: "DR-005",
+            },
+          }
+        ],
+        calibrations: #[],
+      }
+    ],
+  }
 );

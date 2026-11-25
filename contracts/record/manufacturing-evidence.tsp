@@ -85,7 +85,7 @@ model entry {
 
   /** sha256 of each normalized dependency the evidence relied on, by domain; a changed fingerprint makes the evidence stale until an impact assessment carries it forward */
   @minProperties(1)
-  @extension("propertyNames", #{ $ref: "#/$defs/fingerprint_domain" })
+  @extension("propertyNames", fingerprint_domain)
   fingerprints?: Record<Common.sha256>;
 
   @minItems(1)
@@ -134,63 +134,60 @@ model entry {
   note?: Common.text;
 }
 
-@@extension(
+@@example(
   ManufacturingEvidence,
-  "examples",
-  #[
-    #{
-      entries: #[
-        #{
-          id: "EV-001",
-          requirement: "REQ-001",
-          subject: #{ PN: "TST-0001" },
-          level: "physically_validated",
-          result: "pass",
-          method: "coupon load test",
-          criterion: #{
-            property: "load",
-            operator: ">=",
-            value: 11,
-            units: "N",
-            source: #{
-              kind: "user",
-              reference: "bench test request",
-              origin: "the user",
-            },
-          },
-          configuration: #{
-            version: "v1",
-            manifest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            rev: "X1",
-          },
-          artifacts: #[
-            #{
-              path: "hw/manufacturing/sources/test.csv",
-              sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            }
-          ],
-          physical: #{
-            specimen: "coupon 1",
-            configuration: "v1",
-            material: "TST lot 1",
-            process: "print",
-            protocol: "TST protocol",
-            instrument: "TST scale, calibrated",
-            results: "12 N",
-            date: "2026-01-02",
-            approver: "lead",
-            scope: "coupon only",
+  #{
+    entries: #[
+      #{
+        id: "EV-001",
+        requirement: "REQ-001",
+        subject: #{ PN: "TST-0001" },
+        level: "physically_validated",
+        result: "pass",
+        method: "coupon load test",
+        criterion: #{
+          property: "load",
+          operator: ">=",
+          value: 11,
+          units: "N",
+          source: #{
+            kind: "user",
+            reference: "bench test request",
+            origin: "the user",
           },
         },
-        #{
-          id: "EV-002",
-          requirement: "REQ-002",
-          subject: #{ PN: "TST-0001" },
-          level: "process_planned",
-          result: "planned",
-          method: "print trial",
-        }
-      ],
-    }
-  ]
+        configuration: #{
+          version: "v1",
+          manifest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          rev: "X1",
+        },
+        artifacts: #[
+          #{
+            path: "hw/manufacturing/sources/test.csv",
+            sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          }
+        ],
+        physical: #{
+          specimen: "coupon 1",
+          configuration: "v1",
+          material: "TST lot 1",
+          process: "print",
+          protocol: "TST protocol",
+          instrument: "TST scale, calibrated",
+          results: "12 N",
+          date: "2026-01-02",
+          approver: "lead",
+          scope: "coupon only",
+        },
+      },
+      #{
+        id: "EV-002",
+        requirement: "REQ-002",
+        subject: #{ PN: "TST-0001" },
+        level: "process_planned",
+        result: "planned",
+        method: "print trial",
+      }
+    ],
+  }
 );

@@ -74,7 +74,7 @@ model candidate {
 
   evaluations: ManufacturingSelectionCandidateEvaluationsItem[];
 
-  @extension("minProperties", 1)
+  @minProperties(1)
   changes?: {
     design?: Common.texts;
     equipment?: Common.texts;
@@ -243,49 +243,46 @@ model recommendation {
   proposed_changes?: Common.texts;
 }
 
-@@extension(
+@@example(ManufacturingSelection, #{ status: "not_assessed", candidates: #[] });
+@@example(
   ManufacturingSelection,
-  "examples",
-  #[
-    #{ status: "not_assessed", candidates: #[] },
-    #{
-      status: "assessed",
-      assessment: #{
-        input_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        method: "selection 1",
-        date: "2026-01-01",
-      },
-      candidates: #[
-        #{
-          id: "printed",
-          title: "Printed bracket",
-          architecture: "one printed part",
-          parts: #[
-            #{
-              PN: "TST-0001",
-              material_profile: "tst_polymer_printed",
-              route: #[#{ kind: "fdm", capability: "tst_printer" }],
-            }
-          ],
-          evaluations: #[
-            #{
-              requirement: "REQ-001",
-              outcome: "unknown",
-              method: "no creep data",
-            }
-          ],
-          pros: #["cheap"],
-          cons: #["creep unknown"],
-          tradeoffs: #["speed against evidence"],
-        }
-      ],
-      recommendation: #{
-        status: "conditional",
-        primary: "printed",
-        reasons: #["only candidate"],
-        limits: #["no creep evidence"],
-        what_would_change: #["higher temperature"],
-      },
-    }
-  ]
+  #{
+    status: "assessed",
+    assessment: #{
+      input_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      method: "selection 1",
+      date: "2026-01-01",
+    },
+    candidates: #[
+      #{
+        id: "printed",
+        title: "Printed bracket",
+        architecture: "one printed part",
+        parts: #[
+          #{
+            PN: "TST-0001",
+            material_profile: "tst_polymer_printed",
+            route: #[#{ kind: "fdm", capability: "tst_printer" }],
+          }
+        ],
+        evaluations: #[
+          #{
+            requirement: "REQ-001",
+            outcome: "unknown",
+            method: "no creep data",
+          }
+        ],
+        pros: #["cheap"],
+        cons: #["creep unknown"],
+        tradeoffs: #["speed against evidence"],
+      }
+    ],
+    recommendation: #{
+      status: "conditional",
+      primary: "printed",
+      reasons: #["only candidate"],
+      limits: #["no creep evidence"],
+      what_would_change: #["higher temperature"],
+    },
+  }
 );

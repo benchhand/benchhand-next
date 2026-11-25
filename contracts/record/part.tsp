@@ -107,7 +107,7 @@ model Part {
     volume_abs_tolerance_mm3?: float64;
 
     /** FDM part.stl tessellation, overriding the layout default (0.05 mm, 0.1 rad) */
-    @extension("minProperties", 1)
+    @minProperties(1)
     mesh?: {
       @minValue(0.001)
       @maxValue(1)
@@ -182,7 +182,7 @@ model intent {
   @oneOf
   route: PartIntentRoute0 | Common.fact_unknown;
 
-  @extension("minProperties", 1)
+  @minProperties(1)
   rationale?: {
     decision?: Common.decision;
     selection?: Common.semantic_id;
@@ -369,7 +369,7 @@ model purchase {
 /** Stock, datums, workholding and access of one operation. Nothing here is guessed from a bounding box */
 @extension("minProperties", 1)
 model setup {
-  @extension("minProperties", 1)
+  @minProperties(1)
   stock?: {
     @oneOf
     material_profile?: Common.profile_id | Common.fact_open;
@@ -394,7 +394,7 @@ model setup {
     allowable_deformation?: Common.quantity_fact;
   };
 
-  @extension("minProperties", 1)
+  @minProperties(1)
   access?: {
     sides?: Common.texts;
 
@@ -517,101 +517,65 @@ model inspection {
   evidence?: Common.evidence_id[];
 }
 
-@@extension(
+@@example(
   Part,
-  "examples",
-  #[
-    #{
-      PN: "LMP-0011",
-      rev: "X1",
-      title: "Retaining ring DIN 471 - 5x0.6",
-      material: "Spring steel C60S",
-      process: "purchased",
-      finish: "Phosphated and oiled",
-      mass_target: 0.081,
-      make_buy: "buy",
-      supplier: null,
-      decisions: #["DR-004"],
-      model_frame: "part_local",
-      procurement: #{
-        mode: "catalog",
-        manufacturer: "Beneri",
-        designation: "Retaining ring DIN 471 - 5x0.6, spring steel C60S, phosphated and oiled",
-        standard: "DIN 471",
-        specification: #{
-          reference: "Beneri DIN 471 datasheet",
-          revision: "undated, retrieved 2026-10-27",
-          url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf",
-          sha256: "0fe9e28736fde2bd995a269da97c057a612a5ed72fa4c5bdcafd7cf95e0a6baf",
-        },
+  #{
+    PN: "LMP-0011",
+    rev: "X1",
+    title: "Retaining ring DIN 471 - 5x0.6",
+    material: "Spring steel C60S",
+    process: "purchased",
+    finish: "Phosphated and oiled",
+    mass_target: 0.081,
+    make_buy: PartMakeBuy.buy,
+    supplier: null,
+    decisions: #["DR-004"],
+    model_frame: PartModelFrame.part_local,
+    procurement: #{
+      mode: Drawing.DrawingProcurementMode.catalog,
+      manufacturer: "Beneri",
+      designation: "Retaining ring DIN 471 - 5x0.6, spring steel C60S, phosphated and oiled",
+      standard: "DIN 471",
+      specification: #{
+        reference: "Beneri DIN 471 datasheet",
+        revision: "undated, retrieved 2026-10-27",
+        url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf",
+        sha256: "0fe9e28736fde2bd995a269da97c057a612a5ed72fa4c5bdcafd7cf95e0a6baf",
       },
-      intent: #{
-        functions: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-022",
-        },
-        material_profile: #{
-          status: "unknown",
-          reason: "not recorded before record version 2; the legacy material Spring steel C60S is a declaration, not a sourced grade",
-          question: "Q-022",
-        },
-        service: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-022",
-        },
-        critical_surfaces: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-022",
-        },
-        route: #[
-          #{
-            id: "buy",
-            kind: "purchased",
-            title: "Buy the DIN 471 - 5x0.6 retaining ring",
-            output_state: "installed",
-            purchase: #{
-              identity: #{
-                status: "known",
-                value: "DIN 471 - 5x0.6",
-                basis: "standard",
-                sources: #[
-                  #{
-                    kind: "datasheet",
-                    reference: "Beneri DIN 471 datasheet",
-                    revision: "undated, retrieved 2026-10-27",
-                    url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf",
-                    accessed: "2026-10-27",
-                  }
-                ],
-              },
-              specification: #{
-                status: "known",
-                value: "DIN 471 - 5x0.6, spring steel C60S, phosphated and oiled, per the Beneri datasheet",
-                basis: "user_declared",
-                sources: #[
-                  #{
-                    kind: "datasheet",
-                    reference: "Beneri DIN 471 datasheet",
-                    revision: "undated, retrieved 2026-10-27",
-                    url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf",
-                    accessed: "2026-10-27",
-                  }
-                ],
-              },
-              ratings: #{
-                status: "unknown",
-                reason: "no load, speed or temperature rating is recorded for this item; DR-004 cites none",
-                question: "Q-022",
-              },
-              availability: #{
-                status: "unknown",
-                reason: "no supplier is selected (DR-004 open items)",
-                question: "Q-022",
-              },
-              supplier_evidence: #[
+    },
+    intent: #{
+      functions: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-022",
+      },
+      material_profile: #{
+        status: "unknown",
+        reason: "not recorded before record version 2; the legacy material Spring steel C60S is a declaration, not a sourced grade",
+        question: "Q-022",
+      },
+      service: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-022",
+      },
+      critical_surfaces: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-022",
+      },
+      route: #[
+        #{
+          id: "buy",
+          kind: "purchased",
+          title: "Buy the DIN 471 - 5x0.6 retaining ring",
+          output_state: "installed",
+          purchase: #{
+            identity: #{
+              status: "known",
+              value: "DIN 471 - 5x0.6",
+              basis: "standard",
+              sources: #[
                 #{
                   kind: "datasheet",
                   reference: "Beneri DIN 471 datasheet",
@@ -621,172 +585,232 @@ model inspection {
                 }
               ],
             },
-          }
-        ],
+            specification: #{
+              status: "known",
+              value: "DIN 471 - 5x0.6, spring steel C60S, phosphated and oiled, per the Beneri datasheet",
+              basis: "user_declared",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Beneri DIN 471 datasheet",
+                  revision: "undated, retrieved 2026-10-27",
+                  url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf",
+                  accessed: "2026-10-27",
+                }
+              ],
+            },
+            ratings: #{
+              status: "unknown",
+              reason: "no load, speed or temperature rating is recorded for this item; DR-004 cites none",
+              question: "Q-022",
+            },
+            availability: #{
+              status: "unknown",
+              reason: "no supplier is selected (DR-004 open items)",
+              question: "Q-022",
+            },
+            supplier_evidence: #[
+              #{
+                kind: "datasheet",
+                reference: "Beneri DIN 471 datasheet",
+                revision: "undated, retrieved 2026-10-27",
+                url: "https://www.beneri.com/files/schedetecniche/7f91c971879a15a58dd911afa79f2fba.pdf",
+                accessed: "2026-10-27",
+              }
+            ],
+          },
+        }
+      ],
+    },
+  }
+);
+@@example(
+  Part,
+  #{
+    PN: "LMP-0001",
+    rev: "X1",
+    title: "Base plate and pivot boss",
+    material: "PETG",
+    process: "fdm",
+    finish: "Deburr; no sharp edges",
+    mass_target: 313,
+    make_buy: PartMakeBuy.make,
+    supplier: null,
+    decisions: #["DR-002", "DR-004"],
+    manufacture: #{
+      relationship: "same",
+      mesh: #{ linear_deflection_mm: 0.05, angular_deflection_rad: 0.1 },
+    },
+    drawing: #{
+      type: Drawing.DrawingPartDrawingType.detail,
+      tolerance_policy: "fdm_bureau",
+      datum_features: #{
+        A: #{
+          feature: "bed_face",
+          role: Drawing.DrawingPartDrawingDatumFeaturesValueRole.plane,
+        },
+        B: #{
+          feature: "seat",
+          role: Drawing.DrawingPartDrawingDatumFeaturesValueRole.axis,
+        },
+        C: #{
+          feature: "mount_slots",
+          role: Drawing.DrawingPartDrawingDatumFeaturesValueRole.clocking_feature,
+        },
+      },
+      coordinate_frame: #{
+        origin: #{ intersection: #["A", "B"] },
+        z: #{ normal_to: "A", toward: "boss_top" },
+        x: #{ toward: "C" },
+      },
+      views: #[
+        #{
+          id: "plan",
+          kind: Drawing.DrawingViewKind.orthographic,
+          normal_to: "top_face",
+        },
+        #{
+          id: "section_profile",
+          kind: Drawing.DrawingViewKind.section,
+          through: "B",
+        },
+        #{
+          id: "underside",
+          kind: Drawing.DrawingViewKind.orthographic,
+          opposite: "plan",
+        }
+      ],
+      features: #{
+        bed_face: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        seat: #{ size: Drawing.DrawingFeatureIntentSize.`interface` },
+        seat_chamfer: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        boss_top: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        boss_chamfer: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        boss: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        boss_root_round: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        top_face: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        top_round: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        rim: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        bed_chamfer: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        cavity_outer_wall: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        cavity_flanks: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        cavity_roof: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        cavity_inner_wall: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        clip_pocket: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        mount_slots: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        mount_counterbores: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        foot_recesses: #{ size: Drawing.DrawingFeatureIntentSize.general },
+        engraving: #{ size: Drawing.DrawingFeatureIntentSize.general },
+      },
+      dimensions: #[
+        #{
+          id: "cavity_wall_height",
+          operation: Drawing.DrawingDimensionRequestOperation.length,
+          features: #["cavity_outer_wall"],
+        },
+        #{
+          id: "plate_thickness",
+          operation: Drawing.DrawingDimensionRequestOperation.thickness,
+          features: #["bed_face", "top_face"],
+        },
+        #{
+          id: "cavity_roof_thickness",
+          operation: Drawing.DrawingDimensionRequestOperation.thickness,
+          features: #["top_face", "cavity_roof"],
+        }
+      ],
+      geometric_tolerances: #[
+        #{
+          id: "seat_perpendicularity",
+          characteristic: Drawing.DrawingGeometricToleranceCharacteristic.perpendicularity,
+          features: #["seat"],
+          zone_mm: 0.2,
+          diameter_zone: true,
+          datum_frame: #["A"],
+        }
+      ],
+      edges: #{ external: #[-0.2, 0.0], internal: #[0.0, 0.2] },
+      surface_texture: #{
+        open: "no standard or vendor specification in the record gives an as-printed PETG roughness; the print bureau's surface specification is needed (DR-004)",
+      },
+      notes: #[
+        #{
+          kind: Drawing.DrawingPartDrawingNotesItemKind.process,
+          text: "FDM, printed boss-up with datum face A on the build plate.",
+        },
+        #{
+          kind: Drawing.DrawingPartDrawingNotesItemKind.finish,
+          text: "As printed, burrs and stringing removed; the bushing seat is drilled or reamed to its limits after printing.",
+        },
+        #{
+          kind: Drawing.DrawingPartDrawingNotesItemKind.general,
+          text: "Engrave the text LMP in FreeCAD TechDraw Osifont Bold, centred on the stated position.",
+          reference: "engraving",
+        },
+        #{
+          kind: Drawing.DrawingPartDrawingNotesItemKind.inspection,
+          text: "Heat-set the LMP-0008 bushing flush with the boss top after drilling (DR-004).",
+        }
+      ],
+      manufacturing: #{
+        build_direction: #{ normal_to: "A", toward: "boss_top" },
+        interface_condition: Drawing.DrawingPartDrawingManufacturingInterfaceCondition.post_processed,
+      },
+      sheet: #{
+        sizes: #[Drawing.sheet_size.A3, Drawing.sheet_size.A2],
+        scale: "auto",
       },
     },
-    #{
-      PN: "LMP-0001",
-      rev: "X1",
-      title: "Base plate and pivot boss",
-      material: "PETG",
-      process: "fdm",
-      finish: "Deburr; no sharp edges",
-      mass_target: 313,
-      make_buy: "make",
-      supplier: null,
-      decisions: #["DR-002", "DR-004"],
-      manufacture: #{
-        relationship: "same",
-        mesh: #{ linear_deflection_mm: 0.05, angular_deflection_rad: 0.1 },
+    intent: #{
+      functions: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-012",
       },
-      drawing: #{
-        type: "detail",
-        tolerance_policy: "fdm_bureau",
-        datum_features: #{
-          A: #{ feature: "bed_face", role: "plane" },
-          B: #{ feature: "seat", role: "axis" },
-          C: #{ feature: "mount_slots", role: "clocking_feature" },
-        },
-        coordinate_frame: #{
-          origin: #{ intersection: #["A", "B"] },
-          z: #{ normal_to: "A", toward: "boss_top" },
-          x: #{ toward: "C" },
-        },
-        views: #[
-          #{ id: "plan", kind: "orthographic", normal_to: "top_face" },
-          #{ id: "section_profile", kind: "section", through: "B" },
-          #{ id: "underside", kind: "orthographic", opposite: "plan" }
-        ],
-        features: #{
-          bed_face: #{ size: "general" },
-          seat: #{ size: "interface" },
-          seat_chamfer: #{ size: "general" },
-          boss_top: #{ size: "general" },
-          boss_chamfer: #{ size: "general" },
-          boss: #{ size: "general" },
-          boss_root_round: #{ size: "general" },
-          top_face: #{ size: "general" },
-          top_round: #{ size: "general" },
-          rim: #{ size: "general" },
-          bed_chamfer: #{ size: "general" },
-          cavity_outer_wall: #{ size: "general" },
-          cavity_flanks: #{ size: "general" },
-          cavity_roof: #{ size: "general" },
-          cavity_inner_wall: #{ size: "general" },
-          clip_pocket: #{ size: "general" },
-          mount_slots: #{ size: "general" },
-          mount_counterbores: #{ size: "general" },
-          foot_recesses: #{ size: "general" },
-          engraving: #{ size: "general" },
-        },
-        dimensions: #[
-          #{
-            id: "cavity_wall_height",
-            operation: "length",
-            features: #["cavity_outer_wall"],
-          },
-          #{
-            id: "plate_thickness",
-            operation: "thickness",
-            features: #["bed_face", "top_face"],
-          },
-          #{
-            id: "cavity_roof_thickness",
-            operation: "thickness",
-            features: #["top_face", "cavity_roof"],
-          }
-        ],
-        geometric_tolerances: #[
-          #{
-            id: "seat_perpendicularity",
-            characteristic: "perpendicularity",
-            features: #["seat"],
-            zone_mm: 0.2,
-            diameter_zone: true,
-            datum_frame: #["A"],
-          }
-        ],
-        edges: #{ external: #[-0.2, 0.0], internal: #[0.0, 0.2] },
-        surface_texture: #{
-          open: "no standard or vendor specification in the record gives an as-printed PETG roughness; the print bureau's surface specification is needed (DR-004)",
-        },
-        notes: #[
-          #{
-            kind: "process",
-            text: "FDM, printed boss-up with datum face A on the build plate.",
-          },
-          #{
-            kind: "finish",
-            text: "As printed, burrs and stringing removed; the bushing seat is drilled or reamed to its limits after printing.",
-          },
-          #{
-            kind: "general",
-            text: "Engrave the text LMP in FreeCAD TechDraw Osifont Bold, centred on the stated position.",
-            reference: "engraving",
-          },
-          #{
-            kind: "inspection",
-            text: "Heat-set the LMP-0008 bushing flush with the boss top after drilling (DR-004).",
-          }
-        ],
-        manufacturing: #{
-          build_direction: #{ normal_to: "A", toward: "boss_top" },
-          interface_condition: "post_processed",
-        },
-        sheet: #{ sizes: #["A3", "A2"], scale: "auto" },
+      material_profile: "petg",
+      service: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-012",
       },
-      intent: #{
-        functions: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-012",
-        },
-        material_profile: "petg",
-        service: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-012",
-        },
-        critical_surfaces: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-012",
-        },
-        route: #[
-          #{
-            id: "print",
-            kind: "fdm",
-            title: "Print the base plate and pivot boss in PETG, boss up",
-            capability: "h2d",
-            output_state: "printed",
-            orientation: #{
-              status: "proposed",
-              rotation: #{ quaternion: #[1, 0, 0, 0] },
-              note: "Drawing note: printed boss-up with datum face A on the build plate; the manufacture frame equals the model frame, so the pose is the identity. Not yet approved by a decision.",
-            },
-            supports: #{
-              status: "unknown",
-              reason: "no support strategy is recorded; the drawing names none",
-              question: "Q-012",
-            },
-            post_processing: #["Remove burrs and stringing"],
-          },
-          #{
-            id: "finish_holes",
-            kind: "drilling",
-            title: "Drill or ream the bushing seat to its limits after printing (the drawing does not say which)",
-            capability: #{
-              status: "unknown",
-              reason: "no capability profile of the drilling or reaming operator is recorded in manufacturing/capabilities.yaml",
-              question: "Q-010",
-            },
-            input_state: "printed",
-            targets: #[#{ feature: "seat" }],
-            setup: #{ datums: #["bed_face"] },
-          }
-        ],
+      critical_surfaces: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-012",
       },
-    }
-  ]
+      route: #[
+        #{
+          id: "print",
+          kind: "fdm",
+          title: "Print the base plate and pivot boss in PETG, boss up",
+          capability: "h2d",
+          output_state: "printed",
+          orientation: #{
+            status: "proposed",
+            rotation: #{ quaternion: #[1, 0, 0, 0] },
+            note: "Drawing note: printed boss-up with datum face A on the build plate; the manufacture frame equals the model frame, so the pose is the identity. Not yet approved by a decision.",
+          },
+          supports: #{
+            status: "unknown",
+            reason: "no support strategy is recorded; the drawing names none",
+            question: "Q-012",
+          },
+          post_processing: #["Remove burrs and stringing"],
+        },
+        #{
+          id: "finish_holes",
+          kind: "drilling",
+          title: "Drill or ream the bushing seat to its limits after printing (the drawing does not say which)",
+          capability: #{
+            status: "unknown",
+            reason: "no capability profile of the drilling or reaming operator is recorded in manufacturing/capabilities.yaml",
+            question: "Q-010",
+          },
+          input_state: "printed",
+          targets: #[#{ feature: "seat" }],
+          setup: #{ datums: #["bed_face"] },
+        }
+      ],
+    },
+  }
 );

@@ -870,12 +870,9 @@ scalar project_path extends string;
 @pattern("^[a-z][a-z0-9_]*$")
 scalar gate_id extends string;
 
-@@extension(
+@@example(
   Common,
-  "examples",
-  #[
-    #{ status: "unknown", reason: "not recorded yet", question: "Q-001" },
-    "LMP-0001",
-    "DR-004"
-  ]
+  #{ status: "unknown", reason: "not recorded yet", question: "Q-001" }
 );
+@@example(Common, "LMP-0001");
+@@example(Common, "DR-004");

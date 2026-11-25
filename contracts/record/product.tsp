@@ -21,14 +21,13 @@ model Product {
 
   /** The general tolerance a drawing states for dimensions without their own: a linear value in mm or a standard label such as ISO 2768-m. A tunable, so it defaults to ISO 2768-m and the user changes it. Unknown, with the open question that would settle it, is also valid; validation refuses a drawing while it is unknown */
   @oneOf
-  @extension("default", "ISO 2768-m")
   general_tolerance:
     | ProductGeneralTolerance0
     | ProductGeneralTolerance1
-    | Common.fact_unknown;
+    | Common.fact_unknown = ProductGeneralTolerance1("ISO 2768-m");
 
   /** Explicit SPDX license expressions approved for the product's hardware and documentation, such as CERN-OHL-S-2.0 or (MIT OR Apache-2.0); omitted means not recorded. The expression's shape is meant to be checked (identifiers, LicenseRef-, +, WITH, AND, OR, parentheses) but bundles no SPDX license list, so an unlisted identifier such as CERN-OHL-S passes */
-  @extension("minProperties", 1)
+  @minProperties(1)
   license?: {
     @minLength(1)
     hardware?: string;
@@ -91,7 +90,7 @@ model Product {
     processes?: Common.primary_process[];
 
     /** Minimum wall per made-part process, overriding the form check's built-in defaults. A diagnostic heuristic, never a calibrated capability */
-    @extension("minProperties", 1)
+    @minProperties(1)
     min_wall_mm?: {
       @minValue(0.2)
       @maxValue(25)
@@ -211,9 +210,7 @@ enum ProductClearance1 {
 )
 model fea {
   enabled: boolean = true;
-
-  @extension("default", "accurate")
-  mode?: ProductFeaMode;
+  mode?: ProductFeaMode = ProductFeaMode.accurate;
 
   @minValueExclusive(0)
   @maxValue(50)
@@ -233,16 +230,13 @@ model product_profile {
   fea: fea;
 
   /** auto turns on when SPECIFY names a critical interface or a stack case */
-  @extension("default", "auto")
-  stack_up: ProductProductProfileStackUp;
+  stack_up: ProductProductProfileStackUp = ProductProductProfileStackUp.auto;
 
   /** light: both reviewers at the L2 light-review scope, rerun on the analysed version */
-  @extension("default", "full")
-  critique: ProductProductProfileCritique;
+  critique: ProductProductProfileCritique = ProductProductProfileCritique.full;
 
   /** auto: on once a joint moves; stated to the user, never asked */
-  @extension("default", "auto")
-  motion: ProductProductProfileMotion;
+  motion: ProductProductProfileMotion = ProductProductProfileMotion.auto;
 
   storage_results_in_git: boolean = false;
 
@@ -274,27 +268,18 @@ enum ProductProductProfileMotion {
 }
 
 model fdm_profile {
-  @extension("default", "user")
-  orientation: ProductFdmProfileOrientation;
-
-  @extension("default", "allowed")
-  supports: ProductFdmProfileSupports;
+  orientation: ProductFdmProfileOrientation = ProductFdmProfileOrientation.user;
+  supports: ProductFdmProfileSupports = ProductFdmProfileSupports.allowed;
 
   @oneOf
-  @extension("default", "calibrated")
-  overhang_deg: ProductFdmProfileOverhangDeg0 | ProductFdmProfileOverhangDeg1;
+  overhang_deg:
+    | ProductFdmProfileOverhangDeg0
+    | ProductFdmProfileOverhangDeg1 = ProductFdmProfileOverhangDeg1.calibrated;
 
-  @extension("default", "calibrated")
-  bridge_mm: product_limit;
-
-  @extension("default", "calibrated")
-  min_wall_mm: product_limit;
-
-  @extension("default", "calibrated")
-  min_feature_mm: product_limit;
-
-  @extension("default", "calibrated")
-  warp: ProductFdmProfileWarp;
+  bridge_mm: product_limit = ProductProductLimit1.calibrated;
+  min_wall_mm: product_limit = ProductProductLimit1.calibrated;
+  min_feature_mm: product_limit = ProductProductLimit1.calibrated;
+  warp: ProductFdmProfileWarp = ProductFdmProfileWarp.calibrated;
 
   /** true adds the critical-surface role cosmetic, which supports may not touch */
   cosmetic_faces: boolean = false;
@@ -304,11 +289,8 @@ model fdm_profile {
 
   /** The smallest print-in-place gap that separates, across the layers (xy) and between layers (z) */
   pip_clearance_mm: {
-    @extension("default", "calibrated")
-    xy: clearance;
-
-    @extension("default", "calibrated")
-    z: clearance;
+    xy: clearance = ProductClearance1.calibrated;
+    z: clearance = ProductClearance1.calibrated;
   };
 }
 
@@ -503,529 +485,539 @@ model ProductUseCaseEvidencePolicy1ObligationsItem {
   note?: Common.text;
 }
 
-@@extension(
+@@example(
   Product,
-  "examples",
-  #[
-    #{
-      record_version: 3,
-      id: "example-product",
-      units: "mm",
-      regime: "iso",
-      general_tolerance: #{
+  #{
+    record_version: 3,
+    id: "example-product",
+    units: "mm",
+    regime: ProductRegime.iso,
+    general_tolerance: #{
+      status: "unknown",
+      reason: "not recorded yet",
+      question: "Q-013",
+    },
+    flow: #{ stage: Common.stage.ground, recheck_from: Common.stage.ground },
+    use_case: #{
+      status: "unknown",
+      service_class: #{
         status: "unknown",
         reason: "not recorded yet",
-        question: "Q-013",
+        question: "Q-001",
       },
-      flow: #{ stage: "ground", recheck_from: "ground" },
-      use_case: #{
+      purpose: #{
         status: "unknown",
-        service_class: #{
+        reason: "not recorded yet",
+        question: "Q-002",
+      },
+      users: #{
+        status: "unknown",
+        reason: "not recorded yet",
+        question: "Q-002",
+      },
+      environment: #{
+        temperature: #{
           status: "unknown",
           reason: "not recorded yet",
-          question: "Q-001",
+          question: "Q-003",
         },
+        heat_sources: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-003",
+        },
+        moisture: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-004",
+        },
+        chemicals: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-004",
+        },
+        uv: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-004",
+        },
+        corrosion: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-004",
+        },
+      },
+      loads: #{
+        status: "unknown",
+        reason: "not recorded yet",
+        question: "Q-005",
+      },
+      motion: #{
+        speed: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-006",
+        },
+        range: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-006",
+        },
+        duty_cycle: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-006",
+        },
+        friction: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-006",
+        },
+        wear: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-006",
+        },
+        service_life: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-006",
+        },
+      },
+      accuracy: #{
+        tolerance: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-007",
+        },
+        repeatability: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-007",
+        },
+        surface_finish: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-007",
+        },
+        dimensional_stability: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-007",
+        },
+      },
+      consequences: #{
+        failure: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-008",
+        },
+        severity: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-008",
+        },
+        forbidden_outcomes: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-008",
+        },
+        standards: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-008",
+        },
+        supervision: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-008",
+        },
+        approval_authority: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-008",
+        },
+      },
+      logistics: #{
+        quantity: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-009",
+        },
+        budget: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-009",
+        },
+        lead_time: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-009",
+        },
+        maintenance: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-009",
+        },
+        repair: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-009",
+        },
+      },
+      capability: #{
+        equipment: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-010",
+        },
+        operator: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-010",
+        },
+        outsourcing: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-010",
+        },
+      },
+      release_scope: #{
         purpose: #{
           status: "unknown",
           reason: "not recorded yet",
-          question: "Q-002",
+          question: "Q-011",
         },
-        users: #{
-          status: "unknown",
-          reason: "not recorded yet",
-          question: "Q-002",
-        },
-        environment: #{
-          temperature: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-003",
-          },
-          heat_sources: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-003",
-          },
-          moisture: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-004",
-          },
-          chemicals: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-004",
-          },
-          uv: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-004",
-          },
-          corrosion: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-004",
-          },
-        },
-        loads: #{
-          status: "unknown",
-          reason: "not recorded yet",
-          question: "Q-005",
-        },
-        motion: #{
-          speed: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-006",
-          },
-          range: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-006",
-          },
-          duty_cycle: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-006",
-          },
-          friction: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-006",
-          },
-          wear: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-006",
-          },
-          service_life: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-006",
-          },
-        },
-        accuracy: #{
-          tolerance: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-007",
-          },
-          repeatability: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-007",
-          },
-          surface_finish: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-007",
-          },
-          dimensional_stability: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-007",
-          },
-        },
-        consequences: #{
-          failure: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-008",
-          },
-          severity: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-008",
-          },
-          forbidden_outcomes: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-008",
-          },
-          standards: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-008",
-          },
-          supervision: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-008",
-          },
-          approval_authority: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-008",
-          },
-        },
-        logistics: #{
-          quantity: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-009",
-          },
-          budget: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-009",
-          },
-          lead_time: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-009",
-          },
-          maintenance: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-009",
-          },
-          repair: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-009",
-          },
-        },
-        capability: #{
-          equipment: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-010",
-          },
-          operator: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-010",
-          },
-          outsourcing: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-010",
-          },
-        },
-        release_scope: #{
-          purpose: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-011",
-          },
-          operating_limits: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-011",
-          },
-          exclusions: #{
-            status: "unknown",
-            reason: "not recorded yet",
-            question: "Q-011",
-          },
-        },
-        evidence_policy: #{
+        operating_limits: #{
           status: "unknown",
           reason: "not recorded yet",
           question: "Q-011",
+        },
+        exclusions: #{
+          status: "unknown",
+          reason: "not recorded yet",
+          question: "Q-011",
+        },
+      },
+      evidence_policy: #{
+        status: "unknown",
+        reason: "not recorded yet",
+        question: "Q-011",
+      },
+    },
+  }
+);
+@@example(
+  Product,
+  #{
+    id: "lamp-arm",
+    units: "mm",
+    regime: ProductRegime.iso,
+    general_tolerance: "ISO 2768-m",
+    build_volume: #{
+      x_mm: 256,
+      y_mm: 256,
+      z_mm: 256,
+      margin_mm: 5,
+      orientations: #[
+        ProductBuildVolumeOrientationsItem.xyz,
+        ProductBuildVolumeOrientationsItem.xzy,
+        ProductBuildVolumeOrientationsItem.yxz,
+        ProductBuildVolumeOrientationsItem.yzx,
+        ProductBuildVolumeOrientationsItem.zxy,
+        ProductBuildVolumeOrientationsItem.zyx
+      ],
+    },
+    flow: #{
+      stage: Common.stage.layout,
+      recheck_from: Common.stage.layout,
+      profile: #{
+        decision: "DR-010",
+        fea: #{ enabled: false },
+        stack_up: ProductProductProfileStackUp.auto,
+        critique: ProductProductProfileCritique.light,
+        motion: ProductProductProfileMotion.auto,
+        storage_results_in_git: false,
+        processes: #{
+          fdm: #{
+            orientation: ProductFdmProfileOrientation.propose,
+            supports: ProductFdmProfileSupports.allowed,
+            overhang_deg: ProductFdmProfileOverhangDeg1.calibrated,
+            bridge_mm: ProductProductLimit1.calibrated,
+            min_wall_mm: ProductProductLimit1.calibrated,
+            min_feature_mm: ProductProductLimit1.calibrated,
+            warp: ProductFdmProfileWarp.calibrated,
+            cosmetic_faces: false,
+            print_in_place: false,
+            pip_clearance_mm: #{
+              xy: ProductClearance1.calibrated,
+              z: ProductClearance1.calibrated,
+            },
+          },
+        },
+        asked: #{
+          fea: "user",
+          stack_up: "user",
+          critique: "user",
+          storage_results_in_git: "user",
+          `processes/fdm/orientation`: "user",
+          `processes/fdm/supports`: "user",
+          `processes/fdm/overhang_deg`: "user",
+          `processes/fdm/bridge_mm`: "user",
+          `processes/fdm/min_wall_mm`: "user",
+          `processes/fdm/min_feature_mm`: "user",
+          `processes/fdm/warp`: "user",
+          `processes/fdm/cosmetic_faces`: "user",
+          `processes/fdm/print_in_place`: "user",
+          `processes/fdm/pip_clearance_mm/xy`: "asked-accepted-default",
+          `processes/fdm/pip_clearance_mm/z`: "asked-accepted-default",
         },
       },
     },
-    #{
-      id: "lamp-arm",
-      units: "mm",
-      regime: "iso",
-      general_tolerance: "ISO 2768-m",
-      build_volume: #{
-        x_mm: 256,
-        y_mm: 256,
-        z_mm: 256,
-        margin_mm: 5,
-        orientations: #["xyz", "xzy", "yxz", "yzx", "zxy", "zyx"],
+    drawing: #{
+      definition: "model_and_drawing",
+      `projection`: Drawing.DrawingProductDrawingProjection.first_angle,
+      standards: #{
+        dimensioning: "ISO 129-1:2018",
+        geometrical_tolerancing: "ISO 1101:2017",
+        datums: "ISO 5459:2024",
+        gps_fundamentals: "ISO 8015:2011",
+        general_tolerances: "ISO 2768-1:1989",
+        fits: "ISO 286-1:2010",
+        edges: "ISO 13715:2017",
+        surface_texture: "ISO 21920-1:2021",
+        threads: "ISO 6410-1:1993",
+        sheets: "ISO 5457:1999",
       },
-      flow: #{
-        stage: "layout",
-        recheck_from: "layout",
-        profile: #{
-          decision: "DR-010",
-          fea: #{ enabled: false },
-          stack_up: "auto",
-          critique: "light",
-          motion: "auto",
-          storage_results_in_git: false,
-          processes: #{
-            fdm: #{
-              orientation: "propose",
-              supports: "allowed",
-              overhang_deg: "calibrated",
-              bridge_mm: "calibrated",
-              min_wall_mm: "calibrated",
-              min_feature_mm: "calibrated",
-              warp: "calibrated",
-              cosmetic_faces: false,
-              print_in_place: false,
-              pip_clearance_mm: #{ xy: "calibrated", z: "calibrated" },
-            },
-          },
-          asked: #{
-            fea: "user",
-            stack_up: "user",
-            critique: "user",
-            storage_results_in_git: "user",
-            `processes/fdm/orientation`: "user",
-            `processes/fdm/supports`: "user",
-            `processes/fdm/overhang_deg`: "user",
-            `processes/fdm/bridge_mm`: "user",
-            `processes/fdm/min_wall_mm`: "user",
-            `processes/fdm/min_feature_mm`: "user",
-            `processes/fdm/warp`: "user",
-            `processes/fdm/cosmetic_faces`: "user",
-            `processes/fdm/print_in_place`: "user",
-            `processes/fdm/pip_clearance_mm/xy`: "asked-accepted-default",
-            `processes/fdm/pip_clearance_mm/z`: "asked-accepted-default",
-          },
+      default_sheet: #{
+        sizes: #["A4", "A3", "A2"],
+        orientation: "landscape",
+        scale: "auto",
+      },
+      tolerance_policies: #{
+        machining: #{
+          kind: "standard",
+          standard: "ISO 2768-1:1989",
+          class: Drawing.DrawingTolerancePolicy0Class.m,
+          applies_to: #["cnc"],
+        },
+        fdm_bureau: #{
+          kind: "limits",
+          linear_mm: 0.2,
+          angular_deg: 1,
+          applies_to: #["fdm"],
+          reference: "FDM bureau capability +/-0.2 mm, +/-1 deg (DR-004)",
         },
       },
-      drawing: #{
-        definition: "model_and_drawing",
-        `projection`: "first_angle",
-        standards: #{
-          dimensioning: "ISO 129-1:2018",
-          geometrical_tolerancing: "ISO 1101:2017",
-          datums: "ISO 5459:2024",
-          gps_fundamentals: "ISO 8015:2011",
-          general_tolerances: "ISO 2768-1:1989",
-          fits: "ISO 286-1:2010",
-          edges: "ISO 13715:2017",
-          surface_texture: "ISO 21920-1:2021",
-          threads: "ISO 6410-1:1993",
-          sheets: "ISO 5457:1999",
-        },
-        default_sheet: #{
-          sizes: #["A4", "A3", "A2"],
-          orientation: "landscape",
-          scale: "auto",
-        },
-        tolerance_policies: #{
-          machining: #{
-            kind: "standard",
-            standard: "ISO 2768-1:1989",
-            class: "m",
-            applies_to: #["cnc"],
-          },
-          fdm_bureau: #{
-            kind: "limits",
-            linear_mm: 0.2,
-            angular_deg: 1,
-            applies_to: #["fdm"],
-            reference: "FDM bureau capability +/-0.2 mm, +/-1 deg (DR-004)",
-          },
-        },
-        general_tolerance_policy: "machining",
-      },
-      record_version: 3,
-      use_case: #{
+      general_tolerance_policy: "machining",
+    },
+    record_version: 3,
+    use_case: #{
+      status: "unknown",
+      service_class: #{
         status: "unknown",
-        service_class: #{
+        reason: "not recorded before record version 2",
+        question: "Q-001",
+      },
+      purpose: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-002",
+      },
+      users: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-002",
+      },
+      environment: #{
+        temperature: #{
           status: "unknown",
           reason: "not recorded before record version 2",
-          question: "Q-001",
+          question: "Q-003",
         },
+        heat_sources: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-003",
+        },
+        moisture: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-004",
+        },
+        chemicals: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-004",
+        },
+        uv: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-004",
+        },
+        corrosion: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-004",
+        },
+      },
+      loads: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-005",
+      },
+      motion: #{
+        speed: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-006",
+        },
+        range: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-006",
+        },
+        duty_cycle: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-006",
+        },
+        friction: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-006",
+        },
+        wear: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-006",
+        },
+        service_life: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-006",
+        },
+      },
+      accuracy: #{
+        tolerance: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-007",
+        },
+        repeatability: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-007",
+        },
+        surface_finish: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-007",
+        },
+        dimensional_stability: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-007",
+        },
+      },
+      consequences: #{
+        failure: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-008",
+        },
+        severity: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-008",
+        },
+        forbidden_outcomes: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-008",
+        },
+        standards: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-008",
+        },
+        supervision: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-008",
+        },
+        approval_authority: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-008",
+        },
+      },
+      logistics: #{
+        quantity: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-009",
+        },
+        budget: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-009",
+        },
+        lead_time: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-009",
+        },
+        maintenance: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-009",
+        },
+        repair: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-009",
+        },
+      },
+      capability: #{
+        equipment: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-010",
+        },
+        operator: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-010",
+        },
+        outsourcing: #{
+          status: "unknown",
+          reason: "not recorded before record version 2",
+          question: "Q-010",
+        },
+      },
+      release_scope: #{
         purpose: #{
           status: "unknown",
           reason: "not recorded before record version 2",
-          question: "Q-002",
+          question: "Q-011",
         },
-        users: #{
+        operating_limits: #{
           status: "unknown",
           reason: "not recorded before record version 2",
-          question: "Q-002",
+          question: "Q-011",
         },
-        environment: #{
-          temperature: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-003",
-          },
-          heat_sources: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-003",
-          },
-          moisture: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-004",
-          },
-          chemicals: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-004",
-          },
-          uv: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-004",
-          },
-          corrosion: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-004",
-          },
-        },
-        loads: #{
-          status: "unknown",
-          reason: "not recorded before record version 2",
-          question: "Q-005",
-        },
-        motion: #{
-          speed: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-006",
-          },
-          range: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-006",
-          },
-          duty_cycle: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-006",
-          },
-          friction: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-006",
-          },
-          wear: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-006",
-          },
-          service_life: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-006",
-          },
-        },
-        accuracy: #{
-          tolerance: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-007",
-          },
-          repeatability: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-007",
-          },
-          surface_finish: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-007",
-          },
-          dimensional_stability: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-007",
-          },
-        },
-        consequences: #{
-          failure: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-008",
-          },
-          severity: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-008",
-          },
-          forbidden_outcomes: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-008",
-          },
-          standards: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-008",
-          },
-          supervision: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-008",
-          },
-          approval_authority: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-008",
-          },
-        },
-        logistics: #{
-          quantity: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-009",
-          },
-          budget: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-009",
-          },
-          lead_time: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-009",
-          },
-          maintenance: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-009",
-          },
-          repair: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-009",
-          },
-        },
-        capability: #{
-          equipment: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-010",
-          },
-          operator: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-010",
-          },
-          outsourcing: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-010",
-          },
-        },
-        release_scope: #{
-          purpose: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-011",
-          },
-          operating_limits: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-011",
-          },
-          exclusions: #{
-            status: "unknown",
-            reason: "not recorded before record version 2",
-            question: "Q-011",
-          },
-        },
-        evidence_policy: #{
+        exclusions: #{
           status: "unknown",
           reason: "not recorded before record version 2",
           question: "Q-011",
         },
       },
-    }
-  ]
+      evidence_policy: #{
+        status: "unknown",
+        reason: "not recorded before record version 2",
+        question: "Q-011",
+      },
+    },
+  }
 );

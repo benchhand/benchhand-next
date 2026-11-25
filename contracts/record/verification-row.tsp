@@ -38,23 +38,23 @@ enum VerificationRowResult {
   not_assessed,
 }
 
-@@extension(
+@@example(
   VerificationRow,
-  "examples",
-  #[
-    #{
-      requirement: "REQ-001",
-      method: "T",
-      criteria: "Measure head travel on both sides of nominal; each direction is at least 45 degrees.",
-      result: "planned",
-      evidence: "",
-    },
-    #{
-      requirement: "REQ-002",
-      method: "T",
-      criteria: "Sweep the elbow joint and verify both endpoints.",
-      result: "planned",
-      evidence: "",
-    }
-  ]
+  #{
+    requirement: "REQ-001",
+    method: VerificationRowMethod.T,
+    criteria: "Measure head travel on both sides of nominal; each direction is at least 45 degrees.",
+    result: VerificationRowResult.planned,
+    evidence: "",
+  }
+);
+@@example(
+  VerificationRow,
+  #{
+    requirement: "REQ-002",
+    method: VerificationRowMethod.T,
+    criteria: "Sweep the elbow joint and verify both endpoints.",
+    result: VerificationRowResult.planned,
+    evidence: "",
+  }
 );

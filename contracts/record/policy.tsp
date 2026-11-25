@@ -22,14 +22,13 @@ model Policy {
   policy_version: 1;
 
   /** The mode of every gate without its own entry */
-  @extension("default", "ask")
-  default?: mode;
+  default?: mode = "ask";
 
   /** The decision that records a default other than ask */
   decision?: Common.decision;
 
   /** Per-gate modes, keyed by the gate id flow.yaml declares */
-  @extension("propertyNames", #{ $ref: "common.schema.json#/$defs/gate_id" })
+  @extension("propertyNames", Common.gate_id)
   gates?: Record<gate>;
 }
 
@@ -46,19 +45,16 @@ model gate {
   decision?: Common.decision;
 }
 
-@@extension(
+@@example(Policy, #{ policy_version: 1 });
+@@example(
   Policy,
-  "examples",
-  #[
-    #{ policy_version: 1 },
-    #{
-      policy_version: 1,
-      default: "ask",
-      gates: #{
-        layout_freeze: #{ mode: "chat", decision: "DR-014" },
-        parts: #{ mode: "ask" },
-      },
+  #{
+    policy_version: 1,
+    default: "ask",
+    gates: #{
+      layout_freeze: #{ mode: "chat", decision: "DR-014" },
+      parts: #{ mode: "ask" },
     },
-    #{ policy_version: 1, default: "auto", decision: "DR-001" }
-  ]
+  }
 );
+@@example(Policy, #{ policy_version: 1, default: "auto", decision: "DR-001" });

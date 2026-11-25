@@ -471,242 +471,199 @@ union ErrorCodes {
   unknown,
 }
 
-@@extension(
+@@example(
   Protocol,
-  "examples",
-  #[
-    #{
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: #{
-        protocolVersion: 1,
-        minProtocolVersion: 1,
-        host: #{ name: "benchhand", version: "0.1.0" },
-        capabilities: #{
-          hooks: #["kernel"],
-          features: #["progress", "artifacts", "cancel"],
-        },
-        limits: #{ maxMessageBytes: 16777216, maxInFlight: 16 },
-        projectRoot: "/work/lamp",
-      },
-    },
-    #{
-      jsonrpc: "2.0",
-      method: "$/progress",
-      params: #{ id: 2, fraction: 0.5, message: "LMP-0003 built" },
-    },
-    #{
-      jsonrpc: "2.0",
-      id: 3,
-      error: #{
-        code: -32007,
-        message: "FreeCAD 1.0.2 is not a supported version",
-        data: #{
-          code: "external-missing",
-          fix: "Run `benchhand setup` to install FreeCAD 1.1.4.",
-        },
-      },
-    }
-  ]
-);
-
-@@extension(HookDecl, "examples", #[#{ kind: "kernel", id: "build123d" }]);
-
-@@extension(
-  ErrorObject,
-  "examples",
-  #[
-    #{
-      code: -32602,
-      message: "params.input.parts is missing",
-      data: #{ code: "invalid-params" },
-    }
-  ]
-);
-
-@@extension(
-  Limits,
-  "examples",
-  #[#{ maxMessageBytes: 16777216, maxInFlight: 4 }]
-);
-
-@@extension(
-  InitializeParams,
-  "examples",
-  #[
-    #{
+  #{
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: #{
       protocolVersion: 1,
+      minProtocolVersion: 1,
       host: #{ name: "benchhand", version: "0.1.0" },
-      capabilities: #{ hooks: #["kernel"], features: #["progress", "cancel"] },
+      capabilities: #{
+        hooks: #["kernel"],
+        features: #["progress", "artifacts", "cancel"],
+      },
       limits: #{ maxMessageBytes: 16777216, maxInFlight: 16 },
       projectRoot: "/work/lamp",
-    }
-  ]
+    },
+  }
+);
+@@example(
+  Protocol,
+  #{
+    jsonrpc: "2.0",
+    method: "$/progress",
+    params: #{ id: 2, fraction: 0.5, message: "LMP-0003 built" },
+  }
+);
+@@example(
+  Protocol,
+  #{
+    jsonrpc: "2.0",
+    id: 3,
+    error: #{
+      code: -32007,
+      message: "FreeCAD 1.0.2 is not a supported version",
+      data: #{
+        code: "external-missing",
+        fix: "Run `benchhand setup` to install FreeCAD 1.1.4.",
+      },
+    },
+  }
 );
 
-@@extension(
+@@example(HookDecl, #{ kind: "kernel", id: "build123d" });
+
+@@example(
+  ErrorObject,
+  #{
+    code: -32602,
+    message: "params.input.parts is missing",
+    data: #{ code: "invalid-params" },
+  }
+);
+
+@@example(Limits, #{ maxMessageBytes: 16777216, maxInFlight: 4 });
+
+@@example(
+  InitializeParams,
+  #{
+    protocolVersion: 1,
+    host: #{ name: "benchhand", version: "0.1.0" },
+    capabilities: #{ hooks: #["kernel"], features: #["progress", "cancel"] },
+    limits: #{ maxMessageBytes: 16777216, maxInFlight: 16 },
+    projectRoot: "/work/lamp",
+  }
+);
+
+@@example(
   InitializeResult,
-  "examples",
-  #[
-    #{
-      protocolVersion: 1,
-      provider: #{ name: "benchhand-build123d", version: "0.1.0" },
-      hooks: #[#{ kind: "kernel", id: "build123d" }],
-      features: #{ required: #[], optional: #["progress"] },
-      limits: #{ maxInFlight: 4 },
-      needs: #{ freecad: false, chromium: false, network: false },
-    }
-  ]
+  #{
+    protocolVersion: 1,
+    provider: #{ name: "benchhand-build123d", version: "0.1.0" },
+    hooks: #[#{ kind: "kernel", id: "build123d" }],
+    features: #{ required: #[], optional: #["progress"] },
+    limits: #{ maxInFlight: 4 },
+    needs: #{ freecad: false, chromium: false, network: false },
+  }
 );
 
-@@extension(
-  Needs,
-  "examples",
-  #[#{ freecad: true, chromium: false, network: false }]
-);
+@@example(Needs, #{ freecad: true, chromium: false, network: false });
 
-@@extension(CancelParams, "examples", #[#{ id: 7 }]);
+@@example(CancelParams, #{ id: 7 });
 
-@@extension(
+@@example(
   ProgressParams,
-  "examples",
-  #[#{ id: 7, fraction: 0.25, message: "LMP-0003 built", stage: "build" }]
+  #{ id: 7, fraction: 0.25, message: "LMP-0003 built", stage: "build" }
 );
 
-@@extension(
+@@example(
   LogParams,
-  "examples",
-  #[
-    #{
-      level: "warning",
-      message: "fillet radius clamped to 0.4 mm",
-      data: #{ pn: "LMP-0003" },
-    }
-  ]
+  #{
+    level: "warning",
+    message: "fillet radius clamped to 0.4 mm",
+    data: #{ pn: "LMP-0003" },
+  }
 );
 
-@@extension(
+@@example(
   Artifact,
-  "examples",
-  #[
-    #{
-      path: "/work/lamp/out/LMP-0003.step",
-      mediaType: "model/step",
-      role: "step",
-      bytes: 48213,
-      sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-    }
-  ]
+  #{
+    path: "/work/lamp/out/LMP-0003.step",
+    mediaType: "model/step",
+    role: "step",
+    bytes: 48213,
+    sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  }
 );
 
-@@extension(
-  Coverage,
-  "examples",
-  #[#{ status: "pass" }, #{ status: "unknown", reason: "no mesh for LMP-0004" }]
-);
+@@example(Coverage, #{ status: "pass" });
+@@example(Coverage, #{ status: "unknown", reason: "no mesh for LMP-0004" });
 
-@@extension(
+@@example(
   HookParamsBase,
-  "examples",
-  #[
-    #{
+  #{
+    projectRoot: "/work/lamp",
+    outDir: "/work/lamp/out",
+    input: #{ parts: #["LMP-0003"] },
+  }
+);
+
+@@example(
+  HookResultBase,
+  #{
+    coverage: #{ status: "pass" },
+    artifacts: #[
+      #{
+        path: "/work/lamp/out/LMP-0003.step",
+        mediaType: "model/step",
+        role: "step",
+        bytes: 48213,
+        sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      }
+    ],
+    output: #{},
+  }
+);
+
+@@example(
+  KernelBuildPart,
+  #{
+    pn: "LMP-0003",
+    name: "arm link",
+    `model`: "/work/lamp/hw/parts/LMP-0003/model.py",
+    step: "/work/lamp/out/LMP-0003.step",
+  }
+);
+
+@@example(
+  KernelBuildPartResult,
+  #{ pn: "LMP-0003", status: "pass", seconds: 1.8 }
+);
+@@example(
+  KernelBuildPartResult,
+  #{ pn: "LMP-0004", status: "fail", error: "fillet failed" }
+);
+
+@@example(
+  Request,
+  #{
+    jsonrpc: "2.0",
+    id: 7,
+    method: "kernel/build",
+    params: #{
       projectRoot: "/work/lamp",
       outDir: "/work/lamp/out",
-      input: #{ parts: #["LMP-0003"] },
-    }
-  ]
+      input: #{},
+    },
+  }
 );
 
-@@extension(
-  HookResultBase,
-  "examples",
-  #[
-    #{
-      coverage: #{ status: "pass" },
-      artifacts: #[
-        #{
-          path: "/work/lamp/out/LMP-0003.step",
-          mediaType: "model/step",
-          role: "step",
-          bytes: 48213,
-          sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-        }
-      ],
-      output: #{},
-    }
-  ]
-);
-
-@@extension(
-  KernelBuildPart,
-  "examples",
-  #[
-    #{
-      pn: "LMP-0003",
-      name: "arm link",
-      `model`: "/work/lamp/hw/parts/LMP-0003/model.py",
-      step: "/work/lamp/out/LMP-0003.step",
-    }
-  ]
-);
-
-@@extension(
-  KernelBuildPartResult,
-  "examples",
-  #[
-    #{ pn: "LMP-0003", status: "pass", seconds: 1.8 },
-    #{ pn: "LMP-0004", status: "fail", error: "fillet failed" }
-  ]
-);
-
-@@extension(
-  Request,
-  "examples",
-  #[
-    #{
-      jsonrpc: "2.0",
-      id: 7,
-      method: "kernel/build",
-      params: #{
-        projectRoot: "/work/lamp",
-        outDir: "/work/lamp/out",
-        input: #{},
-      },
-    }
-  ]
-);
-
-@@extension(
+@@example(
   Notification,
-  "examples",
-  #[#{ jsonrpc: "2.0", method: "$/cancelRequest", params: #{ id: 7 } }]
+  #{ jsonrpc: "2.0", method: "$/cancelRequest", params: #{ id: 7 } }
 );
 
-@@extension(
+@@example(
   SuccessResponse,
-  "examples",
-  #[
-    #{
-      jsonrpc: "2.0",
-      id: 7,
-      result: #{ coverage: #{ status: "pass" }, artifacts: #[] },
-    }
-  ]
+  #{
+    jsonrpc: "2.0",
+    id: 7,
+    result: #{ coverage: #{ status: "pass" }, artifacts: #[] },
+  }
 );
 
-@@extension(
+@@example(
   ErrorResponse,
-  "examples",
-  #[
-    #{
-      jsonrpc: "2.0",
-      id: null,
-      error: #{
-        code: -32700,
-        message: "invalid JSON",
-        data: #{ code: "parse-error" },
-      },
-    }
-  ]
+  #{
+    jsonrpc: "2.0",
+    id: null,
+    error: #{
+      code: -32700,
+      message: "invalid JSON",
+      data: #{ code: "parse-error" },
+    },
+  }
 );

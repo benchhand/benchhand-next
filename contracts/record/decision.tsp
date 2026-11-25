@@ -83,52 +83,58 @@ model design_decision {
   informed?: people;
 }
 
-@@extension(
+@@example(
   Decision,
-  "examples",
-  #[
-    #{
-      id: "DR-012",
-      kind: "gate",
-      title: "Provisional layout freeze of v3",
-      date: "2026-11-22",
-      status: "provisional",
-      gate: "layout_freeze",
-      stage: "layout",
-      version: "v3",
-      evidence: #["hw/checks/v3/assembly/result.json"],
+  #{
+    id: "DR-012",
+    kind: "gate",
+    title: "Provisional layout freeze of v3",
+    date: "2026-11-22",
+    status: "provisional",
+    gate: "layout_freeze",
+    stage: "layout",
+    version: "v3",
+    evidence: #["hw/checks/v3/assembly/result.json"],
+  }
+);
+@@example(
+  Decision,
+  #{
+    id: "DR-013",
+    kind: "gate",
+    title: "Layout freeze of v3",
+    date: "2026-11-23",
+    status: "approved",
+    gate: "layout_freeze",
+    stage: "layout",
+    version: "v3",
+    supersedes: #["DR-012"],
+    approval: #{
+      channel: "chat",
+      by: "the user",
+      quote: "Yes, freeze the layout.",
     },
-    #{
-      id: "DR-013",
-      kind: "gate",
-      title: "Layout freeze of v3",
-      date: "2026-11-23",
-      status: "approved",
-      gate: "layout_freeze",
-      stage: "layout",
-      version: "v3",
-      supersedes: #["DR-012"],
-      approval: #{
-        channel: "chat",
-        by: "the user",
-        quote: "Yes, freeze the layout.",
-      },
-    },
-    #{
-      id: "DR-003",
-      kind: "design",
-      title: "Press-fit pivot pins",
-      date: "2026-10-26",
-      status: "superseded",
-      superseded_by: #["DR-004"],
-    },
-    #{
-      id: "DR-005",
-      kind: "design",
-      title: "Print the PETG parts in-house on a Bambu Lab H2D",
-      date: "2026-11-18",
-      status: "accepted",
-      decision_makers: #["the user"],
-    }
-  ]
+  }
+);
+@@example(
+  Decision,
+  #{
+    id: "DR-003",
+    kind: "design",
+    title: "Press-fit pivot pins",
+    date: "2026-10-26",
+    status: "superseded",
+    superseded_by: #["DR-004"],
+  }
+);
+@@example(
+  Decision,
+  #{
+    id: "DR-005",
+    kind: "design",
+    title: "Print the PETG parts in-house on a Bambu Lab H2D",
+    date: "2026-11-18",
+    status: "accepted",
+    decision_makers: #["the user"],
+  }
 );

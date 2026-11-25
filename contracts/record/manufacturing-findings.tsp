@@ -57,33 +57,30 @@ model disposition {
   waiver?: Common.waiver;
 }
 
-@@extension(
+@@example(
   ManufacturingFindings,
-  "examples",
-  #[
-    #{
-      dispositions: #[
-        #{
-          finding: "overhang_1",
-          producer: #{
-            bundle: "hw/checks/v1/TST-0001",
-            manifest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          },
-          status: "accepted_waiver",
-          reason: "trial print",
+  #{
+    dispositions: #[
+      #{
+        finding: "overhang_1",
+        producer: #{
+          bundle: "hw/checks/v1/TST-0001",
+          manifest_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        },
+        status: "accepted_waiver",
+        reason: "trial print",
+        decision: "DR-001",
+        waiver: #{
           decision: "DR-001",
-          waiver: #{
-            decision: "DR-001",
-            subject: #{ PN: "TST-0001" },
-            criterion: "creep",
-            operating_envelope: "below 30 deg_C",
-            until_change: "any load change",
-            reason: "trial",
-            consequence: "sag",
-            authority: "lead",
-          },
-        }
-      ],
-    }
-  ]
+          subject: #{ PN: "TST-0001" },
+          criterion: "creep",
+          operating_envelope: "below 30 deg_C",
+          until_change: "any load change",
+          reason: "trial",
+          consequence: "sag",
+          authority: "lead",
+        },
+      }
+    ],
+  }
 );

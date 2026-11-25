@@ -469,32 +469,29 @@ model `property` {
   };
 }
 
-@@extension(
+@@example(
   ManufacturingMaterials,
-  "examples",
-  #[
-    #{
-      profiles: #[
-        #{
-          id: "petg",
-          revision: 1,
-          title: "PETG, printed (family)",
-          level: "family",
-          family: "PETG",
-          grade: #{
-            status: "not_applicable",
-            reason: "family guidance only; no filament grade is selected",
-          },
-          form: "printed",
-          process_state: #{
-            process: "fdm",
-            conditioning: "unknown",
-            notes: "no filament lot, drying or print orientation is recorded, so no property is stated",
-          },
-          typical_not_allowable: true,
-          properties: #[],
-        }
-      ],
-    }
-  ]
+  #{
+    profiles: #[
+      #{
+        id: "petg",
+        revision: 1,
+        title: "PETG, printed (family)",
+        level: "family",
+        family: "PETG",
+        grade: #{
+          status: "not_applicable",
+          reason: "family guidance only; no filament grade is selected",
+        },
+        form: "printed",
+        process_state: #{
+          process: "fdm",
+          conditioning: "unknown",
+          notes: "no filament lot, drying or print orientation is recorded, so no property is stated",
+        },
+        typical_not_allowable: true,
+        properties: #[],
+      }
+    ],
+  }
 );
