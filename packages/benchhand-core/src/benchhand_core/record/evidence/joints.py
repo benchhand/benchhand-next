@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, TypeGuard
+from typing import TypeGuard
 
 from benchhand_core.record.evidence.obligations import JOINING_KINDS
 from benchhand_core.record.evidence.use_case import fact_at
@@ -219,8 +219,3 @@ def joint_results(record: RecordView, part_of: PartOf) -> dict[str, tuple[str, s
         reason = "; ".join(f.text for f in found if f.outcome == outcome) or JOINT_METHOD
         results[f"assembly.joint@op:{op.get('id')}"] = (outcome, reason)
     return results
-
-
-def default_part_of(ref: str) -> Any:
-    """A bare PN names itself; an @occurrence names none (assembly_operations.py:639)."""
-    return None if ref.startswith("@") else ref
