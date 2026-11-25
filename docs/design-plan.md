@@ -395,6 +395,24 @@ Reference examples, shipped with FreeCAD 1.1 under `share/examples`:
 
 The acceptance tests compare the object tree and page contents against these patterns, not the pixels.
 
+**Customer equipment and other non-product geometry.** This comes from the test project's brief (`benchhand-test-project/.cad-work/lead/architect-prompt-reference-geometry.md`) and prototype PR #333. Two separate fields:
+
+- **`make_buy` on the part: `make`, `buy` or `existing`.** It says who provides the part. `existing` parts need a dimension range with a basis (measured, standard, user-declared or assumed) and its sources. They may not have a supplier or an order code, and they generate no purchase, route, process, form or manufacture obligations. Those obligations are recorded as `not_applicable`, with the role as the reason, never silently skipped. Interface, clearance, sweep and access obligations stay.
+- **`role` on an occurrence or subassembly: `product`, `context` or `tooling`.** It says what the exports do with it. The default comes from the part: `existing` gives `context`, anything else gives `product`. An occurrence can override it, for example a bought jig used as `tooling` in one assembly.
+
+Each version then exports:
+- `product.step` (AP242) and `product.glb`, with `product` occurrences only. This is the released deliverable.
+- `scene.step` and `scene.glb`, with every occurrence. The checks, motion and sweeps read the scene, and a release can attach it as installation context.
+
+The STEP/GLB agreement check runs on both. The release refuses a product export that contains a `context` or `tooling` part.
+
+In the documentation set:
+- the parts list leaves out `context` and `tooling`, and the BOM and build guide add a table "Customer-furnished equipment (not supplied)" with the required ranges;
+- drawings draw context parts in phantom lines;
+- renders and the viewer ghost them, with a toggle.
+
+When a dimension is a range, the clearance and sweep checks run at both ends. A change to existing geometry makes the geometry, interface and clearance evidence stale, not the purchase evidence.
+
 ### 13. Client capability research (as of 2026-11; recheck at implementation)
 
 | Host | Skills (native) | Prompts | Resources | Image results | Form elicitation | URL elicitation | Tasks | MCP Apps | Install route |
