@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/record/evidence-assessment.schema.json",
+  "title": "benchhand evidence assessment of one built version",
+  "description": "The evidence of one built record version: the status of every obligation the record implies, each from three sources only (the record itself, the sealed required-check packets of the version and the accepted ledger hw/manufacturing/evidence.yaml), the result of each evidence level per requirement, part, interface, assembly operation and the product as independent facets, the findings about the evidence, the unresolved critical producer findings and the acceptance digest a freeze records and a release checks. Unknown, planned and untested never become pass; stale evidence counts as nothing; a waived obligation stays waived",
+  "x-version": "1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "manifest_sha256",
+    "build_staleness",
+    "expected_sha256",
+    "statuses",
+    "facets",
+    "findings",
+    "critical",
+    "complete",
+    "acceptance"
+  ],
+  "properties": {
+    "version": {
+      "$ref": "common.schema.json#/$defs/version"
+    },
+    "manifest_sha256": {
+      "description": "sha256 of hw/versions/<V>/manifest.json",
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "build_staleness": {
+      "description": "computed: producer outcomes whose inputs changed since the build are stale. not_computed: the built record could not be compared with the current one, so no producer pass, fail or not_applicable outcome counts, and a finding says why",
+      "enum": [
+        "computed",
+        "not_computed"
+      ]
+    },
+    "expected_sha256": {
+      "description": "sha256 of the expected obligations, as canonical JSON",
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "statuses": {
+      "description": "one status per expected obligation, sorted by obligation id",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/obligation_status"
+      }
+    },
+    "facets": {
+      "description": "per requirement, part, interface, op:<assembly operation> and product: each evidence level's worst status over its obligations, or not_required where none applies",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/facets"
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "../common/finding.schema.json"
+      }
+    },
+    "critical": {
+      "description": "producer findings of severity critical whose outcome is fail or unknown and that no disposition settles",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/critical_finding"
+      }
+    },
+    "complete": {
+      "description": "false when a producer packet was partial or refused",
+      "type": "boolean"
+    },
+    "acceptance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/acceptance_formed"
+        },
+        {
+          "$ref": "#/$defs/acceptance_refused"
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "version": "v1",
+      "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "build_staleness": "computed",
+      "expected_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "statuses": [
+        {
+          "obligation": {
+            "id": "cad.readback@TST-0001",
+            "family": "cad.readback",
+            "subject": {
+              "PN": "TST-0001"
+            },
+            "level": "cad_valid",
+            "stage": "layout",
+            "basis": "TST-0001: B-rep validity and readback"
+          },
+          "result": "pass",
+          "sources": [
+            "hw/checks/v1/cad"
+          ],
+          "reasons": [
+            "TST readback"
+          ]
+        }
+      ],
+      "facets": {
+        "TST-0001": {
+          "cad_valid": "pass",
+          "geometrically_manufacturable": "not_required",
+          "process_planned": "not_required",
+          "simulation_supported": "not_required",
+          "physically_validated": "not_required"
+        }
+      },
+      "findings": [],
+      "critical": [],
+      "complete": true,
+      "acceptance": {
+        "status": "formed",
+        "evidence_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "inventory": {
+          "hw/verification.csv": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "evidence_result": {
+      "enum": [
+        "pass",
+        "fail",
+        "waived",
+        "not_applicable",
+        "not_assessed",
+        "stale",
+        "planned",
+        "unknown"
+      ]
+    },
+    "obligation_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligation",
+        "result",
+        "sources",
+        "reasons"
+      ],
+      "properties": {
+        "obligation": {
+          "$ref": "common.schema.json#/$defs/obligation"
+        },
+        "result": {
+          "$ref": "#/$defs/evidence_result"
+        },
+        "sources": {
+          "description": "the packet bundles, ledger entry ids or `record` that decided it",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "waiver": {
+          "description": "the approved waiver, when the result is waived",
+          "$ref": "common.schema.json#/$defs/waiver"
+        }
+      }
+    },
+    "facet_result": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/evidence_result"
+        },
+        {
+          "const": "not_required"
+        }
+      ]
+    },
+    "facets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cad_valid",
+        "geometrically_manufacturable",
+        "process_planned",
+        "simulation_supported",
+        "physically_validated"
+      ],
+      "properties": {
+        "cad_valid": {
+          "$ref": "#/$defs/facet_result"
+        },
+        "geometrically_manufacturable": {
+          "$ref": "#/$defs/facet_result"
+        },
+        "process_planned": {
+          "$ref": "#/$defs/facet_result"
+        },
+        "simulation_supported": {
+          "$ref": "#/$defs/facet_result"
+        },
+        "physically_validated": {
+          "$ref": "#/$defs/facet_result"
+        }
+      }
+    },
+    "critical_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finding",
+        "bundle"
+      ],
+      "properties": {
+        "finding": {
+          "$ref": "common.schema.json#/$defs/semantic_id"
+        },
+        "code": {
+          "$ref": "common.schema.json#/$defs/finding_code"
+        },
+        "bundle": {
+          "$ref": "common.schema.json#/$defs/project_path"
+        },
+        "obligation": {
+          "$ref": "common.schema.json#/$defs/obligation_id"
+        },
+        "consequence": {
+          "$ref": "common.schema.json#/$defs/text"
+        }
+      }
+    },
+    "acceptance_formed": {
+      "description": "The acceptance inventory (hw/ path to sha256) and its digest: sha256 of {\"schema\": \"cad-acceptance-inventory/1\", \"files\": the sorted [path, sha256] pairs} as canonical JSON",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence_sha256",
+        "inventory"
+      ],
+      "properties": {
+        "status": {
+          "const": "formed"
+        },
+        "evidence_sha256": {
+          "$ref": "common.schema.json#/$defs/sha256"
+        },
+        "inventory": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "acceptance_refused": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "refused"
+        },
+        "reason": {
+          "description": "why the inventory cannot be formed: a missing, linked, escaping or refused path",
+          "$ref": "common.schema.json#/$defs/text"
+        }
+      }
+    }
+  }
+}

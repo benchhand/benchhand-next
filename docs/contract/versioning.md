@@ -90,3 +90,7 @@ Before the first release nothing is published, so a narrowing keeps its version.
 
 - A breaking change needs a higher major `x-version` than the schema had at the release tag, for example `1.4.0` to `2.0.0`. The check passes a schema whose major version went up, whatever else changed.
 - An additive change raises the minor version. A fix that changes no accepted instance, for example a description, raises the patch version. The check doesn't enforce minor and patch bumps.
+
+## Provisional contracts
+
+`record/bundle-manifest.schema.json` (version `0.1.0`) is provisional. It holds only the keys of a sealed directory's `manifest.json` that the evidence service reads: `files`, `version_manifest_sha256` and each built part's `source_sha256`. It accepts every other key unread. Phase 2's versioning work (snapshot, seal and verify) owns it and extends it, and gives it version `1.0.0` when it is complete.

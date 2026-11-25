@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/record/bundle-manifest.schema.json",
+  "title": "benchhand sealed directory manifest (manifest.json), provisional",
+  "description": "Provisional: the manifest.json of a sealed directory, a built version (hw/versions/<V>/) or a version-bound bundle such as hw/checks/<V>/<S>/, with only the keys the evidence service reads. Phase 2's versioning work (snapshot, seal and verify) owns this contract and extends it; until then every other key is accepted unread",
+  "x-version": "0.1.0",
+  "type": "object",
+  "required": [
+    "files"
+  ],
+  "properties": {
+    "files": {
+      "description": "sha256 of every file the directory holds apart from manifest.json, by its path relative to the directory",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/sha256"
+      }
+    },
+    "version_manifest_sha256": {
+      "description": "a bundle's binding to its build: the sha256 of hw/versions/<V>/manifest.json",
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "parts": {
+      "description": "a built version's parts, by PN",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/version_part"
+      }
+    }
+  },
+  "examples": [
+    {
+      "files": {
+        "result.json": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "version_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "$defs": {
+    "version_part": {
+      "type": "object",
+      "properties": {
+        "source_sha256": {
+          "description": "sha256 of the model source the version built",
+          "$ref": "common.schema.json#/$defs/sha256"
+        }
+      }
+    }
+  }
+}
