@@ -184,16 +184,24 @@ def test_a_typespec_contract_is_published_under_its_id_with_file_relative_refs(
 @needs_node
 def test_the_compiler_lists_the_declarations_in_source_order(contracts_dir: Path) -> None:
     # The TypeSpec compiler reads the names, so a backticked name, an @id and a template need no parser of
-    # our own; a template isn't a declaration until it is instantiated, and its instance is inlined.
+    # our own; a template isn't a declaration until it is instantiated, and its instance is inlined. A
+    # relative @id resolves against the namespace's @baseUri, as the emitter resolves it.
     extra = (
         "\nmodel Box<T> {\n  value: T;\n}\n\n"
         '@id("https://benchhand.github.io/benchhand/contracts/generator-test/widget/renamed.json")\n'
         "model Original {\n  box: Box<string>;\n}\n\nscalar `then` extends string;\n"
+        '\n@id("relative.json")\nscalar Relative extends string;\n'
     )
     _write_widget(contracts_dir, NEW_TYPESPEC + extra)
     widget = f"{NEW_ID.removesuffix('.schema.json')}/"
     ids = [schema_id for schema_id in read_source(contracts_dir).ids if schema_id.startswith(widget[:-1])]
-    assert ids == [NEW_ID, f"{widget}PartNumber.json", f"{widget}renamed.json", f"{widget}then.json"]
+    assert ids == [
+        NEW_ID,
+        f"{widget}PartNumber.json",
+        f"{widget}renamed.json",
+        f"{widget}then.json",
+        f"{widget}relative.json",
+    ]
 
 
 @needs_node

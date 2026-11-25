@@ -36,7 +36,10 @@ for (const type of getJsonSchemaTypes(program)) {
     namespaces.push({ baseUri, extensions });
     continue;
   }
-  const id = getId(program, type) ?? (baseUri && new URL(`${type.name}.json`, baseUri).href);
+  // As the emitter does: an explicit @id is resolved against the namespace's @baseUri, so it may be relative.
+  const explicit = getId(program, type);
+  const resolved = explicit && (baseUri ? new URL(explicit, baseUri).href : explicit);
+  const id = resolved ?? (baseUri && new URL(`${type.name}.json`, baseUri).href);
   if (!id) {
     console.error(`${type.name} has no @id and its namespace no @baseUri`);
     process.exit(1);

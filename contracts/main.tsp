@@ -16,9 +16,11 @@
 //   value where the value is one schema reference.
 // - A scalar or enum used once is written where it is used, as a declaration expression
 //   (`name: @minLength(1) scalar extends string`; tspconfig.yaml enables the experimental feature). One
-//   used more than once, from another contract, by a member in an example or default, or as a variant of
-//   a union declaration, and a model or union that carries @extension values, is a declaration with
-//   `@extension("x-inline", true)`: it is written in place of every reference to it.
+//   used more than once, from another contract, by a member in an example or default, as a variant of a
+//   union declaration, or as a template argument such as `Record<...>` (TypeSpec 1.18's checker fails
+//   on a declaration expression there: ManifestTimeoutsValue, DrawingProductDrawingStandardsValue), and a
+//   model or union that carries @extension values, is a declaration with `@extension("x-inline", true)`:
+//   it is written in place of every reference to it.
 // - JSON Schema that TypeSpec has no syntax for (if/then/else, not, dependentRequired, propertyNames on a
 //   model, a oneOf of required sets, minProperties on a closed model, a schema without a type of its own
 //   such as `union X { unknown }` plus keywords) is an @extension value. A $ref in one is written as it
