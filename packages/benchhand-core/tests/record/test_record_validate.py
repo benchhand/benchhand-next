@@ -523,3 +523,20 @@ def test_part_drawing_datums_and_tolerance_policies_are_declared(lamp_arm: Path)
         ("drawing.datum", "hw/parts/LMP-0001/part.yaml", "/drawing/views/1/through"),
         ("drawing.policy", "hw/parts/LMP-0001/part.yaml", "/drawing/tolerance_policy"),
     }
+
+
+@pytest.mark.parametrize(
+    "junk",
+    [".DS_Store", "._part.yaml", "Thumbs.db", "desktop.ini", "Desktop.ini", "__pycache__/model.cpython-312.pyc"],
+)
+def test_os_and_tool_junk_anywhere_in_hw_changes_nothing(lamp_arm: Path, junk: str) -> None:
+    # A file browser writes these into every folder it opens (test-project issue 10). The reader
+    # reads only the documents the layout names, so junk must neither break a read nor add a finding.
+    before = validate(lamp_arm)
+    hw = lamp_arm / "hw"
+    folders = [hw, *(path for path in hw.rglob("*") if path.is_dir())]
+    for folder in folders:
+        target = folder / junk
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"\x00\x00\x00\x01Bud1")
+    assert validate(lamp_arm) == before

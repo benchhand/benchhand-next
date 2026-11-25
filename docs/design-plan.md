@@ -516,6 +516,11 @@ Code is reused only where it is already clean and fits the new boundaries (secti
 
 ## Steps (phased)
 
+Every phase ends at a review gate. When a phase's work is done:
+1. Write a phase summary in `docs/phases/phase-N.md (phases 0 and 1 share `phase-0-1.md`)`: what was built, what was left out and why, the open items, and how it was verified.
+2. Verify it by running it, not only through the test suite. Run the built services or CLI against a real project record (a copy of `benchhand-test-project`), and record the commands and their output in the summary.
+3. Stop. Send the summary to the owner and wait for approval before starting the next phase. Work for the next phase may sit on an unmerged branch, but it isn't merged and the phase box isn't ticked until the owner approves.
+
 - [ ] **Phase 0: repo and contracts.**
   - Create the temporary `benchhand/benchhand-next` repo: uv workspace, pnpm `ui/`, CI, the complexity ratchet and the slopvac prose check. Keep the repo name in a single `BENCHHAND_REPO` variable.
   - Import the reference material (tests, examples, schemas) with `git filter-repo` to keep its history. Production code is written fresh.
