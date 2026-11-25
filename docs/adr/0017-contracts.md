@@ -40,10 +40,11 @@ Every boundary validates at runtime, in both directions.
 - **Lowercase `t` and `z` in date-times:** the Zod route rejects them, while Ajv accepts them. The contract narrows date-time to uppercase `T` and `Z`, and a fixture pins it.
 - **Dropped descriptions:** hey-api and datamodel-code-generator drop some field descriptions. A docs check lists which ones survive. The reference docs come from the JSON Schema, so no description is lost to the person reading them.
 - **Schema normaliser:** a small, tested script prepares the emitted JSON Schema for the generators. It rewrites `unevaluatedProperties` to `additionalProperties` and bundle refs to `#/$defs`.
-- **No validating root:** the published schema gets a root entry that points at each top-level document.
+- **No validating root:** each published document schema validates its document at the root. The TypeSpec bundle is an unpublished intermediate, which the normaliser splits into one file per contract, and it refuses a contract without a root.
 
 ## Consequences
 
 - Hand-written copies of message shapes are not allowed.
 - The current JSON Schema sources move to TypeSpec in Phase 2, together with the record additions in plan sections 12a and 12b. The generated models must keep their public names, so the record service and tests don't change.
+- The move kept the existing TypeScript route: json-schema-to-typescript types and Ajv standalone validators, generated from the published JSON Schema. It kept every generated name and the `benchhand_contracts` API, and needs no OpenAPI document. OpenAPI 3.1 and hey-api arrive with the first Zod consumer in the UIs.
 - Rust and Go have no consumer in benchhand yet. If one appears, its routes are typify with a `jsonschema` crate pass (29 of 29) and ogen with `x-ogen-time-format` (28 of 29).
