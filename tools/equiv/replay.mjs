@@ -1,13 +1,15 @@
-// Judge every replay case with Ajv 2020, the engine of the generated TypeScript validators, against the
-// hand-written and the published schemas (ADR-0017).
+// Judge every replay case, and every mutant replay.py made, with Ajv 2020, the engine of the generated
+// TypeScript validators, against the hand-written and the published schemas (ADR-0017).
 //
 // Usage: node tools/equiv/replay.mjs <work dir>, after replay.py. Compares whether each instance is valid
 // and Ajv's first error (instance path, keyword and schema path), since a generated validator reports
-// only that one. A difference is explained only when the published schemas without the Timestamp
-// pattern, the one intended narrowing, give exactly the hand-written verdict. It also checks that Ajv and Python agree on every published verdict. Exits 1 otherwise.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+// only that one. The evidence for the one intended narrowing is a second comparison: the published
+// schemas with the Timestamp pattern taken out must give exactly the hand-written verdict, with no
+// difference left. It also checks that Ajv and Python agree on every published verdict. Exits 1 otherwise.
+import { createReadStream, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -66,44 +68,60 @@ function judge(ajv, testCase) {
   return { valid, first: first && `${first.instancePath || "/"} ${first.keyword} ${first.schemaPath}` };
 }
 
+const sameVerdict = (a, b) => a.valid === b.valid && a.first === b.first;
 const oldAjv = ajvFor(path.join(work, "old"));
 const newAjv = ajvFor(published);
-const counterfactualAjv = ajvFor(published, (schema) => {
+const withoutPatternAjv = ajvFor(published, (schema) => {
   if (schema.$id === jobId) delete schema.$defs.Timestamp.pattern;
   return schema;
 });
-const cases = JSON.parse(readFileSync(path.join(work, "cases.json"), "utf8"));
-const python = JSON.parse(readFileSync(path.join(work, "python.json"), "utf8"));
-const counts = {};
-let differ = 0;
-let unexplained = 0;
-let firstChanged = 0;
-let disagreements = 0;
-const shown = [];
-cases.forEach((testCase, index) => {
+
+function comparison(title) {
+  return { title, count: 0, counts: {}, differ: 0, firstChanged: 0, withoutPattern: 0, disagree: 0, shown: [] };
+}
+
+function add(result, testCase, python) {
   const before = judge(oldAjv, testCase);
   const after = judge(newAjv, testCase);
   const key = `${before.valid}/${after.valid}`;
-  counts[key] = (counts[key] ?? 0) + 1;
-  if (after.valid !== python[index]) disagreements += 1;
-  if (before.valid === after.valid && before.first === after.first) return;
-  differ += 1;
-  if (before.first !== after.first) firstChanged += 1;
-  const without = judge(counterfactualAjv, testCase);
-  const ok = without.valid === before.valid && without.first === before.first;
-  if (!ok) unexplained += 1;
-  shown.push(
-    `    ${ok ? "explained" : "UNEXPLAINED"}: ${testCase.source}, ${testCase.schema_id.split("/contracts/")[1]}, ` +
-      `${JSON.stringify(testCase.instance).slice(0, 60)}\n      hand-written: ${before.first ?? before.valid}\n` +
-      `      published:    ${after.first ?? after.valid}`,
-  );
-});
-console.log(`ajv replay: ${cases.length} instances`);
-console.log(`  valid hand-written/published: ${JSON.stringify(counts)}`);
-console.log(`  verdicts that differ: ${differ}, of which the first error changed: ${firstChanged}`);
-console.log(`  explained by the Timestamp pattern: ${differ - unexplained}`);
-console.log(`  unexplained: ${unexplained}`);
-shown.sort((a, b) => a.includes("UNEXPLAINED") - b.includes("UNEXPLAINED")).reverse();
-console.log(shown.slice(0, 12).join("\n"));
-console.log(`ajv and python disagree on ${disagreements} published verdicts`);
-process.exit(unexplained || disagreements ? 1 : 0);
+  result.count += 1;
+  result.counts[key] = (result.counts[key] ?? 0) + 1;
+  if (after.valid !== python) result.disagree += 1;
+  if (sameVerdict(before, after)) return;
+  result.differ += 1;
+  if (before.first !== after.first) result.firstChanged += 1;
+  const left = !sameVerdict(judge(withoutPatternAjv, testCase), before);
+  if (left) result.withoutPattern += 1;
+  if (left || result.shown.length < 6) {
+    result.shown.push(
+      `    ${left ? "DIFFERS WITHOUT THE PATTERN" : "only with the pattern"}: ${testCase.source}, ` +
+        `${testCase.schema_id.split("/contracts/")[1]}, ${JSON.stringify(testCase.instance).slice(0, 60)}\n` +
+        `      hand-written: ${before.first ?? before.valid}\n      published:    ${after.first ?? after.valid}`,
+    );
+  }
+}
+
+function report(result) {
+  console.log(`${result.title}: ${result.count} instances`);
+  console.log(`  valid hand-written/published: ${JSON.stringify(result.counts)}`);
+  console.log(`  hand-written vs published: ${result.differ} differ, the first error in ${result.firstChanged}`);
+  console.log(`  hand-written vs published without the Timestamp pattern: ${result.withoutPattern} differ`);
+  console.log(result.shown.slice(0, 12).join("\n"));
+  console.log(`  ajv and python disagree on ${result.disagree} published verdicts`);
+  return result.withoutPattern + result.disagree;
+}
+
+const cases = JSON.parse(readFileSync(path.join(work, "cases.json"), "utf8"));
+const python = JSON.parse(readFileSync(path.join(work, "python.json"), "utf8"));
+const replay = comparison("ajv replay");
+cases.forEach((testCase, index) => add(replay, testCase, python[index]));
+
+// mutants.jsonl: one {"case": {...}, "python": <published validity>} per line, written by replay.py.
+const mutation = comparison("ajv mutations of each instance the published schemas accept");
+const lines = readline.createInterface({ input: createReadStream(path.join(work, "mutants.jsonl")) });
+for await (const line of lines) {
+  const { case: testCase, python: verdict } = JSON.parse(line);
+  add(mutation, testCase, verdict);
+}
+const failures = report(replay) + report(mutation);
+process.exit(failures ? 1 : 0);

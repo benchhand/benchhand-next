@@ -82,9 +82,12 @@ contracts-drift: contracts
     fi
     echo "contracts: no drift"
 
-# Migration evidence (ADR-0017): compare the published schemas with the hand-written ones at the migration
-# base, decoded, and replay the instances the tests validate, the fixtures and the examples, plus mutations
-# of each, in Python and Ajv. Takes about half an hour; writes tools/equiv/results/.
+# Migration evidence (ADR-0017), on demand and not a CI gate: it compares the published schemas with the
+# hand-written ones at the migration base 41598c2, which a later contract change will rightly differ from.
+# It compares them decoded, then judges the instances the tests validate, the fixtures, the examples and
+# mutations of each accepted one, in Python (the whole list of violations) and in Ajv (the first error),
+# against the hand-written schemas, the published ones, and the published ones without the Timestamp
+# pattern. Takes about half an hour; writes tools/equiv/results/.
 contracts-equivalence:
     #!/usr/bin/env bash
     set -euo pipefail

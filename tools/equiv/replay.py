@@ -3,10 +3,11 @@ schemas with the real ``benchhand_contracts.violations``.
 
 Usage: ``python tools/equiv/replay.py <work dir>``, after ``cases.py``. For each instance it compares
 whether it's valid and the whole list of violations, each ``(pointer, schema_path, message)`` in order,
-so a changed first violation shows up even when both schemas refuse the instance. A difference is
-explained only when the published schemas without the Timestamp ``pattern``, the one intended narrowing,
-give exactly the hand-written verdict. Writes ``<work dir>/python.json``, the published verdicts, for
-``replay.mjs`` to compare with, and exits 1 on any unexplained difference.
+so a changed first violation shows up even when both schemas refuse the instance. The evidence for the one
+intended narrowing is a second comparison: the published schemas with the Timestamp ``pattern`` taken
+out must give exactly the hand-written verdict, with no difference left. Writes ``<work dir>/python.json``
+and ``mutants.jsonl``, the published verdicts and the mutants, for ``replay.mjs`` to judge in Ajv, and
+exits 1 on any difference left without the pattern.
 """
 
 from __future__ import annotations
@@ -158,24 +159,24 @@ def _short(verdict: Verdict) -> str:
 
 
 def _report(title: str, cases: list[dict[str, Any]], verdicts: dict[str, list[Verdict]]) -> int:
-    """``verdicts``: the ``old``, ``new`` and ``counterfactual`` (new without the pattern) verdicts."""
+    """``verdicts``: the ``old``, ``new`` and ``counterfactual`` (new without the pattern) verdicts. Returns
+    the number of instances whose verdict still differs once the Timestamp pattern is taken out."""
     rows = list(zip(cases, verdicts["old"], verdicts["new"], verdicts["counterfactual"], strict=True))
     validity = Counter(f"{_valid(o)}/{_valid(n)}" for _, o, n, _ in rows)
     differ = [row for row in rows if row[1] != row[2]]
-    unexplained = [row for row in rows if row[1] != row[3]]
+    left = [row for row in rows if row[1] != row[3]]
     first_changed = sum(1 for _, o, n, _ in differ if _first(o) != _first(n))
     print(f"{title}: {len(cases)} instances")
     print(f"  valid hand-written/published: {dict(sorted(validity.items()))}")
-    print(f"  verdicts that differ: {len(differ)}, of which the first violation changed: {first_changed}")
-    print(f"  explained by the Timestamp pattern: {len(differ) - len(unexplained)}")
-    print(f"  unexplained: {len(unexplained)}")
-    for case, o, n, _ in (unexplained or differ)[:8]:
-        mark = "UNEXPLAINED" if unexplained else "explained"
+    print(f"  hand-written vs published: {len(differ)} differ, the first violation in {first_changed}")
+    print(f"  hand-written vs published without the Timestamp pattern: {len(left)} differ")
+    for case, o, n, _ in (left or differ)[:8]:
+        mark = "DIFFERS WITHOUT THE PATTERN" if left else "only with the pattern"
         where = case["schema_id"].removeprefix(CONTRACTS)
         print(f"    {mark}: {case['source']}, {where}, {json.dumps(case['instance'])[:70]}")
         print(f"      hand-written: {_short(o)}")
         print(f"      published:    {_short(n)}")
-    return len(unexplained)
+    return len(left)
 
 
 def main(work: Path) -> int:
@@ -192,6 +193,9 @@ def main(work: Path) -> int:
         _use_registry(registry)
         replay[name], mutation[name] = _verdicts(cases), _verdicts(mutated)
     (work / "python.json").write_text(json.dumps([_valid(v) for v in new]), encoding="utf-8")
+    with (work / "mutants.jsonl").open("w", encoding="utf-8") as out:
+        for mutant, verdict in zip(mutated, mutation["new"], strict=True):
+            out.write(json.dumps({"case": mutant, "python": _valid(verdict)}) + "\n")
     print(f"cases by source: {dict(Counter(case['source'] for case in cases))}")
     failures = _report("replay", cases, replay)
     failures += _report("mutations of each instance the published schemas accept", mutated, mutation)
