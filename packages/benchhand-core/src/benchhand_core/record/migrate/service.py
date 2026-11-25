@@ -141,7 +141,9 @@ def _migrate_file(root: Path, path: str, rules: list[Rule]) -> tuple[FileChange 
         before = _read(root, path)
     except (OSError, UnicodeDecodeError) as failure:
         return None, [_unreadable(path, f"cannot read: {failure}")]
-    text, applied, findings = before, [], []
+    text = before
+    applied: list[str] = []
+    findings: list[Finding] = []
     for rule in rules:
         try:
             rewrite = rule.transform(path, text)
