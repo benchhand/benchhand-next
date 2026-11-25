@@ -32,6 +32,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          # One pnpm store for both installs; either lockfile changes the key.
+          cache: pnpm
+          cache-dependency-path: |
+            ui/pnpm-lock.yaml
+            contracts/pnpm-lock.yaml
       - uses: extractions/setup-just@v3
       - run: uv sync --all-packages --locked
       - run: pnpm install --frozen-lockfile
