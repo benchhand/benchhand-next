@@ -529,11 +529,13 @@ Every phase ends at a review gate. When a phase's work is done:
   - Run the dev probe by hand in the 7 hosts and commit `docs/client-support.md`.
 - [ ] **Phase 1: contracts and core.**
   - Write `contracts/` (record, envelope, provider protocol, flow, policy) and the codegen with its CI drift check.
-  - Build `benchhand-contracts` and the record service against it: typed reads and writes, validate, migrate, evidence and release.
+  - Build `benchhand-contracts` and the record service against it: typed reads and writes, validate, migrate and evidence. Versioning (snapshot, seal, verify) moves to Phase 2 with the freeze, and release packaging to Phase 4 with the outputs it packages (owner decision, 2026-11-25).
+  - The prototype is still changing. Migrate and evidence port its behaviour as of `release.toml` `reference_commit`, and stay extendable. Every prototype change that merges later is ported by its own reviewed step (ADR-0015, `just reference-changes`): a contract change, a new migrate rule with a fixture, and an evidence rule if it applies. The migrate rules are a table, one row per prototype change, so a new row needs no restructuring.
   - Port the record test cases from `cad-agent` as acceptance fixtures.
   - Add the job service, built on the kept process-identity rules.
 - [ ] **Phase 2: flow engine.**
   - `flow.yaml` plus the interpreter, CEL guards and policy (`hw/policy.yaml`), and the CEL rule lists for checks-by-iteration, fidelity and dispatch.
+  - Version snapshots, seal and verify, used by the freeze and `--since-version` baselines. They honour the project ignore rules (bead `benchhand-3fc`).
   - Decision records, VOID cascade, the result envelope and `next_actions`.
   - Cut `flow/guides/*.md` from the current SKILL.md and `flow.md` prose.
   - Closes `c7q.2`, `c7q.3`, `c7q.4` and `c7q.14`.
@@ -552,7 +554,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - `benchhand-provider` runtime and conformance kit.
   - Providers: kernel-cadquery and kernel-build123d, freecad (managed install and compatibility probe), solver-calculix, collision-fcl, render-chromium, checks-process (CEL dispatch) and store-fs.
   - `benchhand-sdk`.
-  - The output, inspect, generator, calculator, motion, drawing, analysis, BOM and release tools.
+  - The output, inspect, generator, calculator, motion, drawing, analysis, BOM and release tools. Release packaging (`hw/releases/<REV>/`, refusal checks and the acceptance digest against the freeze) is built here.
   - The documentation set (section 12a):
     - the annotation-set contract;
     - surface finish, weld symbols and notes on part drawings;
