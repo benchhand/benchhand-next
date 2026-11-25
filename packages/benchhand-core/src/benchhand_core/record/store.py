@@ -40,6 +40,7 @@ from benchhand_core.record.formats import (
     same,
     split_front_matter,
 )
+from benchhand_core.record.ignore import is_junk
 from benchhand_core.record.model import (
     MANUFACTURING_DOCUMENTS,
     Assembly,
@@ -233,6 +234,11 @@ def _misnamed_part(name: str, pn: str, names: list[str]) -> RecordReadError:
     return RecordReadError(path, f"directory name does not match PN {pn}", code="part.directory_mismatch")
 
 
+def _scan(root: Path, directory: Path, pattern: str) -> list[Path]:
+    """The files under `directory` that match `pattern`, in name order, without OS and tool junk."""
+    return sorted(path for path in directory.glob(pattern) if not is_junk(path.relative_to(root)))
+
+
 class _Reader:
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -254,7 +260,7 @@ class _Reader:
             self.read.errors.append(RecordMissingError(documents.PARTS_DIR, "parts directory is missing"))
             return
         found: dict[str, list[str]] = {}
-        for part_file in sorted(directory.glob("*/part.yaml")):
+        for part_file in _scan(self.root, directory, "*/part.yaml"):
             name = part_file.parent.name
             part = self.attempt(documents.part(name))
             if part is not None:
@@ -268,7 +274,7 @@ class _Reader:
 
     def decisions(self) -> None:
         directory = self.root / documents.DECISIONS_DIR
-        names = sorted(path.name for path in directory.glob("DR-*.md")) if directory.is_dir() else []
+        names = [path.name for path in _scan(self.root, directory, "DR-*.md")] if directory.is_dir() else []
         for file_name in names:
             try:
                 decision = read_decision(self.root, file_name)
@@ -293,7 +299,7 @@ class _Reader:
             if document is not None:
                 self.read.manufacturing[name] = document
         directory = self.root / documents.GUIDELINES_DIR
-        for path in sorted(directory.glob("*.yaml")) if directory.is_dir() else []:
+        for path in _scan(self.root, directory, "*.yaml") if directory.is_dir() else []:
             document = self.attempt(documents.guideline(path.stem))
             if document is not None:
                 self.read.guidelines[path.stem] = document
