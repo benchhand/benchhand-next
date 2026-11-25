@@ -1,6 +1,6 @@
 # ADR-0008: Interaction adapts to client capabilities
 
-Status: accepted. Source: [the approved plan](../design-plan.md).
+Status: accepted, narrowed by [ADR-0018](0018-baseline-and-no-forms.md): plain tool calls are the baseline, and form elicitation is not used in v1. Source: [the approved plan](../design-plan.md).
 
 ## Context
 

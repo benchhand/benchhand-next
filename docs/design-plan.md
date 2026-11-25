@@ -323,14 +323,14 @@ The `interaction` component reads the client capabilities: on 2026-07-28 from ea
 
 | Interaction | 1st | 2nd | Last resort |
 |---|---|---|---|
-| **Human gate** | MCP App gate card (packet, renders, flow view, Approve or Request changes) | Form elicitation (Approve or Request changes, plus a rationale) | The agent presents the packet and the gate-page URL in chat, asks, and passes your reply to `flow.record_decision` (`channel: chat`, your words quoted) |
+| **Human gate** | MCP App gate card (packet, renders, flow view, Approve or Request changes) | none (form elicitation dropped in v1, ADR-0018) | The agent presents the packet and the gate-page URL in chat, asks, and passes your reply to `flow.record_decision` (`channel: chat`, your words quoted) |
 | **Preview for you** | Preview-host page at a loopback URL, in every host. Where Apps render, the App (`ui://benchhand/viewer`) is a thin shell that embeds the same page (CSP `frameDomains` set to the preview origin). | URL in the tool result | Absolute paths |
 | **Preview for the agent** | PNG snapshots as image content | `resource_link` to the snapshot files | Absolute paths |
-| **Structured questions** (GROUND, INTENT, SPECIFY) | MCP App form (nested schemas) | Form elicitation (flat schema) | Asked in chat, recorded through `record.*` |
+| **Structured questions** (GROUND, INTENT, SPECIFY) | MCP App form (nested schemas) | none (form elicitation dropped in v1, ADR-0018) | Asked in chat, recorded through `record.*` |
 | **Long jobs** | Tasks extension (`tasks/get`, `tasks/update`, `tasks/cancel`) | Progress notifications on a bounded call | `jobs.start`, `jobs.status`, `jobs.result` |
 | **Media out** | Image content + `resource_link` | Preview-host URL | Path |
 
-URL-mode elicitation is not used. Every host that supports it also supports form mode, and preview URLs go in tool results.
+URL-mode elicitation is not used, and since ADR-0018 neither is form mode: the baseline is a client with plain tool calls, and every workflow must complete on it. Preview URLs go in tool results.
 
 Rules:
 - An empty or declined answer means no answer, and the gate stays open. Codex auto-review has been seen answering with empty content (openai/codex#23383).
@@ -475,7 +475,7 @@ Code is reused only where it is already clean and fits the new boundaries (secti
 - [ ] **Phase 5: preview host and the richer interactions.**
   - The preview host plus `ui/`: viewer, concept, gallery, gate card and flow view (React Flow).
   - `preview.*`, `viewer.*` and `concept.*`, draft preview, and `layout.from_concept`.
-  - MCP Apps shells, form elicitation, image results, and the tasks adapter behind a flag.
+  - MCP Apps shells, image results, and the tasks adapter behind a flag (no form elicitation, ADR-0018).
   - `benchhand serve`.
 - [ ] **Phase 6: harness integration.**
   - `benchhand install` for the 7 hosts: MCP registration with timeouts, the bootstrap skill, agent profiles from `harness/generate.py`, and the Pi package with its extension.
@@ -491,7 +491,7 @@ Code is reused only where it is already clean and fits the new boundaries (secti
 - **Behavioural parity.** The test cases from every `cad-agent` per-skill suite are ported as acceptance fixtures against the new APIs, and they pass.
 - **Contracts.** The codegen drift check is clean. A schema diff against the last release flags a breaking change without a major bump. The runtime validators reject a malformed message at every boundary (provider, MCP, record, preview host), and the generated conformance examples round-trip through every built-in provider.
 - **Golden end-to-end.** `examples/lamp-arm` goes from GROUND to RELEASE through MCP tools only, driven by a scripted MCP client.
-  - It is run once per capability profile: chat only, forms, Apps, tasks.
+  - It is run once per capability profile: chat only (the release gate, ADR-0018), Apps, tasks.
   - The STEP, drawings, EBOM and verification must match the `cad-agent` baseline.
 - **Flow tests.**
   - An out-of-order transition is refused with a reason and the next action.

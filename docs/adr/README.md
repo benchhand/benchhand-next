@@ -17,3 +17,4 @@
 - [ADR-0015: Temporary repo `benchhand/benchhand-next`, swapped later](0015-temporary-repo.md)
 - [ADR-0016: The capability probe is dev-only](0016-dev-only-probe.md)
 - [ADR-0017: Contracts are generated from one source and enforced](0017-contracts.md)
+- [ADR-0018: Plain tool calls are the baseline; forms are dropped from v1](0018-baseline-and-no-forms.md)
