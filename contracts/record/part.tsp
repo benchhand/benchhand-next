@@ -44,7 +44,13 @@ model Part {
   model_frame?: PartModelFrame;
 
   /** The part's form type for the form check; absent means solid, and only a solid part is judged block_like */
-  form_class?: PartFormClass;
+  form_class?: enum {
+    solid,
+    frame,
+    plate,
+    skeleton,
+    shell,
+  };
 
   transparency?: PartTransparency;
   procurement?: Drawing.procurement;
@@ -134,15 +140,6 @@ enum PartMakeBuy {
 enum PartModelFrame {
   assembly_zero,
   part_local,
-}
-
-@extension("x-inline", true)
-enum PartFormClass {
-  solid,
-  frame,
-  plate,
-  skeleton,
-  shell,
 }
 
 /** How much light the part passes; absent means opaque. Only a transparent part is see-through to the visibility check. An optical requirement is a hard selection constraint met by a purchased transparent part or identified transparent stock on a suitable route, never by an opaque process */

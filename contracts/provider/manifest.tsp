@@ -35,7 +35,7 @@ model Manifest {
   resident?: boolean = false;
 
   @minItems(1)
-  command: ManifestCommandItem[];
+  command: @minLength(1) scalar extends string[];
 
   @doc("Seconds per hook method, e.g. {\"solver/solve\": 3600}.")
   timeouts?: Record<ManifestTimeoutsValue>;
@@ -62,10 +62,6 @@ model Manifest {
     summary: string;
   }[];
 }
-
-@extension("x-inline", true)
-@minLength(1)
-scalar ManifestCommandItem extends string;
 
 @extension("x-inline", true)
 @minValue(1)

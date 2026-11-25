@@ -22,7 +22,12 @@ model Product {
   /** The general tolerance a drawing states for dimensions without their own: a linear value in mm or a standard label such as ISO 2768-m. A tunable, so it defaults to ISO 2768-m and the user changes it. Unknown, with the open question that would settle it, is also valid; validation refuses a drawing while it is unknown */
   @oneOf
   general_tolerance:
-    | ProductGeneralTolerance0
+    |
+        /** a linear value in mm */
+        @minValueExclusive(0)
+        @maxValue(5)
+        @extension("x-plausible", #{ min: 0.01, max: 0.5 })
+        scalar extends float64
     | ProductGeneralTolerance1
     | Common.fact_unknown = ProductGeneralTolerance1("ISO 2768-m");
 
@@ -120,13 +125,6 @@ enum ProductRegime {
   iso,
   asme,
 }
-
-/** a linear value in mm */
-@extension("x-inline", true)
-@minValueExclusive(0)
-@maxValue(5)
-@extension("x-plausible", #{ min: 0.01, max: 0.5 })
-scalar ProductGeneralTolerance0 extends float64;
 
 @extension("x-inline", true)
 @minLength(1)
@@ -273,7 +271,7 @@ model fdm_profile {
 
   @oneOf
   overhang_deg:
-    | ProductFdmProfileOverhangDeg0
+    | @minValueExclusive(0) @maxValueExclusive(90) scalar extends float64
     | ProductFdmProfileOverhangDeg1 = ProductFdmProfileOverhangDeg1.calibrated;
 
   bridge_mm: product_limit = ProductProductLimit1.calibrated;
@@ -306,11 +304,6 @@ enum ProductFdmProfileSupports {
   free,
   off,
 }
-
-@extension("x-inline", true)
-@minValueExclusive(0)
-@maxValueExclusive(90)
-scalar ProductFdmProfileOverhangDeg0 extends float64;
 
 @extension("x-inline", true)
 enum ProductFdmProfileOverhangDeg1 {

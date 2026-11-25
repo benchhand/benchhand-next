@@ -1,5 +1,12 @@
+kind: project
 emit:
   - "@typespec/json-schema"
+# A declaration expression is a decorated scalar or enum written at its
+# one use, such as `name: @minLength(1) scalar extends string`; the emitter
+# writes it in place. Experimental in TypeSpec 1.18, pinned exactly in
+# package.json.
+features:
+  - declaration-expressions
 options:
   "@typespec/json-schema":
     emitter-output-dir: "{output-dir}"

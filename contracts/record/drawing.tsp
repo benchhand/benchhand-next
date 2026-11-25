@@ -63,15 +63,12 @@ model sheet {
   @uniqueItems
   sizes?: sheet_size[];
 
-  orientation?: DrawingSheetOrientation;
+  orientation?: enum {
+    landscape,
+    portrait,
+  };
   scale?: scale;
   multi_sheet?: boolean;
-}
-
-@extension("x-inline", true)
-enum DrawingSheetOrientation {
-  landscape,
-  portrait,
 }
 
 /** An axis built from resolved datums or features: normal_to or parallel_to fixes the line, toward or toward_axis its sense */
@@ -101,14 +98,9 @@ union tolerance {
     @minItems(2)
     @maxItems(2)
     @extension("x-plausible", #{ min: -1, max: 1 })
-    deviation_mm: DrawingTolerance1DeviationMmItem[],
+    deviation_mm: @minValue(-10) @maxValue(10) scalar extends float64[],
   },
 }
-
-@extension("x-inline", true)
-@minValue(-10)
-@maxValue(10)
-scalar DrawingTolerance1DeviationMmItem extends float64;
 
 @oneOf
 union tolerance_policy {
@@ -247,7 +239,13 @@ model feature_intent {
   profile_tolerance_mm?: float64;
 
   /** general_note: a round's or chamfer's size goes in the sheet's general note of undimensioned edge fillets and edge breaks */
-  presentation?: DrawingFeatureIntentPresentation;
+  presentation?: enum {
+    auto,
+    visible,
+    section,
+    detail,
+    general_note,
+  };
 
   axial_location_from?: reference;
   tolerance_policy?: policy_name;
@@ -262,15 +260,6 @@ enum DrawingFeatureIntentSize {
   `interface`,
 }
 
-@extension("x-inline", true)
-enum DrawingFeatureIntentPresentation {
-  auto,
-  visible,
-  section,
-  detail,
-  general_note,
-}
-
 /** A thread on a bore or shaft feature, drawn conventionally (ISO 6410-1, ASME Y14.6); the full-thread depth is the measured distance from the feature's entry to its locator anchor */
 model thread {
   @pattern("^M[0-9]+(\\.[0-9]+)?x[0-9]+(\\.[0-9]+)?-[0-9][a-hA-H]([0-9][a-hA-H])?$")
@@ -279,17 +268,14 @@ model thread {
   @minLength(1)
   standard: string;
 
-  operation: DrawingThreadOperation;
+  operation: enum {
+    tap,
+    thread_form,
+    roll,
+    cut,
+    vendor,
+  };
   full_depth_anchor?: Common.semantic_id;
-}
-
-@extension("x-inline", true)
-enum DrawingThreadOperation {
-  tap,
-  thread_form,
-  roll,
-  cut,
-  vendor,
 }
 
 /** ISO 13715:2017 edge size limits [lower, upper] in mm: + permits excess material (burr, passing), - requires removal (edge break, undercut); a single limit pairs with 0 */
@@ -312,27 +298,21 @@ model edges {
 
 /** An ISO 21920-1 (ASME Y14.36) surface texture requirement: the parameter's upper limit in micrometres and whether material shall be removed */
 model texture_requirement {
-  parameter: DrawingTextureRequirementParameter;
+  parameter: enum {
+    Ra,
+    Rz,
+  };
 
   @minValue(0.01)
   @maxValue(500)
   @extension("x-plausible", #{ max: 100 })
   limit_um: float64;
 
-  process: DrawingTextureRequirementProcess;
-}
-
-@extension("x-inline", true)
-enum DrawingTextureRequirementParameter {
-  Ra,
-  Rz,
-}
-
-@extension("x-inline", true)
-enum DrawingTextureRequirementProcess {
-  any,
-  removal_required,
-  removal_prohibited,
+  process: enum {
+    any,
+    removal_required,
+    removal_prohibited,
+  };
 }
 
 /** A geometrical tolerance of ISO 1101 or ASME Y14.5 on resolved features; the zone is design intent, never a measured value */
@@ -392,7 +372,12 @@ model dimension_request {
   datum_frame?: datum_label[];
 
   tolerance?: tolerance;
-  presentation?: DrawingDimensionRequestPresentation;
+  presentation?: enum {
+    auto,
+    visible,
+    section,
+    detail,
+  };
   reference?: boolean;
 }
 
@@ -411,14 +396,6 @@ enum DrawingDimensionRequestOperation {
   length,
   thickness,
   chamfer,
-}
-
-@extension("x-inline", true)
-enum DrawingDimensionRequestPresentation {
-  auto,
-  visible,
-  section,
-  detail,
 }
 
 model part_drawing {
@@ -498,10 +475,13 @@ model part_drawing {
   manufacturing?: {
     build_direction?: direction;
     interface_condition?: DrawingPartDrawingManufacturingInterfaceCondition;
-    dimensions_apply?: DrawingPartDrawingManufacturingDimensionsApply;
+    dimensions_apply?: enum {
+      before_finish,
+      after_finish,
+    };
 
     @minItems(1)
-    post_processing?: DrawingPartDrawingManufacturingPostProcessingItem[];
+    post_processing?: @minLength(1) scalar extends string[];
 
     @minLength(1)
     inspection_stage?: string;
@@ -541,16 +521,6 @@ enum DrawingPartDrawingManufacturingInterfaceCondition {
   post_processed,
   finish_machined,
 }
-
-@extension("x-inline", true)
-enum DrawingPartDrawingManufacturingDimensionsApply {
-  before_finish,
-  after_finish,
-}
-
-@extension("x-inline", true)
-@minLength(1)
-scalar DrawingPartDrawingManufacturingPostProcessingItem extends string;
 
 model procurement {
   mode: DrawingProcurementMode;
@@ -619,7 +589,7 @@ model procurement {
 
   @minItems(1)
   @uniqueItems
-  certificates?: DrawingProcurementCertificatesItem[];
+  certificates?: @minLength(1) scalar extends string[];
 }
 
 @extension("x-inline", true)
@@ -627,10 +597,6 @@ enum DrawingProcurementMode {
   catalog,
   made_to_drawing,
 }
-
-@extension("x-inline", true)
-@minLength(1)
-scalar DrawingProcurementCertificatesItem extends string;
 
 model fit_endpoint {
   PN: Common.pn;

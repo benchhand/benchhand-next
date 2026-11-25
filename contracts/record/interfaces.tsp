@@ -203,7 +203,7 @@ model functional {
     /** hw/motion/cases/<ID> case ids */
     @minItems(1)
     @uniqueItems
-    scenario_cases?: InterfacesFunctionalPlayScenarioCasesItem[];
+    scenario_cases?: @pattern("^[a-z][a-z0-9_-]*$") scalar extends string[];
   };
 
   @minItems(1)
@@ -248,10 +248,6 @@ union InterfacesFunctionalContactMaterialsItem {
   Common.profile_id,
   Common.fact_open,
 }
-
-@extension("x-inline", true)
-@pattern("^[a-z][a-z0-9_-]*$")
-scalar InterfacesFunctionalPlayScenarioCasesItem extends string;
 
 @extension("x-inline", true)
 @minItems(2)

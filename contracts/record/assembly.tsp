@@ -127,25 +127,22 @@ scalar joint_id extends string;
 
 /** What carries the drive torque across a torque: transmitted joint; required on a fixed joint, optional on a revolute driven through an unmodelled shaft. Hardware types (key, set_screw, pin) name their modelled occurrences in parts */
 model torque_path {
-  type: AssemblyTorquePathType;
+  type: enum {
+    key,
+    set_screw,
+    d_flat,
+    press_fit,
+    spline,
+    clamp,
+    pin,
+    adhesive,
+  };
 
   @minItems(1)
   @uniqueItems
   parts?: part_ref[];
 
   decision?: Common.decision;
-}
-
-@extension("x-inline", true)
-enum AssemblyTorquePathType {
-  key,
-  set_screw,
-  d_flat,
-  press_fit,
-  spline,
-  clamp,
-  pin,
-  adhesive,
 }
 
 /** A dependent joint's law: its value derives from a driver joint */
@@ -278,7 +275,7 @@ model assembly_drawing {
   scope?: "modeled_mechanical_assembly" | "complete_assembly";
 
   /** What a modelled scope leaves out, named on the drawing */
-  excludes?: AssemblyAssemblyDrawingExcludesItem[];
+  excludes?: @minLength(1) scalar extends string[];
 
   @minItems(1)
   views: {
@@ -299,16 +296,8 @@ model assembly_drawing {
   items: drawing_item[];
 
   @uniqueItems
-  subassembly_sheets?: AssemblyAssemblyDrawingSubassemblySheetsItem[];
+  subassembly_sheets?: @pattern("^[a-z][a-z0-9_-]*$") scalar extends string[];
 }
-
-@extension("x-inline", true)
-@minLength(1)
-scalar AssemblyAssemblyDrawingExcludesItem extends string;
-
-@extension("x-inline", true)
-@pattern("^[a-z][a-z0-9_-]*$")
-scalar AssemblyAssemblyDrawingSubassemblySheetsItem extends string;
 
 /** One assembly operation. An installation step puts `part` into `into` along `direction` (in the receiving part's model frame) until the acceptance holds; the fit, insert or ring comes from the interface limit of the same kind. predecessors name the operations that must come first, closes the parts it encloses, and tool_access the tools that must reach. A tool name alone is display text: its reach stays unknown. path, when given, is the part's insertion path; without it the part travels in a straight line along direction, and checks report that default. edge_distance is a fastener, insert or heat-set joint's distance from its hole to the nearest edge against its sourced criterion */
 @extension(
@@ -400,17 +389,17 @@ model assembly_operation {
 
     @minItems(1)
     @maxItems(2)
-    features: AssemblyAssemblyOperationAcceptanceFeaturesItem[];
+    features: @pattern("^[a-z][a-z0-9_]*$") scalar extends string[];
   };
-  tools?: AssemblyAssemblyOperationToolsItem[];
-  consumables?: AssemblyAssemblyOperationConsumablesItem[];
+  tools?: @minLength(1) scalar extends string[];
+  consumables?: @minLength(1) scalar extends string[];
 
   @pattern("^J-[0-9]{3}$")
   verify_joint?: string;
 
   @minItems(1)
   @uniqueItems
-  predecessors?: AssemblyAssemblyOperationPredecessorsItem[];
+  predecessors?: @pattern("^[a-z][a-z0-9_-]*$") scalar extends string[];
 
   /** parts this operation encloses: no later operation reaches them */
   @minItems(1)
@@ -465,22 +454,6 @@ model assembly_operation {
   @minLength(1)
   inspection?: string;
 }
-
-@extension("x-inline", true)
-@pattern("^[a-z][a-z0-9_]*$")
-scalar AssemblyAssemblyOperationAcceptanceFeaturesItem extends string;
-
-@extension("x-inline", true)
-@minLength(1)
-scalar AssemblyAssemblyOperationToolsItem extends string;
-
-@extension("x-inline", true)
-@minLength(1)
-scalar AssemblyAssemblyOperationConsumablesItem extends string;
-
-@extension("x-inline", true)
-@pattern("^[a-z][a-z0-9_-]*$")
-scalar AssemblyAssemblyOperationPredecessorsItem extends string;
 
 @@example(
   Assembly,

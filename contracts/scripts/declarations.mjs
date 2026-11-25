@@ -8,14 +8,21 @@
 // - declarations: {"id", "file"} of each declaration the emitter writes, sorted by file and position;
 // - namespaces: {"baseUri", "extensions"} of each @jsonSchema namespace, with the @extension values on
 //   the namespace itself, which the emitter doesn't write.
-import { compile, NodeHost, getSourceLocation, formatDiagnostic } from "@typespec/compiler";
+import { compile, NodeHost, getSourceLocation, formatDiagnostic, resolveCompilerOptions } from "@typespec/compiler";
 import { findBaseUri, getExtensions, getId, getJsonSchemaTypes } from "@typespec/json-schema";
 import { relative, resolve } from "node:path";
 
 const main = resolve(process.argv[2] ?? "main.tsp");
-const program = await compile(NodeHost, main, { noEmit: true, warningAsError: true });
-if (program.diagnostics.length > 0) {
-  for (const diagnostic of program.diagnostics) console.error(formatDiagnostic(diagnostic));
+// tspconfig.yaml's features, as `tsp compile` reads them.
+const [options, configDiagnostics] = await resolveCompilerOptions(NodeHost, {
+  entrypoint: main,
+  cwd: process.cwd(),
+  overrides: { noEmit: true, warningAsError: true },
+});
+const program = await compile(NodeHost, main, options);
+const diagnostics = [...configDiagnostics, ...program.diagnostics];
+if (diagnostics.length > 0) {
+  for (const diagnostic of diagnostics) console.error(formatDiagnostic(diagnostic));
   process.exit(1);
 }
 
