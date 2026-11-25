@@ -98,11 +98,11 @@ model Widget {{
   }};
 }}
 
-@extension("examples", #["LMP-0003"])
+@example("LMP-0003")
 @pattern("^[A-Z]{{3}}-[0-9]{{4}}$")
 scalar PartNumber extends string;
 
-@@extension(Widget, "examples", #[#{{ part: "LMP-0003", kind: "kernel" }}]);
+@@example(Widget, #{{ part: "LMP-0003", kind: "kernel" }});
 """
 
 
