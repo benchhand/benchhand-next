@@ -3,17 +3,24 @@
 The contracts moved from hand-written JSON Schema to TypeSpec on top of ``BASE``. This compares each
 published schema with ``contracts/<path>.schema.json`` at ``BASE``, after JSON decoding:
 
-- every value must be equal, lists in order, and a ``required`` list in order, since the validator reports
-  missing properties in that order;
-- at each schema node, two keywords that can both fail on one instance at the same place must come in the
-  same order. ``benchhand_contracts.violations`` lists the violations at one place in the order of their
-  keywords, and Python's validator raises the first of two that ``jsonschema.exceptions.relevance`` ties,
-  so the order decides the violation ``validate`` raises, its ``schema_path``, and the order of the list.
-  Keywords whose errors are always deeper in the instance (``properties``, ``items``) and keywords of
-  different JSON types (``minLength`` and ``minimum``) never fail at the same place.
+- every value must be the same, lists in order. Literal data (``const``, ``enum``, ``examples``,
+  ``default``, ``required``, ``dependentRequired`` and ``x-*`` values) is compared recursively by JSON type,
+  so ``true`` is not ``1`` and ``1`` is not ``1.0``, with a ``required`` list and the keys of a
+  ``dependentRequired`` in order, since the validator reports missing properties in that order;
+- at each schema node, two keywords that can both report a violation at the same instance path must come
+  in the same order. ``benchhand_contracts.violations`` sorts the violations by instance path and keeps
+  the validator's order among those at one path, which is the order of the keywords, and
+  ``jsonschema.exceptions.best_match`` takes the first of two it ranks alike. So the order decides the
+  violation ``validate`` raises, its ``schema_path``, and the order of the list.
 
-Each intended difference is in ``ALLOWED`` with its reason, and anything else fails. ``just
-contracts-equivalence`` runs it; ``tools/equiv/results/decoded.txt`` holds the output.
+``places`` works out where a keyword can report: at the node's own instance path, under a named property,
+under any property or item, or anywhere. It follows inline subschemas; a ``$ref`` and a keyword it doesn't
+know count as anywhere, so an order change is skipped only when the two keywords provably can't report at
+one path.
+
+Each intended difference is an ``Allowed`` entry with its exact old value, new value, kind and reason,
+and anything else fails, as does an entry that matches nothing. ``just contracts-equivalence`` runs it;
+``tools/equiv/results/decoded.txt`` holds the output.
 """
 
 from __future__ import annotations
@@ -23,6 +30,7 @@ import json
 import subprocess
 import sys
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -34,27 +42,116 @@ NEW_DIR = "packages/benchhand-contracts/src/benchhand_contracts/schemas"
 SCHEMA_SUFFIX = ".schema.json"
 DATA_KEYWORDS = frozenset(("const", "enum", "examples", "default", "required", "dependentRequired"))
 SCHEMA_MAPS = frozenset(("properties", "patternProperties", "$defs", "dependentSchemas"))
-TYPE_GROUPS = {
-    "object": ("required", "minProperties", "maxProperties", "propertyNames", "dependentRequired"),
+
+
+class _Absent:
+    def __repr__(self) -> str:
+        return "absent"
+
+
+ABSENT: Any = _Absent()
+"""The old value of an added keyword, the new value of a removed one."""
+
+
+@dataclass(frozen=True)
+class Difference:
+    pointer: str
+    kind: str
+    """``added``, ``removed``, ``changed``, ``key order`` (of a ``dependentRequired``) or ``keyword order``
+    (``old`` and ``new`` are then the two keywords, in each schema's order)."""
+    old: Any
+    new: Any
+
+    def __str__(self) -> str:
+        return f"{self.pointer or '/'}: {self.kind}: {_short(self.old)} -> {_short(self.new)}"
+
+
+@dataclass(frozen=True)
+class Allowed:
+    rel_path: str
+    pointer: str
+    kind: str
+    old: Any
+    new: Any
+    reason: str
+
+    def matches(self, rel_path: str, difference: Difference) -> bool:
+        return (
+            (rel_path, difference.pointer, difference.kind) == (self.rel_path, self.pointer, self.kind)
+            and same_data(difference.old, self.old)
+            and same_data(difference.new, self.new)
+        )
+
+
+# Where a keyword reports, as a set of places: HERE (the node's own instance path), (PROPERTY, name) or
+# (PROPERTY, ANY_NAME) for that property and below, ITEM for an item and below, ANYWHERE when unknown.
+HERE, PROPERTY, ANY_NAME, ITEM, ANYWHERE = "here", "property", "*", ("item",), "anywhere"
+_TYPED_HERE = {
+    "object": ("required", "dependentRequired", "minProperties", "maxProperties", "propertyNames"),
     "array": ("minItems", "maxItems", "uniqueItems", "contains", "minContains", "maxContains"),
-    "string": ("minLength", "maxLength", "pattern"),
+    "string": ("minLength", "maxLength", "pattern", "format"),
     "number": ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf"),
 }
+JSON_TYPE = {keyword: kind for kind, keywords in _TYPED_HERE.items() for keyword in keywords} | {
+    **dict.fromkeys(("properties", "patternProperties", "additionalProperties"), "object"),
+    **dict.fromkeys(("unevaluatedProperties", "dependentSchemas"), "object"),
+    **dict.fromkeys(("items", "prefixItems", "unevaluatedItems"), "array"),
+}
 """Keywords that judge one JSON type and pass every other."""
-_GROUP = {keyword: group for group, keywords in TYPE_GROUPS.items() for keyword in keywords}
-ANY_TYPE = frozenset(
-    ("type", "const", "enum", "$ref", "allOf", "anyOf", "oneOf", "not", "then", "else", "dependentSchemas")
+HERE_ONLY = frozenset((*JSON_TYPE, "type", "const", "enum", "not")) - {
+    "properties", "patternProperties", "additionalProperties", "unevaluatedProperties", "dependentSchemas",
+    "items", "prefixItems", "unevaluatedItems",
+}  # fmt: skip
+"""Keywords that report at the node's own instance path only (``propertyNames`` and ``contains`` too)."""
+SILENT = frozenset(
+    (
+        "$schema", "$id", "$anchor", "$dynamicAnchor", "$comment", "$defs", "$vocabulary", "title",
+        "description", "examples", "default", "deprecated", "readOnly", "writeOnly", "then", "else",
+        "contentEncoding", "contentMediaType", "contentSchema",
+    )
+)  # fmt: skip
+"""Keywords that never report on their own: annotations, and then/else, which jsonschema reports under if."""
+DISJOINT = frozenset(
+    frozenset(pair)
+    for pair in (
+        ("properties", "additionalProperties"),
+        ("patternProperties", "additionalProperties"),
+        ("prefixItems", "items"),
+    )
 )
-"""Keywords whose errors can be at the schema's own place in the instance, for any instance."""
+"""Pairs that judge disjoint properties or items of one instance: additionalProperties takes the names
+that properties and patternProperties don't, and items the items after prefixItems."""
 
 TIMESTAMP = ("jobs/job.schema.json", "/$defs/Timestamp")
-EMPTY_SCHEMA_AS_TRUE = "changed: a property schema of {} is written true; both accept every value"
-ALLOWED: dict[tuple[str, str], str] = {
-    (TIMESTAMP[0], f"{TIMESTAMP[1]}/pattern"): "added: an uppercase T and an explicit offset (ADR-0017)",
-    (TIMESTAMP[0], f"{TIMESTAMP[1]}/description"): "changed: the description states the new pattern",
-    ("provider/protocol.schema.json", "/$defs/Limits/required"): "removed: `required: []` requires nothing",
-    **{
-        ("provider/protocol.schema.json", pointer): EMPTY_SCHEMA_AS_TRUE
+TIMESTAMP_PATTERN = (
+    "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)"
+    "(\\.[0-9]+)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$"
+)
+TIMESTAMP_DESCRIPTION = (
+    "A date-time, RFC 3339-shaped with an explicit offset: Z or a numeric one, after an uppercase T. The "
+    "pattern refuses a lowercase t or z, which the validators of each language disagree on; it doesn't "
+    "check that the date exists. The job service writes UTC."
+)
+EMPTY_SCHEMA_AS_TRUE = "a property schema of {} is written true; both accept every value"
+WHOLE_NUMBER = (
+    "TypeSpec values are JavaScript numbers, so the example's 20.0 is written 20: the same JSON number, "
+    "and an example is an annotation"
+)
+ALLOWED: tuple[Allowed, ...] = (
+    Allowed(
+        TIMESTAMP[0], f"{TIMESTAMP[1]}/pattern", "added", ABSENT, TIMESTAMP_PATTERN,
+        "an uppercase T and an explicit offset (ADR-0017)",
+    ),
+    Allowed(
+        TIMESTAMP[0], f"{TIMESTAMP[1]}/description", "changed", "UTC, RFC 3339.", TIMESTAMP_DESCRIPTION,
+        "the description states the new pattern",
+    ),
+    Allowed(
+        "provider/protocol.schema.json", "/$defs/Limits/required", "removed", [], ABSENT,
+        "`required: []` requires nothing",
+    ),
+    *(
+        Allowed("provider/protocol.schema.json", pointer, "changed", {}, True, EMPTY_SCHEMA_AS_TRUE)
         for pointer in (
             "/$defs/ErrorObject/properties/data/properties/detail",
             "/$defs/LogParams/properties/data",
@@ -62,10 +159,22 @@ ALLOWED: dict[tuple[str, str], str] = {
             "/$defs/Notification/properties/params",
             "/$defs/SuccessResponse/properties/result",
         )
-    },
-}
-"""``(contract, JSON pointer) -> reason`` for each difference the migration made on purpose."""
-ROOT_DESCRIPTION = "added: a description at the contract root"
+    ),
+    *(
+        Allowed(rel_path, f"/examples/{pointer}", "changed", float(value), value, WHOLE_NUMBER)
+        for rel_path, pointer, value in (
+            ("record/interfaces.schema.json", "0/interfaces/0/limits/press_fit/engagement_length_mm", 20),
+            ("record/interfaces.schema.json", "0/interfaces/0/limits/heat_set/0/min_depth_mm", 8),
+            ("record/interfaces.schema.json", "0/interfaces/0/limits/heat_set/0/engagement_length_mm", 8),
+            ("record/manufacturing-guideline.schema.json", "0/limits/4/quantity/value", 2),
+            ("record/manufacturing-guideline.schema.json", "0/limits/5/quantity/value", 2),
+            ("record/part.schema.json", "1/drawing/edges/internal/0", 0),
+            ("record/part.schema.json", "1/drawing/edges/external/1", 0),
+        )
+    ),
+)  # fmt: skip
+"""Each difference the migration made on purpose, with its exact old and new value."""
+ROOT_DESCRIPTION = "a description added at the contract root, an annotation"
 
 
 def old_schemas() -> dict[str, Any]:
@@ -83,74 +192,156 @@ def new_schemas() -> dict[str, Any]:
     return {path.relative_to(root).as_posix(): json.loads(path.read_text()) for path in paths}
 
 
-def differences(old: Any, new: Any, pointer: str = "") -> Iterator[tuple[str, str]]:
-    """``(JSON pointer, what differs)`` for every difference between two decoded schemas."""
+def same_data(old: Any, new: Any) -> bool:
+    """JSON values equal by JSON type, recursively: ``true`` is not ``1``, and ``1`` is not ``1.0``."""
+    if isinstance(old, dict) and isinstance(new, dict):
+        return old.keys() == new.keys() and all(same_data(old[key], new[key]) for key in old)
+    if isinstance(old, list) and isinstance(new, list):
+        return len(old) == len(new) and all(map(same_data, old, new))
+    return type(old) is type(new) and old == new
+
+
+def differences(old: Any, new: Any, pointer: str = "") -> Iterator[Difference]:
+    """Every difference between two decoded schemas."""
     if isinstance(old, dict) and isinstance(new, dict):
         yield from _object_differences(old, new, pointer)
     elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
         for index, (old_item, new_item) in enumerate(zip(old, new, strict=True)):
             yield from differences(old_item, new_item, f"{pointer}/{index}")
-    elif not _same_value(old, new):
-        yield pointer, f"{_short(old)} -> {_short(new)}"
+    elif not same_data(old, new):
+        yield Difference(pointer, "changed", old, new)
 
 
-def _object_differences(old: dict[str, Any], new: dict[str, Any], pointer: str) -> Iterator[tuple[str, str]]:
-    for key in sorted(old.keys() - new.keys()):
-        yield f"{pointer}/{_escape(key)}", "removed"
-    for key in sorted(new.keys() - old.keys()):
-        yield f"{pointer}/{_escape(key)}", "added"
-    for first, second in same_place_order_changes(old, new):
-        yield pointer or "/", f"keyword order: {first} before {second} -> after it"
+def _object_differences(old: dict[str, Any], new: dict[str, Any], pointer: str) -> Iterator[Difference]:
+    yield from _key_differences(old, new, pointer)
+    for first, second in same_path_order_changes(old, new):
+        yield Difference(pointer or "/", "keyword order", [first, second], [second, first])
     for key in [key for key in old if key in new]:
         child = f"{pointer}/{_escape(key)}"
         if key in DATA_KEYWORDS or key.startswith("x-"):
-            if old[key] != new[key]:
-                yield child, f"{_short(old[key])} -> {_short(new[key])}"
+            yield from _data_differences(key, old[key], new[key], child)
         elif key in SCHEMA_MAPS and isinstance(old[key], dict) and isinstance(new[key], dict):
-            yield from _map_differences(old[key], new[key], child)
+            yield from _key_differences(old[key], new[key], child)
+            for name in [name for name in old[key] if name in new[key]]:
+                yield from differences(old[key][name], new[key][name], f"{child}/{_escape(name)}")
         else:
             yield from differences(old[key], new[key], child)
 
 
-def _map_differences(old: dict[str, Any], new: dict[str, Any], pointer: str) -> Iterator[tuple[str, str]]:
-    for name in sorted(old.keys() - new.keys()):
-        yield f"{pointer}/{_escape(name)}", "removed"
-    for name in sorted(new.keys() - old.keys()):
-        yield f"{pointer}/{_escape(name)}", "added"
-    for name in [name for name in old if name in new]:
-        yield from differences(old[name], new[name], f"{pointer}/{_escape(name)}")
+def _key_differences(old: dict[str, Any], new: dict[str, Any], pointer: str) -> Iterator[Difference]:
+    for key in sorted(old.keys() - new.keys()):
+        yield Difference(f"{pointer}/{_escape(key)}", "removed", old[key], ABSENT)
+    for key in sorted(new.keys() - old.keys()):
+        yield Difference(f"{pointer}/{_escape(key)}", "added", ABSENT, new[key])
 
 
-def same_place_order_changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str]]:
-    """Pairs of keywords that can fail at the same place, ``old`` lists first, and ``new`` reverses."""
-    in_old = [key for key in old if key in new and _reports_here(key, old[key])]
+def _data_differences(key: str, old: Any, new: Any, pointer: str) -> Iterator[Difference]:
+    both_maps = isinstance(old, dict) and isinstance(new, dict)
+    if key == "dependentRequired" and both_maps and old.keys() == new.keys() and list(old) != list(new):
+        yield Difference(pointer, "key order", list(old), list(new))
+    yield from _literal_differences(old, new, pointer)
+
+
+def _literal_differences(old: Any, new: Any, pointer: str) -> Iterator[Difference]:
+    """Each leaf of literal data that differs, by JSON type."""
+    if isinstance(old, dict) and isinstance(new, dict):
+        yield from _key_differences(old, new, pointer)
+        for key in [key for key in old if key in new]:
+            yield from _literal_differences(old[key], new[key], f"{pointer}/{_escape(key)}")
+    elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
+        for index, (old_item, new_item) in enumerate(zip(old, new, strict=True)):
+            yield from _literal_differences(old_item, new_item, f"{pointer}/{index}")
+    elif not same_data(old, new):
+        yield Difference(pointer, "changed", old, new)
+
+
+def same_path_order_changes(old: dict[str, Any], new: dict[str, Any]) -> list[tuple[str, str]]:
+    """Pairs of keywords that can report at the same instance path, ``old`` lists first, ``new`` reverses."""
+    shared = [key for key in old if key in new]
+    reach = {key: places(key, old[key], old) | places(key, new[key], new) for key in shared}
     position = {key: index for index, key in enumerate(new)}
     return [
         (first, second)
-        for first, second in itertools.combinations(in_old, 2)
-        if _same_place(first, second) and position[first] > position[second]
+        for first, second in itertools.combinations(shared, 2)
+        if position[first] > position[second] and _can_share_a_path(first, second, reach)
     ]
 
 
-def _reports_here(keyword: str, value: Any) -> bool:
-    if keyword == "additionalProperties":
-        return value is False  # a schema there reports at the extra property
-    return keyword in _GROUP or keyword in ANY_TYPE
+def _can_share_a_path(first: str, second: str, reach: dict[str, frozenset[Any]]) -> bool:
+    types = {JSON_TYPE.get(first), JSON_TYPE.get(second)}
+    if None not in types and len(types) == 2:
+        return False  # they judge different JSON types, so one of them passes any instance
+    return frozenset((first, second)) not in DISJOINT and overlap(reach[first], reach[second])
 
 
-def _same_place(first: str, second: str) -> bool:
-    groups = {_GROUP.get("required" if k == "additionalProperties" else k) for k in (first, second)}
-    return None in groups or len(groups) == 1
+def overlap(first: frozenset[Any], second: frozenset[Any]) -> bool:
+    """Whether two sets of places share an instance path."""
+    if not first or not second:
+        return False
+    if ANYWHERE in first or ANYWHERE in second or first & second:
+        return True
+    names = [{place[1] for place in group if place[0] == PROPERTY} for group in (first, second)]
+    return all(names) and (ANY_NAME in names[0] | names[1] or bool(names[0] & names[1]))
 
 
-def _same_value(old: Any, new: Any) -> bool:
-    numbers = (int, float)
-    if isinstance(old, numbers) and isinstance(new, numbers):
-        return isinstance(old, bool) == isinstance(new, bool) and old == new
-    return type(old) is type(new) and old == new
+def places(keyword: str, value: Any, schema: dict[str, Any]) -> frozenset[Any]:
+    """Where ``keyword: value`` of ``schema`` can report a violation."""
+    if keyword in SILENT or keyword.startswith("x-"):
+        return frozenset()
+    if keyword in HERE_ONLY:
+        return frozenset((HERE,))
+    if keyword in ("properties", "patternProperties", "additionalProperties", "unevaluatedProperties"):
+        return _property_places(keyword, value)
+    if keyword in ("items", "prefixItems", "unevaluatedItems"):
+        return frozenset((HERE,)) if value is False else frozenset() if value is True else frozenset((ITEM,))
+    if keyword == "if":
+        return subschema_places(schema.get("then", True)) | subschema_places(schema.get("else", True))
+    return _applicator_places(keyword, value)
+
+
+def _property_places(keyword: str, value: Any) -> frozenset[Any]:
+    if keyword == "properties" and isinstance(value, dict):
+        return frozenset((PROPERTY, name) for name, sub in value.items() if sub is not True)
+    if value is True or value == {}:
+        return frozenset()
+    return frozenset((HERE,)) if value is False else frozenset(((PROPERTY, ANY_NAME),))
+
+
+def _applicator_places(keyword: str, value: Any) -> frozenset[Any]:
+    if keyword == "allOf" and isinstance(value, list):
+        return frozenset().union(*map(subschema_places, value))
+    if keyword in ("anyOf", "oneOf") and isinstance(value, list):
+        return frozenset((HERE,)).union(*map(subschema_places, value))
+    if keyword == "dependentSchemas" and isinstance(value, dict):
+        return frozenset().union(*map(subschema_places, value.values()))
+    return frozenset((ANYWHERE,))  # $ref, $dynamicRef, and any keyword not listed here
+
+
+def subschema_places(schema: Any) -> frozenset[Any]:
+    """Where a subschema applied at the node's own instance can report."""
+    if schema is True:
+        return frozenset()
+    if schema is False:
+        return frozenset((HERE,))
+    if not isinstance(schema, dict):
+        return frozenset((ANYWHERE,))
+    return frozenset().union(*(places(key, value, schema) for key, value in schema.items()))
+
+
+def reason(rel_path: str, difference: Difference, allowed: tuple[Allowed, ...] = ALLOWED) -> str | None:
+    """Why ``difference`` is intended, or None."""
+    for entry in allowed:
+        if entry.matches(rel_path, difference):
+            return entry.reason
+    added_at_root = (difference.pointer, difference.kind, difference.old) == ("/description", "added", ABSENT)
+    if added_at_root and isinstance(difference.new, str):
+        return ROOT_DESCRIPTION
+    return None
 
 
 def _short(value: Any) -> str:
+    if value is ABSENT:
+        return "absent"
     text = json.dumps(value, ensure_ascii=False)
     return text if len(text) <= 80 else f"{text[:77]}..."
 
@@ -163,29 +354,21 @@ def _git(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout
 
 
-def _reason(rel_path: str, pointer: str, what: str) -> str | None:
-    if (rel_path, pointer) in ALLOWED:
-        return ALLOWED[(rel_path, pointer)]
-    if pointer == "/description" and what == "added":
-        return ROOT_DESCRIPTION
-    return None
-
-
 def main() -> int:
     old, new = old_schemas(), new_schemas()
     unexpected, allowed, matched = [], [], set()
     if old.keys() != new.keys():
         unexpected.append(f"contract sets differ: {sorted(old.keys() ^ new.keys())}")
     for rel_path in sorted(old.keys() & new.keys()):
-        for pointer, what in differences(old[rel_path], new[rel_path]):
-            reason = _reason(rel_path, pointer, what)
-            line = f"{rel_path}#{pointer}: {what}"
-            if reason:
-                allowed.append(f"{line}  [{reason}]")
-                matched.add((rel_path, pointer))
-            else:
+        for difference in differences(old[rel_path], new[rel_path]):
+            line = f"{rel_path}#{difference}"
+            why = reason(rel_path, difference)
+            if why is None:
                 unexpected.append(line)
-    unused = sorted(set(ALLOWED) - matched)
+                continue
+            allowed.append(f"{line}  [{why}]")
+            matched.update(i for i, entry in enumerate(ALLOWED) if entry.matches(rel_path, difference))
+    unused = [f"{e.rel_path}#{e.pointer}: {e.kind}" for i, e in enumerate(ALLOWED) if i not in matched]
     print(f"decoded comparison of {len(new)} published schemas with {OLD_DIR}/ at {BASE}")
     for title, lines in (("allowed", allowed), ("unexpected", unexpected), ("unused allowlist", unused)):
         print(f"{title}: {len(lines)}")
