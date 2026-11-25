@@ -1,0 +1,1751 @@
+{
+ "obligations": [
+  {
+   "basis": "assembly operation heat_set_base_bushing: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:heat_set_base_bushing",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_base_bushing"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_head_bushing: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:heat_set_head_bushing",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_head_bushing"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_socket_insert: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:heat_set_socket_insert",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_socket_insert"
+   }
+  },
+  {
+   "basis": "assembly operation press_base_pin: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:press_base_pin",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_base_pin"
+   }
+  },
+  {
+   "basis": "assembly operation press_elbow_pin: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:press_elbow_pin",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_elbow_pin"
+   }
+  },
+  {
+   "basis": "assembly operation press_head_pin: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:press_head_pin",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_head_pin"
+   }
+  },
+  {
+   "basis": "assembly operation ring_base: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:ring_base",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_base"
+   }
+  },
+  {
+   "basis": "assembly operation ring_elbow: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:ring_elbow",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_elbow"
+   }
+  },
+  {
+   "basis": "assembly operation ring_head: part path and tool reach",
+   "family": "assembly.access",
+   "id": "assembly.access@op:ring_head",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_head"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_base_bushing: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:heat_set_base_bushing",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_base_bushing"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_head_bushing: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:heat_set_head_bushing",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_head_bushing"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_socket_insert: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:heat_set_socket_insert",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_socket_insert"
+   }
+  },
+  {
+   "basis": "assembly operation press_base_pin: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:press_base_pin",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_base_pin"
+   }
+  },
+  {
+   "basis": "assembly operation press_elbow_pin: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:press_elbow_pin",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_elbow_pin"
+   }
+  },
+  {
+   "basis": "assembly operation press_head_pin: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:press_head_pin",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_head_pin"
+   }
+  },
+  {
+   "basis": "assembly operation ring_base: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:ring_base",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_base"
+   }
+  },
+  {
+   "basis": "assembly operation ring_elbow: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:ring_elbow",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_elbow"
+   }
+  },
+  {
+   "basis": "assembly operation ring_head: engagement, edge distance, retention, torque and host suitability",
+   "family": "assembly.joint",
+   "id": "assembly.joint@op:ring_head",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_head"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_base_bushing: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:heat_set_base_bushing",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_base_bushing"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_head_bushing: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:heat_set_head_bushing",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_head_bushing"
+   }
+  },
+  {
+   "basis": "assembly operation heat_set_socket_insert: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:heat_set_socket_insert",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "heat_set_socket_insert"
+   }
+  },
+  {
+   "basis": "assembly operation press_base_pin: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:press_base_pin",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_base_pin"
+   }
+  },
+  {
+   "basis": "assembly operation press_elbow_pin: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:press_elbow_pin",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_elbow_pin"
+   }
+  },
+  {
+   "basis": "assembly operation press_head_pin: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:press_head_pin",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "press_head_pin"
+   }
+  },
+  {
+   "basis": "assembly operation ring_base: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:ring_base",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_base"
+   }
+  },
+  {
+   "basis": "assembly operation ring_elbow: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:ring_elbow",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_elbow"
+   }
+  },
+  {
+   "basis": "assembly operation ring_head: installation order and closure",
+   "family": "assembly.order",
+   "id": "assembly.order@op:ring_head",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "assembly_operation": "ring_head"
+   }
+  },
+  {
+   "basis": "every assembly occurrence is installed by an operation, apart from the assembly's one base",
+   "family": "assembly.order",
+   "id": "assembly.order@product",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "product": true
+   }
+  },
+  {
+   "basis": "IF-001 heat_set 1: the declared hole_d is a bore of its host in the sealed model",
+   "family": "cad.declared_dimensions",
+   "id": "cad.declared_dimensions@IF-001#heat_set_1",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "feature": "heat_set_1",
+    "interface": "IF-001"
+   }
+  },
+  {
+   "basis": "IF-003 heat_set 1: the declared hole_d is a bore of its host in the sealed model",
+   "family": "cad.declared_dimensions",
+   "id": "cad.declared_dimensions@IF-003#heat_set_1",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "feature": "heat_set_1",
+    "interface": "IF-003"
+   }
+  },
+  {
+   "basis": "IF-005 heat_set 1: the declared hole_d is a bore of its host in the sealed model",
+   "family": "cad.declared_dimensions",
+   "id": "cad.declared_dimensions@IF-005#heat_set_1",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "feature": "heat_set_1",
+    "interface": "IF-005"
+   }
+  },
+  {
+   "basis": "LMP-0001: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0001",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0001"
+   }
+  },
+  {
+   "basis": "LMP-0002: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0002",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0002"
+   }
+  },
+  {
+   "basis": "LMP-0003: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0003",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0003"
+   }
+  },
+  {
+   "basis": "LMP-0004: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0004",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0004"
+   }
+  },
+  {
+   "basis": "LMP-0005: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0005",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0005"
+   }
+  },
+  {
+   "basis": "LMP-0006: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0006",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0006"
+   }
+  },
+  {
+   "basis": "LMP-0007: each occurrence's assembly.glb node shows its assembly.step shape and placement",
+   "family": "cad.glb_step_agreement",
+   "id": "cad.glb_step_agreement@LMP-0007",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0007"
+   }
+  },
+  {
+   "basis": "LMP-0001: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0001",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0001"
+   }
+  },
+  {
+   "basis": "LMP-0002: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0002",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0002"
+   }
+  },
+  {
+   "basis": "LMP-0003: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0003",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0003"
+   }
+  },
+  {
+   "basis": "LMP-0004: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0004",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0004"
+   }
+  },
+  {
+   "basis": "LMP-0005: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0005",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0005"
+   }
+  },
+  {
+   "basis": "LMP-0006: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0006",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0006"
+   }
+  },
+  {
+   "basis": "LMP-0007: B-rep validity, readback, manufacturing state and component identity",
+   "family": "cad.readback",
+   "id": "cad.readback@LMP-0007",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0007"
+   }
+  },
+  {
+   "basis": "LMP-0001: part.3mf, the FDM part's 3MF export of geometry, material and colour",
+   "family": "export.3mf",
+   "id": "export.3mf@LMP-0001",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0001"
+   }
+  },
+  {
+   "basis": "LMP-0004: part.3mf, the FDM part's 3MF export of geometry, material and colour",
+   "family": "export.3mf",
+   "id": "export.3mf@LMP-0004",
+   "level": "cad_valid",
+   "stage": "layout",
+   "subject": {
+    "PN": "LMP-0004"
+   }
+  },
+  {
+   "basis": "LMP-0001 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0001",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001"
+   }
+  },
+  {
+   "basis": "LMP-0002 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0002",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002"
+   }
+  },
+  {
+   "basis": "LMP-0003 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0003",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003"
+   }
+  },
+  {
+   "basis": "LMP-0004 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0004",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004"
+   }
+  },
+  {
+   "basis": "LMP-0005 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0005",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005"
+   }
+  },
+  {
+   "basis": "LMP-0006 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0006",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006"
+   }
+  },
+  {
+   "basis": "LMP-0007 critical surfaces are unknown",
+   "family": "intent.critical_surfaces",
+   "id": "intent.critical_surfaces@LMP-0007",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007"
+   }
+  },
+  {
+   "basis": "LMP-0001 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0001",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0001"
+   }
+  },
+  {
+   "basis": "LMP-0002 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0002",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0002"
+   }
+  },
+  {
+   "basis": "LMP-0003 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0003",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0003"
+   }
+  },
+  {
+   "basis": "LMP-0004 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0004",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0004"
+   }
+  },
+  {
+   "basis": "LMP-0005 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0005",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0005"
+   }
+  },
+  {
+   "basis": "LMP-0006 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0006",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0006"
+   }
+  },
+  {
+   "basis": "LMP-0007 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0007",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0007"
+   }
+  },
+  {
+   "basis": "LMP-0008 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0008",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0008"
+   }
+  },
+  {
+   "basis": "LMP-0009 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0009",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0009"
+   }
+  },
+  {
+   "basis": "LMP-0010 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0010",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0010"
+   }
+  },
+  {
+   "basis": "LMP-0011 functions are unknown",
+   "family": "intent.functions",
+   "id": "intent.functions@LMP-0011",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0011"
+   }
+  },
+  {
+   "basis": "IF-001 criticality is unknown",
+   "family": "intent.interface",
+   "id": "intent.interface@IF-001",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "interface": "IF-001"
+   }
+  },
+  {
+   "basis": "IF-002 criticality is unknown",
+   "family": "intent.interface",
+   "id": "intent.interface@IF-002",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "interface": "IF-002"
+   }
+  },
+  {
+   "basis": "IF-003 criticality is unknown",
+   "family": "intent.interface",
+   "id": "intent.interface@IF-003",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "interface": "IF-003"
+   }
+  },
+  {
+   "basis": "IF-004 criticality is unknown",
+   "family": "intent.interface",
+   "id": "intent.interface@IF-004",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "interface": "IF-004"
+   }
+  },
+  {
+   "basis": "IF-005 criticality is unknown",
+   "family": "intent.interface",
+   "id": "intent.interface@IF-005",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "interface": "IF-005"
+   }
+  },
+  {
+   "basis": "LMP-0002 material profile is unknown",
+   "family": "intent.material",
+   "id": "intent.material@LMP-0002",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0002"
+   }
+  },
+  {
+   "basis": "LMP-0003 material profile is unknown",
+   "family": "intent.material",
+   "id": "intent.material@LMP-0003",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0003"
+   }
+  },
+  {
+   "basis": "LMP-0005 material profile is unknown",
+   "family": "intent.material",
+   "id": "intent.material@LMP-0005",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0005"
+   }
+  },
+  {
+   "basis": "LMP-0006 material profile is unknown",
+   "family": "intent.material",
+   "id": "intent.material@LMP-0006",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0006"
+   }
+  },
+  {
+   "basis": "LMP-0007 material profile is unknown",
+   "family": "intent.material",
+   "id": "intent.material@LMP-0007",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0007"
+   }
+  },
+  {
+   "basis": "a final material and process recommendation needs a confirmed use case",
+   "family": "intent.use_case",
+   "id": "intent.use_case@product",
+   "level": "process_planned",
+   "stage": "intent",
+   "subject": {
+    "product": true
+   }
+  },
+  {
+   "basis": "LMP-0002 machine: cnc operation",
+   "family": "process.cnc.access",
+   "id": "process.cnc.access@LMP-0002/machine",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0003 machine: cnc operation",
+   "family": "process.cnc.access",
+   "id": "process.cnc.access@LMP-0003/machine",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0005 turn: cnc operation",
+   "family": "process.cnc.access",
+   "id": "process.cnc.access@LMP-0005/turn",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0006 turn: cnc operation",
+   "family": "process.cnc.access",
+   "id": "process.cnc.access@LMP-0006/turn",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0007 turn: cnc operation",
+   "family": "process.cnc.access",
+   "id": "process.cnc.access@LMP-0007/turn",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0002 machine: cnc operation",
+   "family": "process.cnc.features",
+   "id": "process.cnc.features@LMP-0002/machine",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0003 machine: cnc operation",
+   "family": "process.cnc.features",
+   "id": "process.cnc.features@LMP-0003/machine",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0005 turn: cnc operation",
+   "family": "process.cnc.features",
+   "id": "process.cnc.features@LMP-0005/turn",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0006 turn: cnc operation",
+   "family": "process.cnc.features",
+   "id": "process.cnc.features@LMP-0006/turn",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0007 turn: cnc operation",
+   "family": "process.cnc.features",
+   "id": "process.cnc.features@LMP-0007/turn",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0002 machine: cnc operation",
+   "family": "process.cnc.precision",
+   "id": "process.cnc.precision@LMP-0002/machine",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0003 machine: cnc operation",
+   "family": "process.cnc.precision",
+   "id": "process.cnc.precision@LMP-0003/machine",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0005 turn: cnc operation",
+   "family": "process.cnc.precision",
+   "id": "process.cnc.precision@LMP-0005/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0006 turn: cnc operation",
+   "family": "process.cnc.precision",
+   "id": "process.cnc.precision@LMP-0006/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0007 turn: cnc operation",
+   "family": "process.cnc.precision",
+   "id": "process.cnc.precision@LMP-0007/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0002 machine: cnc operation",
+   "family": "process.cnc.setup",
+   "id": "process.cnc.setup@LMP-0002/machine",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0003 machine: cnc operation",
+   "family": "process.cnc.setup",
+   "id": "process.cnc.setup@LMP-0003/machine",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0005 turn: cnc operation",
+   "family": "process.cnc.setup",
+   "id": "process.cnc.setup@LMP-0005/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0006 turn: cnc operation",
+   "family": "process.cnc.setup",
+   "id": "process.cnc.setup@LMP-0006/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0007 turn: cnc operation",
+   "family": "process.cnc.setup",
+   "id": "process.cnc.setup@LMP-0007/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0002 machine: cnc operation",
+   "family": "process.cnc.stock",
+   "id": "process.cnc.stock@LMP-0002/machine",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0003 machine: cnc operation",
+   "family": "process.cnc.stock",
+   "id": "process.cnc.stock@LMP-0003/machine",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0005 turn: cnc operation",
+   "family": "process.cnc.stock",
+   "id": "process.cnc.stock@LMP-0005/turn",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0006 turn: cnc operation",
+   "family": "process.cnc.stock",
+   "id": "process.cnc.stock@LMP-0006/turn",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0007 turn: cnc operation",
+   "family": "process.cnc.stock",
+   "id": "process.cnc.stock@LMP-0007/turn",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0005 passivate: coating operation",
+   "family": "process.coating.access",
+   "id": "process.coating.access@LMP-0005/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0006 passivate: coating operation",
+   "family": "process.coating.access",
+   "id": "process.coating.access@LMP-0006/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0007 passivate: coating operation",
+   "family": "process.coating.access",
+   "id": "process.coating.access@LMP-0007/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0005 passivate: coating operation",
+   "family": "process.coating.allowance",
+   "id": "process.coating.allowance@LMP-0005/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0006 passivate: coating operation",
+   "family": "process.coating.allowance",
+   "id": "process.coating.allowance@LMP-0006/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0007 passivate: coating operation",
+   "family": "process.coating.allowance",
+   "id": "process.coating.allowance@LMP-0007/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0001 finish_holes: drilling operation",
+   "family": "process.drilling.access",
+   "id": "process.drilling.access@LMP-0001/finish_holes",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "finish_holes"
+   }
+  },
+  {
+   "basis": "LMP-0004 finish_holes: drilling operation",
+   "family": "process.drilling.access",
+   "id": "process.drilling.access@LMP-0004/finish_holes",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "finish_holes"
+   }
+  },
+  {
+   "basis": "LMP-0001 finish_holes: drilling operation",
+   "family": "process.drilling.feature",
+   "id": "process.drilling.feature@LMP-0001/finish_holes",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "finish_holes"
+   }
+  },
+  {
+   "basis": "LMP-0004 finish_holes: drilling operation",
+   "family": "process.drilling.feature",
+   "id": "process.drilling.feature@LMP-0004/finish_holes",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "finish_holes"
+   }
+  },
+  {
+   "basis": "LMP-0001 print: fdm operation",
+   "family": "process.fdm.geometry",
+   "id": "process.fdm.geometry@LMP-0001/print",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0004 print: fdm operation",
+   "family": "process.fdm.geometry",
+   "id": "process.fdm.geometry@LMP-0004/print",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0001 print: fdm operation",
+   "family": "process.fdm.orientation",
+   "id": "process.fdm.orientation@LMP-0001/print",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0004 print: fdm operation",
+   "family": "process.fdm.orientation",
+   "id": "process.fdm.orientation@LMP-0004/print",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0001 print: fdm operation",
+   "family": "process.fdm.support",
+   "id": "process.fdm.support@LMP-0001/print",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0004 print: fdm operation",
+   "family": "process.fdm.support",
+   "id": "process.fdm.support@LMP-0004/print",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0001 print: fdm operation",
+   "family": "process.fdm.thermal_distortion",
+   "id": "process.fdm.thermal_distortion@LMP-0001/print",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0004 print: fdm operation",
+   "family": "process.fdm.thermal_distortion",
+   "id": "process.fdm.thermal_distortion@LMP-0004/print",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0001 print: fdm operation",
+   "family": "process.fdm.trial",
+   "id": "process.fdm.trial@LMP-0001/print",
+   "level": "physically_validated",
+   "stage": "release",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0004 print: fdm operation",
+   "family": "process.fdm.trial",
+   "id": "process.fdm.trial@LMP-0004/print",
+   "level": "physically_validated",
+   "stage": "release",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0002 ream: reaming operation",
+   "family": "process.reaming.access",
+   "id": "process.reaming.access@LMP-0002/ream",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "ream"
+   }
+  },
+  {
+   "basis": "LMP-0003 ream: reaming operation",
+   "family": "process.reaming.access",
+   "id": "process.reaming.access@LMP-0003/ream",
+   "level": "geometrically_manufacturable",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "ream"
+   }
+  },
+  {
+   "basis": "LMP-0002 ream: reaming operation",
+   "family": "process.reaming.allowance",
+   "id": "process.reaming.allowance@LMP-0002/ream",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "ream"
+   }
+  },
+  {
+   "basis": "LMP-0003 ream: reaming operation",
+   "family": "process.reaming.allowance",
+   "id": "process.reaming.allowance@LMP-0003/ream",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "ream"
+   }
+  },
+  {
+   "basis": "LMP-0008 buy: purchased operation",
+   "family": "purchase.availability",
+   "id": "purchase.availability@LMP-0008/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0008",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0009 buy: purchased operation",
+   "family": "purchase.availability",
+   "id": "purchase.availability@LMP-0009/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0009",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0010 buy: purchased operation",
+   "family": "purchase.availability",
+   "id": "purchase.availability@LMP-0010/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0010",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0011 buy: purchased operation",
+   "family": "purchase.availability",
+   "id": "purchase.availability@LMP-0011/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0011",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0008 buy: purchased operation",
+   "family": "purchase.dimensions",
+   "id": "purchase.dimensions@LMP-0008/buy",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0008",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0009 buy: purchased operation",
+   "family": "purchase.dimensions",
+   "id": "purchase.dimensions@LMP-0009/buy",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0009",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0010 buy: purchased operation",
+   "family": "purchase.dimensions",
+   "id": "purchase.dimensions@LMP-0010/buy",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0010",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0011 buy: purchased operation",
+   "family": "purchase.dimensions",
+   "id": "purchase.dimensions@LMP-0011/buy",
+   "level": "geometrically_manufacturable",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0011",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0008 buy: purchased operation",
+   "family": "purchase.identity",
+   "id": "purchase.identity@LMP-0008/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0008",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0009 buy: purchased operation",
+   "family": "purchase.identity",
+   "id": "purchase.identity@LMP-0009/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0009",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0010 buy: purchased operation",
+   "family": "purchase.identity",
+   "id": "purchase.identity@LMP-0010/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0010",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0011 buy: purchased operation",
+   "family": "purchase.identity",
+   "id": "purchase.identity@LMP-0011/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0011",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0008 buy: purchased operation",
+   "family": "purchase.mounting",
+   "id": "purchase.mounting@LMP-0008/buy",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0008",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0009 buy: purchased operation",
+   "family": "purchase.mounting",
+   "id": "purchase.mounting@LMP-0009/buy",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0009",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0010 buy: purchased operation",
+   "family": "purchase.mounting",
+   "id": "purchase.mounting@LMP-0010/buy",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0010",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0011 buy: purchased operation",
+   "family": "purchase.mounting",
+   "id": "purchase.mounting@LMP-0011/buy",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0011",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0008 buy: purchased operation",
+   "family": "purchase.rating",
+   "id": "purchase.rating@LMP-0008/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0008",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0009 buy: purchased operation",
+   "family": "purchase.rating",
+   "id": "purchase.rating@LMP-0009/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0009",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0010 buy: purchased operation",
+   "family": "purchase.rating",
+   "id": "purchase.rating@LMP-0010/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0010",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0011 buy: purchased operation",
+   "family": "purchase.rating",
+   "id": "purchase.rating@LMP-0011/buy",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0011",
+    "operation": "buy"
+   }
+  },
+  {
+   "basis": "LMP-0001: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0001",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0001"
+   }
+  },
+  {
+   "basis": "LMP-0002: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0002",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0002"
+   }
+  },
+  {
+   "basis": "LMP-0003: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0003",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0003"
+   }
+  },
+  {
+   "basis": "LMP-0004: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0004",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0004"
+   }
+  },
+  {
+   "basis": "LMP-0005: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0005",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0005"
+   }
+  },
+  {
+   "basis": "LMP-0006: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0006",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0006"
+   }
+  },
+  {
+   "basis": "LMP-0007: route, profile, material and capability consistency",
+   "family": "route.consistency",
+   "id": "route.consistency@LMP-0007",
+   "level": "process_planned",
+   "stage": "parts",
+   "subject": {
+    "PN": "LMP-0007"
+   }
+  },
+  {
+   "basis": "LMP-0001 finish_holes: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0001/finish_holes",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "finish_holes"
+   }
+  },
+  {
+   "basis": "LMP-0001 print: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0001/print",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0001",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0002 machine: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0002/machine",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0002 ream: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0002/ream",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0002",
+    "operation": "ream"
+   }
+  },
+  {
+   "basis": "LMP-0003 machine: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0003/machine",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "machine"
+   }
+  },
+  {
+   "basis": "LMP-0003 ream: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0003/ream",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0003",
+    "operation": "ream"
+   }
+  },
+  {
+   "basis": "LMP-0004 finish_holes: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0004/finish_holes",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "finish_holes"
+   }
+  },
+  {
+   "basis": "LMP-0004 print: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0004/print",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0004",
+    "operation": "print"
+   }
+  },
+  {
+   "basis": "LMP-0005 passivate: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0005/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0005 turn: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0005/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0005",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0006 passivate: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0006/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0006 turn: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0006/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0006",
+    "operation": "turn"
+   }
+  },
+  {
+   "basis": "LMP-0007 passivate: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0007/passivate",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "passivate"
+   }
+  },
+  {
+   "basis": "LMP-0007 turn: setup, orientation, supports, allowances and inspection",
+   "family": "route.operation_plan",
+   "id": "route.operation_plan@LMP-0007/turn",
+   "level": "process_planned",
+   "stage": "detail",
+   "subject": {
+    "PN": "LMP-0007",
+    "operation": "turn"
+   }
+  }
+ ],
+ "source": "prototype 412b5d9 manufacturing_intent.required_checks on examples/lamp-arm/hw (record v2)"
+}

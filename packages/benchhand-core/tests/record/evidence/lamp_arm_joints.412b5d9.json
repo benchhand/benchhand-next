@@ -1,0 +1,41 @@
+{
+ "joints": {
+  "assembly.joint@op:heat_set_base_bushing": [
+   "unknown",
+   "heat_set_base_bushing: retention of the heat_set is not a sourced fact; heat_set_base_bushing: the heat_set records no edge distance; heat_set_base_bushing: the use-case temperature is unknown"
+  ],
+  "assembly.joint@op:heat_set_head_bushing": [
+   "unknown",
+   "heat_set_head_bushing: retention of the heat_set is not a sourced fact; heat_set_head_bushing: the heat_set records no edge distance; heat_set_head_bushing: the use-case temperature is unknown"
+  ],
+  "assembly.joint@op:heat_set_socket_insert": [
+   "unknown",
+   "heat_set_socket_insert: retention of the heat_set is not a sourced fact; heat_set_socket_insert: the heat_set records no edge distance; heat_set_socket_insert: the use-case temperature is unknown"
+  ],
+  "assembly.joint@op:press_base_pin": [
+   "unknown",
+   "press_base_pin: retention of the press_fit is not a sourced fact; press_base_pin: the host is unknown: LMP-0002 has no resolved material profile"
+  ],
+  "assembly.joint@op:press_elbow_pin": [
+   "unknown",
+   "press_elbow_pin: retention of the press_fit is not a sourced fact; press_elbow_pin: the host is unknown: LMP-0002 has no resolved material profile"
+  ],
+  "assembly.joint@op:press_head_pin": [
+   "unknown",
+   "press_head_pin: retention of the press_fit is not a sourced fact; press_head_pin: the host is unknown: LMP-0003 has no resolved material profile"
+  ],
+  "assembly.joint@op:ring_base": [
+   "unknown",
+   "ring_base: retention of the retaining_ring is not a sourced fact"
+  ],
+  "assembly.joint@op:ring_elbow": [
+   "unknown",
+   "ring_elbow: retention of the retaining_ring is not a sourced fact"
+  ],
+  "assembly.joint@op:ring_head": [
+   "unknown",
+   "ring_head: retention of the retaining_ring is not a sourced fact"
+  ]
+ },
+ "source": "prototype 412b5d9 evidence._joint_results on examples/lamp-arm/hw (record v2)"
+}
