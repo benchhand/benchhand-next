@@ -19,7 +19,7 @@ export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancell
  */
 export type ExitCode = number | null;
 /**
- * UTC, RFC 3339.
+ * UTC, RFC 3339, with an uppercase T and Z: the validators of each language disagree on a lowercase t or z, so the pattern refuses them.
  */
 export type Timestamp = string;
 export type OptionalTimestamp = Timestamp | null;

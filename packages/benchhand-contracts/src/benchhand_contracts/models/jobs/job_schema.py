@@ -88,7 +88,7 @@ class JobRecord(ContractModel):
     error: str | None
     created_at: Annotated[AwareDatetime, Field(alias="createdAt")]
     """
-    UTC, RFC 3339.
+    UTC, RFC 3339, with an uppercase T and Z: the validators of each language disagree on a lowercase t or z, so the pattern refuses them.
     """
     started_at: Annotated[AwareDatetime | None, Field(alias="startedAt")]
     finished_at: Annotated[AwareDatetime | None, Field(alias="finishedAt")]
@@ -118,7 +118,7 @@ class JobHandle(ContractModel):
     error: str | None
     created_at: Annotated[AwareDatetime, Field(alias="createdAt")]
     """
-    UTC, RFC 3339.
+    UTC, RFC 3339, with an uppercase T and Z: the validators of each language disagree on a lowercase t or z, so the pattern refuses them.
     """
     started_at: Annotated[AwareDatetime | None, Field(alias="startedAt")]
     finished_at: Annotated[AwareDatetime | None, Field(alias="finishedAt")]

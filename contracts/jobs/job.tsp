@@ -42,8 +42,9 @@ model JobProgress {
   message: string | null;
 }
 
-/** UTC, RFC 3339. */
+/** UTC, RFC 3339, with an uppercase T and Z: the validators of each language disagree on a lowercase t or z, so the pattern refuses them. */
 @format("date-time")
+@pattern("^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]+)?(Z|[+-]([01][0-9]|2[0-3]):[0-5][0-9])$")
 scalar Timestamp extends string;
 
 @oneOf

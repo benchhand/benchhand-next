@@ -354,6 +354,12 @@ EDGE_CASES: list[tuple[str, str, Any, bool]] = [
     ("provider/protocol", "ProgressParams", {"id": 1, "fraction": 2}, False),
     ("provider/protocol", "ProgressParams", {"id": 1, "fraction": float("nan")}, False),
     ("provider/protocol", "ProgressParams", {"id": 1, "fraction": float("inf")}, False),
+    # A date-time takes an uppercase T and Z only (ADR-0017): some languages' parsers refuse t and z.
+    ("jobs/job", "Timestamp", "2026-11-25T05:08:13Z", True),
+    ("jobs/job", "Timestamp", "2026-11-25T05:08:13.134+01:00", True),
+    ("jobs/job", "Timestamp", "2026-11-25t05:08:13Z", False),
+    ("jobs/job", "Timestamp", "2026-11-25T05:08:13z", False),
+    ("jobs/job", "Timestamp", "2026-11-25 05:08:13Z", False),
 ]
 
 
