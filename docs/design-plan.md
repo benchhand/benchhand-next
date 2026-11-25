@@ -413,6 +413,29 @@ In the documentation set:
 
 When a dimension is a range, the clearance and sweep checks run at both ends. A change to existing geometry makes the geometry, interface and clearance evidence stale, not the purchase evidence.
 
+### 12b. Assembly steps and joint evidence
+
+These come from the test project's L3 DETAIL run. Under the prototype's rules, 22 joint obligations could never pass.
+
+**Placement is not a joint.** Assembly operations get a `place` kind beside `insert`, `fasten`, `press_fit`, `heat_set`, `retaining_ring` and the others:
+
+- A `place` step installs a part: a sleeve, a ring, washers, a collar held by a pinch screw, a hanger held by a bolt, a harness held by ties. Order, access and interference are checked as for any step.
+- It makes no joint of its own, so it gets no retention or edge-distance obligation.
+- It must name the step that retains it (`retained_by: <step id>`). The record refuses a `place` step without one, or with a `retained_by` that names a step that isn't a joint.
+- The retaining joint keeps its full evidence rules, and its evidence covers the parts it holds. A change to that joint makes the placed parts' evidence stale too.
+- `existing` parts are never the `part` of a step, only its `into` (section 12a). So the customer's equipment is never placed or joined.
+
+**Test coupons are evidence.** Some joint evidence can only come from a physical test: insert pull-out, screw torque, a bonded magnet's push-out, the push-out of a snap or a retaining ring.
+
+- **Coupons from the requirement.** The tool proposes test coupons from the verification rows that need a physical test. It adds them to the calibration print job, so they come from the same printer, material and settings as the parts.
+- **What a result records:**
+  - the method and the instrument (scale, torque screwdriver);
+  - the measured values and their uncertainty;
+  - the test conditions (temperature, wet or dry, conditioning time);
+  - the print job and material lot.
+- **Conditions limit what passes.** A result passes only the conditions it was tested under. A requirement at -10 deg C wet and at +40 deg C needs the coupon conditioned to each case. A room-temperature result leaves those cases provisional, and says so in the gate packet.
+- **User-measured results** use the source kind `user_measured`, with the uncertainty the instrument gives. A kitchen scale is coarse, and the margin check uses that uncertainty.
+
 ### 13. Client capability research (as of 2026-11; recheck at implementation)
 
 | Host | Skills (native) | Prompts | Resources | Image results | Form elicitation | URL elicitation | Tasks | MCP Apps | Install route |
@@ -509,6 +532,11 @@ Code is reused only where it is already clean and fits the new boundaries (secti
   - Decision records, VOID cascade, the result envelope and `next_actions`.
   - Cut `flow/guides/*.md` from the current SKILL.md and `flow.md` prose.
   - Closes `c7q.2`, `c7q.3`, `c7q.4` and `c7q.14`.
+  - Record contract additions, made with the move to TypeSpec:
+    - `make_buy: existing` and the occurrence `role` (section 12a);
+    - the annotation set (section 12a);
+    - the `place` step kind with `retained_by`, and test-coupon evidence with test conditions (section 12b).
+    - Obligation generation marks parts nobody orders, and placed parts, `not_applicable` with a reason.
 - [ ] **Phase 3: MCP server and CLI.**
   - `benchhand mcp` on stdio (`--http` optional), built on the Python SDK v2.
   - Tools: `flow.guide`, `flow.*`, `project.*`, `record.*`, `env.doctor` and `jobs.*`.
