@@ -2,19 +2,35 @@
 
 from __future__ import annotations
 
+from typing import TypedDict, Unpack
+
 from benchhand_contracts import Finding
 from benchhand_contracts.models.common.finding_schema import Severity
 
-__all__ = ["Finding", "Severity", "error", "pointer"]
+__all__ = ["Finding", "Severity", "error", "info", "pointer"]
 
 
-def error(
-    code: str, path: str, message: str, *, pointer: str | None = None, subject: str | None = None
-) -> Finding:
-    """A blocking finding; pointer and subject left None are absent, as the contract has no null for them."""
-    optional = {"pointer": pointer, "subject": subject}
-    present = {name: value for name, value in optional.items() if value is not None}
-    return Finding(code=code, severity=Severity.error, path=path, message=message, **present)
+class FindingFields(TypedDict, total=False):
+    """The optional fields of a finding; a field left out (or None) is absent, as the contract has no null."""
+
+    pointer: str | None
+    subject: str | None
+    action: str | None
+
+
+def _finding(severity: Severity, code: str, path: str, message: str, optional: FindingFields) -> Finding:
+    present: dict[str, str] = {name: value for name, value in optional.items() if isinstance(value, str)}
+    return Finding(code=code, severity=severity, path=path, message=message, **present)
+
+
+def error(code: str, path: str, message: str, **optional: Unpack[FindingFields]) -> Finding:
+    """A blocking finding."""
+    return _finding(Severity.error, code, path, message, optional)
+
+
+def info(code: str, path: str, message: str, **optional: Unpack[FindingFields]) -> Finding:
+    """A finding that never blocks."""
+    return _finding(Severity.info, code, path, message, optional)
 
 
 def pointer(*parts: str | int) -> str:
