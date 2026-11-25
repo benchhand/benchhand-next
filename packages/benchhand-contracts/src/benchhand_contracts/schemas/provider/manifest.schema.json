@@ -4,6 +4,17 @@
   "title": "benchhand-provider.toml",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "version",
+    "protocol",
+    "kinds",
+    "hooks",
+    "command",
+    "environment",
+    "needs"
+  ],
   "properties": {
     "name": {
       "type": "string",
@@ -17,6 +28,11 @@
     },
     "protocol": {
       "type": "object",
+      "required": [
+        "min",
+        "max"
+      ],
+      "additionalProperties": false,
       "properties": {
         "min": {
           "type": "integer",
@@ -26,27 +42,22 @@
           "type": "integer",
           "minimum": 1
         }
-      },
-      "required": [
-        "min",
-        "max"
-      ],
-      "additionalProperties": false
+      }
     },
     "kinds": {
       "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "$ref": "protocol.schema.json#/$defs/HookKind"
-      },
-      "minItems": 1,
-      "uniqueItems": true
+      }
     },
     "hooks": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "$ref": "protocol.schema.json#/$defs/HookDecl"
-      },
-      "minItems": 1
+      }
     },
     "resident": {
       "type": "boolean",
@@ -54,11 +65,11 @@
     },
     "command": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "string",
         "minLength": 1
-      },
-      "minItems": 1
+      }
     },
     "timeouts": {
       "description": "Seconds per hook method, e.g. {\"solver/solve\": 3600}.",
@@ -72,6 +83,12 @@
       "oneOf": [
         {
           "type": "object",
+          "required": [
+            "kind",
+            "requires-python",
+            "dependencies"
+          ],
+          "additionalProperties": false,
           "properties": {
             "kind": {
               "const": "uv"
@@ -85,37 +102,31 @@
                 "type": "string"
               }
             }
-          },
-          "required": [
-            "kind",
-            "requires-python",
-            "dependencies"
-          ],
-          "additionalProperties": false
+          }
         },
         {
           "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
           "properties": {
             "kind": {
               "const": "freecad"
             }
-          },
-          "required": [
-            "kind"
-          ],
-          "additionalProperties": false
+          }
         },
         {
           "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
           "properties": {
             "kind": {
               "const": "system"
             }
-          },
-          "required": [
-            "kind"
-          ],
-          "additionalProperties": false
+          }
         }
       ]
     },
@@ -126,6 +137,11 @@
       "type": "array",
       "items": {
         "type": "object",
+        "required": [
+          "name",
+          "summary"
+        ],
+        "additionalProperties": false,
         "properties": {
           "name": {
             "type": "string",
@@ -134,26 +150,10 @@
           "summary": {
             "type": "string"
           }
-        },
-        "required": [
-          "name",
-          "summary"
-        ],
-        "additionalProperties": false
+        }
       }
     }
   },
-  "required": [
-    "name",
-    "version",
-    "protocol",
-    "kinds",
-    "hooks",
-    "command",
-    "environment",
-    "needs"
-  ],
-  "additionalProperties": false,
   "examples": [
     {
       "name": "kernel-build123d",

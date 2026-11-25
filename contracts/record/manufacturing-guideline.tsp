@@ -56,6 +56,7 @@ model scope {
     ]
   )
   @extension("required", #["lower", "upper"])
+  @extension("x-keyword-order", #["allOf", "required"])
   nozzle_diameter?: unknown;
 
   nozzle_material?: names;
@@ -76,6 +77,7 @@ model relative {
 
   @extension("allOf", #[#{ $ref: "common.schema.json#/$defs/quantity" }])
   @extension("required", #["value"])
+  @extension("x-keyword-order", #["allOf", "required"])
   floor: unknown;
 }
 
@@ -425,6 +427,7 @@ model manufacturing_guideline_limit {
   ]
 )
 @extension("required", #["value"])
+@extension("x-keyword-order", #["allOf", "required"])
 union ManufacturingGuidelineManufacturingGuidelineLimitQuantitiesItem {
   unknown,
 }

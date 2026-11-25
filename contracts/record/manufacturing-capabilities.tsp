@@ -135,6 +135,19 @@ model parameters {
   #{ required: #["guidance"], properties: #{ calibrations: #{ maxItems: 0 } } }
 )
 @extension("else", #{ not: #{ required: #["guidance"] } })
+@extension(
+  "x-required-order",
+  #[
+    "id",
+    "revision",
+    "title",
+    "process",
+    "provider",
+    "parameters",
+    "materials",
+    "calibrations"
+  ]
+)
 model manufacturing_capabilities_profile {
   id: Common.profile_id;
 

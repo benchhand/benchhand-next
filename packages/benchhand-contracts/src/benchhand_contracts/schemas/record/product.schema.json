@@ -4,6 +4,16 @@
   "title": "benchhand product record (hw/product.yaml)",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_version",
+    "id",
+    "units",
+    "regime",
+    "general_tolerance",
+    "flow",
+    "use_case"
+  ],
   "properties": {
     "record_version": {
       "$ref": "common.schema.json#/$defs/record_version"
@@ -24,16 +34,17 @@
       ]
     },
     "general_tolerance": {
+      "description": "The general tolerance a drawing states for dimensions without their own: a linear value in mm or a standard label such as ISO 2768-m. A tunable, so it defaults to ISO 2768-m and the user changes it. Unknown, with the open question that would settle it, is also valid; validation refuses a drawing while it is unknown",
       "oneOf": [
         {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 5,
           "description": "a linear value in mm",
           "x-plausible": {
             "min": 0.01,
             "max": 0.5
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5
         },
         {
           "type": "string",
@@ -43,11 +54,13 @@
           "$ref": "common.schema.json#/$defs/fact_unknown"
         }
       ],
-      "description": "The general tolerance a drawing states for dimensions without their own: a linear value in mm or a standard label such as ISO 2768-m. A tunable, so it defaults to ISO 2768-m and the user changes it. Unknown, with the open question that would settle it, is also valid; validation refuses a drawing while it is unknown",
       "default": "ISO 2768-m"
     },
     "license": {
+      "description": "Explicit SPDX license expressions approved for the product's hardware and documentation, such as CERN-OHL-S-2.0 or (MIT OR Apache-2.0); omitted means not recorded. The expression's shape is meant to be checked (identifiers, LicenseRef-, +, WITH, AND, OR, parentheses) but bundles no SPDX license list, so an unlisted identifier such as CERN-OHL-S passes",
       "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
       "properties": {
         "hardware": {
           "type": "string",
@@ -57,13 +70,20 @@
           "type": "string",
           "minLength": 1
         }
-      },
-      "additionalProperties": false,
-      "description": "Explicit SPDX license expressions approved for the product's hardware and documentation, such as CERN-OHL-S-2.0 or (MIT OR Apache-2.0); omitted means not recorded. The expression's shape is meant to be checked (identifiers, LicenseRef-, +, WITH, AND, OR, parentheses) but bundles no SPDX license list, so an unlisted identifier such as CERN-OHL-S passes",
-      "minProperties": 1
+      }
     },
     "flow": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage",
+        "recheck_from"
+      ],
+      "dependentRequired": {
+        "change": [
+          "frozen"
+        ]
+      },
       "properties": {
         "stage": {
           "$ref": "common.schema.json#/$defs/stage"
@@ -80,50 +100,49 @@
         "profile": {
           "$ref": "#/$defs/profile"
         }
-      },
-      "required": [
-        "stage",
-        "recheck_from"
-      ],
-      "additionalProperties": false,
-      "dependentRequired": {
-        "change": [
-          "frozen"
-        ]
       }
     },
     "build_volume": {
+      "description": "A printer envelope for the legacy build-volume diagnostic. The sizes are facts about the machine, not tunables, so they have no default: they come from the active capability profile's envelope. Margin is a tunable. Fitting it is not printability; a capability profile's envelope and an approved orientation govern manufacturability",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x_mm",
+        "y_mm",
+        "z_mm"
+      ],
       "properties": {
         "x_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 2000,
           "x-plausible": {
             "min": 20,
             "max": 500
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2000
         },
         "y_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 2000,
           "x-plausible": {
             "min": 20,
             "max": 500
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2000
         },
         "z_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 2000,
           "x-plausible": {
             "min": 20,
             "max": 500
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2000
         },
         "orientations": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "enum": [
@@ -134,100 +153,91 @@
               "zxy",
               "zyx"
             ]
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "margin_mm": {
-          "type": "number",
-          "default": 0,
-          "minimum": 0,
-          "maximum": 1000,
           "description": "Unusable rim on each side, in mm; at most half the smallest side, which the config loader checks",
           "x-plausible": {
             "max": 20
-          }
+          },
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "default": 0
         }
-      },
-      "required": [
-        "x_mm",
-        "y_mm",
-        "z_mm"
-      ],
-      "additionalProperties": false,
-      "description": "A printer envelope for the legacy build-volume diagnostic. The sizes are facts about the machine, not tunables, so they have no default: they come from the active capability profile's envelope. Margin is a tunable. Fitting it is not printability; a capability profile's envelope and an approved orientation govern manufacturability"
+      }
     },
     "design": {
+      "description": "Product-wide design rules",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "clearance_margin_mm": {
-          "type": "number",
-          "default": 0.1,
-          "minimum": 0,
-          "maximum": 1,
           "description": "Margin above each clearance requirement's minimum (default 0.1); a distance at or above the minimum but below minimum + margin is a margin warning, never a failure. A clearance interface's margin_mm overrides it",
           "x-plausible": {
             "max": 0.5
-          }
+          },
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.1
         }
-      },
-      "additionalProperties": false,
-      "description": "Product-wide design rules"
+      }
     },
     "manufacturing": {
+      "description": "Product-wide manufacturing plan and rules",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "processes": {
+          "description": "The processes planned at INTENT, before any part record exists",
           "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/primary_process"
-          },
           "minItems": 1,
           "uniqueItems": true,
-          "description": "The processes planned at INTENT, before any part record exists"
+          "items": {
+            "$ref": "common.schema.json#/$defs/primary_process"
+          }
         },
         "min_wall_mm": {
+          "description": "Minimum wall per made-part process, overriding the form check's built-in defaults. A diagnostic heuristic, never a calibrated capability",
           "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
           "properties": {
             "fdm": {
-              "type": "number",
-              "default": 1.2,
-              "minimum": 0.2,
-              "maximum": 25,
               "x-plausible": {
                 "min": 0.4,
                 "max": 3
-              }
-            },
-            "cnc": {
+              },
               "type": "number",
               "minimum": 0.2,
               "maximum": 25,
+              "default": 1.2
+            },
+            "cnc": {
               "description": "A fact of the shop, not a tunable, so it has no default: it comes from the CNC capability profile and stays UNKNOWN until one exists",
               "x-plausible": {
                 "min": 0.4,
                 "max": 3
-              }
+              },
+              "type": "number",
+              "minimum": 0.2,
+              "maximum": 25
             }
-          },
-          "additionalProperties": false,
-          "description": "Minimum wall per made-part process, overriding the form check's built-in defaults. A diagnostic heuristic, never a calibrated capability",
-          "minProperties": 1
+          }
         }
-      },
-      "additionalProperties": false,
-      "description": "Product-wide manufacturing plan and rules"
+      }
     },
     "storage": {
+      "description": "Repository storage choices the user made",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "results_in_git": {
-          "type": "boolean",
-          "description": "Whether generated results (STEP, GLB, renders, check bundles) are tracked in git; absent means the user has not been asked"
+          "description": "Whether generated results (STEP, GLB, renders, check bundles) are tracked in git; absent means the user has not been asked",
+          "type": "boolean"
         }
-      },
-      "additionalProperties": false,
-      "description": "Repository storage choices the user made"
+      }
     },
     "drawing": {
       "$ref": "drawing.schema.json#/$defs/product_drawing"
@@ -236,16 +246,6 @@
       "$ref": "#/$defs/use_case"
     }
   },
-  "required": [
-    "record_version",
-    "id",
-    "units",
-    "regime",
-    "general_tolerance",
-    "flow",
-    "use_case"
-  ],
-  "additionalProperties": false,
   "examples": [
     {
       "record_version": 3,
@@ -837,18 +837,22 @@
     "fea": {
       "description": "Whether and how FEA runs, the shape agreed with package A. mode is required when enabled. fast escalates a case to accurate when the fast result lies within fast_band_pct of its criterion limit, |limit - result| / limit x 100 <= fast_band_pct; without fast_band_pct, the analysis uses its measured default band, twice the worst-case bias.",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
       "properties": {
         "enabled": {
           "type": "boolean",
           "default": true
         },
         "mode": {
-          "default": "accurate",
           "type": "string",
           "enum": [
             "fast",
             "accurate"
-          ]
+          ],
+          "default": "accurate"
         },
         "fast_band_pct": {
           "type": "number",
@@ -856,10 +860,6 @@
           "maximum": 50
         }
       },
-      "required": [
-        "enabled"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -913,6 +913,15 @@
     "profile": {
       "description": "The user's answers to the project-start questions , recorded at INTENT with the decision that holds them. Each question has a default the user is shown; asked records, per question, whether the user answered (user) or accepted the default (asked-accepted-default). A number is the user's design limit; calibrated stays unknown until a calibration exists; off means not assessed. A two-state answer is a boolean; a word answer is a string, written quoted, since YAML reads a bare on, off, yes or no as a boolean",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fea",
+        "stack_up",
+        "critique",
+        "motion",
+        "storage_results_in_git",
+        "processes"
+      ],
       "properties": {
         "decision": {
           "$ref": "common.schema.json#/$defs/decision"
@@ -922,85 +931,89 @@
         },
         "stack_up": {
           "description": "auto turns on when SPECIFY names a critical interface or a stack case",
-          "default": "auto",
           "type": "string",
           "enum": [
             "auto",
             "on",
             "off"
-          ]
+          ],
+          "default": "auto"
         },
         "critique": {
           "description": "light: both reviewers at the L2 light-review scope, rerun on the analysed version",
-          "default": "full",
           "type": "string",
           "enum": [
             "full",
             "light",
             "off"
-          ]
+          ],
+          "default": "full"
         },
         "motion": {
           "description": "auto: on once a joint moves; stated to the user, never asked",
-          "default": "auto",
           "type": "string",
           "enum": [
             "auto"
-          ]
+          ],
+          "default": "auto"
         },
         "storage_results_in_git": {
           "type": "boolean",
           "default": false
         },
         "asked": {
+          "description": "How each project-start question was settled, keyed by its field path below flow.profile (fea, stack_up, processes/fdm/orientation, processes/fdm/pip_clearance_mm/xy, ...)",
           "type": "object",
           "additionalProperties": {
             "enum": [
               "user",
               "asked-accepted-default"
             ]
-          },
-          "description": "How each project-start question was settled, keyed by its field path below flow.profile (fea, stack_up, processes/fdm/orientation, processes/fdm/pip_clearance_mm/xy, ...)"
+          }
         },
         "processes": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "fdm": {
               "$ref": "#/$defs/fdm_profile"
             }
-          },
-          "additionalProperties": false
+          }
         }
-      },
-      "required": [
-        "fea",
-        "stack_up",
-        "critique",
-        "motion",
-        "storage_results_in_git",
-        "processes"
-      ],
-      "additionalProperties": false
+      }
     },
     "fdm_profile": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orientation",
+        "supports",
+        "overhang_deg",
+        "bridge_mm",
+        "min_wall_mm",
+        "min_feature_mm",
+        "warp",
+        "cosmetic_faces",
+        "print_in_place",
+        "pip_clearance_mm"
+      ],
       "properties": {
         "orientation": {
-          "default": "user",
           "type": "string",
           "enum": [
             "user",
             "propose"
-          ]
+          ],
+          "default": "user"
         },
         "supports": {
-          "default": "allowed",
           "type": "string",
           "enum": [
             "allowed",
             "free",
             "off"
-          ]
+          ],
+          "default": "allowed"
         },
         "overhang_deg": {
           "oneOf": [
@@ -1032,25 +1045,31 @@
           "default": "calibrated"
         },
         "warp": {
-          "default": "calibrated",
           "type": "string",
           "enum": [
             "calibrated",
             "off"
-          ]
+          ],
+          "default": "calibrated"
         },
         "cosmetic_faces": {
+          "description": "true adds the critical-surface role cosmetic, which supports may not touch",
           "type": "boolean",
-          "default": false,
-          "description": "true adds the critical-surface role cosmetic, which supports may not touch"
+          "default": false
         },
         "print_in_place": {
+          "description": "true: offer to print hinges and joints already assembled where that fits; false: assemble them",
           "type": "boolean",
-          "default": false,
-          "description": "true: offer to print hinges and joints already assembled where that fits; false: assemble them"
+          "default": false
         },
         "pip_clearance_mm": {
+          "description": "The smallest print-in-place gap that separates, across the layers (xy) and between layers (z)",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "xy",
+            "z"
+          ],
           "properties": {
             "xy": {
               "$ref": "#/$defs/clearance",
@@ -1060,32 +1079,19 @@
               "$ref": "#/$defs/clearance",
               "default": "calibrated"
             }
-          },
-          "required": [
-            "xy",
-            "z"
-          ],
-          "additionalProperties": false,
-          "description": "The smallest print-in-place gap that separates, across the layers (xy) and between layers (z)"
+          }
         }
-      },
-      "required": [
-        "orientation",
-        "supports",
-        "overhang_deg",
-        "bridge_mm",
-        "min_wall_mm",
-        "min_feature_mm",
-        "warp",
-        "cosmetic_faces",
-        "print_in_place",
-        "pip_clearance_mm"
-      ],
-      "additionalProperties": false
+      }
     },
     "frozen": {
       "description": "The frozen configuration: the built version the design_freeze gate approved, its manifest sha256 and the approving decision. Once set, layout findings stay blocking at every stage. A freeze also anchors evidence_sha256, the canonical digest of its acceptance inventory (verification, evidence and finding dispositions, relied-on bundle manifests and source bytes); a freeze without it is refused by a release until a new freeze records one.",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "manifest_sha256",
+        "decision"
+      ],
       "properties": {
         "version": {
           "$ref": "common.schema.json#/$defs/version"
@@ -1099,17 +1105,17 @@
         "evidence_sha256": {
           "$ref": "common.schema.json#/$defs/sha256"
         }
-      },
-      "required": [
-        "version",
-        "manifest_sha256",
-        "decision"
-      ],
-      "additionalProperties": false
+      }
     },
     "change": {
       "description": "An approved engineering change against the frozen baseline, while it is open",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "baseline_version",
+        "affected_parts"
+      ],
       "properties": {
         "decision": {
           "$ref": "common.schema.json#/$defs/decision"
@@ -1119,23 +1125,33 @@
         },
         "affected_parts": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/pn"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         }
-      },
-      "required": [
-        "decision",
-        "baseline_version",
-        "affected_parts"
-      ],
-      "additionalProperties": false
+      }
     },
     "use_case": {
       "description": "What the product must actually do, recorded before any process or material is chosen. Every field is a fact: known with its sources, unknown with the open question that would answer it, or not applicable. confirmed needs the approving decision; a service class never replaces governing safety or regulatory policy",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "service_class",
+        "purpose",
+        "users",
+        "environment",
+        "loads",
+        "motion",
+        "accuracy",
+        "consequences",
+        "logistics",
+        "capability",
+        "release_scope",
+        "evidence_policy"
+      ],
       "properties": {
         "status": {
           "enum": [
@@ -1176,10 +1192,19 @@
         },
         "environment": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "temperature",
+            "heat_sources",
+            "moisture",
+            "chemicals",
+            "uv",
+            "corrosion"
+          ],
           "properties": {
             "temperature": {
-              "$ref": "common.schema.json#/$defs/quantity_fact",
-              "description": "the operating temperature range, deg_C"
+              "description": "the operating temperature range, deg_C",
+              "$ref": "common.schema.json#/$defs/quantity_fact"
             },
             "heat_sources": {
               "$ref": "common.schema.json#/$defs/text_fact"
@@ -1196,25 +1221,16 @@
             "corrosion": {
               "$ref": "common.schema.json#/$defs/text_fact"
             }
-          },
-          "required": [
-            "temperature",
-            "heat_sources",
-            "moisture",
-            "chemicals",
-            "uv",
-            "corrosion"
-          ],
-          "additionalProperties": false
+          }
         },
         "loads": {
           "oneOf": [
             {
               "type": "array",
+              "minItems": 1,
               "items": {
                 "$ref": "common.schema.json#/$defs/load"
-              },
-              "minItems": 1
+              }
             },
             {
               "$ref": "common.schema.json#/$defs/fact_open"
@@ -1223,6 +1239,15 @@
         },
         "motion": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "speed",
+            "range",
+            "duty_cycle",
+            "friction",
+            "wear",
+            "service_life"
+          ],
           "properties": {
             "speed": {
               "$ref": "common.schema.json#/$defs/quantity_fact"
@@ -1242,19 +1267,18 @@
             "service_life": {
               "$ref": "common.schema.json#/$defs/quantity_fact"
             }
-          },
-          "required": [
-            "speed",
-            "range",
-            "duty_cycle",
-            "friction",
-            "wear",
-            "service_life"
-          ],
-          "additionalProperties": false
+          }
         },
         "accuracy": {
+          "description": "Required accuracy: these are requirements, never manufacturing capability",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tolerance",
+            "repeatability",
+            "surface_finish",
+            "dimensional_stability"
+          ],
           "properties": {
             "tolerance": {
               "$ref": "common.schema.json#/$defs/text_fact"
@@ -1268,18 +1292,19 @@
             "dimensional_stability": {
               "$ref": "common.schema.json#/$defs/text_fact"
             }
-          },
-          "required": [
-            "tolerance",
-            "repeatability",
-            "surface_finish",
-            "dimensional_stability"
-          ],
-          "additionalProperties": false,
-          "description": "Required accuracy: these are requirements, never manufacturing capability"
+          }
         },
         "consequences": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "failure",
+            "severity",
+            "forbidden_outcomes",
+            "standards",
+            "supervision",
+            "approval_authority"
+          ],
           "properties": {
             "failure": {
               "$ref": "common.schema.json#/$defs/text_fact"
@@ -1317,23 +1342,22 @@
             "approval_authority": {
               "$ref": "common.schema.json#/$defs/text_fact"
             }
-          },
-          "required": [
-            "failure",
-            "severity",
-            "forbidden_outcomes",
-            "standards",
-            "supervision",
-            "approval_authority"
-          ],
-          "additionalProperties": false
+          }
         },
         "logistics": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "quantity",
+            "budget",
+            "lead_time",
+            "maintenance",
+            "repair"
+          ],
           "properties": {
             "quantity": {
-              "$ref": "common.schema.json#/$defs/quantity_fact",
-              "description": "how many, in count"
+              "description": "how many, in count",
+              "$ref": "common.schema.json#/$defs/quantity_fact"
             },
             "budget": {
               "$ref": "common.schema.json#/$defs/money_fact"
@@ -1347,28 +1371,27 @@
             "repair": {
               "$ref": "common.schema.json#/$defs/text_fact"
             }
-          },
-          "required": [
-            "quantity",
-            "budget",
-            "lead_time",
-            "maintenance",
-            "repair"
-          ],
-          "additionalProperties": false
+          }
         },
         "capability": {
+          "description": "What is available to make it. Availability is not a requirement",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "equipment",
+            "operator",
+            "outsourcing"
+          ],
           "properties": {
             "equipment": {
               "oneOf": [
                 {
                   "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
                   "items": {
                     "$ref": "common.schema.json#/$defs/profile_id"
-                  },
-                  "minItems": 1,
-                  "uniqueItems": true
+                  }
                 },
                 {
                   "$ref": "common.schema.json#/$defs/fact_open"
@@ -1381,17 +1404,16 @@
             "outsourcing": {
               "$ref": "common.schema.json#/$defs/text_fact"
             }
-          },
-          "required": [
-            "equipment",
-            "operator",
-            "outsourcing"
-          ],
-          "additionalProperties": false,
-          "description": "What is available to make it. Availability is not a requirement"
+          }
         },
         "release_scope": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "purpose",
+            "operating_limits",
+            "exclusions"
+          ],
           "properties": {
             "purpose": {
               "$ref": "common.schema.json#/$defs/text_fact"
@@ -1402,13 +1424,7 @@
             "exclusions": {
               "$ref": "common.schema.json#/$defs/texts_fact"
             }
-          },
-          "required": [
-            "purpose",
-            "operating_limits",
-            "exclusions"
-          ],
-          "additionalProperties": false
+          }
         },
         "evidence_policy": {
           "oneOf": [
@@ -1417,11 +1433,21 @@
             },
             {
               "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "obligations",
+                "decision"
+              ],
               "properties": {
                 "obligations": {
                   "type": "array",
+                  "minItems": 1,
                   "items": {
                     "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "level"
+                    ],
                     "properties": {
                       "requirement": {
                         "$ref": "common.schema.json#/$defs/requirement_id"
@@ -1436,10 +1462,6 @@
                         "$ref": "common.schema.json#/$defs/text"
                       }
                     },
-                    "required": [
-                      "level"
-                    ],
-                    "additionalProperties": false,
                     "anyOf": [
                       {
                         "required": [
@@ -1452,42 +1474,15 @@
                         ]
                       }
                     ]
-                  },
-                  "minItems": 1
+                  }
                 },
                 "decision": {
                   "$ref": "common.schema.json#/$defs/decision"
                 }
-              },
-              "required": [
-                "obligations",
-                "decision"
-              ],
-              "additionalProperties": false
+              }
             }
           ]
         }
-      },
-      "required": [
-        "status",
-        "service_class",
-        "purpose",
-        "users",
-        "environment",
-        "loads",
-        "motion",
-        "accuracy",
-        "consequences",
-        "logistics",
-        "capability",
-        "release_scope",
-        "evidence_policy"
-      ],
-      "additionalProperties": false,
-      "then": {
-        "required": [
-          "decision"
-        ]
       },
       "if": {
         "properties": {
@@ -1495,6 +1490,11 @@
             "const": "confirmed"
           }
         }
+      },
+      "then": {
+        "required": [
+          "decision"
+        ]
       }
     }
   }

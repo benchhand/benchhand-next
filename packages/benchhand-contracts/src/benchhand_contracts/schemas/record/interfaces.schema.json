@@ -4,11 +4,34 @@
   "title": "benchhand interfaces record (hw/interfaces.yaml)",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "interfaces"
+  ],
   "properties": {
     "interfaces": {
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "from",
+          "to",
+          "type",
+          "description"
+        ],
+        "dependentRequired": {
+          "pair": [
+            "min_clearance_mm"
+          ],
+          "min_clearance_mm": [
+            "pair"
+          ],
+          "margin_mm": [
+            "min_clearance_mm"
+          ]
+        },
         "properties": {
           "id": {
             "$ref": "common.schema.json#/$defs/interface_id"
@@ -37,32 +60,32 @@
             "minLength": 1
           },
           "pair": {
+            "description": "A clearance requirement's two parts, each a PN placed at most once or an @occurrence reference",
             "type": "array",
-            "items": {
-              "$ref": "assembly.schema.json#/$defs/part_ref"
-            },
             "minItems": 2,
             "maxItems": 2,
             "uniqueItems": true,
-            "description": "A clearance requirement's two parts, each a PN placed at most once or an @occurrence reference"
+            "items": {
+              "$ref": "assembly.schema.json#/$defs/part_ref"
+            }
           },
           "min_clearance_mm": {
-            "type": "number",
-            "exclusiveMinimum": 0,
-            "maximum": 5,
             "description": "The smallest distance the pair may come to, at the nominal pose and at every swept pose",
             "x-plausible": {
               "max": 1
-            }
+            },
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 5
           },
           "margin_mm": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1,
             "description": "This requirement's margin above min_clearance_mm, overriding product.yaml design.clearance_margin_mm",
             "x-plausible": {
               "max": 0.5
-            }
+            },
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
           },
           "limits": {
             "type": "object",
@@ -78,10 +101,10 @@
               },
               "heat_set": {
                 "type": "array",
+                "minItems": 1,
                 "items": {
                   "$ref": "drawing.schema.json#/$defs/heat_set"
-                },
-                "minItems": 1
+                }
               }
             }
           },
@@ -89,44 +112,21 @@
             "$ref": "#/$defs/functional"
           }
         },
-        "required": [
-          "id",
-          "from",
-          "to",
-          "type",
-          "description"
-        ],
-        "additionalProperties": false,
+        "if": {
+          "required": [
+            "pair"
+          ]
+        },
         "then": {
           "properties": {
             "type": {
               "const": "clearance"
             }
           }
-        },
-        "if": {
-          "required": [
-            "pair"
-          ]
-        },
-        "dependentRequired": {
-          "pair": [
-            "min_clearance_mm"
-          ],
-          "min_clearance_mm": [
-            "pair"
-          ],
-          "margin_mm": [
-            "min_clearance_mm"
-          ]
         }
       }
     }
   },
-  "required": [
-    "interfaces"
-  ],
-  "additionalProperties": false,
   "examples": [
     {
       "interfaces": [
@@ -304,6 +304,11 @@
     "face": {
       "description": "One face of a part, by its semantic feature id",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "PN",
+        "feature"
+      ],
       "properties": {
         "PN": {
           "$ref": "common.schema.json#/$defs/pn"
@@ -320,16 +325,16 @@
         "region": {
           "$ref": "common.schema.json#/$defs/semantic_id"
         }
-      },
-      "required": [
-        "PN",
-        "feature"
-      ],
-      "additionalProperties": false
+      }
     },
     "functional": {
       "description": "Record version 2 functional contract of an interface. Desired fit limits (limits), calibrated process precision (capability profiles) and inspected finished dimensions (acceptance) stay three distinct things; no tolerance is inferred from a fit name",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "critical",
+        "functions"
+      ],
       "properties": {
         "critical": {
           "$ref": "common.schema.json#/$defs/boolean_fact"
@@ -338,10 +343,10 @@
           "oneOf": [
             {
               "type": "array",
+              "minItems": 1,
               "items": {
                 "$ref": "common.schema.json#/$defs/function_entry"
-              },
-              "minItems": 1
+              }
             },
             {
               "$ref": "common.schema.json#/$defs/fact_unknown"
@@ -355,16 +360,24 @@
           "$ref": "common.schema.json#/$defs/text_fact"
         },
         "loads": {
-          "$ref": "common.schema.json#/$defs/semantic_ids",
-          "description": "product.yaml use_case.loads ids"
+          "description": "product.yaml use_case.loads ids",
+          "$ref": "common.schema.json#/$defs/semantic_ids"
         },
         "environment": {
           "$ref": "common.schema.json#/$defs/text"
         },
         "surfaces": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "PN",
+              "feature",
+              "role",
+              "dimension_state"
+            ],
             "properties": {
               "PN": {
                 "$ref": "common.schema.json#/$defs/pn"
@@ -407,27 +420,31 @@
               "dimension_state": {
                 "$ref": "common.schema.json#/$defs/dimension_state"
               }
-            },
-            "required": [
-              "PN",
-              "feature",
-              "role",
-              "dimension_state"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "acceptance": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "criterion",
+              "verification"
+            ],
             "properties": {
               "criterion": {
                 "$ref": "common.schema.json#/$defs/criterion"
               },
               "verification": {
                 "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "method",
+                  "evidence_required",
+                  "stage"
+                ],
                 "properties": {
                   "method": {
                     "enum": [
@@ -439,42 +456,39 @@
                   },
                   "evidence_required": {
                     "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
                     "items": {
                       "$ref": "common.schema.json#/$defs/evidence_level"
-                    },
-                    "minItems": 1,
-                    "uniqueItems": true
+                    }
                   },
                   "stage": {
                     "$ref": "common.schema.json#/$defs/stage"
                   }
-                },
-                "required": [
-                  "method",
-                  "evidence_required",
-                  "stage"
-                ],
-                "additionalProperties": false
+                }
               }
-            },
-            "required": [
-              "criterion",
-              "verification"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "variation": {
+          "description": "The tolerance stack: its managed analysis case, the contributors it includes and the governing method; RSS needs the decision that justifies its statistical assumptions",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stack_case",
+            "contributors",
+            "method"
+          ],
           "properties": {
             "stack_case": {
+              "description": "an hw/analysis/cases/<ID> case id",
               "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]*$",
-              "description": "an hw/analysis/cases/<ID> case id"
+              "pattern": "^[a-z][a-z0-9_-]*$"
             },
             "contributors": {
               "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
               "items": {
                 "enum": [
                   "manufacture",
@@ -487,9 +501,7 @@
                   "adhesive",
                   "joining"
                 ]
-              },
-              "minItems": 1,
-              "uniqueItems": true
+              }
             },
             "method": {
               "enum": [
@@ -501,31 +513,30 @@
               "$ref": "common.schema.json#/$defs/decision"
             }
           },
-          "required": [
-            "stack_case",
-            "contributors",
-            "method"
-          ],
-          "additionalProperties": false,
-          "description": "The tolerance stack: its managed analysis case, the contributors it includes and the governing method; RSS needs the decision that justifies its statistical assumptions",
-          "then": {
-            "required": [
-              "decision"
-            ]
-          },
           "if": {
             "properties": {
               "method": {
                 "const": "justified_rss"
               }
             }
+          },
+          "then": {
+            "required": [
+              "decision"
+            ]
           }
         },
         "contact": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "materials"
+          ],
           "properties": {
             "materials": {
               "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
               "items": {
                 "oneOf": [
                   {
@@ -535,9 +546,7 @@
                     "$ref": "common.schema.json#/$defs/fact_open"
                   }
                 ]
-              },
-              "minItems": 2,
-              "maxItems": 2
+              }
             },
             "finish": {
               "$ref": "common.schema.json#/$defs/text_fact"
@@ -559,20 +568,19 @@
             },
             "evidence": {
               "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
               "items": {
                 "$ref": "common.schema.json#/$defs/evidence_id"
-              },
-              "minItems": 1,
-              "uniqueItems": true
+              }
             }
-          },
-          "required": [
-            "materials"
-          ],
-          "additionalProperties": false
+          }
         },
         "play": {
+          "description": "The joint's free movement at this interface: each component the total play about the nominal, centred pose (an interval's upper bound governs the extremes), axial along the joint axis, radial across it, angular as tilt of the axis, backlash along the joint's own coordinate; compliance the elastic displacement under the interface's declared loads (spring preload, operating loads), sourced from a calculation or test, added to the play at the extremes. A component the interface function needs and the record does not declare is unknown, never zero. scenario_cases name the motion cases evaluated under play",
           "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
           "properties": {
             "axial": {
               "$ref": "common.schema.json#/$defs/quantity_fact"
@@ -588,6 +596,8 @@
             },
             "compliance": {
               "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
               "properties": {
                 "axial": {
                   "$ref": "common.schema.json#/$defs/quantity_fact"
@@ -598,37 +608,41 @@
                 "angular": {
                   "$ref": "common.schema.json#/$defs/quantity_fact"
                 }
-              },
-              "additionalProperties": false,
-              "minProperties": 1
+              }
             },
             "scenario_cases": {
+              "description": "hw/motion/cases/<ID> case ids",
               "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
               "items": {
                 "type": "string",
                 "pattern": "^[a-z][a-z0-9_-]*$"
-              },
-              "minItems": 1,
-              "uniqueItems": true,
-              "description": "hw/motion/cases/<ID> case ids"
+              }
             }
-          },
-          "additionalProperties": false,
-          "description": "The joint's free movement at this interface: each component the total play about the nominal, centred pose (an interval's upper bound governs the extremes), axial along the joint axis, radial across it, angular as tilt of the axis, backlash along the joint's own coordinate; compliance the elastic displacement under the interface's declared loads (spring preload, operating loads), sourced from a calculation or test, added to the play at the extremes. A component the interface function needs and the record does not declare is unknown, never zero. scenario_cases name the motion cases evaluated under play",
-          "minProperties": 1
+          }
         },
         "assembly_operations": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/assembly_operation_id"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "print_in_place": {
+          "description": "The joints at this interface that print already assembled: each joint's kind, the joint value it prints at, the face pairs its gap separates and how it breaks free after printing. min_clearance_mm must be at least the governing product.yaml flow.profile processes.fdm.pip_clearance_mm",
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "joint",
+              "print_pose",
+              "gap_features",
+              "break_free"
+            ],
             "properties": {
               "joint": {
                 "enum": [
@@ -640,30 +654,34 @@
                 ]
               },
               "print_pose": {
-                "minProperties": 1,
                 "description": "the value each assembly.yaml joint prints at, in that joint's units",
-                "propertyNames": {
-                  "pattern": "^J-[0-9]{3}$"
-                },
                 "type": "object",
                 "additionalProperties": {
                   "type": "number"
+                },
+                "minProperties": 1,
+                "propertyNames": {
+                  "pattern": "^J-[0-9]{3}$"
                 }
               },
               "gap_features": {
                 "type": "array",
+                "minItems": 1,
                 "items": {
                   "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
                   "items": {
                     "$ref": "#/$defs/face"
-                  },
-                  "minItems": 2,
-                  "maxItems": 2
-                },
-                "minItems": 1
+                  }
+                }
               },
               "break_free": {
                 "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "method"
+                ],
                 "properties": {
                   "method": {
                     "$ref": "common.schema.json#/$defs/text"
@@ -672,41 +690,23 @@
                     "type": "number",
                     "exclusiveMinimum": 0
                   }
-                },
-                "required": [
-                  "method"
-                ],
-                "additionalProperties": false
+                }
               }
-            },
-            "required": [
-              "joint",
-              "print_pose",
-              "gap_features",
-              "break_free"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1,
-          "description": "The joints at this interface that print already assembled: each joint's kind, the joint value it prints at, the face pairs its gap separates and how it breaks free after printing. min_clearance_mm must be at least the governing product.yaml flow.profile processes.fdm.pip_clearance_mm"
+            }
+          }
         },
         "inspections": {
           "$ref": "common.schema.json#/$defs/semantic_ids"
         },
         "decisions": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/decision"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         }
-      },
-      "required": [
-        "critical",
-        "functions"
-      ],
-      "additionalProperties": false
+      }
     }
   }
 }

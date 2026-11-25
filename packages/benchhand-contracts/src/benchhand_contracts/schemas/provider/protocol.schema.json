@@ -105,8 +105,8 @@
     "AbsPath": {
       "description": "Absolute POSIX path.",
       "type": "string",
-      "minLength": 2,
-      "pattern": "^/"
+      "pattern": "^/",
+      "minLength": 2
     },
     "Sha256": {
       "type": "string",
@@ -114,6 +114,11 @@
     },
     "HookDecl": {
       "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false,
       "properties": {
         "kind": {
           "$ref": "#/$defs/HookKind"
@@ -122,11 +127,6 @@
           "$ref": "#/$defs/HookId"
         }
       },
-      "required": [
-        "kind",
-        "id"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "kind": "kernel",
@@ -136,6 +136,12 @@
     },
     "ErrorObject": {
       "type": "object",
+      "required": [
+        "code",
+        "message",
+        "data"
+      ],
+      "additionalProperties": false,
       "properties": {
         "code": {
           "type": "integer"
@@ -145,6 +151,10 @@
         },
         "data": {
           "type": "object",
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false,
           "properties": {
             "code": {
               "enum": [
@@ -164,6 +174,11 @@
             },
             "supported": {
               "type": "object",
+              "required": [
+                "min",
+                "max"
+              ],
+              "additionalProperties": false,
               "properties": {
                 "min": {
                   "$ref": "#/$defs/ProtocolVersion"
@@ -171,30 +186,15 @@
                 "max": {
                   "$ref": "#/$defs/ProtocolVersion"
                 }
-              },
-              "required": [
-                "min",
-                "max"
-              ],
-              "additionalProperties": false
+              }
             },
             "fix": {
               "type": "string"
             },
             "detail": true
-          },
-          "required": [
-            "code"
-          ],
-          "additionalProperties": false
+          }
         }
       },
-      "required": [
-        "code",
-        "message",
-        "data"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "code": -32602,
@@ -207,6 +207,7 @@
     },
     "Limits": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "maxMessageBytes": {
           "type": "integer",
@@ -219,7 +220,6 @@
           "maximum": 16
         }
       },
-      "additionalProperties": false,
       "examples": [
         {
           "maxMessageBytes": 16777216,
@@ -229,6 +229,13 @@
     },
     "InitializeParams": {
       "type": "object",
+      "required": [
+        "protocolVersion",
+        "host",
+        "capabilities",
+        "limits"
+      ],
+      "additionalProperties": false,
       "properties": {
         "protocolVersion": {
           "$ref": "#/$defs/ProtocolVersion"
@@ -238,6 +245,11 @@
         },
         "host": {
           "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "additionalProperties": false,
           "properties": {
             "name": {
               "const": "benchhand"
@@ -245,36 +257,31 @@
             "version": {
               "type": "string"
             }
-          },
-          "required": [
-            "name",
-            "version"
-          ],
-          "additionalProperties": false
+          }
         },
         "capabilities": {
           "type": "object",
-          "properties": {
-            "hooks": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/HookKind"
-              },
-              "uniqueItems": true
-            },
-            "features": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/FeatureName"
-              },
-              "uniqueItems": true
-            }
-          },
           "required": [
             "hooks",
             "features"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "properties": {
+            "hooks": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/HookKind"
+              }
+            },
+            "features": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/FeatureName"
+              }
+            }
+          }
         },
         "limits": {
           "$ref": "#/$defs/Limits"
@@ -283,13 +290,6 @@
           "$ref": "#/$defs/AbsPath"
         }
       },
-      "required": [
-        "protocolVersion",
-        "host",
-        "capabilities",
-        "limits"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "protocolVersion": 1,
@@ -316,12 +316,26 @@
     },
     "InitializeResult": {
       "type": "object",
+      "required": [
+        "protocolVersion",
+        "provider",
+        "hooks",
+        "features",
+        "limits",
+        "needs"
+      ],
+      "additionalProperties": false,
       "properties": {
         "protocolVersion": {
           "$ref": "#/$defs/ProtocolVersion"
         },
         "provider": {
           "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "additionalProperties": false,
           "properties": {
             "name": {
               "type": "string"
@@ -329,22 +343,22 @@
             "version": {
               "type": "string"
             }
-          },
-          "required": [
-            "name",
-            "version"
-          ],
-          "additionalProperties": false
+          }
         },
         "hooks": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/HookDecl"
-          },
-          "minItems": 1
+          }
         },
         "features": {
           "type": "object",
+          "required": [
+            "required",
+            "optional"
+          ],
+          "additionalProperties": false,
           "properties": {
             "required": {
               "type": "array",
@@ -358,12 +372,7 @@
                 "$ref": "#/$defs/FeatureName"
               }
             }
-          },
-          "required": [
-            "required",
-            "optional"
-          ],
-          "additionalProperties": false
+          }
         },
         "limits": {
           "$ref": "#/$defs/Limits"
@@ -372,15 +381,6 @@
           "$ref": "#/$defs/Needs"
         }
       },
-      "required": [
-        "protocolVersion",
-        "provider",
-        "hooks",
-        "features",
-        "limits",
-        "needs"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "protocolVersion": 1,
@@ -413,6 +413,12 @@
     },
     "Needs": {
       "type": "object",
+      "required": [
+        "freecad",
+        "chromium",
+        "network"
+      ],
+      "additionalProperties": false,
       "properties": {
         "freecad": {
           "type": "boolean"
@@ -424,12 +430,6 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "freecad",
-        "chromium",
-        "network"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "freecad": true,
@@ -440,15 +440,15 @@
     },
     "CancelParams": {
       "type": "object",
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/RequestId"
         }
       },
-      "required": [
-        "id"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "id": 7
@@ -457,6 +457,10 @@
     },
     "ProgressParams": {
       "type": "object",
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
       "properties": {
         "id": {
           "$ref": "#/$defs/RequestId"
@@ -475,10 +479,6 @@
           "maxLength": 80
         }
       },
-      "required": [
-        "id"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "id": 7,
@@ -490,6 +490,11 @@
     },
     "LogParams": {
       "type": "object",
+      "required": [
+        "level",
+        "message"
+      ],
+      "additionalProperties": false,
       "properties": {
         "level": {
           "enum": [
@@ -505,11 +510,6 @@
         },
         "data": true
       },
-      "required": [
-        "level",
-        "message"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "level": "warning",
@@ -522,6 +522,14 @@
     },
     "Artifact": {
       "type": "object",
+      "required": [
+        "path",
+        "mediaType",
+        "role",
+        "bytes",
+        "sha256"
+      ],
+      "additionalProperties": false,
       "properties": {
         "path": {
           "$ref": "#/$defs/AbsPath"
@@ -541,14 +549,6 @@
           "$ref": "#/$defs/Sha256"
         }
       },
-      "required": [
-        "path",
-        "mediaType",
-        "role",
-        "bytes",
-        "sha256"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "path": "/work/lamp/out/LMP-0003.step",
@@ -561,6 +561,10 @@
     },
     "Coverage": {
       "type": "object",
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false,
       "properties": {
         "status": {
           "enum": [
@@ -573,10 +577,6 @@
           "type": "string"
         }
       },
-      "required": [
-        "status"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -605,6 +605,12 @@
     },
     "HookParamsBase": {
       "type": "object",
+      "required": [
+        "projectRoot",
+        "outDir",
+        "input"
+      ],
+      "additionalProperties": false,
       "properties": {
         "projectRoot": {
           "$ref": "#/$defs/AbsPath"
@@ -616,12 +622,6 @@
           "type": "object"
         }
       },
-      "required": [
-        "projectRoot",
-        "outDir",
-        "input"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "projectRoot": "/work/lamp",
@@ -636,6 +636,11 @@
     },
     "HookResultBase": {
       "type": "object",
+      "required": [
+        "coverage",
+        "artifacts"
+      ],
+      "additionalProperties": false,
       "properties": {
         "coverage": {
           "$ref": "#/$defs/Coverage"
@@ -653,11 +658,6 @@
           "type": "object"
         }
       },
-      "required": [
-        "coverage",
-        "artifacts"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "coverage": {
@@ -678,6 +678,12 @@
     },
     "KernelBuildPart": {
       "type": "object",
+      "required": [
+        "pn",
+        "model",
+        "step"
+      ],
+      "additionalProperties": false,
       "properties": {
         "pn": {
           "type": "string",
@@ -699,12 +705,6 @@
           "$ref": "#/$defs/AbsPath"
         }
       },
-      "required": [
-        "pn",
-        "model",
-        "step"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "pn": "LMP-0003",
@@ -719,6 +719,11 @@
     },
     "KernelBuildPartResult": {
       "type": "object",
+      "required": [
+        "pn",
+        "status"
+      ],
+      "additionalProperties": false,
       "properties": {
         "pn": {
           "type": "string",
@@ -738,11 +743,6 @@
           "minimum": 0
         }
       },
-      "required": [
-        "pn",
-        "status"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "pn": "LMP-0003",
@@ -906,6 +906,12 @@
     },
     "Request": {
       "type": "object",
+      "required": [
+        "jsonrpc",
+        "id",
+        "method"
+      ],
+      "additionalProperties": false,
       "properties": {
         "jsonrpc": {
           "const": "2.0"
@@ -918,12 +924,6 @@
         },
         "params": true
       },
-      "required": [
-        "jsonrpc",
-        "id",
-        "method"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "jsonrpc": "2.0",
@@ -939,6 +939,11 @@
     },
     "Notification": {
       "type": "object",
+      "required": [
+        "jsonrpc",
+        "method"
+      ],
+      "additionalProperties": false,
       "properties": {
         "jsonrpc": {
           "const": "2.0"
@@ -948,11 +953,6 @@
         },
         "params": true
       },
-      "required": [
-        "jsonrpc",
-        "method"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "jsonrpc": "2.0",
@@ -965,6 +965,12 @@
     },
     "SuccessResponse": {
       "type": "object",
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "additionalProperties": false,
       "properties": {
         "jsonrpc": {
           "const": "2.0"
@@ -974,12 +980,6 @@
         },
         "result": true
       },
-      "required": [
-        "jsonrpc",
-        "id",
-        "result"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "jsonrpc": "2.0",
@@ -995,6 +995,12 @@
     },
     "ErrorResponse": {
       "type": "object",
+      "required": [
+        "jsonrpc",
+        "id",
+        "error"
+      ],
+      "additionalProperties": false,
       "properties": {
         "jsonrpc": {
           "const": "2.0"
@@ -1013,12 +1019,6 @@
           "$ref": "#/$defs/ErrorObject"
         }
       },
-      "required": [
-        "jsonrpc",
-        "id",
-        "error"
-      ],
-      "additionalProperties": false,
       "examples": [
         {
           "jsonrpc": "2.0",

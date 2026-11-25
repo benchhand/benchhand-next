@@ -5,6 +5,11 @@
   "description": "Whole candidate routes compared together: architecture, per-part material profile and complete route with capabilities, an evaluation of every mandatory requirement, the changes each introduces, cost and lead time at quantity, maintenance, evidence confidence, pros, cons and tradeoffs. A mandatory fail eliminates a candidate and an unknown keeps it conditional; preferences rank only feasible candidates. A final recommendation needs the confirming decision; the selection never writes product records",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "candidates"
+  ],
   "properties": {
     "status": {
       "enum": [
@@ -15,10 +20,16 @@
     },
     "assessment": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_sha256",
+        "method",
+        "date"
+      ],
       "properties": {
         "input_sha256": {
-          "$ref": "common.schema.json#/$defs/sha256",
-          "description": "The selection input digest of the record inputs the assessment read (its DIGEST_SCOPE); a different current digest makes the assessment stale"
+          "description": "The selection input digest of the record inputs the assessment read (its DIGEST_SCOPE); a different current digest makes the assessment stale",
+          "$ref": "common.schema.json#/$defs/sha256"
         },
         "method": {
           "$ref": "common.schema.json#/$defs/text"
@@ -29,13 +40,7 @@
         "decision": {
           "$ref": "common.schema.json#/$defs/decision"
         }
-      },
-      "required": [
-        "input_sha256",
-        "method",
-        "date"
-      ],
-      "additionalProperties": false
+      }
     },
     "candidates": {
       "type": "array",
@@ -47,11 +52,6 @@
       "$ref": "#/$defs/recommendation"
     }
   },
-  "required": [
-    "status",
-    "candidates"
-  ],
-  "additionalProperties": false,
   "allOf": [
     {
       "if": {
@@ -199,6 +199,17 @@
   "$defs": {
     "candidate": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "architecture",
+        "parts",
+        "evaluations",
+        "pros",
+        "cons",
+        "tradeoffs"
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -211,23 +222,29 @@
         },
         "parts": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/candidate_part"
-          },
-          "minItems": 1
+          }
         },
         "interfaces": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/interface_id"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "evaluations": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requirement",
+              "outcome",
+              "method"
+            ],
             "properties": {
               "requirement": {
                 "$ref": "common.schema.json#/$defs/requirement_id"
@@ -264,12 +281,6 @@
                 "$ref": "common.schema.json#/$defs/text"
               }
             },
-            "required": [
-              "requirement",
-              "outcome",
-              "method"
-            ],
-            "additionalProperties": false,
             "allOf": [
               {
                 "if": {
@@ -297,6 +308,8 @@
         },
         "changes": {
           "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
           "properties": {
             "design": {
               "$ref": "common.schema.json#/$defs/texts"
@@ -316,13 +329,11 @@
             "assembly": {
               "$ref": "common.schema.json#/$defs/texts"
             }
-          },
-          "additionalProperties": false,
-          "minProperties": 1
+          }
         },
         "quantity": {
-          "$ref": "common.schema.json#/$defs/quantity_fact",
-          "description": "the quantity cost and lead time are stated at"
+          "description": "the quantity cost and lead time are stated at",
+          "$ref": "common.schema.json#/$defs/quantity_fact"
         },
         "cost": {
           "$ref": "common.schema.json#/$defs/money_fact"
@@ -337,8 +348,8 @@
           "$ref": "common.schema.json#/$defs/text"
         },
         "obligations": {
-          "$ref": "common.schema.json#/$defs/texts",
-          "description": "validation still outstanding"
+          "description": "validation still outstanding",
+          "$ref": "common.schema.json#/$defs/texts"
         },
         "pros": {
           "$ref": "common.schema.json#/$defs/texts"
@@ -351,8 +362,14 @@
         },
         "preference_scores": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "preference",
+              "score"
+            ],
             "properties": {
               "preference": {
                 "$ref": "common.schema.json#/$defs/preference_id"
@@ -363,31 +380,20 @@
               "note": {
                 "$ref": "common.schema.json#/$defs/text"
               }
-            },
-            "required": [
-              "preference",
-              "score"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         }
-      },
-      "required": [
-        "id",
-        "title",
-        "architecture",
-        "parts",
-        "evaluations",
-        "pros",
-        "cons",
-        "tradeoffs"
-      ],
-      "additionalProperties": false
+      }
     },
     "candidate_part": {
       "description": "One part of a candidate: a declared part (hw/parts/<PN>/part.yaml) or, with `proposed`, a part the candidate introduces that the record does not hold yet",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "PN",
+        "material_profile",
+        "route"
+      ],
       "properties": {
         "PN": {
           "$ref": "common.schema.json#/$defs/pn"
@@ -404,10 +410,10 @@
         },
         "route": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/step"
-          },
-          "minItems": 1
+          }
         },
         "proposed": {
           "$ref": "#/$defs/proposed_part"
@@ -416,12 +422,6 @@
           "$ref": "common.schema.json#/$defs/text"
         }
       },
-      "required": [
-        "PN",
-        "material_profile",
-        "route"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -441,16 +441,6 @@
           "then": {
             "properties": {
               "route": {
-                "items": {
-                  "properties": {
-                    "kind": {
-                      "enum": [
-                        "purchased",
-                        "inspection"
-                      ]
-                    }
-                  }
-                },
                 "contains": {
                   "required": [
                     "purchase"
@@ -458,6 +448,16 @@
                   "properties": {
                     "kind": {
                       "const": "purchased"
+                    }
+                  }
+                },
+                "items": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "purchased",
+                        "inspection"
+                      ]
                     }
                   }
                 }
@@ -504,6 +504,11 @@
     "step": {
       "description": "One route step of a candidate part. A purchased step may carry the purchase criteria of the bought item, so a purchased alternative to a made part can be assessed before any part record holds them",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "capability"
+      ],
       "properties": {
         "kind": {
           "$ref": "common.schema.json#/$defs/route_kind"
@@ -528,27 +533,28 @@
           "$ref": "part.schema.json#/$defs/purchase"
         }
       },
-      "required": [
-        "kind",
-        "capability"
-      ],
-      "additionalProperties": false,
+      "if": {
+        "required": [
+          "purchase"
+        ]
+      },
       "then": {
         "properties": {
           "kind": {
             "const": "purchased"
           }
         }
-      },
-      "if": {
-        "required": [
-          "purchase"
-        ]
       }
     },
     "proposed_part": {
       "description": "Marks a candidate part as proposed: a new purchased or made part the candidate's architecture introduces. Its PN must not be declared under hw/parts; it is never an existing record, gets no check obligations, and becomes a part only when the approved change creates its part.yaml. A catalogue proposal is bought (its route is the purchase, whose criteria identify the item); a made or made-to-drawing proposal lists the operations that make it",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "sourcing",
+        "reason"
+      ],
       "properties": {
         "title": {
           "$ref": "common.schema.json#/$defs/text"
@@ -562,30 +568,32 @@
           ]
         },
         "reason": {
-          "$ref": "common.schema.json#/$defs/text",
-          "description": "why the candidate needs the new part"
+          "description": "why the candidate needs the new part",
+          "$ref": "common.schema.json#/$defs/text"
         },
         "functions": {
+          "description": "what the new part does, so function-driven constraints (optical, structural) apply to it",
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "common.schema.json#/$defs/function_entry"
-          },
-          "minItems": 1,
-          "description": "what the new part does, so function-driven constraints (optical, structural) apply to it"
+          }
         },
         "transparency": {
           "$ref": "part.schema.json#/properties/transparency"
         }
-      },
-      "required": [
-        "title",
-        "sourcing",
-        "reason"
-      ],
-      "additionalProperties": false
+      }
     },
     "recommendation": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "primary",
+        "reasons",
+        "limits",
+        "what_would_change"
+      ],
       "properties": {
         "status": {
           "description": "conditional while material-to-choice or safety inputs are missing",
@@ -616,8 +624,8 @@
           "$ref": "common.schema.json#/$defs/texts"
         },
         "prototype_validates": {
-          "$ref": "common.schema.json#/$defs/texts",
-          "description": "what the prototype route can and cannot validate"
+          "description": "what the prototype route can and cannot validate",
+          "$ref": "common.schema.json#/$defs/texts"
         },
         "what_would_change": {
           "$ref": "common.schema.json#/$defs/texts"
@@ -625,15 +633,7 @@
         "proposed_changes": {
           "$ref": "common.schema.json#/$defs/texts"
         }
-      },
-      "required": [
-        "status",
-        "primary",
-        "reasons",
-        "limits",
-        "what_would_change"
-      ],
-      "additionalProperties": false
+      }
     }
   }
 }

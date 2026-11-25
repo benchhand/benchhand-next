@@ -20,14 +20,21 @@ for, are copied as they are. Each rewrite accepts and rejects the same instances
 - ``type`` beside a ``const`` of that type, ``items: {}`` and ``properties: {}`` are dropped;
 - a property whose schema is ``{}`` (``unknown``) gets ``true``: datamodel-code-generator types ``{}`` as
   ``Any`` even where an ``allOf`` branch narrows it, but takes the branch's type over ``true``.
+
+The keywords of every schema are then put in ``KEYWORD_ORDER``. Python's validator reports the first of
+two errors at the same place in the instance in the order of their keywords, so the order decides which
+violation ``benchhand_contracts.validate`` raises; a fixed order keeps it from depending on how the
+emitter happened to write a schema. ``@extension("x-keyword-order", #[...])`` lists keywords that take
+each other's places in another order: on a contract's namespace for each of its schemas, on a declaration
+or a property for that schema alone. ``x-required-order`` puts a ``required`` list, which the emitter writes
+in property order, in the order the validator should report missing properties in.
 """
 
 from __future__ import annotations
 
 import posixpath
-import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 BASE_URI = "https://benchhand.github.io/benchhand/contracts/"
@@ -42,9 +49,23 @@ DATA_KEYWORDS = frozenset(("const", "enum", "examples", "default", "required", "
 MAX_REF_DEPTH = 16
 SCHEMA_MAPS = frozenset(("properties", "patternProperties", "$defs", "dependentSchemas"))
 JSON_TYPES = {"string": str, "boolean": bool, "null": type(None)}
-_DECLARATION = re.compile(r"^(?:model|scalar|union|enum) `?([A-Za-z_][A-Za-z0-9_]*)`?\b")
-_ID = re.compile(r'^@id\("([^"]+)"\)$')
-_BASE = re.compile(r'^@baseUri\("([^"]+)"\)$')
+KEYWORD_ORDER_KEY = "x-keyword-order"
+REQUIRED_ORDER_KEY = "x-required-order"
+_EXTENSIONS = "x-*"
+KEYWORD_ORDER = (
+    *("$schema", "$id", "title", "description", "$comment", _EXTENSIONS, "type"),
+    *("additionalProperties", "minProperties", "maxProperties", "propertyNames", "required"),
+    *("dependentRequired", "properties", "patternProperties"),
+    *("minItems", "maxItems", "uniqueItems", "contains", "minContains", "maxContains"),
+    *("items", "prefixItems"),
+    *("minLength", "maxLength", "pattern", "format"),
+    *("minimum", "exclusiveMinimum", "maximum", "exclusiveMaximum", "multipleOf"),
+    *("const", "enum", "$ref", "allOf", "anyOf", "oneOf", "not", "if", "then", "else", "dependentSchemas"),
+    *("default", "examples", "$defs"),
+)
+"""The order of the keywords in a published schema: the hand-written contracts' order, where they agreed.
+A keyword not listed here comes last."""
+_RANK = {keyword: index for index, keyword in enumerate(KEYWORD_ORDER)}
 
 
 class NormaliseError(Exception):
@@ -71,38 +92,42 @@ class _Contract:
     defs: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
-def declaration_ids(contracts_dir: Path) -> list[str]:
-    """The ``$id`` of every declaration in ``contracts_dir/**/*.tsp``, in source order.
+@dataclass(frozen=True)
+class Source:
+    """What the TypeSpec compiler reports about the source (``contracts/scripts/declarations.mjs``)."""
 
-    The bundle lists declarations in the order the emitter reached them, so the published ``$defs`` take
-    their order from the source instead. Each file sets its namespace's ``@baseUri``; a declaration's
-    ``$id`` is that plus ``<name>.json``, unless an ``@id`` above it says otherwise.
-    """
-    ids: list[str] = []
-    for path in sorted(contracts_dir.rglob("*.tsp")):
-        if "node_modules" in path.parts:
-            continue
-        base, pending = None, None
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if match := _BASE.match(line):
-                base = match.group(1)
-            elif match := _ID.match(line):
-                pending = match.group(1)
-            elif match := _DECLARATION.match(line):
-                if pending is None and base is None:
-                    raise NormaliseError(f"{path}: {match.group(1)} has no @id and its file no @baseUri")
-                ids.append(pending or f"{base}{match.group(1)}.json")
-                pending = None
-    return ids
+    ids: Sequence[str]
+    """The ``$id`` of every declaration, in source order. The bundle lists declarations in the order the
+    emitter reached them, so the published ``$defs`` take their order from the source instead."""
+    keyword_orders: dict[str, list[str]] = field(default_factory=dict)
+    """The ``x-keyword-order`` of each contract's namespace, keyed by the contract's path."""
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> Source:
+        orders: dict[str, list[str]] = {}
+        for namespace in data["namespaces"]:
+            extensions = dict(namespace["extensions"])
+            order = extensions.pop(KEYWORD_ORDER_KEY, None)
+            if extensions:
+                raise NormaliseError(
+                    f"{namespace['baseUri']}: the emitter writes no @extension of a namespace, only of a "
+                    f"declaration; {', '.join(sorted(extensions))} would be lost"
+                )
+            if order is not None:
+                orders[_locate(f"{namespace['baseUri']}namespace.json")[0]] = _keyword_order(order)
+        return cls([declaration["id"] for declaration in data["declarations"]], orders)
 
 
-def normalise(bundle: dict[str, Any], order: list[str]) -> dict[str, dict[str, Any]]:
+def normalise(bundle: dict[str, Any], source: Source) -> dict[str, dict[str, Any]]:
     """The published schema of every contract in ``bundle``, keyed by path below ``contracts/``."""
     declarations = _declarations(bundle)
-    contracts = _contracts(declarations, order)
+    contracts = _contracts(declarations, source.ids)
     inlined = {schema_id: d for schema_id, d in declarations.items() if d.inline}
     resolved = {rel: _file(contract, declarations, inlined) for rel, contract in contracts.items()}
-    published = {rel: _simplify_file(schema, _Scope(rel, resolved)) for rel, schema in resolved.items()}
+    published = {
+        rel: _simplify_file(schema, _Scope(rel, resolved), source.keyword_orders.get(rel, []))
+        for rel, schema in resolved.items()
+    }
     homes = {rel: _take_homes(schema) for rel, schema in published.items()}
     for rel, schema in published.items():
         _point_at_homes(schema, rel, homes)
@@ -166,7 +191,7 @@ def _locate(schema_id: str) -> tuple[str, str | None]:
     return f"{directory}{SCHEMA_SUFFIX}", file.removesuffix(".json")
 
 
-def _contracts(declarations: dict[str, _Declaration], order: list[str]) -> dict[str, _Contract]:
+def _contracts(declarations: dict[str, _Declaration], order: Sequence[str]) -> dict[str, _Contract]:
     position = {schema_id: index for index, schema_id in enumerate(order)}
     contracts: dict[str, _Contract] = {}
     for schema_id in sorted(declarations, key=lambda i: (position.get(i, len(position)), i)):
@@ -230,15 +255,6 @@ def _file(
             name: _resolve(body, rel, declarations, inlined, ()) for name, body in contract.defs.items()
         }
     return schema
-
-
-def _ordered(schema: Any) -> Any:
-    """Annotations first, as the hand-written contracts had them; the order means nothing to a validator."""
-    if not isinstance(schema, dict):
-        return schema
-    first = [key for key in ("title", "description") if key in schema]
-    first += [key for key in schema if key.startswith("x-") and key != _HOME]
-    return {**{key: schema[key] for key in first}, **{k: v for k, v in schema.items() if k not in first}}
 
 
 def _resolve(
@@ -387,12 +403,42 @@ class _Scope:
         return _pointer(self.files.get(target), fragment) if target in self.files else None
 
 
-def _simplify_file(schema: dict[str, Any], scope: _Scope) -> dict[str, Any]:
-    root = _ordered(_simplify({key: value for key, value in schema.items() if key != "$defs"}, scope))
-    out = {"$schema": root.pop("$schema"), "$id": root.pop("$id"), **root}
+def _simplify_file(schema: dict[str, Any], scope: _Scope, keyword_order: list[str]) -> dict[str, Any]:
+    out = _simplify({key: value for key, value in schema.items() if key != "$defs"}, scope)
     if "$defs" in schema:
-        out["$defs"] = {name: _ordered(_simplify(body, scope)) for name, body in schema["$defs"].items()}
-    return out
+        out["$defs"] = {name: _simplify(body, scope) for name, body in schema["$defs"].items()}
+    return _order_keywords(out, keyword_order)
+
+
+def _keyword_order(value: Any) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(k, str) and k in _RANK for k in value):
+        raise NormaliseError(f"{KEYWORD_ORDER_KEY} must list keywords of KEYWORD_ORDER, not {value!r}")
+    return value
+
+
+def _required_order(order: Any, required: Any) -> list[str]:
+    if not isinstance(order, list) or not isinstance(required, list) or sorted(order) != sorted(required):
+        raise NormaliseError(f"{REQUIRED_ORDER_KEY} {order!r} must reorder the required list {required!r}")
+    return order
+
+
+def _order_keywords(node: Any, contract_order: list[str]) -> Any:
+    """``node`` and its subschemas with their keywords in ``KEYWORD_ORDER``, except that the keywords of
+    the ``x-keyword-order`` in force take each other's places in its order."""
+    if isinstance(node, list):
+        return [_order_keywords(item, contract_order) for item in node]
+    if not isinstance(node, dict):
+        return node
+    own = node.get(KEYWORD_ORDER_KEY)
+    order = contract_order if own is None else _keyword_order(own)
+    rest = {key: value for key, value in node.items() if key not in (KEYWORD_ORDER_KEY, REQUIRED_ORDER_KEY)}
+    if REQUIRED_ORDER_KEY in node:
+        rest["required"] = _required_order(node[REQUIRED_ORDER_KEY], node.get("required"))
+    out = _map_subschemas(rest, lambda value: _order_keywords(value, contract_order), skip_extensions=True)
+    keys = sorted(out, key=lambda key: _RANK.get(_EXTENSIONS if key.startswith("x-") else key, len(_RANK)))
+    reordered = iter(sorted((key for key in keys if key in order), key=order.index))
+    keys = [next(reordered) if key in order else key for key in keys]
+    return {key: out[key] for key in keys}
 
 
 def _simplify(node: Any, scope: _Scope) -> Any:

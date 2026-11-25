@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from contracts_gen.normalise import BASE_URI, NormaliseError, normalise
+from contracts_gen.normalise import BASE_URI, NormaliseError, Source, normalise
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
@@ -53,7 +53,7 @@ ORDER = [WIDGET["$id"], COLOUR["$id"], LIBRARY_ROOT["$id"], PART_NUMBER["$id"]]
 
 
 def _published() -> dict[str, dict[str, Any]]:
-    return normalise(_bundle(WIDGET, COLOUR, LIBRARY_ROOT, PART_NUMBER), ORDER)
+    return normalise(_bundle(WIDGET, COLOUR, LIBRARY_ROOT, PART_NUMBER), Source(ORDER))
 
 
 def test_the_bundle_splits_into_files_with_relative_refs() -> None:
@@ -117,7 +117,7 @@ def test_inlining_a_local_def_leaves_instance_data_alone() -> None:
         unevaluatedProperties=CLOSED,
         **{"$defs": {"RecordString": {"type": "object", "unevaluatedProperties": {"type": "string"}}}},
     )
-    properties = normalise(_bundle(widget), [ROOT_ID])["demo/widget.schema.json"]["properties"]
+    properties = normalise(_bundle(widget), Source([ROOT_ID]))["demo/widget.schema.json"]["properties"]
     assert properties["tags"] == {"type": "object", "additionalProperties": {"type": "string"}}
     assert properties["pointer"] == {"const": literal, "default": literal, "examples": [literal]}
     assert properties["choice"] == {"enum": [literal]}
@@ -133,22 +133,73 @@ def test_a_closed_object_beside_an_applicator_that_names_an_unlisted_property_is
         allOf=[{"if": {"required": ["kind"]}, "then": {"properties": {"colour": {"type": "string"}}}}],
     )
     with pytest.raises(NormaliseError, match="names the property 'colour'"):
-        normalise(_bundle(widget), [ROOT_ID])
+        normalise(_bundle(widget), Source([ROOT_ID]))
 
 
 def test_a_contract_without_a_root_is_refused() -> None:
     with pytest.raises(NormaliseError, match="demo/library.schema.json has no root type"):
-        normalise(_bundle(PART_NUMBER), [PART_NUMBER["$id"]])
+        normalise(_bundle(PART_NUMBER), Source([PART_NUMBER["$id"]]))
 
 
 def test_a_declaration_the_emitter_dropped_is_reported() -> None:
     # The emitter keeps one of two declarations with the same name, even in different namespaces.
     with pytest.raises(NormaliseError, match="missing from the bundle: .*widget/Lost.json"):
-        normalise(_bundle(LIBRARY_ROOT, PART_NUMBER), [*ORDER[2:], _def("widget", "Lost")])
+        normalise(_bundle(LIBRARY_ROOT, PART_NUMBER), Source([*ORDER[2:], _def("widget", "Lost")]))
 
 
 def test_a_ref_written_in_an_extension_must_resolve() -> None:
     missing = {"$ref": "library.schema.json#/$defs/Nope"}
     widget = _decl(ROOT_ID, type="object", unevaluatedProperties=CLOSED, **{"not": missing})
     with pytest.raises(NormaliseError, match="doesn't resolve"):
-        normalise(_bundle(widget, LIBRARY_ROOT, PART_NUMBER), [ROOT_ID, *ORDER[2:]])
+        normalise(_bundle(widget, LIBRARY_ROOT, PART_NUMBER), Source([ROOT_ID, *ORDER[2:]]))
+
+
+def test_keywords_come_in_the_published_order_unless_a_schema_says_otherwise() -> None:
+    # The emitter writes properties, required, then unevaluatedProperties; the published order puts
+    # additionalProperties first, which decides the violation a {"extra": 1} instance reports.
+    widget = _decl(
+        ROOT_ID,
+        type="object",
+        properties={"name": {"type": "string", "pattern": "^/", "minLength": 2}},
+        required=["name"],
+        unevaluatedProperties=CLOSED,
+    )
+    reordered = _decl(
+        ROOT_ID,
+        type="object",
+        properties={
+            "name": {"type": "string", "pattern": "^/", "minLength": 2},
+            "path": {"minLength": 2, "pattern": "^/", "x-keyword-order": ["pattern", "minLength"]},
+        },
+        required=["path", "name"],
+        unevaluatedProperties=CLOSED,
+        **{"x-required-order": ["name", "path"]},
+    )
+    published = normalise(_bundle(widget), Source([ROOT_ID]))["demo/widget.schema.json"]
+    assert list(published) == ["$schema", "$id", "type", "additionalProperties", "required", "properties"]
+    assert list(published["properties"]["name"]) == ["type", "minLength", "pattern"]
+    contract_order = {"demo/widget.schema.json": ["required", "additionalProperties"]}
+    published = normalise(_bundle(reordered), Source([ROOT_ID], contract_order))["demo/widget.schema.json"]
+    assert list(published) == ["$schema", "$id", "type", "required", "additionalProperties", "properties"]
+    assert published["required"] == ["name", "path"]
+    assert list(published["properties"]["path"]) == ["pattern", "minLength"]
+
+
+def test_a_required_order_must_name_the_required_properties() -> None:
+    widget = _decl(ROOT_ID, type="object", required=["a", "b"], **{"x-required-order": ["a"]})
+    with pytest.raises(NormaliseError, match="must reorder the required list"):
+        normalise(_bundle(widget), Source([ROOT_ID]))
+
+
+def test_the_source_reads_keyword_orders_and_refuses_other_namespace_extensions() -> None:
+    namespace = {"baseUri": f"{BASE_URI}demo/widget/", "extensions": {"x-keyword-order": ["required"]}}
+    source = Source.from_json(
+        {"declarations": [{"id": ROOT_ID, "file": "demo/widget.tsp"}], "namespaces": [namespace]}
+    )
+    assert source == Source([ROOT_ID], {"demo/widget.schema.json": ["required"]})
+    namespace["extensions"] = {"x-version": "1.0.0"}
+    with pytest.raises(NormaliseError, match="x-version would be lost"):
+        Source.from_json({"declarations": [], "namespaces": [namespace]})
+    namespace["extensions"] = {"x-keyword-order": ["nope"]}
+    with pytest.raises(NormaliseError, match="must list keywords"):
+        Source.from_json({"declarations": [], "namespaces": [namespace]})

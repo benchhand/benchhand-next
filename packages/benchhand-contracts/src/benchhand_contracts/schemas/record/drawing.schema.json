@@ -33,11 +33,11 @@
         },
         {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/reference"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         }
       ]
     },
@@ -73,14 +73,16 @@
     },
     "sheet": {
       "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
       "properties": {
         "sizes": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/sheet_size"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "orientation": {
           "type": "string",
@@ -95,13 +97,13 @@
         "multi_sheet": {
           "type": "boolean"
         }
-      },
-      "additionalProperties": false,
-      "minProperties": 1
+      }
     },
     "direction": {
       "description": "An axis built from resolved datums or features: normal_to or parallel_to fixes the line, toward or toward_axis its sense",
       "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
       "properties": {
         "normal_to": {
           "$ref": "#/$defs/reference"
@@ -116,7 +118,6 @@
           "$ref": "#/$defs/reference"
         }
       },
-      "additionalProperties": false,
       "not": {
         "anyOf": [
           {
@@ -132,45 +133,44 @@
             ]
           }
         ]
-      },
-      "minProperties": 1
+      }
     },
     "tolerance": {
       "oneOf": [
         {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "policy"
+          ],
           "properties": {
             "policy": {
               "$ref": "#/$defs/policy_name"
             }
-          },
-          "required": [
-            "policy"
-          ],
-          "additionalProperties": false
+          }
         },
         {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deviation_mm"
+          ],
           "properties": {
             "deviation_mm": {
+              "x-plausible": {
+                "min": -1,
+                "max": 1
+              },
               "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
               "items": {
                 "type": "number",
                 "minimum": -10,
                 "maximum": 10
-              },
-              "minItems": 2,
-              "maxItems": 2,
-              "x-plausible": {
-                "min": -1,
-                "max": 1
               }
             }
-          },
-          "required": [
-            "deviation_mm"
-          ],
-          "additionalProperties": false
+          }
         }
       ]
     },
@@ -178,6 +178,13 @@
       "oneOf": [
         {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "standard",
+            "class",
+            "applies_to"
+          ],
           "properties": {
             "kind": {
               "const": "standard"
@@ -196,68 +203,70 @@
             },
             "applies_to": {
               "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
               "items": {
                 "$ref": "common.schema.json#/$defs/primary_process"
-              },
-              "minItems": 1,
-              "uniqueItems": true
+              }
             }
-          },
-          "required": [
-            "kind",
-            "standard",
-            "class",
-            "applies_to"
-          ],
-          "additionalProperties": false
+          }
         },
         {
           "type": "object",
-          "properties": {
-            "kind": {
-              "const": "limits"
-            },
-            "linear_mm": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "maximum": 5,
-              "x-plausible": {
-                "max": 0.5
-              }
-            },
-            "angular_deg": {
-              "type": "number",
-              "exclusiveMinimum": 0,
-              "maximum": 10,
-              "x-plausible": {
-                "max": 5
-              }
-            },
-            "applies_to": {
-              "type": "array",
-              "items": {
-                "$ref": "common.schema.json#/$defs/primary_process"
-              },
-              "minItems": 1,
-              "uniqueItems": true
-            },
-            "reference": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
+          "additionalProperties": false,
           "required": [
             "kind",
             "linear_mm",
             "applies_to",
             "reference"
           ],
-          "additionalProperties": false
+          "properties": {
+            "kind": {
+              "const": "limits"
+            },
+            "linear_mm": {
+              "x-plausible": {
+                "max": 0.5
+              },
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5
+            },
+            "angular_deg": {
+              "x-plausible": {
+                "max": 5
+              },
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10
+            },
+            "applies_to": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "common.schema.json#/$defs/primary_process"
+              }
+            },
+            "reference": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       ]
     },
     "product_drawing": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "definition",
+        "projection",
+        "standards",
+        "default_sheet",
+        "tolerance_policies",
+        "general_tolerance_policy"
+      ],
       "properties": {
         "definition": {
           "const": "model_and_drawing"
@@ -270,14 +279,14 @@
           ]
         },
         "standards": {
-          "required": [
-            "dimensioning"
-          ],
           "type": "object",
           "additionalProperties": {
             "type": "string",
             "minLength": 1
-          }
+          },
+          "required": [
+            "dimensioning"
+          ]
         },
         "default_sheet": {
           "allOf": [
@@ -292,31 +301,27 @@
           ]
         },
         "tolerance_policies": {
-          "minProperties": 1,
-          "propertyNames": {
-            "$ref": "#/$defs/policy_name"
-          },
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/tolerance_policy"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/policy_name"
           }
         },
         "general_tolerance_policy": {
           "$ref": "#/$defs/policy_name"
         }
-      },
-      "required": [
-        "definition",
-        "projection",
-        "standards",
-        "default_sheet",
-        "tolerance_policies",
-        "general_tolerance_policy"
-      ],
-      "additionalProperties": false
+      }
     },
     "view": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind"
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -357,9 +362,9 @@
           ]
         },
         "sheet": {
+          "description": "the sheet the view is drawn on; the principal view is on sheet 1",
           "type": "integer",
-          "minimum": 1,
-          "description": "the sheet the view is drawn on; the principal view is on sheet 1"
+          "minimum": 1
         },
         "toward": {
           "$ref": "#/$defs/reference"
@@ -371,11 +376,6 @@
           "$ref": "#/$defs/scale"
         }
       },
-      "required": [
-        "id",
-        "kind"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -450,6 +450,8 @@
     },
     "feature_intent": {
       "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
       "properties": {
         "size": {
           "type": "string",
@@ -465,12 +467,12 @@
           "const": "controlled_model"
         },
         "profile_tolerance_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 5,
           "x-plausible": {
             "max": 0.5
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5
         },
         "presentation": {
           "description": "general_note: a round's or chamfer's size goes in the sheet's general note of undimensioned edge fillets and edge breaks",
@@ -498,13 +500,17 @@
         "edges": {
           "$ref": "#/$defs/edges"
         }
-      },
-      "additionalProperties": false,
-      "minProperties": 1
+      }
     },
     "thread": {
       "description": "A thread on a bore or shaft feature, drawn conventionally (ISO 6410-1, ASME Y14.6); the full-thread depth is the measured distance from the feature's entry to its locator anchor",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "designation",
+        "standard",
+        "operation"
+      ],
       "properties": {
         "designation": {
           "type": "string",
@@ -527,13 +533,7 @@
         "full_depth_anchor": {
           "$ref": "common.schema.json#/$defs/semantic_id"
         }
-      },
-      "required": [
-        "designation",
-        "standard",
-        "operation"
-      ],
-      "additionalProperties": false
+      }
     },
     "edge_limits": {
       "description": "ISO 13715:2017 edge size limits [lower, upper] in mm: + permits excess material (burr, passing), - requires removal (edge break, undercut); a single limit pairs with 0",
@@ -542,17 +542,19 @@
         "max": 0.5
       },
       "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
       "items": {
         "type": "number",
         "minimum": -5,
         "maximum": 5
-      },
-      "minItems": 2,
-      "maxItems": 2
+      }
     },
     "edges": {
       "description": "Edges of undefined shape: the external and internal edge size limits; on a feature, exceptions to the drawing's general indication",
       "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
       "properties": {
         "external": {
           "$ref": "#/$defs/edge_limits"
@@ -560,13 +562,17 @@
         "internal": {
           "$ref": "#/$defs/edge_limits"
         }
-      },
-      "additionalProperties": false,
-      "minProperties": 1
+      }
     },
     "texture_requirement": {
       "description": "An ISO 21920-1 (ASME Y14.36) surface texture requirement: the parameter's upper limit in micrometres and whether material shall be removed",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parameter",
+        "limit_um",
+        "process"
+      ],
       "properties": {
         "parameter": {
           "type": "string",
@@ -576,12 +582,12 @@
           ]
         },
         "limit_um": {
-          "type": "number",
-          "minimum": 0.01,
-          "maximum": 500,
           "x-plausible": {
             "max": 100
-          }
+          },
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 500
         },
         "process": {
           "type": "string",
@@ -591,17 +597,18 @@
             "removal_prohibited"
           ]
         }
-      },
-      "required": [
-        "parameter",
-        "limit_um",
-        "process"
-      ],
-      "additionalProperties": false
+      }
     },
     "geometric_tolerance": {
       "description": "A geometrical tolerance of ISO 1101 or ASME Y14.5 on resolved features; the zone is design intent, never a measured value",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "characteristic",
+        "features",
+        "zone_mm"
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -622,45 +629,44 @@
         },
         "features": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/semantic_id"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "zone_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 10,
           "x-plausible": {
             "min": 0.01,
             "max": 1
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10
         },
         "diameter_zone": {
           "type": "boolean"
         },
         "datum_frame": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/datum_label"
-          },
           "minItems": 1,
           "maxItems": 3,
-          "uniqueItems": true
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/datum_label"
+          }
         }
-      },
-      "required": [
-        "id",
-        "characteristic",
-        "features",
-        "zone_mm"
-      ],
-      "additionalProperties": false
+      }
     },
     "dimension_request": {
       "description": "An additional measured dimension; its value always comes from the model, so there is no value field",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operation",
+        "features"
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -685,29 +691,29 @@
         },
         "features": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/semantic_id"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "at": {
-          "$ref": "common.schema.json#/$defs/semantic_id",
-          "description": "A plane feature a width, thickness or separation is stated at: between two planes that are not parallel (a drafted wall, inclined flanks), the distance between the lines where they meet this plane"
+          "description": "A plane feature a width, thickness or separation is stated at: between two planes that are not parallel (a drafted wall, inclined flanks), the distance between the lines where they meet this plane",
+          "$ref": "common.schema.json#/$defs/semantic_id"
         },
         "instance": {
+          "description": "A distance from a plane_face to a bore's or shaft's centres: which of their distances from that plane it states, 1 the nearest; centres at one distance share the dimension. Required when the centres lie at several distances",
           "type": "integer",
-          "minimum": 1,
-          "description": "A distance from a plane_face to a bore's or shaft's centres: which of their distances from that plane it states, 1 the nearest; centres at one distance share the dimension. Required when the centres lie at several distances"
+          "minimum": 1
         },
         "datum_frame": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/datum_label"
-          },
           "minItems": 1,
           "maxItems": 3,
-          "uniqueItems": true
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/datum_label"
+          }
         },
         "tolerance": {
           "$ref": "#/$defs/tolerance"
@@ -724,16 +730,14 @@
         "reference": {
           "type": "boolean"
         }
-      },
-      "required": [
-        "id",
-        "operation",
-        "features"
-      ],
-      "additionalProperties": false
+      }
     },
     "part_drawing": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -750,6 +754,11 @@
           "type": "object",
           "additionalProperties": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "feature",
+              "role"
+            ],
             "properties": {
               "feature": {
                 "$ref": "common.schema.json#/$defs/semantic_id"
@@ -764,12 +773,7 @@
                   "clocking_feature"
                 ]
               }
-            },
-            "required": [
-              "feature",
-              "role"
-            ],
-            "additionalProperties": false
+            }
           },
           "minProperties": 1,
           "propertyNames": {
@@ -778,38 +782,42 @@
         },
         "coordinate_frame": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "origin"
+          ],
           "properties": {
             "origin": {
               "oneOf": [
                 {
                   "type": "object",
-                  "properties": {
-                    "intersection": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/$defs/reference"
-                      },
-                      "minItems": 2,
-                      "maxItems": 3,
-                      "uniqueItems": true
-                    }
-                  },
+                  "additionalProperties": false,
                   "required": [
                     "intersection"
                   ],
-                  "additionalProperties": false
+                  "properties": {
+                    "intersection": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 3,
+                      "uniqueItems": true,
+                      "items": {
+                        "$ref": "#/$defs/reference"
+                      }
+                    }
+                  }
                 },
                 {
                   "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "at"
+                  ],
                   "properties": {
                     "at": {
                       "$ref": "#/$defs/reference"
                     }
-                  },
-                  "required": [
-                    "at"
-                  ],
-                  "additionalProperties": false
+                  }
                 }
               ]
             },
@@ -823,10 +831,6 @@
               "$ref": "#/$defs/direction"
             }
           },
-          "required": [
-            "origin"
-          ],
-          "additionalProperties": false,
           "anyOf": [
             {
               "required": [
@@ -847,34 +851,34 @@
         },
         "views": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/view"
-          },
-          "minItems": 1
+          }
         },
         "features": {
-          "minProperties": 1,
-          "propertyNames": {
-            "$ref": "common.schema.json#/$defs/semantic_id"
-          },
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/feature_intent"
+          },
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "common.schema.json#/$defs/semantic_id"
           }
         },
         "dimensions": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/dimension_request"
-          },
-          "minItems": 1
+          }
         },
         "geometric_tolerances": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/geometric_tolerance"
-          },
-          "minItems": 1
+          }
         },
         "edges": {
           "description": "the general indication of the edges of undefined shape (ISO 13715:2017 §4.5.4); a detail drawing needs it",
@@ -891,30 +895,36 @@
           ]
         },
         "surface_texture": {
+          "description": "the general surface texture of the surfaces with no texture of their own (ISO 21920-1 §9.1.2), or open with the reason no value has a basis yet; a detail drawing needs it",
           "oneOf": [
             {
               "$ref": "#/$defs/texture_requirement"
             },
             {
               "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "open"
+              ],
               "properties": {
                 "open": {
                   "type": "string",
                   "minLength": 1
                 }
-              },
-              "required": [
-                "open"
-              ],
-              "additionalProperties": false
+              }
             }
-          ],
-          "description": "the general surface texture of the surfaces with no texture of their own (ISO 21920-1 §9.1.2), or open with the reason no value has a basis yet; a detail drawing needs it"
+          ]
         },
         "notes": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "text"
+            ],
             "properties": {
               "kind": {
                 "type": "string",
@@ -934,17 +944,13 @@
                 "type": "string",
                 "minLength": 1
               }
-            },
-            "required": [
-              "kind",
-              "text"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "manufacturing": {
           "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
           "properties": {
             "build_direction": {
               "$ref": "#/$defs/direction"
@@ -966,31 +972,29 @@
             },
             "post_processing": {
               "type": "array",
+              "minItems": 1,
               "items": {
                 "type": "string",
                 "minLength": 1
-              },
-              "minItems": 1
+              }
             },
             "inspection_stage": {
               "type": "string",
               "minLength": 1
             }
-          },
-          "additionalProperties": false,
-          "minProperties": 1
+          }
         },
         "sheet": {
           "$ref": "#/$defs/sheet"
         }
-      },
-      "required": [
-        "type"
-      ],
-      "additionalProperties": false
+      }
     },
     "procurement": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
       "properties": {
         "mode": {
           "type": "string",
@@ -1016,12 +1020,19 @@
           "minLength": 1
         },
         "standard": {
+          "description": "the product standard of a standard part, such as DIN 471 or ISO 4762; its designation states the standard with its designation items (DIN 471 - 5x0.6) and identifies the item without a manufacturer or manufacturer part number",
           "type": "string",
-          "pattern": "^(ISO|IEC|EN|DIN|BS|JIS|ANSI|ASME|SAE|NAS|MS)( (EN|ISO|IEC))* [A-Z]?[0-9]+(\\.[0-9]+)*(-[0-9]+)*$",
-          "description": "the product standard of a standard part, such as DIN 471 or ISO 4762; its designation states the standard with its designation items (DIN 471 - 5x0.6) and identifies the item without a manufacturer or manufacturer part number"
+          "pattern": "^(ISO|IEC|EN|DIN|BS|JIS|ANSI|ASME|SAE|NAS|MS)( (EN|ISO|IEC))* [A-Z]?[0-9]+(\\.[0-9]+)*(-[0-9]+)*$"
         },
         "specification": {
+          "description": "the datasheet or standard that defines the item, identified by its sha256; with only a url the frozen copy is a sourcing input kept outside the record",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reference",
+            "revision",
+            "sha256"
+          ],
           "properties": {
             "reference": {
               "type": "string",
@@ -1032,29 +1043,22 @@
               "minLength": 1
             },
             "artifact": {
+              "description": "frozen copy of the specification, relative to hw/",
               "type": "string",
               "pattern": "^[^/\\n\\r\\u2028\\u2029][^\\n\\r\\u2028\\u2029]*$",
-              "description": "frozen copy of the specification, relative to hw/",
               "not": {
                 "pattern": "(^|/)\\.\\.(/|$)"
               }
             },
             "url": {
+              "description": "where the publisher serves the specification",
               "type": "string",
-              "pattern": "^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$",
-              "description": "where the publisher serves the specification"
+              "pattern": "^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"
             },
             "sha256": {
               "$ref": "common.schema.json#/$defs/sha256"
             }
           },
-          "required": [
-            "reference",
-            "revision",
-            "sha256"
-          ],
-          "additionalProperties": false,
-          "description": "the datasheet or standard that defines the item, identified by its sha256; with only a url the frozen copy is a sourcing input kept outside the record",
           "anyOf": [
             {
               "required": [
@@ -1069,7 +1073,10 @@
           ]
         },
         "open": {
+          "description": "orderable identity fields deliberately left open, each with the reason; every one blocks release",
           "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
           "properties": {
             "manufacturer": {
               "type": "string",
@@ -1083,15 +1090,17 @@
               "type": "string",
               "minLength": 1
             }
-          },
-          "additionalProperties": false,
-          "description": "orderable identity fields deliberately left open, each with the reason; every one blocks release",
-          "minProperties": 1
+          }
         },
         "approved_sources": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
             "properties": {
               "name": {
                 "type": "string",
@@ -1101,13 +1110,8 @@
                 "type": "string",
                 "minLength": 1
               }
-            },
-            "required": [
-              "name"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "qualification_evidence": {
           "type": "string",
@@ -1115,21 +1119,22 @@
         },
         "certificates": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "minLength": 1
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         }
-      },
-      "required": [
-        "mode"
-      ],
-      "additionalProperties": false
+      }
     },
     "fit_endpoint": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "PN",
+        "feature"
+      ],
       "properties": {
         "PN": {
           "$ref": "common.schema.json#/$defs/pn"
@@ -1143,16 +1148,15 @@
         "region": {
           "$ref": "common.schema.json#/$defs/semantic_id"
         }
-      },
-      "required": [
-        "PN",
-        "feature"
-      ],
-      "additionalProperties": false
+      }
     },
     "fit": {
       "description": "An ISO 286 fit between two parts: a part pair, or a hole and a shaft feature endpoint",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fit"
+      ],
       "properties": {
         "fit": {
           "type": "string",
@@ -1160,12 +1164,12 @@
         },
         "pair": {
           "type": "array",
-          "items": {
-            "$ref": "assembly.schema.json#/$defs/part_ref"
-          },
           "minItems": 2,
           "maxItems": 2,
-          "uniqueItems": true
+          "uniqueItems": true,
+          "items": {
+            "$ref": "assembly.schema.json#/$defs/part_ref"
+          }
         },
         "hole": {
           "$ref": "#/$defs/fit_endpoint"
@@ -1174,9 +1178,9 @@
           "$ref": "#/$defs/fit_endpoint"
         },
         "engagement_length_mm": {
+          "description": "engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived.",
           "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived."
+          "exclusiveMinimum": 0
         },
         "note": {
           "type": "string",
@@ -1186,10 +1190,6 @@
           "$ref": "#/$defs/axial_retainer"
         }
       },
-      "required": [
-        "fit"
-      ],
-      "additionalProperties": false,
       "oneOf": [
         {
           "required": [
@@ -1226,6 +1226,10 @@
     "axial_retainer": {
       "description": "What keeps a press_fit or locating_fit from walking along its axis; the record validator requires one from stage parts on. Hardware types (circlip, set_screw, nut, pin, cap) name their modelled occurrences in parts",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -1243,67 +1247,70 @@
         },
         "parts": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "assembly.schema.json#/$defs/part_ref"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "decision": {
           "$ref": "common.schema.json#/$defs/decision"
         }
-      },
-      "required": [
-        "type"
-      ],
-      "additionalProperties": false
+      }
     },
     "heat_set": {
       "description": "A heat-set insert installed in its host part's bore; the pair is [host, insert], each a PN or an @occurrence reference",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pair",
+        "hole_diameter_mm",
+        "insert",
+        "source"
+      ],
       "properties": {
         "pair": {
           "type": "array",
-          "items": {
-            "$ref": "assembly.schema.json#/$defs/part_ref"
-          },
           "minItems": 2,
           "maxItems": 2,
-          "uniqueItems": true
+          "uniqueItems": true,
+          "items": {
+            "$ref": "assembly.schema.json#/$defs/part_ref"
+          }
         },
         "hole_diameter_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 100,
           "description": "The bore diameter, in mm",
           "x-plausible": {
             "min": 1.5,
             "max": 25
-          }
-        },
-        "hole_deviation_mm": {
-          "type": "array",
-          "items": {
-            "type": "number"
           },
-          "minItems": 2,
-          "maxItems": 2,
-          "description": "The bore's [lower, upper] deviation from hole_diameter_mm, in mm"
-        },
-        "min_depth_mm": {
           "type": "number",
           "exclusiveMinimum": 0,
-          "maximum": 100,
+          "maximum": 100
+        },
+        "hole_deviation_mm": {
+          "description": "The bore's [lower, upper] deviation from hole_diameter_mm, in mm",
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "min_depth_mm": {
           "description": "The minimum bore depth, in mm",
           "x-plausible": {
             "min": 1.5,
             "max": 25
-          }
-        },
-        "engagement_length_mm": {
+          },
           "type": "number",
           "exclusiveMinimum": 0,
-          "description": "engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived."
+          "maximum": 100
+        },
+        "engagement_length_mm": {
+          "description": "engagement_length_mm: positive number, in mm. The travel along the insertion axis, back from the installed pose, over which the interfering surface of the inserted part still overlaps its partner. For a press fit seated on a bore floor, use the bore depth (an entry chamfer or counterbore may be ignored); not the press-band length and not the overlap at the installed pose. For a heat-set insert, use its embedded length. For a press fit or a heat-set insert, assembly access exempts interference up to this length plus one minimum sampling step. A running or locating fit records the length but gets no exemption. Optional; never derived.",
+          "type": "number",
+          "exclusiveMinimum": 0
         },
         "insert": {
           "type": "string",
@@ -1318,17 +1325,10 @@
           "minLength": 1
         },
         "feature": {
-          "$ref": "common.schema.json#/$defs/semantic_id",
-          "description": "the host part's bore feature that takes the insert"
+          "description": "the host part's bore feature that takes the insert",
+          "$ref": "common.schema.json#/$defs/semantic_id"
         }
-      },
-      "required": [
-        "pair",
-        "hole_diameter_mm",
-        "insert",
-        "source"
-      ],
-      "additionalProperties": false
+      }
     }
   }
 }

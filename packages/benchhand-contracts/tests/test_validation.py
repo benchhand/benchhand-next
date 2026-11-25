@@ -61,6 +61,19 @@ def test_violations_lists_every_violation_with_the_most_relevant_first() -> None
     assert violations(MANIFEST_ID, _manifest_example()) == []
 
 
+def test_of_two_violations_at_one_place_the_first_keyword_is_reported() -> None:
+    # {"extra": 1} breaks both additionalProperties and required at the root. The validator reports the
+    # keyword that comes first in the schema, so the published keyword order is part of the diagnostic.
+    finding_id = f"{CONTRACTS}common/finding.schema.json"
+    with pytest.raises(ContractViolation) as caught:
+        validate(finding_id, {"extra": 1})
+    assert caught.value.pointer == ""
+    assert caught.value.schema_path == f"{finding_id}#/additionalProperties"
+    paths = [violation.schema_path.partition("#")[2] for violation in violations(finding_id, {"extra": 1})]
+    assert paths[0] == "/additionalProperties"
+    assert set(paths[1:]) == {"/required"}
+
+
 def test_an_unknown_schema_id_is_an_error() -> None:
     with pytest.raises(UnknownSchemaError):
         validate(f"{MANIFEST_ID}#/$defs/NoSuchDefinition", {})

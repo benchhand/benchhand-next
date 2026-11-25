@@ -4,6 +4,7 @@ using TypeSpec.JsonSchema;
 
 @jsonSchema
 @baseUri("https://benchhand.github.io/benchhand/contracts/jobs/job/")
+@extension("x-keyword-order", #["required", "additionalProperties"])
 namespace Jobs.Job;
 
 /** A long-running job of the job service. JobRecord is the run record kept at <project>/.benchhand/runs/<jobId>.json; JobHandle is what jobs.start, jobs.status and jobs.result return to the agent. */

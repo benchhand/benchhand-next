@@ -4,6 +4,7 @@ using TypeSpec.JsonSchema;
 
 @jsonSchema
 @baseUri("https://benchhand.github.io/benchhand/contracts/provider/protocol/")
+@extension("x-keyword-order", #["required", "additionalProperties"])
 namespace Provider.Protocol;
 
 /** Message shapes of the benchhand provider protocol. Prose rules: docs/contract/provider-protocol.md. */
@@ -48,6 +49,7 @@ scalar FeatureName extends string;
 /** Absolute POSIX path. */
 @pattern("^/")
 @minLength(2)
+@extension("x-keyword-order", #["pattern", "minLength"])
 scalar AbsPath extends string;
 
 @pattern("^[0-9a-f]{64}$")

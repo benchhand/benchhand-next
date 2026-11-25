@@ -263,14 +263,14 @@ Condition:
 ```json
 {
   "if": {
+    "required": [
+      "kind"
+    ],
     "properties": {
       "kind": {
         "const": "guideline"
       }
-    },
-    "required": [
-      "kind"
-    ]
+    }
   },
   "then": {
     "required": [
@@ -604,14 +604,14 @@ Condition:
 ```json
 {
   "if": {
+    "required": [
+      "outcome"
+    ],
     "properties": {
       "outcome": {
         "const": "not_assessed"
       }
-    },
-    "required": [
-      "outcome"
-    ]
+    }
   },
   "then": {
     "required": [

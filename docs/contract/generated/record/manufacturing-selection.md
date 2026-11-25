@@ -272,16 +272,6 @@ Condition:
   "then": {
     "properties": {
       "route": {
-        "items": {
-          "properties": {
-            "kind": {
-              "enum": [
-                "purchased",
-                "inspection"
-              ]
-            }
-          }
-        },
         "contains": {
           "required": [
             "purchase"
@@ -289,6 +279,16 @@ Condition:
           "properties": {
             "kind": {
               "const": "purchased"
+            }
+          }
+        },
+        "items": {
+          "properties": {
+            "kind": {
+              "enum": [
+                "purchased",
+                "inspection"
+              ]
             }
           }
         }

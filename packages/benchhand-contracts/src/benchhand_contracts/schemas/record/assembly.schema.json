@@ -4,8 +4,14 @@
   "title": "benchhand assembly record (hw/assembly.yaml)",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subassemblies",
+    "joints"
+  ],
   "properties": {
     "operations": {
+      "description": "Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded",
       "oneOf": [
         {
           "type": "array",
@@ -16,13 +22,19 @@
         {
           "$ref": "common.schema.json#/$defs/fact_unknown"
         }
-      ],
-      "description": "Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded"
+      ]
     },
     "occurrences": {
+      "description": "Explicit placements of part definitions; a PN listed in a subassembly's parts is one implicit occurrence at the identity placement instead",
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "PN"
+        ],
         "properties": {
           "id": {
             "$ref": "#/$defs/occurrence_id"
@@ -33,39 +45,38 @@
           "placement": {
             "$ref": "#/$defs/placement"
           }
-        },
-        "required": [
-          "id",
-          "PN"
-        ],
-        "additionalProperties": false
-      },
-      "minItems": 1,
-      "description": "Explicit placements of part definitions; a PN listed in a subassembly's parts is one implicit occurrence at the identity placement instead"
+        }
+      }
     },
     "profiles": {
-      "minProperties": 1,
       "description": "Reusable periodic tables a periodic_table coupling evaluates, by name",
-      "propertyNames": {
-        "pattern": "^[a-z][a-z0-9_-]*$"
-      },
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/profile"
+      },
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$"
       }
     },
     "mechanisms": {
+      "description": "Shared mechanism parameters whose outputs several slider_crank couplings follow",
       "type": "array",
+      "minItems": 1,
       "items": {
         "$ref": "#/$defs/mechanism"
-      },
-      "minItems": 1,
-      "description": "Shared mechanism parameters whose outputs several slider_crank couplings follow"
+      }
     },
     "subassemblies": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -77,25 +88,20 @@
           },
           "parts": {
             "type": "array",
+            "minItems": 1,
             "items": {
               "$ref": "common.schema.json#/$defs/pn"
-            },
-            "minItems": 1
+            }
           },
           "occurrences": {
             "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
             "items": {
               "$ref": "common.schema.json#/$defs/occurrence_ref"
-            },
-            "minItems": 1,
-            "uniqueItems": true
+            }
           }
         },
-        "required": [
-          "id",
-          "title"
-        ],
-        "additionalProperties": false,
         "anyOf": [
           {
             "required": [
@@ -108,13 +114,23 @@
             ]
           }
         ]
-      },
-      "minItems": 1
+      }
     },
     "joints": {
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "parent",
+          "child",
+          "axis",
+          "origin",
+          "min",
+          "max"
+        ],
         "properties": {
           "id": {
             "$ref": "#/$defs/joint_id"
@@ -146,8 +162,8 @@
             "type": "number"
           },
           "nominal": {
-            "type": "number",
-            "description": "The value of an independent joint; a coupled joint has none"
+            "description": "The value of an independent joint; a coupled joint has none",
+            "type": "number"
           },
           "coupling": {
             "$ref": "#/$defs/coupling"
@@ -164,17 +180,6 @@
             "$ref": "#/$defs/torque_path"
           }
         },
-        "required": [
-          "id",
-          "type",
-          "parent",
-          "child",
-          "axis",
-          "origin",
-          "min",
-          "max"
-        ],
-        "additionalProperties": false,
         "allOf": [
           {
             "if": {
@@ -251,11 +256,6 @@
       "$ref": "#/$defs/assembly_drawing"
     }
   },
-  "required": [
-    "subassemblies",
-    "joints"
-  ],
-  "additionalProperties": false,
   "examples": [
     {
       "occurrences": [
@@ -955,6 +955,10 @@
     "torque_path": {
       "description": "What carries the drive torque across a torque: transmitted joint; required on a fixed joint, optional on a revolute driven through an unmodelled shaft. Hardware types (key, set_screw, pin) name their modelled occurrences in parts",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
       "properties": {
         "type": {
           "type": "string",
@@ -971,26 +975,29 @@
         },
         "parts": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/part_ref"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "decision": {
           "$ref": "common.schema.json#/$defs/decision"
         }
-      },
-      "required": [
-        "type"
-      ],
-      "additionalProperties": false
+      }
     },
     "coupling": {
       "description": "A dependent joint's law: its value derives from a driver joint",
       "oneOf": [
         {
+          "description": "q = ratio * q_driver + offset; ratio in dependent units per driver unit",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "driver",
+            "ratio"
+          ],
           "properties": {
             "type": {
               "const": "linear"
@@ -1004,17 +1011,17 @@
             "offset": {
               "type": "number"
             }
-          },
+          }
+        },
+        {
+          "description": "q = profile((q_driver + phase_deg) mod period_deg); the driver is revolute",
+          "type": "object",
+          "additionalProperties": false,
           "required": [
             "type",
             "driver",
-            "ratio"
+            "profile"
           ],
-          "additionalProperties": false,
-          "description": "q = ratio * q_driver + offset; ratio in dependent units per driver unit"
-        },
-        {
-          "type": "object",
           "properties": {
             "type": {
               "const": "periodic_table"
@@ -1029,17 +1036,17 @@
             "phase_deg": {
               "type": "number"
             }
-          },
-          "required": [
-            "type",
-            "driver",
-            "profile"
-          ],
-          "additionalProperties": false,
-          "description": "q = profile((q_driver + phase_deg) mod period_deg); the driver is revolute"
+          }
         },
         {
+          "description": "One output of a slider_crank mechanism: piston displacement (prismatic) or rod angle (revolute)",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "mechanism",
+            "output"
+          ],
           "properties": {
             "type": {
               "const": "slider_crank"
@@ -1054,20 +1061,21 @@
                 "rod_angle"
               ]
             }
-          },
-          "required": [
-            "type",
-            "mechanism",
-            "output"
-          ],
-          "additionalProperties": false,
-          "description": "One output of a slider_crank mechanism: piston displacement (prismatic) or rod angle (revolute)"
+          }
         }
       ]
     },
     "profile": {
       "description": "Piecewise-linear periodic table: samples from 0 to period_deg with matching end values",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_unit",
+        "output_unit",
+        "period_deg",
+        "interpolation",
+        "samples"
+      ],
       "properties": {
         "input_unit": {
           "const": "deg"
@@ -1088,6 +1096,7 @@
         },
         "samples": {
           "type": "array",
+          "minItems": 2,
           "items": {
             "type": "array",
             "minItems": 2,
@@ -1100,22 +1109,24 @@
                 "type": "number"
               }
             ]
-          },
-          "minItems": 2
+          }
         }
-      },
-      "required": [
-        "input_unit",
-        "output_unit",
-        "period_deg",
-        "interpolation",
-        "samples"
-      ],
-      "additionalProperties": false
+      }
     },
     "mechanism": {
       "description": "A centred slider-crank: the driver turns the crank about crank_axis through origin_mm; the piston slides along bank_axis",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "driver",
+        "origin_mm",
+        "crank_axis",
+        "bank_axis",
+        "crank_radius_mm",
+        "rod_length_mm"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -1137,36 +1148,25 @@
           "$ref": "common.schema.json#/$defs/vector"
         },
         "crank_radius_mm": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 1000,
           "x-plausible": {
             "max": 200
-          }
-        },
-        "rod_length_mm": {
+          },
           "type": "number",
           "exclusiveMinimum": 0,
-          "maximum": 1000,
+          "maximum": 1000
+        },
+        "rod_length_mm": {
           "x-plausible": {
             "max": 500
-          }
+          },
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
         },
         "phase_deg": {
           "type": "number"
         }
-      },
-      "required": [
-        "id",
-        "type",
-        "driver",
-        "origin_mm",
-        "crank_axis",
-        "bank_axis",
-        "crank_radius_mm",
-        "rod_length_mm"
-      ],
-      "additionalProperties": false
+      }
     },
     "occurrence_id": {
       "type": "string",
@@ -1186,12 +1186,18 @@
     "placement": {
       "description": "Rest placement x -> R x + t: rotation about the definition's local origin, then translation (mm)",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "translation_mm": {
           "$ref": "common.schema.json#/$defs/vector"
         },
         "rotation": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "axis",
+            "angle_deg"
+          ],
           "properties": {
             "axis": {
               "$ref": "common.schema.json#/$defs/vector"
@@ -1199,19 +1205,18 @@
             "angle_deg": {
               "type": "number"
             }
-          },
-          "required": [
-            "axis",
-            "angle_deg"
-          ],
-          "additionalProperties": false
+          }
         }
-      },
-      "additionalProperties": false
+      }
     },
     "drawing_item": {
       "description": "One assembly-drawing item row: a PN and, when it is placed more than once, the occurrences it stands for",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "PN"
+      ],
       "properties": {
         "item": {
           "type": "integer",
@@ -1222,22 +1227,25 @@
         },
         "occurrences": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/occurrence_ref"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         }
-      },
-      "required": [
-        "item",
-        "PN"
-      ],
-      "additionalProperties": false
+      }
     },
     "assembly_drawing": {
       "description": "Assembly drawing intent: identity, views, presentation-only explode offsets, parts-list items, subassembly sheets and installation operations",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "rev",
+        "title",
+        "views",
+        "items"
+      ],
       "properties": {
         "number": {
           "type": "string",
@@ -1258,17 +1266,24 @@
           ]
         },
         "excludes": {
+          "description": "What a modelled scope leaves out, named on the drawing",
           "type": "array",
           "items": {
             "type": "string",
             "minLength": 1
-          },
-          "description": "What a modelled scope leaves out, named on the drawing"
+          }
         },
         "views": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "kind",
+              "direction"
+            ],
             "properties": {
               "id": {
                 "type": "string",
@@ -1291,20 +1306,19 @@
                   "iso"
                 ]
               }
-            },
-            "required": [
-              "id",
-              "kind",
-              "direction"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "explode": {
+          "description": "Exploded-view offsets in mm, assembly frame; each occurrence also moves by its kinematic ancestors' offsets",
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ref",
+              "offset_mm"
+            ],
             "properties": {
               "ref": {
                 "$ref": "#/$defs/part_ref"
@@ -1312,43 +1326,35 @@
               "offset_mm": {
                 "$ref": "common.schema.json#/$defs/vector"
               }
-            },
-            "required": [
-              "ref",
-              "offset_mm"
-            ],
-            "additionalProperties": false
-          },
-          "description": "Exploded-view offsets in mm, assembly frame; each occurrence also moves by its kinematic ancestors' offsets"
+            }
+          }
         },
         "items": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "$ref": "#/$defs/drawing_item"
-          },
-          "minItems": 1
+          }
         },
         "subassembly_sheets": {
           "type": "array",
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9_-]*$"
-          },
-          "uniqueItems": true
+          }
         }
-      },
-      "required": [
-        "number",
-        "rev",
-        "title",
-        "views",
-        "items"
-      ],
-      "additionalProperties": false
+      }
     },
     "assembly_operation": {
       "description": "One assembly operation. An installation step puts `part` into `into` along `direction` (in the receiving part's model frame) until the acceptance holds; the fit, insert or ring comes from the interface limit of the same kind. predecessors name the operations that must come first, closes the parts it encloses, and tool_access the tools that must reach. A tool name alone is display text: its reach stays unknown. path, when given, is the part's insertion path; without it the part travels in a straight line along direction, and checks report that default. edge_distance is a fastener, insert or heat-set joint's distance from its hole to the nearest edge against its sourced criterion",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "part"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -1382,6 +1388,11 @@
         },
         "acceptance": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "features"
+          ],
           "properties": {
             "kind": {
               "enum": [
@@ -1396,19 +1407,14 @@
             },
             "features": {
               "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
               "items": {
                 "type": "string",
                 "pattern": "^[a-z][a-z0-9_]*$"
-              },
-              "minItems": 1,
-              "maxItems": 2
+              }
             }
-          },
-          "required": [
-            "kind",
-            "features"
-          ],
-          "additionalProperties": false
+          }
         },
         "tools": {
           "type": "array",
@@ -1430,26 +1436,31 @@
         },
         "predecessors": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9_-]*$"
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "closes": {
+          "description": "parts this operation encloses: no later operation reaches them",
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/part_ref"
-          },
           "minItems": 1,
           "uniqueItems": true,
-          "description": "parts this operation encloses: no later operation reaches them"
+          "items": {
+            "$ref": "#/$defs/part_ref"
+          }
         },
         "tool_access": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tool"
+            ],
             "properties": {
               "tool": {
                 "type": "string",
@@ -1467,13 +1478,8 @@
               "envelope": {
                 "$ref": "common.schema.json#/$defs/text_fact"
               }
-            },
-            "required": [
-              "tool"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "engagement": {
           "$ref": "common.schema.json#/$defs/quantity_fact"
@@ -1488,7 +1494,13 @@
           "$ref": "common.schema.json#/$defs/text_fact"
         },
         "edge_distance": {
+          "description": "The joint's edge distance: the criterion it must meet (property edge_distance, a length bound with its source) and the distance the design gives, a known length (an interval's lower end governs) or an unknown with its reason",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "criterion",
+            "distance"
+          ],
           "properties": {
             "criterion": {
               "allOf": [
@@ -1523,45 +1535,33 @@
             "distance": {
               "$ref": "common.schema.json#/$defs/quantity_fact"
             }
-          },
-          "required": [
-            "criterion",
-            "distance"
-          ],
-          "additionalProperties": false,
-          "description": "The joint's edge distance: the criterion it must meet (property edge_distance, a length bound with its source) and the distance the design gives, a known length (an interval's lower end governs) or an unknown with its reason"
+          }
         },
         "path": {
+          "description": "The insertion path of `part`: its offsets in mm from the installed pose, in the receiving part's model frame, keeping the installed orientation. The part starts at start, passes via in order and arrives installed; the last leg runs along direction",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start"
+          ],
           "properties": {
             "start": {
               "$ref": "common.schema.json#/$defs/vector"
             },
             "via": {
               "type": "array",
+              "minItems": 1,
               "items": {
                 "$ref": "common.schema.json#/$defs/vector"
-              },
-              "minItems": 1
+              }
             }
-          },
-          "required": [
-            "start"
-          ],
-          "additionalProperties": false,
-          "description": "The insertion path of `part`: its offsets in mm from the installed pose, in the receiving part's model frame, keeping the installed orientation. The part starts at start, passes via in order and arrives installed; the last leg runs along direction"
+          }
         },
         "inspection": {
           "type": "string",
           "minLength": 1
         }
       },
-      "required": [
-        "id",
-        "kind",
-        "part"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {

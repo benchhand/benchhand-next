@@ -5,6 +5,15 @@
   "description": "One file of published design-for-manufacturing guidance for a process. A guideline is never a calibration: the grade of a resolved limit is the kind of the source it cites, and a resolved criterion cites a source of kind guideline (id, revision and sha256 of this file), never the inner citations. Scope is declarative selectors, never expressions; which layer a limit sits at follows from how specific its scope is. A machine is reached only through the capability profile's guidelines pin. A guideline may only tighten the limit of a less specific one; a limit that relaxes needs `relaxes` with a reason and a citation. A value a source does not publish is left out, never defaulted. Layer height, shrinkage and Z strength are not guideline limits: they are a capability parameter and material-profile properties",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "revision",
+    "title",
+    "scope",
+    "limits"
+  ],
   "properties": {
     "schema_version": {
       "const": 1
@@ -20,17 +29,17 @@
       "$ref": "common.schema.json#/$defs/text"
     },
     "extends": {
+      "description": "parent guideline ids, in order; a later parent is read after an earlier one",
       "type": "array",
-      "items": {
-        "$ref": "common.schema.json#/$defs/guideline_id"
-      },
       "minItems": 1,
       "uniqueItems": true,
-      "description": "parent guideline ids, in order; a later parent is read after an earlier one"
+      "items": {
+        "$ref": "common.schema.json#/$defs/guideline_id"
+      }
     },
     "abstract": {
-      "type": "boolean",
-      "description": "an abstract set is reached through extends; it is matched on its own only when the capability profile's pin names it"
+      "description": "an abstract set is reached through extends; it is matched on its own only when the capability profile's pin names it",
+      "type": "boolean"
     },
     "scope": {
       "$ref": "#/$defs/scope"
@@ -42,15 +51,6 @@
       }
     }
   },
-  "required": [
-    "schema_version",
-    "id",
-    "revision",
-    "title",
-    "scope",
-    "limits"
-  ],
-  "additionalProperties": false,
   "examples": [
     {
       "schema_version": 1,
@@ -211,16 +211,20 @@
   "$defs": {
     "names": {
       "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
       "items": {
         "type": "string",
         "pattern": "^[a-z0-9][a-z0-9_.-]*$"
-      },
-      "minItems": 1,
-      "uniqueItems": true
+      }
     },
     "scope": {
       "description": "What the set applies to. Every selector present must match; a set with more selectors is more specific. nozzle_diameter is the interval of nozzle diameters it covers",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "process"
+      ],
       "properties": {
         "process": {
           "$ref": "common.schema.json#/$defs/route_kind"
@@ -235,10 +239,6 @@
           "$ref": "#/$defs/names"
         },
         "nozzle_diameter": {
-          "required": [
-            "lower",
-            "upper"
-          ],
           "allOf": [
             {
               "$ref": "common.schema.json#/$defs/quantity"
@@ -246,19 +246,21 @@
             {
               "$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"
             }
+          ],
+          "required": [
+            "lower",
+            "upper"
           ]
         },
         "nozzle_material": {
           "$ref": "#/$defs/names"
         }
-      },
-      "required": [
-        "process"
-      ],
-      "additionalProperties": false
+      }
     },
     "applies_to": {
       "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
       "properties": {
         "orientation": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -266,13 +268,17 @@
         "feature": {
           "$ref": "common.schema.json#/$defs/semantic_id"
         }
-      },
-      "additionalProperties": false,
-      "minProperties": 1
+      }
     },
     "relative": {
       "description": "factor times the profile's line width (or nozzle diameter), never below floor",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_to",
+        "factor",
+        "floor"
+      ],
       "properties": {
         "relative_to": {
           "enum": [
@@ -285,26 +291,25 @@
           "exclusiveMinimum": 0
         },
         "floor": {
-          "required": [
-            "value"
-          ],
           "allOf": [
             {
               "$ref": "common.schema.json#/$defs/quantity"
             }
+          ],
+          "required": [
+            "value"
           ]
         }
-      },
-      "required": [
-        "relative_to",
-        "factor",
-        "floor"
-      ],
-      "additionalProperties": false
+      }
     },
     "relaxes": {
       "description": "a limit less strict than the less specific one it overrides needs the reason and the source",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "citation"
+      ],
       "properties": {
         "reason": {
           "$ref": "common.schema.json#/$defs/text"
@@ -312,15 +317,16 @@
         "citation": {
           "$ref": "common.schema.json#/$defs/source"
         }
-      },
-      "required": [
-        "reason",
-        "citation"
-      ],
-      "additionalProperties": false
+      }
     },
     "limit": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "characteristic",
+        "operator",
+        "citations"
+      ],
       "properties": {
         "characteristic": {
           "description": "only a characteristic whose quantity the capability schema bounds, so no limit holds an unbounded value",
@@ -351,18 +357,17 @@
           ]
         },
         "quantity": {
-          "$ref": "common.schema.json#/$defs/quantity",
-          "description": "the limit as a value (>=, <=) or an interval (between), in one unit"
+          "description": "the limit as a value (>=, <=) or an interval (between), in one unit",
+          "$ref": "common.schema.json#/$defs/quantity"
         },
         "relative": {
           "$ref": "#/$defs/relative"
         },
         "quantities": {
+          "description": "the discrete nozzle diameters a one_of limit on nozzle_diameter allows, each one value; compared as whole micrometres",
           "type": "array",
+          "minItems": 1,
           "items": {
-            "required": [
-              "value"
-            ],
             "allOf": [
               {
                 "$ref": "common.schema.json#/$defs/quantity"
@@ -370,34 +375,35 @@
               {
                 "$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"
               }
+            ],
+            "required": [
+              "value"
             ]
-          },
-          "minItems": 1,
-          "description": "the discrete nozzle diameters a one_of limit on nozzle_diameter allows, each one value; compared as whole micrometres"
+          }
         },
         "value": {
-          "minItems": 1,
-          "uniqueItems": true,
           "description": "the categorical requirement of equals and one_of, such as enclosure true or nozzle_material hardened_steel; no default",
-          "items": {
-            "minLength": 1,
-            "type": [
-              "string",
-              "boolean"
-            ]
-          },
           "type": [
             "string",
             "boolean",
             "array"
-          ]
+          ],
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": [
+              "string",
+              "boolean"
+            ],
+            "minLength": 1
+          }
         },
         "applies_to": {
           "$ref": "#/$defs/applies_to"
         },
         "disputed": {
-          "type": "boolean",
-          "description": "true when the cited sources disagree; the stricter value applies"
+          "description": "true when the cited sources disagree; the stricter value applies",
+          "type": "boolean"
         },
         "relaxes": {
           "$ref": "#/$defs/relaxes"
@@ -406,12 +412,6 @@
           "$ref": "common.schema.json#/$defs/sources"
         }
       },
-      "required": [
-        "characteristic",
-        "operator",
-        "citations"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -526,24 +526,24 @@
               ]
             },
             "if": {
+              "required": [
+                "characteristic"
+              ],
               "properties": {
                 "characteristic": {
                   "const": "nozzle_diameter"
                 }
-              },
-              "required": [
-                "characteristic"
-              ]
+              }
             },
             "then": {
+              "required": [
+                "quantities"
+              ],
               "properties": {
                 "operator": {
                   "const": "one_of"
                 }
               },
-              "required": [
-                "quantities"
-              ],
               "not": {
                 "required": [
                   "value"
@@ -622,14 +622,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "bridge_span"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -648,14 +648,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "overhang_angle"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -674,14 +674,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "min_wall"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -700,14 +700,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "nozzle_diameter"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -726,14 +726,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "min_feature"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -752,14 +752,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "min_hole"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -778,14 +778,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "sliding_clearance"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -804,6 +804,9 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "enum": [
@@ -812,10 +815,7 @@
                   "profile_deviation"
                 ]
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -834,6 +834,9 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "enum": [
@@ -841,10 +844,7 @@
                   "nozzle_material"
                 ]
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -859,14 +859,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "enclosure"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {
@@ -889,14 +889,14 @@
         },
         {
           "if": {
+            "required": [
+              "characteristic"
+            ],
             "properties": {
               "characteristic": {
                 "const": "nozzle_material"
               }
-            },
-            "required": [
-              "characteristic"
-            ]
+            }
           },
           "then": {
             "properties": {

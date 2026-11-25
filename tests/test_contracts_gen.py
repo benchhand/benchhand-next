@@ -16,7 +16,7 @@ import pytest
 from benchhand_contracts import ContractViolation, validate
 from benchhand_contracts.validation import ContractValidator
 from contracts_gen.docs import write_docs
-from contracts_gen.emit import TSP, TypeSpecError, write_published_schemas
+from contracts_gen.emit import TSP, TypeSpecError, read_source, write_published_schemas
 from contracts_gen.examples import ExampleError, contract_registry, write_examples
 from contracts_gen.generate import drift, generate
 from contracts_gen.python_models import write_python
@@ -179,6 +179,21 @@ def test_a_typespec_contract_is_published_under_its_id_with_file_relative_refs(
     for path in sorted((REPO_ROOT / SCHEMAS_OUT).rglob("*.schema.json")):
         rel_path = path.relative_to(REPO_ROOT / SCHEMAS_OUT)
         assert (tmp_path / rel_path).read_bytes() == path.read_bytes(), rel_path
+
+
+@needs_node
+def test_the_compiler_lists_the_declarations_in_source_order(contracts_dir: Path) -> None:
+    # The TypeSpec compiler reads the names, so a backticked name, an @id and a template need no parser of
+    # our own; a template isn't a declaration until it is instantiated, and its instance is inlined.
+    extra = (
+        "\nmodel Box<T> {\n  value: T;\n}\n\n"
+        '@id("https://benchhand.github.io/benchhand/contracts/generator-test/widget/renamed.json")\n'
+        "model Original {\n  box: Box<string>;\n}\n\nscalar `then` extends string;\n"
+    )
+    _write_widget(contracts_dir, NEW_TYPESPEC + extra)
+    widget = f"{NEW_ID.removesuffix('.schema.json')}/"
+    ids = [schema_id for schema_id in read_source(contracts_dir).ids if schema_id.startswith(widget[:-1])]
+    assert ids == [NEW_ID, f"{widget}PartNumber.json", f"{widget}renamed.json", f"{widget}then.json"]
 
 
 @needs_node

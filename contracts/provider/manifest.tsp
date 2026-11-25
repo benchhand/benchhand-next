@@ -4,11 +4,13 @@ using TypeSpec.JsonSchema;
 
 @jsonSchema
 @baseUri("https://benchhand.github.io/benchhand/contracts/provider/manifest/")
+@extension("x-keyword-order", #["required", "additionalProperties"])
 namespace Provider.Manifest;
 
 @summary("benchhand-provider.toml")
 @id("https://benchhand.github.io/benchhand/contracts/provider/manifest.schema.json")
 @extension("x-version", "1.0.0")
+@extension("x-keyword-order", #["additionalProperties", "required"])
 model Manifest {
   @pattern("^[a-z][a-z0-9-]{1,63}$")
   name: string;

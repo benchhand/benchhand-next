@@ -5,38 +5,33 @@
   "description": "How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. An absent file means every gate asks",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policy_version"
+  ],
   "properties": {
     "policy_version": {
       "const": 1
     },
     "default": {
-      "$ref": "#/$defs/mode",
       "description": "The mode of every gate without its own entry",
+      "$ref": "#/$defs/mode",
       "default": "ask"
     },
     "decision": {
-      "$ref": "common.schema.json#/$defs/decision",
-      "description": "The decision that records a default other than ask"
+      "description": "The decision that records a default other than ask",
+      "$ref": "common.schema.json#/$defs/decision"
     },
     "gates": {
       "description": "Per-gate modes, keyed by the gate id flow.yaml declares",
-      "propertyNames": {
-        "$ref": "common.schema.json#/$defs/gate_id"
-      },
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/gate"
+      },
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/gate_id"
       }
     }
-  },
-  "required": [
-    "policy_version"
-  ],
-  "additionalProperties": false,
-  "then": {
-    "required": [
-      "decision"
-    ]
   },
   "if": {
     "required": [
@@ -50,6 +45,11 @@
         ]
       }
     }
+  },
+  "then": {
+    "required": [
+      "decision"
+    ]
   },
   "examples": [
     {
@@ -84,6 +84,10 @@
     },
     "gate": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
       "properties": {
         "mode": {
           "$ref": "#/$defs/mode"
@@ -91,15 +95,6 @@
         "decision": {
           "$ref": "common.schema.json#/$defs/decision"
         }
-      },
-      "required": [
-        "mode"
-      ],
-      "additionalProperties": false,
-      "then": {
-        "required": [
-          "decision"
-        ]
       },
       "if": {
         "properties": {
@@ -110,6 +105,11 @@
             ]
           }
         }
+      },
+      "then": {
+        "required": [
+          "decision"
+        ]
       }
     }
   }

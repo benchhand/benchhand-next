@@ -5,6 +5,10 @@
   "description": "What the user's actual machines, operators and suppliers can do, kept apart from design requirements. Nominal resolution, machine specifications and drawing labels are parameters that describe the machine, never its achieved accuracy: achievable dimensional performance comes only from calibrations, each scoped to a material, feature, orientation, setup and tool, with its evidence. The plugin's capability templates carry template: true and hold no machine numbers; a template is never a capability. Parameter names per process kind are manufacturing_intent.CAPABILITY_PARAMETERS",
   "x-version": "1.0.0",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profiles"
+  ],
   "properties": {
     "profiles": {
       "type": "array",
@@ -13,10 +17,6 @@
       }
     }
   },
-  "required": [
-    "profiles"
-  ],
-  "additionalProperties": false,
   "examples": [
     {
       "profiles": [
@@ -235,6 +235,12 @@
     "parameters": {
       "description": "Parameters by name. A named parameter that has a hard bound is checked in every unit of its dimension; the bounds are in the qty_* and fact_* definitions below and the plausibility band (x-plausible, a warning) beside them. layer_height at most nozzle_diameter compares two facts in possibly different units, so the config loader checks it",
       "type": "object",
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/fact"
+      },
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/semantic_id"
+      },
       "properties": {
         "nozzle_diameter": {
           "allOf": [
@@ -356,16 +362,21 @@
             }
           ]
         }
-      },
-      "additionalProperties": {
-        "$ref": "common.schema.json#/$defs/fact"
-      },
-      "propertyNames": {
-        "$ref": "common.schema.json#/$defs/semantic_id"
       }
     },
     "profile": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "title",
+        "process",
+        "provider",
+        "parameters",
+        "materials",
+        "calibrations"
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/profile_id"
@@ -387,8 +398,8 @@
           ]
         },
         "template": {
-          "const": true,
-          "description": "present only on a plugin template: copy it, record your own values, then remove this flag"
+          "description": "present only on a plugin template: copy it, record your own values, then remove this flag",
+          "const": true
         },
         "guidance": {
           "$ref": "common.schema.json#/$defs/texts"
@@ -401,22 +412,29 @@
         },
         "machine": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "identity"
+          ],
           "properties": {
             "identity": {
-              "$ref": "common.schema.json#/$defs/text_fact",
-              "description": "make, model and the machine's own identity"
+              "description": "make, model and the machine's own identity",
+              "$ref": "common.schema.json#/$defs/text_fact"
             },
             "location": {
               "$ref": "common.schema.json#/$defs/text"
             }
-          },
-          "required": [
-            "identity"
-          ],
-          "additionalProperties": false
+          }
         },
         "envelope": {
+          "description": "The usable working envelope in the machine frame",
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
           "properties": {
             "x": {
               "$ref": "common.schema.json#/$defs/quantity_fact"
@@ -427,37 +445,37 @@
             "z": {
               "$ref": "common.schema.json#/$defs/quantity_fact"
             }
-          },
-          "required": [
-            "x",
-            "y",
-            "z"
-          ],
-          "additionalProperties": false,
-          "description": "The usable working envelope in the machine frame"
+          }
         },
         "materials": {
+          "description": "The exact materials and stock the profile is approved or forbidden for; for laser, waterjet and plasma also its thickness, coating and extraction approval. An unidentified material is never approved",
           "oneOf": [
             {
               "type": "array",
+              "minItems": 1,
               "items": {
                 "$ref": "#/$defs/material_approval"
-              },
-              "minItems": 1
+              }
             },
             {
               "$ref": "common.schema.json#/$defs/fact_open"
             }
-          ],
-          "description": "The exact materials and stock the profile is approved or forbidden for; for laser, waterjet and plasma also its thickness, coating and extraction approval. An unidentified material is never approved"
+          ]
         },
         "parameters": {
           "$ref": "#/$defs/parameters"
         },
         "tools": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "description",
+              "parameters"
+            ],
             "properties": {
               "id": {
                 "$ref": "common.schema.json#/$defs/semantic_id"
@@ -468,15 +486,8 @@
               "parameters": {
                 "$ref": "#/$defs/parameters"
               }
-            },
-            "required": [
-              "id",
-              "description",
-              "parameters"
-            ],
-            "additionalProperties": false
-          },
-          "minItems": 1
+            }
+          }
         },
         "workholding": {
           "$ref": "common.schema.json#/$defs/text_fact"
@@ -491,35 +502,22 @@
           }
         },
         "guidelines": {
+          "description": "The manufacturing guideline sets (id@revision) that this profile's machine layer names. They rank above every set that scope selects, and a calibration ranks above them. Sets of the generic, material and nozzle layers resolve by their scope and need no pin. It has no default",
           "type": "array",
-          "items": {
-            "$ref": "common.schema.json#/$defs/guideline_ref"
-          },
           "minItems": 1,
           "uniqueItems": true,
-          "description": "The manufacturing guideline sets (id@revision) that this profile's machine layer names. They rank above every set that scope selects, and a calibration ranks above them. Sets of the generic, material and nozzle layers resolve by their scope and need no pin. It has no default"
+          "items": {
+            "$ref": "common.schema.json#/$defs/guideline_ref"
+          }
         },
         "source": {
           "$ref": "common.schema.json#/$defs/source"
         }
       },
-      "required": [
-        "id",
-        "revision",
-        "title",
-        "process",
-        "provider",
-        "materials",
-        "parameters",
-        "calibrations"
-      ],
-      "additionalProperties": false,
-      "else": {
-        "not": {
-          "required": [
-            "guidance"
-          ]
-        }
+      "if": {
+        "required": [
+          "template"
+        ]
       },
       "then": {
         "required": [
@@ -531,10 +529,12 @@
           }
         }
       },
-      "if": {
-        "required": [
-          "template"
-        ]
+      "else": {
+        "not": {
+          "required": [
+            "guidance"
+          ]
+        }
       }
     },
     "qty_nozzle_diameter": {
@@ -543,6 +543,15 @@
         "min": 0.2,
         "max": 1.2,
         "units": "mm"
+      },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
       },
       "allOf": [
         {
@@ -629,25 +638,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "fact_nozzle_diameter": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_nozzle_diameter"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -655,6 +648,13 @@
         "properties": {
           "status": {
             "const": "known"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_nozzle_diameter"
           }
         }
       }
@@ -665,6 +665,15 @@
         "relative_to": "nozzle_diameter",
         "max": 0.8
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -750,25 +759,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "fact_layer_height": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_layer_height"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -776,6 +769,13 @@
         "properties": {
           "status": {
             "const": "known"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_layer_height"
           }
         }
       }
@@ -786,6 +786,14 @@
         "max": 350,
         "units": "deg_C"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "deg_C",
+            "K"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -843,24 +851,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "deg_C",
-            "K"
-          ]
-        }
-      }
+      ]
     },
     "fact_hotend_max_temperature": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_hotend_max_temperature"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -868,6 +861,13 @@
         "properties": {
           "status": {
             "const": "known"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_hotend_max_temperature"
           }
         }
       }
@@ -878,6 +878,14 @@
         "max": 120,
         "units": "deg_C"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "deg_C",
+            "K"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -935,24 +943,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "deg_C",
-            "K"
-          ]
-        }
-      }
+      ]
     },
     "fact_bed_max_temperature": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_bed_max_temperature"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -962,10 +955,25 @@
             "const": "known"
           }
         }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_bed_max_temperature"
+          }
+        }
       }
     },
     "qty_max_speed": {
       "description": "Print speed: above 0 and at most 1000 mm/s. It has no separate plausibility band: current printers such as the Bambu Lab H2D reach the hard bound (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s)",
+      "properties": {
+        "units": {
+          "enum": [
+            "mm_s",
+            "m_s"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -1023,24 +1031,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm_s",
-            "m_s"
-          ]
-        }
-      }
+      ]
     },
     "fact_max_speed": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_max_speed"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1048,6 +1041,13 @@
         "properties": {
           "status": {
             "const": "known"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_max_speed"
           }
         }
       }
@@ -1058,6 +1058,15 @@
         "max": 2000,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -1143,25 +1152,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "fact_travel_x": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_travel_x"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1169,6 +1162,13 @@
         "properties": {
           "status": {
             "const": "known"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_travel_x"
           }
         }
       }
@@ -1179,6 +1179,15 @@
         "max": 2000,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -1264,25 +1273,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "fact_travel_y": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_travel_y"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1290,6 +1283,13 @@
         "properties": {
           "status": {
             "const": "known"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_travel_y"
           }
         }
       }
@@ -1300,6 +1300,15 @@
         "max": 2000,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -1385,25 +1394,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "fact_travel_z": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_travel_z"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1413,6 +1406,13 @@
             "const": "known"
           }
         }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_travel_z"
+          }
+        }
       }
     },
     "qty_spindle_max_speed": {
@@ -1420,6 +1420,14 @@
       "x-plausible": {
         "max": 60000,
         "units": "rpm"
+      },
+      "properties": {
+        "units": {
+          "enum": [
+            "rpm",
+            "Hz"
+          ]
+        }
       },
       "allOf": [
         {
@@ -1478,24 +1486,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "rpm",
-            "Hz"
-          ]
-        }
-      }
+      ]
     },
     "fact_spindle_max_speed": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_spindle_max_speed"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1505,6 +1498,13 @@
             "const": "known"
           }
         }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_spindle_max_speed"
+          }
+        }
       }
     },
     "qty_power": {
@@ -1512,6 +1512,14 @@
       "x-plausible": {
         "max": 0.3,
         "units": "kW"
+      },
+      "properties": {
+        "units": {
+          "enum": [
+            "kW",
+            "W"
+          ]
+        }
       },
       "allOf": [
         {
@@ -1570,24 +1578,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "kW",
-            "W"
-          ]
-        }
-      }
+      ]
     },
     "fact_power": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_power"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1597,6 +1590,13 @@
             "const": "known"
           }
         }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_power"
+          }
+        }
       }
     },
     "qty_pump_pressure": {
@@ -1604,6 +1604,15 @@
       "x-plausible": {
         "max": 450,
         "units": "MPa"
+      },
+      "properties": {
+        "units": {
+          "enum": [
+            "MPa",
+            "GPa",
+            "bar"
+          ]
+        }
       },
       "allOf": [
         {
@@ -1690,25 +1699,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "MPa",
-            "GPa",
-            "bar"
-          ]
-        }
-      }
+      ]
     },
     "fact_pump_pressure": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_pump_pressure"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1718,10 +1711,25 @@
             "const": "known"
           }
         }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_pump_pressure"
+          }
+        }
       }
     },
     "qty_press_brake_force": {
       "description": "Press brake force: above 0 and at most 10000 kN",
+      "properties": {
+        "units": {
+          "enum": [
+            "kN",
+            "N"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -1779,24 +1787,9 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "kN",
-            "N"
-          ]
-        }
-      }
+      ]
     },
     "fact_press_brake_force": {
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_press_brake_force"
-          }
-        }
-      },
       "if": {
         "required": [
           "status"
@@ -1806,6 +1799,13 @@
             "const": "known"
           }
         }
+      },
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_press_brake_force"
+          }
+        }
       }
     },
     "qty_bridge_span": {
@@ -1813,6 +1813,15 @@
       "x-plausible": {
         "max": 50,
         "units": "mm"
+      },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
       },
       "allOf": [
         {
@@ -1899,16 +1908,7 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "qty_overhang_angle": {
       "description": "Calibrated unsupported overhang, from vertical: 0 to 90 deg",
@@ -1916,6 +1916,14 @@
         "min": 20,
         "max": 70,
         "units": "deg"
+      },
+      "properties": {
+        "units": {
+          "enum": [
+            "deg",
+            "rad"
+          ]
+        }
       },
       "allOf": [
         {
@@ -1974,15 +1982,7 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "deg",
-            "rad"
-          ]
-        }
-      }
+      ]
     },
     "qty_min_wall": {
       "description": "Calibrated thinnest wall: 0.1 to 25 mm",
@@ -1991,6 +1991,15 @@
         "max": 3,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -2076,16 +2085,7 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "qty_min_feature": {
       "description": "Calibrated smallest reliable pin or boss diameter: 0.2 to 20 mm",
@@ -2094,6 +2094,15 @@
         "max": 5,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -2179,16 +2188,7 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "qty_min_hole": {
       "description": "Calibrated smallest reliable cut hole diameter: 0.1 to 25 mm. The 0.5 to 10 mm plausibility band is a heuristic with no source table and only warns; the sourced guideline value is 2.0 mm (Protolabs, S3 in the FDM survey)",
@@ -2197,6 +2197,15 @@
         "max": 10,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -2282,16 +2291,7 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "qty_deviation": {
       "description": "Calibrated as-made minus nominal deviation: -2 to 2 mm",
@@ -2300,6 +2300,15 @@
         "max": 0.5,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -2385,16 +2394,7 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "qty_clearance_per_side": {
       "description": "Sliding clearance per side between mating parts: above 0 to 5 mm. A fact of the machine and material, so it has no default. The 0.1 to 0.5 mm plausibility band is a heuristic with no source table and only warns; the sourced value is 0.3 mm per side (S4 in the FDM survey). A press fit is not a negative clearance: use qty_interference_per_side",
@@ -2403,6 +2403,15 @@
         "max": 0.5,
         "units": "mm"
       },
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -2488,7 +2497,15 @@
             }
           }
         }
-      ],
+      ]
+    },
+    "qty_interference_per_side": {
+      "description": "Press-fit interference per side, shaft larger than hole: above 0 to 1 mm, never negative. A fact of the machine and material, so it has no default. The 0.05 to 0.3 mm plausibility band is a heuristic with no source table and only warns; the intended press-fit range is 0.10 to 0.15 mm per side",
+      "x-plausible": {
+        "min": 0.05,
+        "max": 0.3,
+        "units": "mm"
+      },
       "properties": {
         "units": {
           "enum": [
@@ -2497,14 +2514,6 @@
             "um"
           ]
         }
-      }
-    },
-    "qty_interference_per_side": {
-      "description": "Press-fit interference per side, shaft larger than hole: above 0 to 1 mm, never negative. A fact of the machine and material, so it has no default. The 0.05 to 0.3 mm plausibility band is a heuristic with no source table and only warns; the intended press-fit range is 0.10 to 0.15 mm per side",
-      "x-plausible": {
-        "min": 0.05,
-        "max": 0.3,
-        "units": "mm"
       },
       "allOf": [
         {
@@ -2591,19 +2600,17 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      }
+      ]
     },
     "qty_min_bed_contact_area": {
       "description": "Calibrated smallest reliable first-layer contact area: above 0 mm2. A fact of the machine and material, so it has no default. The plausibility band waits for more calibrations (#141)",
+      "properties": {
+        "units": {
+          "enum": [
+            "mm2"
+          ]
+        }
+      },
       "allOf": [
         {
           "if": {
@@ -2630,21 +2637,20 @@
             }
           }
         }
-      ],
-      "properties": {
-        "units": {
-          "enum": [
-            "mm2"
-          ]
-        }
-      }
+      ]
     },
     "material_approval": {
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "material",
+        "status",
+        "source"
+      ],
       "properties": {
         "material": {
-          "$ref": "common.schema.json#/$defs/profile_id",
-          "description": "a material profile id"
+          "description": "a material profile id",
+          "$ref": "common.schema.json#/$defs/profile_id"
         },
         "status": {
           "enum": [
@@ -2663,6 +2669,8 @@
         },
         "operations": {
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "enum": [
               "cut",
@@ -2674,9 +2682,7 @@
               "join",
               "other"
             ]
-          },
-          "minItems": 1,
-          "uniqueItems": true
+          }
         },
         "reason": {
           "$ref": "common.schema.json#/$defs/text"
@@ -2685,42 +2691,49 @@
           "$ref": "common.schema.json#/$defs/source"
         }
       },
-      "required": [
-        "material",
-        "status",
-        "source"
-      ],
-      "additionalProperties": false,
-      "then": {
-        "required": [
-          "reason"
-        ]
-      },
       "if": {
         "properties": {
           "status": {
             "const": "forbidden"
           }
         }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
       }
     },
     "calibration": {
       "description": "One demonstrated capability: the characteristic measured, its exact scope and the measured limits with their uncertainty and evidence",
       "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "characteristic",
+        "scope",
+        "result",
+        "source",
+        "date"
+      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/semantic_id"
         },
         "characteristic": {
-          "$ref": "common.schema.json#/$defs/semantic_id",
-          "description": "such as hole_diameter_deviation, min_wall, kerf, flatness or bridge_span"
+          "description": "such as hole_diameter_deviation, min_wall, kerf, flatness or bridge_span",
+          "$ref": "common.schema.json#/$defs/semantic_id"
         },
         "scope": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "material"
+          ],
           "properties": {
             "material": {
-              "$ref": "common.schema.json#/$defs/profile_id",
-              "description": "a material profile id"
+              "description": "a material profile id",
+              "$ref": "common.schema.json#/$defs/profile_id"
             },
             "condition": {
               "$ref": "common.schema.json#/$defs/text"
@@ -2746,39 +2759,35 @@
             "finish": {
               "$ref": "common.schema.json#/$defs/text"
             }
-          },
-          "required": [
-            "material"
-          ],
-          "additionalProperties": false
+          }
         },
         "result": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "limits",
+            "samples"
+          ],
           "properties": {
             "limits": {
-              "$ref": "common.schema.json#/$defs/quantity",
-              "description": "the measured range of the characteristic"
+              "description": "the measured range of the characteristic",
+              "$ref": "common.schema.json#/$defs/quantity"
             },
             "distribution": {
               "$ref": "common.schema.json#/$defs/text"
             },
             "uncertainty": {
-              "$ref": "common.schema.json#/$defs/quantity",
-              "description": "the measurement uncertainty"
+              "description": "the measurement uncertainty",
+              "$ref": "common.schema.json#/$defs/quantity"
             },
             "samples": {
-              "type": "integer",
-              "minimum": 1,
               "x-plausible": {
                 "min": 3
-              }
+              },
+              "type": "integer",
+              "minimum": 1
             }
-          },
-          "required": [
-            "limits",
-            "samples"
-          ],
-          "additionalProperties": false
+          }
         },
         "source": {
           "$ref": "common.schema.json#/$defs/source"
@@ -2793,15 +2802,6 @@
           "$ref": "common.schema.json#/$defs/decision"
         }
       },
-      "required": [
-        "id",
-        "characteristic",
-        "scope",
-        "result",
-        "source",
-        "date"
-      ],
-      "additionalProperties": false,
       "allOf": [
         {
           "if": {
