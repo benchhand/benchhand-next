@@ -50,7 +50,7 @@ Status: waiting for the owner's review. Written 2026-11-25 at `main` `41598c2`, 
 
 | Item | State | Effect |
 |---|---|---|
-| Record migrate service (prototype v2 to v3) | Only a test fixture converter exists (`tests/record/prototype_v2.py`). The rules are written down in `docs/contract/record-migration.md`. | Every real prototype project is v2, so benchhand-next can't open one without the migrate service. |
+| Record migrate service (prototype v2 to v3) | Built on a branch, not yet reviewed: `benchhand_core.record.migrate` and `benchhand record migrate [--apply] HW`. Its rule table and the three decided defaults are in `docs/contract/record-migration.md`. The test helper `tests/record/prototype_v2.py` is gone. | On a copy of `benchhand-test-project`, everything migrates except the Phase 2 assembly kinds (`bench`, `place`, `instructions`). |
 | Record evidence service | Evidence documents are read and validated. Nothing writes evidence or checks what it cites. | Needed before verification and release work. |
 | Record release service (snapshot, seal, verify, package) | Not started. | Needed before any version can be frozen. It must honour the ignore rules in bead `benchhand-3fc`. |
 | Port of the cad-agent record test cases | The lamp-arm reference record and the validator cases that still hold are ported. The release and evidence cases wait on those services. | |
