@@ -207,7 +207,23 @@ def _data_differences(key: str, old: Any, new: Any, pointer: str) -> Iterator[Di
     both_maps = isinstance(old, dict) and isinstance(new, dict)
     if key == "dependentRequired" and both_maps and old.keys() == new.keys() and list(old) != list(new):
         yield Difference(pointer, "key order", list(old), list(new))
+    if key in ("const", "enum"):
+        # jsonschema prints repr(const) and repr(enum) in its message, in insertion order, so member order
+        # inside these literals is part of the first diagnostic.
+        yield from _member_order_differences(old, new, pointer)
     yield from _literal_differences(old, new, pointer)
+
+
+def _member_order_differences(old: Any, new: Any, pointer: str) -> Iterator[Difference]:
+    """Each object inside literal data that lists the same members on both sides, in another order."""
+    if isinstance(old, dict) and isinstance(new, dict):
+        if old.keys() == new.keys() and list(old) != list(new):
+            yield Difference(pointer, "key order", list(old), list(new))
+        for key in [key for key in old if key in new]:
+            yield from _member_order_differences(old[key], new[key], f"{pointer}/{_escape(key)}")
+    elif isinstance(old, list) and isinstance(new, list) and len(old) == len(new):
+        for index, (old_item, new_item) in enumerate(zip(old, new, strict=True)):
+            yield from _member_order_differences(old_item, new_item, f"{pointer}/{index}")
 
 
 def _literal_differences(old: Any, new: Any, pointer: str) -> Iterator[Difference]:

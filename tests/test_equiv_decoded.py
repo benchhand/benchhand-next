@@ -91,3 +91,28 @@ def test_keywords_about_different_members_still_report_at_one_path(
     assert [[list(error.absolute_path) for error in found] for found in errors] == [[[], []], [[], []]]
     keywords = [[error.schema_path[0] for error in found] for found in errors]
     assert keywords == [[first, second], [second, first]]
+
+
+def test_member_order_inside_a_const_is_a_difference() -> None:
+    """jsonschema prints the const in its message in insertion order, so swapping two members changes the
+    first diagnostic."""
+    old = {"$defs": {"ErrorCodes": {"const": {"parse-error": -32700, "invalid-request": -32600}}}}
+    new = {"$defs": {"ErrorCodes": {"const": {"invalid-request": -32600, "parse-error": -32700}}}}
+    found = _found(old, new)
+    assert found == [
+        Difference(
+            "/$defs/ErrorCodes/const",
+            "key order",
+            ["parse-error", "invalid-request"],
+            ["invalid-request", "parse-error"],
+        )
+    ]
+    assert reason(PROTOCOL, found[0]) is None
+    messages = [
+        next(Draft202012Validator(s["$defs"]["ErrorCodes"]).iter_errors({})).message for s in (old, new)
+    ]
+    assert messages[0] != messages[1]
+    assert _found({"enum": [{"a": 1, "b": 2}]}, {"enum": [{"b": 2, "a": 1}]}) == [
+        Difference("/enum/0", "key order", ["a", "b"], ["b", "a"])
+    ]
+    assert _found(old, old) == []
