@@ -3,9 +3,9 @@
 //
 // Usage: node tools/equiv/replay.mjs <work dir>, after replay.py. Compares whether each instance is valid
 // and Ajv's first error (instance path, keyword and schema path), since a generated validator reports
-// only that one. The evidence for the one intended narrowing is a second comparison: the published
-// schemas with the Timestamp pattern taken out must give exactly the hand-written verdict, with no
-// difference left. It also checks that Ajv and Python agree on every published verdict. Exits 1 otherwise.
+// only that one. The evidence for the one intended narrowing is a second comparison, on every instance:
+// the published schemas with the Timestamp pattern taken out must give exactly the hand-written verdict,
+// with no difference left. It also checks that Ajv and Python agree on every published verdict. Exits 1 otherwise.
 import { createReadStream, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -83,16 +83,17 @@ function comparison(title) {
 function add(result, testCase, python) {
   const before = judge(oldAjv, testCase);
   const after = judge(newAjv, testCase);
+  // Every instance is judged without the pattern too: an unchanged verdict can hide a changed reason.
+  const left = !sameVerdict(judge(withoutPatternAjv, testCase), before);
   const key = `${before.valid}/${after.valid}`;
   result.count += 1;
   result.counts[key] = (result.counts[key] ?? 0) + 1;
   if (after.valid !== python) result.disagree += 1;
-  if (sameVerdict(before, after)) return;
-  result.differ += 1;
-  if (before.first !== after.first) result.firstChanged += 1;
-  const left = !sameVerdict(judge(withoutPatternAjv, testCase), before);
   if (left) result.withoutPattern += 1;
-  if (left || result.shown.length < 6) {
+  const differ = !sameVerdict(before, after);
+  if (differ) result.differ += 1;
+  if (differ && before.first !== after.first) result.firstChanged += 1;
+  if (left || (differ && result.shown.length < 6)) {
     result.shown.push(
       `    ${left ? "DIFFERS WITHOUT THE PATTERN" : "only with the pattern"}: ${testCase.source}, ` +
         `${testCase.schema_id.split("/contracts/")[1]}, ${JSON.stringify(testCase.instance).slice(0, 60)}\n` +
