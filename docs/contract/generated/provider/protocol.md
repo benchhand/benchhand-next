@@ -148,6 +148,12 @@ Type: object
 | `code` | integer | yes |  |
 | `message` | string | yes |  |
 | `data` | object | yes |  |
+| `data.code` | one of `"parse-error"`, `"invalid-request"`, `"method-not-found"`, `"invalid-params"`, `"internal-error"`, `"protocol-version-unsupported"`, `"required-feature-missing"`, `"not-initialized"`, `"message-too-large"`, `"request-cancelled"`, `"input-unsupported"`, `"external-missing"` | yes |  |
+| `data.supported` | object | no |  |
+| `data.supported.min` | [`ProtocolVersion`](#protocolversion) | yes |  |
+| `data.supported.max` | [`ProtocolVersion`](#protocolversion) | yes |  |
+| `data.fix` | string | no |  |
+| `data.detail` | any | no |  |
 
 No other properties are allowed.
 
@@ -192,7 +198,11 @@ Type: object
 | `protocolVersion` | [`ProtocolVersion`](#protocolversion) | yes |  |
 | `minProtocolVersion` | [`ProtocolVersion`](#protocolversion) | no |  |
 | `host` | object | yes |  |
+| `host.name` | `"benchhand"` | yes |  |
+| `host.version` | string | yes |  |
 | `capabilities` | object | yes |  |
+| `capabilities.hooks` | array of [`HookKind`](#hookkind) | yes | `uniqueItems: true` |
+| `capabilities.features` | array of [`FeatureName`](#featurename) | yes | `uniqueItems: true` |
 | `limits` | [`Limits`](#limits) | yes |  |
 | `projectRoot` | [`AbsPath`](#abspath) | no |  |
 
@@ -232,8 +242,12 @@ Type: object
 |---|---|---|---|
 | `protocolVersion` | [`ProtocolVersion`](#protocolversion) | yes |  |
 | `provider` | object | yes |  |
+| `provider.name` | string | yes |  |
+| `provider.version` | string | yes |  |
 | `hooks` | array of [`HookDecl`](#hookdecl) | yes | `minItems: 1` |
 | `features` | object | yes |  |
+| `features.required` | array of [`FeatureName`](#featurename) | yes |  |
+| `features.optional` | array of [`FeatureName`](#featurename) | yes |  |
 | `limits` | [`Limits`](#limits) | yes |  |
 | `needs` | [`Needs`](#needs) | yes |  |
 

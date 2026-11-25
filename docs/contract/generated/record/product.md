@@ -17,11 +17,29 @@ Type: object
 | `regime` | one of `"iso"`, `"asme"` | yes |  |
 | `general_tolerance` | number or string or [`fact_unknown`](common.md#fact_unknown) | yes | The general tolerance a drawing states for dimensions without their own: a linear value in mm or a standard label such as ISO 2768-m. A tunable, so it defaults to ISO 2768-m and the user changes it. Unknown, with the open question that would settle it, is also valid; validation refuses a drawing while it is unknown |
 | `license` | object | no | Explicit SPDX license expressions approved for the product's hardware and documentation, such as CERN-OHL-S-2.0 or (MIT OR Apache-2.0); omitted means not recorded. The expression's shape is meant to be checked (identifiers, LicenseRef-, +, WITH, AND, OR, parentheses) but bundles no SPDX license list, so an unlisted identifier such as CERN-OHL-S passes `minProperties: 1` |
+| `license.hardware` | string | no | `minLength: 1` |
+| `license.documentation` | string | no | `minLength: 1` |
 | `flow` | object | yes |  |
+| `flow.stage` | [`stage`](common.md#stage) | yes |  |
+| `flow.recheck_from` | [`stage`](common.md#stage) | yes |  |
+| `flow.frozen` | [`frozen`](#frozen) | no |  |
+| `flow.change` | [`change`](#change) | no |  |
+| `flow.profile` | [`profile`](#profile) | no |  |
 | `build_volume` | object | no | A printer envelope for the legacy build-volume diagnostic. The sizes are facts about the machine, not tunables, so they have no default: they come from the active capability profile's envelope. Margin is a tunable. Fitting it is not printability; a capability profile's envelope and an approved orientation govern manufacturability |
+| `build_volume.x_mm` | number | yes | `exclusiveMinimum: 0`, `maximum: 2000` |
+| `build_volume.y_mm` | number | yes | `exclusiveMinimum: 0`, `maximum: 2000` |
+| `build_volume.z_mm` | number | yes | `exclusiveMinimum: 0`, `maximum: 2000` |
+| `build_volume.orientations` | array of one of `"xyz"`, `"xzy"`, `"yxz"`, `"yzx"`, `"zxy"`, `"zyx"` | no | `minItems: 1`, `uniqueItems: true` |
+| `build_volume.margin_mm` | number | no | Unusable rim on each side, in mm; at most half the smallest side, which the config loader checks `minimum: 0`, `maximum: 1000` |
 | `design` | object | no | Product-wide design rules |
+| `design.clearance_margin_mm` | number | no | Margin above each clearance requirement's minimum (default 0.1); a distance at or above the minimum but below minimum + margin is a margin warning, never a failure. A clearance interface's margin_mm overrides it `minimum: 0`, `maximum: 1` |
 | `manufacturing` | object | no | Product-wide manufacturing plan and rules |
+| `manufacturing.processes` | array of [`primary_process`](common.md#primary_process) | no | The processes planned at INTENT, before any part record exists `minItems: 1`, `uniqueItems: true` |
+| `manufacturing.min_wall_mm` | object | no | Minimum wall per made-part process, overriding the form check's built-in defaults. A diagnostic heuristic, never a calibrated capability `minProperties: 1` |
+| `manufacturing.min_wall_mm.fdm` | number | no | `minimum: 0.2`, `maximum: 25` |
+| `manufacturing.min_wall_mm.cnc` | number | no | A fact of the shop, not a tunable, so it has no default: it comes from the CNC capability profile and stays UNKNOWN until one exists `minimum: 0.2`, `maximum: 25` |
 | `storage` | object | no | Repository storage choices the user made |
+| `storage.results_in_git` | boolean | no | Whether generated results (STEP, GLB, renders, check bundles) are tracked in git; absent means the user has not been asked |
 | `drawing` | [`product_drawing`](drawing.md#product_drawing) | no |  |
 | `use_case` | [`use_case`](#use_case) | yes |  |
 
@@ -683,6 +701,7 @@ Type: object
 | `storage_results_in_git` | boolean | yes |  |
 | `asked` | object | no | How each project-start question was settled, keyed by its field path below flow.profile (fea, stack_up, processes/fdm/orientation, processes/fdm/pip_clearance_mm/xy, ...) |
 | `processes` | object | yes |  |
+| `processes.fdm` | [`fdm_profile`](#fdm_profile) | no |  |
 
 No other properties are allowed.
 
@@ -702,6 +721,8 @@ Type: object
 | `cosmetic_faces` | boolean | yes | true adds the critical-surface role cosmetic, which supports may not touch |
 | `print_in_place` | boolean | yes | true: offer to print hinges and joints already assembled where that fits; false: assemble them |
 | `pip_clearance_mm` | object | yes | The smallest print-in-place gap that separates, across the layers (xy) and between layers (z) |
+| `pip_clearance_mm.xy` | [`clearance`](#clearance) | yes |  |
+| `pip_clearance_mm.z` | [`clearance`](#clearance) | yes |  |
 
 No other properties are allowed.
 
@@ -748,14 +769,53 @@ Type: object
 | `purpose` | [`text_fact`](common.md#text_fact) | yes |  |
 | `users` | [`text_fact`](common.md#text_fact) | yes |  |
 | `environment` | object | yes |  |
+| `environment.temperature` | [`quantity_fact`](common.md#quantity_fact) | yes | the operating temperature range, deg_C |
+| `environment.heat_sources` | [`text_fact`](common.md#text_fact) | yes |  |
+| `environment.moisture` | [`text_fact`](common.md#text_fact) | yes |  |
+| `environment.chemicals` | [`text_fact`](common.md#text_fact) | yes |  |
+| `environment.uv` | [`text_fact`](common.md#text_fact) | yes |  |
+| `environment.corrosion` | [`text_fact`](common.md#text_fact) | yes |  |
 | `loads` | array of [`load`](common.md#load) or [`fact_open`](common.md#fact_open) | yes |  |
 | `motion` | object | yes |  |
+| `motion.speed` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
+| `motion.range` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
+| `motion.duty_cycle` | [`text_fact`](common.md#text_fact) | yes |  |
+| `motion.friction` | [`text_fact`](common.md#text_fact) | yes |  |
+| `motion.wear` | [`text_fact`](common.md#text_fact) | yes |  |
+| `motion.service_life` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
 | `accuracy` | object | yes | Required accuracy: these are requirements, never manufacturing capability |
+| `accuracy.tolerance` | [`text_fact`](common.md#text_fact) | yes |  |
+| `accuracy.repeatability` | [`text_fact`](common.md#text_fact) | yes |  |
+| `accuracy.surface_finish` | [`text_fact`](common.md#text_fact) | yes |  |
+| `accuracy.dimensional_stability` | [`text_fact`](common.md#text_fact) | yes |  |
 | `consequences` | object | yes |  |
+| `consequences.failure` | [`text_fact`](common.md#text_fact) | yes |  |
+| `consequences.severity` | [`fact_known`](common.md#fact_known) and any or [`fact_unknown`](common.md#fact_unknown) | yes |  |
+| `consequences.forbidden_outcomes` | [`texts_fact`](common.md#texts_fact) | yes |  |
+| `consequences.standards` | [`texts_fact`](common.md#texts_fact) | yes |  |
+| `consequences.supervision` | [`text_fact`](common.md#text_fact) | yes |  |
+| `consequences.approval_authority` | [`text_fact`](common.md#text_fact) | yes |  |
 | `logistics` | object | yes |  |
+| `logistics.quantity` | [`quantity_fact`](common.md#quantity_fact) | yes | how many, in count |
+| `logistics.budget` | [`money_fact`](common.md#money_fact) | yes |  |
+| `logistics.lead_time` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
+| `logistics.maintenance` | [`text_fact`](common.md#text_fact) | yes |  |
+| `logistics.repair` | [`text_fact`](common.md#text_fact) | yes |  |
 | `capability` | object | yes | What is available to make it. Availability is not a requirement |
+| `capability.equipment` | array of [`profile_id`](common.md#profile_id) or [`fact_open`](common.md#fact_open) | yes |  |
+| `capability.operator` | [`text_fact`](common.md#text_fact) | yes |  |
+| `capability.outsourcing` | [`text_fact`](common.md#text_fact) | yes |  |
 | `release_scope` | object | yes |  |
+| `release_scope.purpose` | [`text_fact`](common.md#text_fact) | yes |  |
+| `release_scope.operating_limits` | [`texts_fact`](common.md#texts_fact) | yes |  |
+| `release_scope.exclusions` | [`texts_fact`](common.md#texts_fact) | yes |  |
 | `evidence_policy` | [`fact_unknown`](common.md#fact_unknown) or object | yes |  |
+| `evidence_policy.obligations` | array of object | yes | `minItems: 1` |
+| `evidence_policy.obligations[].requirement` | [`requirement_id`](common.md#requirement_id) | no |  |
+| `evidence_policy.obligations[].subject` | [`subject`](common.md#subject) | no |  |
+| `evidence_policy.obligations[].level` | [`evidence_level`](common.md#evidence_level) | yes |  |
+| `evidence_policy.obligations[].note` | [`text`](common.md#text) | no |  |
+| `evidence_policy.decision` | [`decision`](common.md#decision) | yes |  |
 
 No other properties are allowed.
 

@@ -27,6 +27,15 @@ Type: object
 | `procurement` | [`procurement`](drawing.md#procurement) | no |  |
 | `drawing` | [`part_drawing`](drawing.md#part_drawing) | no |  |
 | `manufacture` | object | no | How a custom-made part is manufactured relative to its installed definition. Absent: relationship same, compared to 1e-9 relative volume, default mesh. |
+| `manufacture.relationship` | one of `"same"`, `"different"` | yes | same: made in its installed shape; different: model.py build_manufacture(params) defines the manufacturing state |
+| `manufacture.state` | string | no | name of the manufacturing state, such as flat `pattern: "^[a-z][a-z0-9_]*$"` |
+| `manufacture.reason` | string | no | why the states differ, such as elastic_bending `pattern: "^[a-z][a-z0-9_]*$"` |
+| `manufacture.decision` | [`decision`](common.md#decision) | no | the decision record approving the difference |
+| `manufacture.volume_rel_tolerance` | number | no | allowed \|V_manufactured - V_installed\| / V_installed `exclusiveMinimum: 0`, `maximum: 0.1` |
+| `manufacture.volume_abs_tolerance_mm3` | number | no | absolute floor of the allowed volume difference `exclusiveMinimum: 0`, `maximum: 1000` |
+| `manufacture.mesh` | object | no | FDM part.stl tessellation, overriding the layout default (0.05 mm, 0.1 rad) `minProperties: 1` |
+| `manufacture.mesh.linear_deflection_mm` | number | no | `minimum: 0.001`, `maximum: 1` |
+| `manufacture.mesh.angular_deflection_rad` | number | no | `exclusiveMinimum: 0`, `maximum: 3.141592653589793` |
 | `intent` | [`intent`](#intent) | no |  |
 
 No other properties are allowed.
@@ -449,10 +458,20 @@ Type: object
 | `color` | string | no | The part's print colour as an sRGB hex string #RRGGBB (for example #FF8000 for orange). 3MF export uses it as the part's display colour `maxLength: 7`, `pattern: "^#[0-9A-Fa-f]{6}$"` |
 | `selection` | [`semantic_id`](common.md#semantic_id) | no | the selection.yaml candidate this intent implements |
 | `service` | object or [`fact_open`](common.md#fact_open) | yes |  |
+| `service.requirements` | [`requirement_ids`](common.md#requirement_ids) | no |  |
+| `service.loads` | [`semantic_ids`](common.md#semantic_ids) | no | product.yaml use_case.loads ids |
+| `service.environment` | [`text`](common.md#text) | no |  |
+| `service.duty` | [`text`](common.md#text) | no |  |
+| `service.life` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `service.differences` | [`text`](common.md#text) | no | where this part's service differs from the product use case |
 | `components` | array of [`component`](#component) | no | `minItems: 1` |
 | `critical_surfaces` | array of [`critical_surface`](#critical_surface) or [`fact_open`](common.md#fact_open) | yes |  |
 | `route` | array of [`operation`](#operation) or [`fact_unknown`](common.md#fact_unknown) | yes |  |
 | `rationale` | object | no | `minProperties: 1` |
+| `rationale.decision` | [`decision`](common.md#decision) | no |  |
+| `rationale.selection` | [`semantic_id`](common.md#semantic_id) | no |  |
+| `rationale.alternatives` | [`texts`](common.md#texts) | no |  |
+| `rationale.tradeoffs` | [`text`](common.md#text) | no |  |
 
 No other properties are allowed.
 
@@ -605,9 +624,28 @@ Constraints: `minProperties: 1`
 | Property | Type | Required | Description |
 |---|---|---|---|
 | `stock` | object | no | `minProperties: 1` |
+| `stock.material_profile` | [`profile_id`](common.md#profile_id) or [`fact_open`](common.md#fact_open) | no |  |
+| `stock.grade` | [`text_fact`](common.md#text_fact) | no |  |
+| `stock.form` | [`text_fact`](common.md#text_fact) | no |  |
+| `stock.dimensions` | [`text_fact`](common.md#text_fact) | no |  |
+| `stock.thickness` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `stock.state` | [`text`](common.md#text) | no |  |
+| `stock.supplier` | [`text`](common.md#text) | no |  |
 | `datums` | [`semantic_ids`](common.md#semantic_ids) | no |  |
 | `workholding` | object | no |  |
+| `workholding.method` | [`text_fact`](common.md#text_fact) | yes |  |
+| `workholding.contact_regions` | array of [`target`](common.md#target) | no | `minItems: 1` |
+| `workholding.fixture` | [`text`](common.md#text) | no |  |
+| `workholding.clamping_force` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `workholding.allowable_deformation` | [`quantity_fact`](common.md#quantity_fact) | no |  |
 | `access` | object | no | `minProperties: 1` |
+| `access.sides` | [`texts`](common.md#texts) | no |  |
+| `access.tools` | array of object | no | `minItems: 1` |
+| `access.tools[].description` | [`text`](common.md#text) | yes |  |
+| `access.tools[].capability` | [`profile_id`](common.md#profile_id) | no |  |
+| `access.tools[].diameter` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `access.tools[].reach` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `access.tools[].holder` | [`text_fact`](common.md#text_fact) | no |  |
 | `inspection_access` | [`text_fact`](common.md#text_fact) | no |  |
 
 No other properties are allowed.
@@ -622,6 +660,9 @@ Type: object
 |---|---|---|---|
 | `status` | one of `"proposed"`, `"approved"` | yes |  |
 | `rotation` | object or object | yes |  |
+| `rotation.quaternion` | array of number | yes | `minItems: 4`, `maxItems: 4` |
+| `rotation.axis` | [`vector`](common.md#vector) | yes |  |
+| `rotation.angle_deg` | number | yes |  |
 | `decision` | [`decision`](common.md#decision) | no |  |
 | `selection` | [`semantic_id`](common.md#semantic_id) | no |  |
 | `note` | [`text`](common.md#text) | no |  |
@@ -660,6 +701,9 @@ Type: object
 | `contact_regions` | array of [`target`](common.md#target) | no | `minItems: 1` |
 | `material` | [`text`](common.md#text) | no |  |
 | `removal` | object | no |  |
+| `removal.tools` | [`texts`](common.md#texts) | yes |  |
+| `removal.access` | [`text`](common.md#text) | yes |  |
+| `removal.path` | [`text`](common.md#text) | no |  |
 | `affected_surfaces` | array of [`target`](common.md#target) | no | `minItems: 1` |
 | `allowance` | [`quantity`](common.md#quantity) | no |  |
 | `finish` | [`text`](common.md#text) | no |  |

@@ -275,10 +275,18 @@ Type: object
 | `supplier` | [`text_fact`](common.md#text_fact) | no |  |
 | `operator` | [`text_fact`](common.md#text_fact) | no |  |
 | `machine` | object | no |  |
+| `machine.identity` | [`text_fact`](common.md#text_fact) | yes | make, model and the machine's own identity |
+| `machine.location` | [`text`](common.md#text) | no |  |
 | `envelope` | object | no | The usable working envelope in the machine frame |
+| `envelope.x` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
+| `envelope.y` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
+| `envelope.z` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
 | `materials` | array of [`material_approval`](#material_approval) or [`fact_open`](common.md#fact_open) | yes | The exact materials and stock the profile is approved or forbidden for; for laser, waterjet and plasma also its thickness, coating and extraction approval. An unidentified material is never approved |
 | `parameters` | [`parameters`](#parameters) | yes |  |
 | `tools` | array of object | no | `minItems: 1` |
+| `tools[].id` | [`semantic_id`](common.md#semantic_id) | yes |  |
+| `tools[].description` | [`text`](common.md#text) | yes |  |
+| `tools[].parameters` | [`parameters`](#parameters) | yes |  |
 | `workholding` | [`text_fact`](common.md#text_fact) | no |  |
 | `constraints` | [`texts`](common.md#texts) | no |  |
 | `calibrations` | array of [`calibration`](#calibration) | yes |  |
@@ -2688,7 +2696,20 @@ Type: object
 | `id` | [`semantic_id`](common.md#semantic_id) | yes |  |
 | `characteristic` | [`semantic_id`](common.md#semantic_id) | yes | such as hole_diameter_deviation, min_wall, kerf, flatness or bridge_span |
 | `scope` | object | yes |  |
+| `scope.material` | [`profile_id`](common.md#profile_id) | yes | a material profile id |
+| `scope.condition` | [`text`](common.md#text) | no |  |
+| `scope.feature` | [`text`](common.md#text) | no |  |
+| `scope.size` | [`quantity`](common.md#quantity) | no |  |
+| `scope.thickness` | [`quantity`](common.md#quantity) | no |  |
+| `scope.orientation` | [`text`](common.md#text) | no |  |
+| `scope.setup` | [`text`](common.md#text) | no |  |
+| `scope.tool` | [`semantic_id`](common.md#semantic_id) | no |  |
+| `scope.finish` | [`text`](common.md#text) | no |  |
 | `result` | object | yes |  |
+| `result.limits` | [`quantity`](common.md#quantity) | yes | the measured range of the characteristic |
+| `result.distribution` | [`text`](common.md#text) | no |  |
+| `result.uncertainty` | [`quantity`](common.md#quantity) | no | the measurement uncertainty |
+| `result.samples` | integer | yes | `minimum: 1` |
 | `source` | [`source`](common.md#source) | yes |  |
 | `date` | [`date`](common.md#date) | yes |  |
 | `valid_until` | [`date`](common.md#date) | no |  |

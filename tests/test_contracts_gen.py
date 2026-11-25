@@ -282,6 +282,34 @@ def test_docs_render_each_contract_and_an_index(schemas_dir: Path, tmp_path: Pat
     assert f"[widget]({SYNTHETIC_DIR}/widget.md)" in (tmp_path / "README.md").read_text()
 
 
+def _descriptions(node: Any, pointer: str = "") -> list[tuple[str, str]]:
+    if isinstance(node, list):
+        return [
+            found for index, item in enumerate(node) for found in _descriptions(item, f"{pointer}/{index}")
+        ]
+    if not isinstance(node, dict):
+        return []
+    found = [(pointer, node["description"])] if isinstance(node.get("description"), str) else []
+    for key, value in node.items():
+        if key not in ("description", "examples", "const", "enum", "default"):
+            found += _descriptions(value, f"{pointer}/{key}")
+    return found
+
+
+def test_docs_show_every_description(tmp_path: Path) -> None:
+    """Some generators drop descriptions (ADR-0017); the reference docs carry every one of them."""
+    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
+    write_docs(contracts, tmp_path)
+    missing = []
+    for contract in contracts:
+        page = (tmp_path / f"{contract.stem}.md").read_text()
+        for pointer, text in _descriptions(contract.schema):
+            shown = (text, text.replace("|", "\\|").replace("\n", " "), json.dumps(text, ensure_ascii=False))
+            if not any(form in page for form in shown):
+                missing.append(f"{contract.rel_path}#{pointer}")
+    assert missing == []
+
+
 @needs_node
 def test_typescript_exports_a_type_and_a_validator_per_def(schemas_dir: Path, tmp_path: Path) -> None:
     """The generator fails on a $def without a type; the types it writes compile, aliases included."""

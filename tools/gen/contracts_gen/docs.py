@@ -76,6 +76,7 @@ def _schema_body(schema: Any, contract: Contract) -> list[str]:
     constraints = _constraints(schema)
     if constraints:
         lines += [f"Constraints: {constraints}", ""]
+    lines += _variants(schema, contract)
     if schema.get("properties"):
         lines += _properties_table(schema, contract)
     if schema.get("additionalProperties") is False:
@@ -90,15 +91,47 @@ def _schema_body(schema: Any, contract: Contract) -> list[str]:
 
 
 def _properties_table(schema: dict[str, Any], contract: Contract) -> list[str]:
-    required = set(schema.get("required", []))
     lines = ["| Property | Type | Required | Description |", "|---|---|---|---|"]
+    return [*lines, *_property_rows(schema, contract, ""), ""]
+
+
+def _property_rows(schema: dict[str, Any], contract: Contract, prefix: str) -> list[str]:
+    """One row per property, followed by the rows of the inline objects under it, so that a nested
+    property's description is shown too: ``notes.text``, ``holes[].diameter``."""
+    required = set(schema.get("required", []))
+    rows = []
     for name, prop in schema["properties"].items():
         description = prop.get("description", "") if isinstance(prop, dict) else ""
         constraints = _constraints(prop) if isinstance(prop, dict) else ""
         detail = " ".join(part for part in (description, constraints) if part)
-        cells = (f"`{name}`", type_expr(prop, contract), "yes" if name in required else "no", detail)
-        lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
-    return [*lines, ""]
+        cells = (f"`{prefix}{name}`", type_expr(prop, contract), "yes" if name in required else "no", detail)
+        rows.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
+        for nested in _inline_objects(prop):
+            rows += _property_rows(nested[1], contract, f"{prefix}{name}{nested[0]}.")
+    return rows
+
+
+def _inline_objects(schema: Any, suffix: str = "") -> list[tuple[str, dict[str, Any]]]:
+    """``(path suffix, schema)`` of each object written inline in ``schema``: itself, its array items, and
+    the branches of its ``oneOf`` or ``anyOf``. A ``$ref`` target has a section of its own."""
+    if not isinstance(schema, dict) or "$ref" in schema:
+        return []
+    found = [(suffix, schema)] if isinstance(schema.get("properties"), dict) else []
+    found += _inline_objects(schema.get("items"), f"{suffix}[]")
+    for keyword in ("oneOf", "anyOf"):
+        for branch in schema.get(keyword, []):
+            found += _inline_objects(branch, suffix)
+    return found
+
+
+def _variants(schema: dict[str, Any], contract: Contract) -> list[str]:
+    """A ``oneOf`` or ``anyOf`` branch's description, which the one-line type can't show."""
+    lines = []
+    for keyword in ("oneOf", "anyOf"):
+        for branch in schema.get(keyword, []):
+            if isinstance(branch, dict) and branch.get("description"):
+                lines.append(f"- {type_expr(branch, contract)}: {branch['description']}")
+    return ["Variants:", "", *lines, ""] if lines else []
 
 
 def _conditions(schema: dict[str, Any]) -> list[dict[str, Any]]:

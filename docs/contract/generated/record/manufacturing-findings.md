@@ -59,6 +59,8 @@ Type: object
 | `finding` | [`semantic_id`](common.md#semantic_id) | yes |  |
 | `code` | [`finding_code`](common.md#finding_code) | no |  |
 | `producer` | object | yes |  |
+| `producer.bundle` | [`project_path`](common.md#project_path) | yes | the producer bundle directory, project-relative |
+| `producer.manifest_sha256` | [`sha256`](common.md#sha256) | yes |  |
 | `status` | one of `"open"`, `"resolved"`, `"accepted_waiver"`, `"declined"` | yes |  |
 | `reason` | [`text`](common.md#text) | yes |  |
 | `decision` | [`decision`](common.md#decision) | no |  |

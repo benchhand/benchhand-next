@@ -340,14 +340,29 @@ Type: object
 | `tolerance_policy` | [`policy_name`](#policy_name) | no |  |
 | `datum_features` | object | no | `minProperties: 1` |
 | `coordinate_frame` | object | no |  |
+| `coordinate_frame.origin` | object or object | yes |  |
+| `coordinate_frame.origin.intersection` | array of [`reference`](#reference) | yes | `minItems: 2`, `maxItems: 3`, `uniqueItems: true` |
+| `coordinate_frame.origin.at` | [`reference`](#reference) | yes |  |
+| `coordinate_frame.x` | [`direction`](#direction) | no |  |
+| `coordinate_frame.y` | [`direction`](#direction) | no |  |
+| `coordinate_frame.z` | [`direction`](#direction) | no |  |
 | `views` | array of [`view`](#view) | no | `minItems: 1` |
 | `features` | object | no | `minProperties: 1` |
 | `dimensions` | array of [`dimension_request`](#dimension_request) | no | `minItems: 1` |
 | `geometric_tolerances` | array of [`geometric_tolerance`](#geometric_tolerance) | no | `minItems: 1` |
 | `edges` | [`edges`](#edges) and any | no | the general indication of the edges of undefined shape (ISO 13715:2017 §4.5.4); a detail drawing needs it |
 | `surface_texture` | [`texture_requirement`](#texture_requirement) or object | no | the general surface texture of the surfaces with no texture of their own (ISO 21920-1 §9.1.2), or open with the reason no value has a basis yet; a detail drawing needs it |
+| `surface_texture.open` | string | yes | `minLength: 1` |
 | `notes` | array of object | no | `minItems: 1` |
+| `notes[].kind` | one of `"process"`, `"finish"`, `"material"`, `"inspection"`, `"general"` | yes |  |
+| `notes[].text` | string | yes | `minLength: 1` |
+| `notes[].reference` | string | no | `minLength: 1` |
 | `manufacturing` | object | no | `minProperties: 1` |
+| `manufacturing.build_direction` | [`direction`](#direction) | no |  |
+| `manufacturing.interface_condition` | one of `"as_printed"`, `"post_processed"`, `"finish_machined"` | no |  |
+| `manufacturing.dimensions_apply` | one of `"before_finish"`, `"after_finish"` | no |  |
+| `manufacturing.post_processing` | array of string | no | `minItems: 1` |
+| `manufacturing.inspection_stage` | string | no | `minLength: 1` |
 | `sheet` | [`sheet`](#sheet) | no |  |
 
 No other properties are allowed.
@@ -365,8 +380,18 @@ Type: object
 | `designation` | string | no | `minLength: 1` |
 | `standard` | string | no | the product standard of a standard part, such as DIN 471 or ISO 4762; its designation states the standard with its designation items (DIN 471 - 5x0.6) and identifies the item without a manufacturer or manufacturer part number `pattern: "^(ISO\|IEC\|EN\|DIN\|BS\|JIS\|ANSI\|ASME\|SAE\|NAS\|MS)( (EN\|ISO\|IEC))* [A-Z]?[0-9]+(\\.[0-9]+)*(-[0-9]+)*$"` |
 | `specification` | object | no | the datasheet or standard that defines the item, identified by its sha256; with only a url the frozen copy is a sourcing input kept outside the record |
+| `specification.reference` | string | yes | `minLength: 1` |
+| `specification.revision` | string | yes | `minLength: 1` |
+| `specification.artifact` | string | no | frozen copy of the specification, relative to hw/ `pattern: "^[^/\\n\\r\\u2028\\u2029][^\\n\\r\\u2028\\u2029]*$"`, `not: {"pattern": "(^\|/)\\.\\.(/\|$)"}` |
+| `specification.url` | string | no | where the publisher serves the specification `pattern: "^https://[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$"` |
+| `specification.sha256` | [`sha256`](common.md#sha256) | yes |  |
 | `open` | object | no | orderable identity fields deliberately left open, each with the reason; every one blocks release `minProperties: 1` |
+| `open.manufacturer` | string | no | `minLength: 1` |
+| `open.manufacturer_part_number` | string | no | `minLength: 1` |
+| `open.supplier_part_number` | string | no | `minLength: 1` |
 | `approved_sources` | array of object | no | `minItems: 1` |
+| `approved_sources[].name` | string | yes | `minLength: 1` |
+| `approved_sources[].part_number` | string | no | `minLength: 1` |
 | `qualification_evidence` | string | no | `minLength: 1` |
 | `certificates` | array of string | no | `minItems: 1`, `uniqueItems: true` |
 

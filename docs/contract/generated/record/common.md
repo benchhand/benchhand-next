@@ -969,16 +969,26 @@ Type: any and [`not_assessed_rule`](#not_assessed_rule)
 | `outcome` | [`outcome`](#outcome) | yes |  |
 | `reason` | [`not_assessed_reason`](#not_assessed_reason) | no |  |
 | `measured` | [`quantity`](#quantity) or object or [`fact_unknown`](#fact_unknown) | yes |  |
+| `measured.text` | [`text`](#text) | yes |  |
 | `criterion` | [`criterion_or_unknown`](#criterion_or_unknown) | yes |  |
 | `requirements` | [`requirement_ids`](#requirement_ids) | no |  |
 | `method` | object | yes |  |
+| `method.name` | [`text`](#text) | yes |  |
+| `method.tool` | [`text`](#text) | no |  |
+| `method.evidence` | array of [`file_hash`](#file_hash) | no | `minItems: 1` |
 | `uncertainty` | [`text`](#text) | yes | the uncertainty or the missing information |
 | `assumptions` | [`texts`](#texts) | no |  |
 | `coverage` | [`text`](#text) | no |  |
 | `consequence` | [`text`](#text) | yes | the functional consequence |
 | `remedy` | [`text`](#text) | no |  |
 | `alternatives` | array of object | no | `minItems: 1` |
+| `alternatives[].text` | [`text`](#text) | yes |  |
+| `alternatives[].tradeoffs` | [`text`](#text) | yes |  |
 | `recheck` | object | yes |  |
+| `recheck.families` | array of [`check_family`](#check_family) | yes | `minItems: 1`, `uniqueItems: true` |
+| `recheck.scope` | array of [`subject`](#subject) | no | `minItems: 1` |
+| `recheck.inputs` | [`texts`](#texts) | no |  |
+| `recheck.earliest_stage` | [`stage`](#stage) | yes |  |
 | `decisions` | array of [`decision`](#decision) | no | `minItems: 1`, `uniqueItems: true` |
 
 No other properties are allowed.

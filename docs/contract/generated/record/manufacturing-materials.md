@@ -605,6 +605,13 @@ Type: object
 | `specification` | [`text_fact`](common.md#text_fact) | no | the standard or datasheet designation the grade conforms to |
 | `form` | one of `"printed"`, `"bulk"`, `"wrought"`, `"cast"`, `"moulded"`, `"sheet"`, `"rod"`, `"film"`, `"purchased"`, `"unknown"` | yes |  |
 | `process_state` | object | yes |  |
+| `process_state.process` | [`route_kind`](common.md#route_kind) or [`fact_open`](common.md#fact_open) | yes | the route kind that made the tested material, or unknown |
+| `process_state.orientation` | [`text`](common.md#text) | no |  |
+| `process_state.layup` | [`text`](common.md#text) | no |  |
+| `process_state.temper` | [`text`](common.md#text) | no |  |
+| `process_state.conditioning` | [`conditioning`](#conditioning) | yes |  |
+| `process_state.lot` | [`text`](common.md#text) | no |  |
+| `process_state.notes` | [`text`](common.md#text) | no |  |
 | `typical_not_allowable` | boolean | yes |  |
 | `properties` | array of [`property`](#property) | yes |  |
 | `guidance` | [`texts`](common.md#texts) | no | family guidance and cautions, such as fibre fill wear on nozzles and mating surfaces; never a grade allowable |
@@ -693,6 +700,14 @@ Type: object
 | `name` | [`semantic_id`](common.md#semantic_id) | yes |  |
 | `value` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
 | `conditions` | object | yes |  |
+| `conditions.test_standard` | [`text_fact`](common.md#text_fact) | yes |  |
+| `conditions.temperature` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
+| `conditions.conditioning` | [`conditioning`](#conditioning) | yes |  |
+| `conditions.orientation` | [`text_fact`](common.md#text_fact) | no | the print or grain orientation of the specimen |
+| `conditions.gauge` | [`gauge`](#gauge) | no | allowed on elongation_at_break only; optional |
+| `conditions.specimen` | [`text`](common.md#text) | no |  |
+| `conditions.rate` | [`text`](common.md#text) | no |  |
+| `conditions.notes` | [`text`](common.md#text) | no |  |
 
 No other properties are allowed.
 

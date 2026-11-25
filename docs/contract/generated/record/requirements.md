@@ -14,9 +14,58 @@ Type: object
 | Property | Type | Required | Description |
 |---|---|---|---|
 | `preferences` | array of object | no | What ranks feasible options; a preference never compensates a mandatory failure |
+| `preferences[].id` | [`preference_id`](common.md#preference_id) | yes |  |
+| `preferences[].text` | [`text`](common.md#text) | yes |  |
+| `preferences[].source` | [`source`](common.md#source) | yes |  |
+| `preferences[].weight` | number | yes | `exclusiveMinimum: 0`, `maximum: 1000` |
+| `preferences[].criterion` | [`criterion`](common.md#criterion) | no |  |
+| `preferences[].subjects` | array of [`subject`](common.md#subject) | no | `minItems: 1` |
 | `assumptions` | array of object | no | Bounded statements taken as true for now, each with its owner and the obligation that would validate it |
+| `assumptions[].id` | [`assumption_id`](common.md#assumption_id) | yes |  |
+| `assumptions[].text` | [`text`](common.md#text) | yes |  |
+| `assumptions[].origin` | [`text`](common.md#text) | yes |  |
+| `assumptions[].reason` | [`text`](common.md#text) | yes |  |
+| `assumptions[].bounds` | [`quantity`](common.md#quantity) or [`text`](common.md#text) | no |  |
+| `assumptions[].requirements` | [`requirement_ids`](common.md#requirement_ids) | no |  |
+| `assumptions[].owner` | [`text`](common.md#text) | yes |  |
+| `assumptions[].validation` | [`text`](common.md#text) | yes | the check, test or answer that would confirm or refute it |
+| `assumptions[].status` | one of `"open"`, `"validated"`, `"invalidated"` | yes |  |
+| `assumptions[].decision` | [`decision`](common.md#decision) | no |  |
 | `open_questions` | array of object | no | Questions still to answer; material_to_choice or safety_relevant open questions block a final material/process recommendation |
+| `open_questions[].id` | [`question_id`](common.md#question_id) | yes |  |
+| `open_questions[].question` | [`text`](common.md#text) | yes |  |
+| `open_questions[].subjects` | array of [`subject`](common.md#subject) | no | `minItems: 1` |
+| `open_questions[].owner` | [`text`](common.md#text) | yes |  |
+| `open_questions[].material_to_choice` | boolean | yes |  |
+| `open_questions[].safety_relevant` | boolean | yes |  |
+| `open_questions[].status` | one of `"open"`, `"resolved"` | yes |  |
+| `open_questions[].resolution` | object | no |  |
+| `open_questions[].resolution.answer` | [`text`](common.md#text) | yes |  |
+| `open_questions[].resolution.source` | [`source`](common.md#source) | no |  |
+| `open_questions[].resolution.decision` | [`decision`](common.md#decision) | no |  |
 | `requirements` | array of object | yes | `minItems: 1` |
+| `requirements[].id` | [`requirement_id`](common.md#requirement_id) | yes |  |
+| `requirements[].text` | string | yes | `minLength: 1` |
+| `requirements[].rationale` | string | yes | `minLength: 1` |
+| `requirements[].source` | string | yes | `minLength: 1` |
+| `requirements[].priority` | one of `"must"`, `"should"`, `"could"`, `"MUST"`, `"SHOULD"`, `"COULD"` | yes |  |
+| `requirements[].verification` | object | yes |  |
+| `requirements[].verification.method` | one of `"I"`, `"A"`, `"D"`, `"T"` | yes |  |
+| `requirements[].verification.criteria` | string | yes | `minLength: 1` |
+| `requirements[].verification.step` | one of `"interference"`, `"form"`, `"visibility"`, `"access"`, `"process"`, `"motion"`, `"stack_up"`, `"fea"`, `"drawing"`, `"critique"`, `"physical"` | no | The flow step that verifies it, so validation can flag a profile that turns that step off (flow.conflict): fea for a strength or stiffness requirement, physical for a trial or inspection outside CAD |
+| `requirements[].subjects` | array of [`subject`](common.md#subject) | no | `minItems: 1` |
+| `requirements[].acceptance` | array of [`criterion`](common.md#criterion) | no | Structured acceptance criteria; the prose criteria stay, and a final selection evaluates these, never an automatic reading of prose `minItems: 1` |
+| `requirements[].conditions` | [`text`](common.md#text) | no | the service conditions the requirement holds under |
+| `requirements[].risk` | object | no |  |
+| `requirements[].risk.severity` | [`consequence_severity`](common.md#consequence_severity) | yes |  |
+| `requirements[].risk.consequence` | [`text`](common.md#text) | yes |  |
+| `requirements[].evidence_required` | array of [`evidence_level`](common.md#evidence_level) | no | The evidence levels a pass needs `minItems: 1`, `uniqueItems: true` |
+| `requirements[].waiver_policy` | one of `"forbidden"`, `"approval_required"` | no |  |
+| `requirements[].visibility` | array of object | no | Show-the-motion checks: from view, rendering only the window and target parts at the nominal pose, each target's own visible share of its projected area must reach min_visible_fraction (default 0.5); the check fails when any target falls short. Only transparency: transparent window parts are see-through `minItems: 1` |
+| `requirements[].visibility[].view` | string | yes | A render view: iso, front, side, or a dir-X-Y-Z direction in assembly coordinates `pattern: "^(?:iso\|front\|side\|dir-[pm](?:0\|[1-9][0-9]{0,5})(?:d[0-9]{0,5}[1-9])?-[pm](?:0\|[1-9][0-9]{0,5})(?:d[0-9]{0,5}[1-9])?-[pm](?:0\|[1-9][0-9]{0,5})(?:d[0-9]{0,5}[1-9])?)$"`, `not: {"description": "a direction needs a non-zero component", "pattern": "^dir-[pm]0-[pm]0-[pm]0$"}` |
+| `requirements[].visibility[].window` | array of [`part_ref`](assembly.md#part_ref) | yes | `minItems: 1`, `uniqueItems: true` |
+| `requirements[].visibility[].targets` | array of [`part_ref`](assembly.md#part_ref) | yes | `minItems: 1`, `uniqueItems: true` |
+| `requirements[].visibility[].min_visible_fraction` | number | no | `exclusiveMinimum: 0`, `maximum: 1` |
 
 No other properties are allowed.
 

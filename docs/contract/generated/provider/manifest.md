@@ -15,14 +15,23 @@ Type: object
 | `version` | string | yes |  |
 | `summary` | string | no |  |
 | `protocol` | object | yes |  |
+| `protocol.min` | integer | yes | `minimum: 1` |
+| `protocol.max` | integer | yes | `minimum: 1` |
 | `kinds` | array of [`HookKind`](protocol.md#hookkind) | yes | `minItems: 1`, `uniqueItems: true` |
 | `hooks` | array of [`HookDecl`](protocol.md#hookdecl) | yes | `minItems: 1` |
 | `resident` | boolean | no |  |
 | `command` | array of string | yes | `minItems: 1` |
 | `timeouts` | object | no | Seconds per hook method, e.g. {"solver/solve": 3600}. |
 | `environment` | object or object or object | yes |  |
+| `environment.kind` | `"uv"` | yes |  |
+| `environment.requires-python` | string | yes |  |
+| `environment.dependencies` | array of string | yes |  |
+| `environment.kind` | `"freecad"` | yes |  |
+| `environment.kind` | `"system"` | yes |  |
 | `needs` | [`Needs`](protocol.md#needs) | yes |  |
 | `cli` | array of object | no |  |
+| `cli[].name` | string | yes | `pattern: "^[a-z][a-z0-9-]*$"` |
+| `cli[].summary` | string | yes |  |
 
 No other properties are allowed.
 

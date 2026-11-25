@@ -15,6 +15,10 @@ Type: object
 |---|---|---|---|
 | `status` | one of `"not_assessed"`, `"assessed"`, `"confirmed"` | yes |  |
 | `assessment` | object | no |  |
+| `assessment.input_sha256` | [`sha256`](common.md#sha256) | yes | The selection input digest of the record inputs the assessment read (its DIGEST_SCOPE); a different current digest makes the assessment stale |
+| `assessment.method` | [`text`](common.md#text) | yes |  |
+| `assessment.date` | [`date`](common.md#date) | yes |  |
+| `assessment.decision` | [`decision`](common.md#decision) | no |  |
 | `candidates` | array of [`candidate`](#candidate) | yes |  |
 | `recommendation` | [`recommendation`](#recommendation) | no |  |
 
@@ -199,7 +203,22 @@ Type: object
 | `parts` | array of [`candidate_part`](#candidate_part) | yes | `minItems: 1` |
 | `interfaces` | array of [`interface_id`](common.md#interface_id) | no | `minItems: 1`, `uniqueItems: true` |
 | `evaluations` | array of any and [`not_assessed_rule`](common.md#not_assessed_rule) | yes |  |
+| `evaluations[].requirement` | [`requirement_id`](common.md#requirement_id) | yes |  |
+| `evaluations[].outcome` | [`outcome`](common.md#outcome) | yes |  |
+| `evaluations[].reason` | [`not_assessed_reason`](common.md#not_assessed_reason) | no |  |
+| `evaluations[].method` | [`text`](common.md#text) | yes |  |
+| `evaluations[].criterion` | [`criterion`](common.md#criterion) | no |  |
+| `evaluations[].value` | [`quantity`](common.md#quantity) or [`text`](common.md#text) | no |  |
+| `evaluations[].uncertainty` | [`text`](common.md#text) | no |  |
+| `evaluations[].source` | [`source`](common.md#source) | no |  |
+| `evaluations[].note` | [`text`](common.md#text) | no |  |
 | `changes` | object | no | `minProperties: 1` |
+| `changes.design` | [`texts`](common.md#texts) | no |  |
+| `changes.equipment` | [`texts`](common.md#texts) | no |  |
+| `changes.finishing` | [`texts`](common.md#texts) | no |  |
+| `changes.inspection` | [`texts`](common.md#texts) | no |  |
+| `changes.interfaces` | [`texts`](common.md#texts) | no |  |
+| `changes.assembly` | [`texts`](common.md#texts) | no |  |
 | `quantity` | [`quantity_fact`](common.md#quantity_fact) | no | the quantity cost and lead time are stated at |
 | `cost` | [`money_fact`](common.md#money_fact) | no |  |
 | `lead_time` | [`quantity_fact`](common.md#quantity_fact) | no |  |
@@ -210,6 +229,9 @@ Type: object
 | `cons` | [`texts`](common.md#texts) | yes |  |
 | `tradeoffs` | [`texts`](common.md#texts) | yes |  |
 | `preference_scores` | array of object | no | `minItems: 1` |
+| `preference_scores[].preference` | [`preference_id`](common.md#preference_id) | yes |  |
+| `preference_scores[].score` | number | yes |  |
+| `preference_scores[].note` | [`text`](common.md#text) | no |  |
 
 No other properties are allowed.
 

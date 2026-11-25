@@ -102,14 +102,31 @@ Type: object
 | `criterion` | [`criterion`](common.md#criterion) | no |  |
 | `source` | [`source`](common.md#source) | no |  |
 | `configuration` | object | no |  |
+| `configuration.version` | [`version`](common.md#version) | yes |  |
+| `configuration.manifest_sha256` | [`sha256`](common.md#sha256) | yes |  |
+| `configuration.rev` | [`revision`](common.md#revision) | no |  |
+| `configuration.geometry_sha256` | [`sha256`](common.md#sha256) | no |  |
 | `fingerprints` | object | no | sha256 of each normalized dependency the evidence relied on, by domain; a changed fingerprint makes the evidence stale until an impact assessment carries it forward `minProperties: 1` |
 | `artifacts` | array of [`file_hash`](common.md#file_hash) | no | `minItems: 1` |
 | `bundle` | object | no |  |
+| `bundle.path` | [`project_path`](common.md#project_path) | yes |  |
+| `bundle.manifest_sha256` | [`sha256`](common.md#sha256) | yes |  |
 | `tool` | [`text`](common.md#text) | no |  |
 | `producer` | [`text`](common.md#text) | no |  |
 | `uncertainty` | [`text`](common.md#text) | no |  |
 | `coverage` | [`text`](common.md#text) | no |  |
 | `physical` | object | no |  |
+| `physical.specimen` | [`text`](common.md#text) | yes | the actual item tested: coupon, part or assembly, with its identity |
+| `physical.configuration` | [`text`](common.md#text) | yes | the as-built configuration and revision |
+| `physical.material` | [`text`](common.md#text) | yes | the material and lot as used |
+| `physical.process` | [`text`](common.md#text) | yes | the route and settings as used |
+| `physical.protocol` | [`text`](common.md#text) | yes |  |
+| `physical.setup` | [`text`](common.md#text) | no |  |
+| `physical.instrument` | [`text`](common.md#text) | yes | the instrument and its calibration |
+| `physical.results` | [`text`](common.md#text) | yes |  |
+| `physical.date` | [`date`](common.md#date) | yes |  |
+| `physical.approver` | [`text`](common.md#text) | yes |  |
+| `physical.scope` | [`text`](common.md#text) | yes | what the result covers: a coupon covers its coupon scope, not assembly or end-use life |
 | `waiver` | [`waiver`](common.md#waiver) | no |  |
 | `decisions` | array of [`decision`](common.md#decision) | no | `minItems: 1`, `uniqueItems: true` |
 | `note` | [`text`](common.md#text) | no |  |

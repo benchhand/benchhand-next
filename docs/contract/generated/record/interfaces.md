@@ -12,6 +12,20 @@ Type: object
 | Property | Type | Required | Description |
 |---|---|---|---|
 | `interfaces` | array of object | yes |  |
+| `interfaces[].id` | [`interface_id`](common.md#interface_id) | yes |  |
+| `interfaces[].from` | string | yes | `minLength: 1` |
+| `interfaces[].to` | string | yes | `minLength: 1` |
+| `interfaces[].type` | one of `"mounting"`, `"motion"`, `"electrical"`, `"thermal"`, `"clearance"`, `"other"` | yes |  |
+| `interfaces[].description` | string | yes | `minLength: 1` |
+| `interfaces[].pair` | array of [`part_ref`](assembly.md#part_ref) | no | A clearance requirement's two parts, each a PN placed at most once or an @occurrence reference `minItems: 2`, `maxItems: 2`, `uniqueItems: true` |
+| `interfaces[].min_clearance_mm` | number | no | The smallest distance the pair may come to, at the nominal pose and at every swept pose `exclusiveMinimum: 0`, `maximum: 5` |
+| `interfaces[].margin_mm` | number | no | This requirement's margin above min_clearance_mm, overriding product.yaml design.clearance_margin_mm `minimum: 0`, `maximum: 1` |
+| `interfaces[].limits` | object | no |  |
+| `interfaces[].limits.press_fit` | [`fit`](drawing.md#fit) | no |  |
+| `interfaces[].limits.running_fit` | [`fit`](drawing.md#fit) | no |  |
+| `interfaces[].limits.locating_fit` | [`fit`](drawing.md#fit) | no |  |
+| `interfaces[].limits.heat_set` | array of [`heat_set`](drawing.md#heat_set) | no | `minItems: 1` |
+| `interfaces[].functional` | [`functional`](#functional) | no |  |
 
 No other properties are allowed.
 
@@ -229,12 +243,53 @@ Type: object
 | `loads` | [`semantic_ids`](common.md#semantic_ids) | no | product.yaml use_case.loads ids |
 | `environment` | [`text`](common.md#text) | no |  |
 | `surfaces` | array of object | no | `minItems: 1` |
+| `surfaces[].PN` | [`pn`](common.md#pn) | yes |  |
+| `surfaces[].occurrence` | [`occurrence_ref`](common.md#occurrence_ref) | no |  |
+| `surfaces[].component` | [`semantic_id`](common.md#semantic_id) | no |  |
+| `surfaces[].feature` | [`semantic_id`](common.md#semantic_id) | yes |  |
+| `surfaces[].region` | [`semantic_id`](common.md#semantic_id) | no |  |
+| `surfaces[].role` | one of `"datum"`, `"bore"`, `"seat"`, `"journal"`, `"running"`, `"sliding"`, `"flank"`, `"cam"`, `"seal"`, `"fastener"`, `"locating"`, `"optical"`, `"other"` | yes |  |
+| `surfaces[].datum` | [`datum_label`](drawing.md#datum_label) | no |  |
+| `surfaces[].source` | [`source`](common.md#source) | no |  |
+| `surfaces[].dimension_state` | [`dimension_state`](common.md#dimension_state) | yes |  |
 | `acceptance` | array of object | no | `minItems: 1` |
+| `acceptance[].criterion` | [`criterion`](common.md#criterion) | yes |  |
+| `acceptance[].verification` | object | yes |  |
+| `acceptance[].verification.method` | one of `"I"`, `"A"`, `"D"`, `"T"` | yes |  |
+| `acceptance[].verification.evidence_required` | array of [`evidence_level`](common.md#evidence_level) | yes | `minItems: 1`, `uniqueItems: true` |
+| `acceptance[].verification.stage` | [`stage`](common.md#stage) | yes |  |
 | `variation` | object | no | The tolerance stack: its managed analysis case, the contributors it includes and the governing method; RSS needs the decision that justifies its statistical assumptions |
+| `variation.stack_case` | string | yes | an hw/analysis/cases/<ID> case id `pattern: "^[a-z][a-z0-9_-]*$"` |
+| `variation.contributors` | array of one of `"manufacture"`, `"assembly"`, `"thermal"`, `"moisture"`, `"wear"`, `"deformation"`, `"coating"`, `"adhesive"`, `"joining"` | yes | `minItems: 1`, `uniqueItems: true` |
+| `variation.method` | one of `"worst_case"`, `"justified_rss"` | yes |  |
+| `variation.decision` | [`decision`](common.md#decision) | no |  |
 | `contact` | object | no |  |
+| `contact.materials` | array of [`profile_id`](common.md#profile_id) or [`fact_open`](common.md#fact_open) | yes | `minItems: 2`, `maxItems: 2` |
+| `contact.finish` | [`text_fact`](common.md#text_fact) | no |  |
+| `contact.lubrication` | [`text_fact`](common.md#text_fact) | no |  |
+| `contact.load` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `contact.speed` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `contact.duty` | [`text_fact`](common.md#text_fact) | no |  |
+| `contact.life` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `contact.evidence` | array of [`evidence_id`](common.md#evidence_id) | no | `minItems: 1`, `uniqueItems: true` |
 | `play` | object | no | The joint's free movement at this interface: each component the total play about the nominal, centred pose (an interval's upper bound governs the extremes), axial along the joint axis, radial across it, angular as tilt of the axis, backlash along the joint's own coordinate; compliance the elastic displacement under the interface's declared loads (spring preload, operating loads), sourced from a calculation or test, added to the play at the extremes. A component the interface function needs and the record does not declare is unknown, never zero. scenario_cases name the motion cases evaluated under play `minProperties: 1` |
+| `play.axial` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.radial` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.angular` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.backlash` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.compliance` | object | no | `minProperties: 1` |
+| `play.compliance.axial` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.compliance.radial` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.compliance.angular` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `play.scenario_cases` | array of string | no | hw/motion/cases/<ID> case ids `minItems: 1`, `uniqueItems: true` |
 | `assembly_operations` | array of [`assembly_operation_id`](common.md#assembly_operation_id) | no | `minItems: 1`, `uniqueItems: true` |
 | `print_in_place` | array of object | no | The joints at this interface that print already assembled: each joint's kind, the joint value it prints at, the face pairs its gap separates and how it breaks free after printing. min_clearance_mm must be at least the governing product.yaml flow.profile processes.fdm.pip_clearance_mm `minItems: 1` |
+| `print_in_place[].joint` | one of `"hinge"`, `"pin"`, `"ball"`, `"captive"`, `"living_hinge"` | yes |  |
+| `print_in_place[].print_pose` | object | yes | the value each assembly.yaml joint prints at, in that joint's units `minProperties: 1` |
+| `print_in_place[].gap_features` | array of array of [`face`](#face) | yes | `minItems: 1` |
+| `print_in_place[].break_free` | object | yes |  |
+| `print_in_place[].break_free.method` | [`text`](common.md#text) | yes |  |
+| `print_in_place[].break_free.force_n` | number | no | `exclusiveMinimum: 0` |
 | `inspections` | [`semantic_ids`](common.md#semantic_ids) | no |  |
 | `decisions` | array of [`decision`](common.md#decision) | no | `minItems: 1`, `uniqueItems: true` |
 

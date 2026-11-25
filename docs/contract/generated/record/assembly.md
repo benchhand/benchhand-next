@@ -13,10 +13,29 @@ Type: object
 |---|---|---|---|
 | `operations` | array of [`assembly_operation`](#assembly_operation) or [`fact_unknown`](common.md#fact_unknown) | no | Record version 2 installation, closure, fastening, adjustment, inspection and service operations, independent of drawings; unknown until recorded |
 | `occurrences` | array of object | no | Explicit placements of part definitions; a PN listed in a subassembly's parts is one implicit occurrence at the identity placement instead `minItems: 1` |
+| `occurrences[].id` | [`occurrence_id`](#occurrence_id) | yes |  |
+| `occurrences[].PN` | [`pn`](common.md#pn) | yes |  |
+| `occurrences[].placement` | [`placement`](#placement) | no |  |
 | `profiles` | object | no | Reusable periodic tables a periodic_table coupling evaluates, by name `minProperties: 1` |
 | `mechanisms` | array of [`mechanism`](#mechanism) | no | Shared mechanism parameters whose outputs several slider_crank couplings follow `minItems: 1` |
 | `subassemblies` | array of object | yes | `minItems: 1` |
+| `subassemblies[].id` | string | yes | `pattern: "^[a-z][a-z0-9_-]*$"` |
+| `subassemblies[].title` | string | yes | `minLength: 1` |
+| `subassemblies[].parts` | array of [`pn`](common.md#pn) | no | `minItems: 1` |
+| `subassemblies[].occurrences` | array of [`occurrence_ref`](common.md#occurrence_ref) | no | `minItems: 1`, `uniqueItems: true` |
 | `joints` | array of object | yes |  |
+| `joints[].id` | [`joint_id`](#joint_id) | yes |  |
+| `joints[].type` | one of `"revolute"`, `"prismatic"`, `"fixed"` | yes |  |
+| `joints[].parent` | [`part_ref`](#part_ref) | yes |  |
+| `joints[].child` | [`part_ref`](#part_ref) | yes |  |
+| `joints[].axis` | [`vector`](common.md#vector) | yes |  |
+| `joints[].origin` | [`vector`](common.md#vector) | yes |  |
+| `joints[].min` | number | yes |  |
+| `joints[].max` | number | yes |  |
+| `joints[].nominal` | number | no | The value of an independent joint; a coupled joint has none |
+| `joints[].coupling` | [`coupling`](#coupling) | no |  |
+| `joints[].torque` | one of `"transmitted"`, `"none"` | no | Whether the child carries drive torque. From stage parts on, every revolute declares it (none for a hand-positioned or free-running joint), and so does every fixed joint inside the drive train that a revolute not declared none starts; a fixed joint declared transmitted names its torque_path |
+| `joints[].torque_path` | [`torque_path`](#torque_path) | no |  |
 | `drawing` | [`assembly_drawing`](#assembly_drawing) | no |  |
 
 No other properties are allowed.
@@ -743,6 +762,12 @@ A dependent joint's law: its value derives from a driver joint
 
 Type: object or object or object
 
+Variants:
+
+- object: q = ratio * q_driver + offset; ratio in dependent units per driver unit
+- object: q = profile((q_driver + phase_deg) mod period_deg); the driver is revolute
+- object: One output of a slider_crank mechanism: piston displacement (prismatic) or rod angle (revolute)
+
 ### `profile`
 
 Piecewise-linear periodic table: samples from 0 to period_deg with matching end values
@@ -801,6 +826,8 @@ Type: object
 |---|---|---|---|
 | `translation_mm` | [`vector`](common.md#vector) | no |  |
 | `rotation` | object | no |  |
+| `rotation.axis` | [`vector`](common.md#vector) | yes |  |
+| `rotation.angle_deg` | number | yes |  |
 
 No other properties are allowed.
 
@@ -832,7 +859,12 @@ Type: object
 | `scope` | one of `"modeled_mechanical_assembly"`, `"complete_assembly"` | no |  |
 | `excludes` | array of string | no | What a modelled scope leaves out, named on the drawing |
 | `views` | array of object | yes | `minItems: 1` |
+| `views[].id` | string | yes | `pattern: "^[a-z][a-z0-9_-]*$"` |
+| `views[].kind` | one of `"assembled"`, `"exploded"` | yes |  |
+| `views[].direction` | one of `"front"`, `"back"`, `"left"`, `"right"`, `"top"`, `"bottom"`, `"iso"` | yes |  |
 | `explode` | array of object | no | Exploded-view offsets in mm, assembly frame; each occurrence also moves by its kinematic ancestors' offsets |
+| `explode[].ref` | [`part_ref`](#part_ref) | yes |  |
+| `explode[].offset_mm` | [`vector`](common.md#vector) | yes |  |
 | `items` | array of [`drawing_item`](#drawing_item) | yes | `minItems: 1` |
 | `subassembly_sheets` | array of string | no | `uniqueItems: true` |
 
@@ -853,18 +885,29 @@ Type: object
 | `interface` | [`interface_id`](common.md#interface_id) | no |  |
 | `direction` | [`vector`](common.md#vector) | no |  |
 | `acceptance` | object | no |  |
+| `acceptance.kind` | one of `"seated"`, `"standoff"`, `"flush"`, `"engaged"`, `"torqued"`, `"adjusted"`, `"inspected"` | yes |  |
+| `acceptance.features` | array of string | yes | `minItems: 1`, `maxItems: 2` |
 | `tools` | array of string | no |  |
 | `consumables` | array of string | no |  |
 | `verify_joint` | string | no | `pattern: "^J-[0-9]{3}$"` |
 | `predecessors` | array of string | no | `minItems: 1`, `uniqueItems: true` |
 | `closes` | array of [`part_ref`](#part_ref) | no | parts this operation encloses: no later operation reaches them `minItems: 1`, `uniqueItems: true` |
 | `tool_access` | array of object | no | `minItems: 1` |
+| `tool_access[].tool` | string | yes | `minLength: 1` |
+| `tool_access[].capability` | [`profile_id`](common.md#profile_id) | no |  |
+| `tool_access[].approach` | [`vector`](common.md#vector) | no |  |
+| `tool_access[].reach` | [`quantity_fact`](common.md#quantity_fact) | no |  |
+| `tool_access[].envelope` | [`text_fact`](common.md#text_fact) | no |  |
 | `engagement` | [`quantity_fact`](common.md#quantity_fact) | no |  |
 | `torque` | [`quantity_fact`](common.md#quantity_fact) | no |  |
 | `retention` | [`text_fact`](common.md#text_fact) | no |  |
 | `service_access` | [`text_fact`](common.md#text_fact) | no |  |
 | `edge_distance` | object | no | The joint's edge distance: the criterion it must meet (property edge_distance, a length bound with its source) and the distance the design gives, a known length (an interval's lower end governs) or an unknown with its reason |
+| `edge_distance.criterion` | [`criterion`](common.md#criterion) and any | yes |  |
+| `edge_distance.distance` | [`quantity_fact`](common.md#quantity_fact) | yes |  |
 | `path` | object | no | The insertion path of `part`: its offsets in mm from the installed pose, in the receiving part's model frame, keeping the installed orientation. The part starts at start, passes via in order and arrives installed; the last leg runs along direction |
+| `path.start` | [`vector`](common.md#vector) | yes |  |
+| `path.via` | array of [`vector`](common.md#vector) | no | `minItems: 1` |
 | `inspection` | string | no | `minLength: 1` |
 
 No other properties are allowed.
