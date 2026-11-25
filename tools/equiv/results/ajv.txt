@@ -1,7 +1,7 @@
 ajv replay: 522 instances
   valid hand-written/published: {"true/true":318,"false/false":197,"unresolvable/unresolvable":1,"true/false":6}
   hand-written vs published: 6 differ, the first error in 6
-  hand-written vs published without the Timestamp pattern: 0 differ
+  hand-written vs published without the Timestamp pattern: 0 differ, of 522
     only with the pattern: test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId":"badtime00001","kind":"collision/sweep","status":"r
       hand-written: true
       published:    /createdAt pattern #/$defs/Timestamp/pattern
@@ -24,7 +24,7 @@ ajv replay: 522 instances
 ajv mutations of each instance the published schemas accept: 185994 instances
   valid hand-written/published: {"false/false":168980,"true/true":16613,"true/false":401}
   hand-written vs published: 401 differ, the first error in 401
-  hand-written vs published without the Timestamp pattern: 0 differ
+  hand-written vs published without the Timestamp pattern: 0 differ, of 185994
     only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId":"stale0000001","kind":"collision/sweep","status":"r
       hand-written: true
       published:    /createdAt pattern #/$defs/Timestamp/pattern

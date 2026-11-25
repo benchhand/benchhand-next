@@ -2,7 +2,7 @@ cases by source: {'test-suite': 292, 'old-fixture': 212, 'new-fixture': 10, 'edg
 replay: 522 instances
   valid hand-written/published: {'False/False': 197, 'True/False': 6, 'True/True': 318, 'unresolvable/unresolvable': 1}
   hand-written vs published: 6 differ, the first violation in 6
-  hand-written vs published without the Timestamp pattern: 0 differ
+  hand-written vs published without the Timestamp pattern: 0 differ, of 522 judged
     only with the pattern: test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "badtime00001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /createdAt by jobs/job.schema.json#/$defs/Timestamp/pattern: 'yesterday' does not match '^[0-9]{4}-(0[1-9]|1[0-
@@ -24,7 +24,7 @@ replay: 522 instances
 mutations of each instance the published schemas accept: 185994 instances
   valid hand-written/published: {'False/False': 168980, 'True/False': 401, 'True/True': 16613}
   hand-written vs published: 401 differ, the first violation in 401
-  hand-written vs published without the Timestamp pattern: 0 differ
+  hand-written vs published without the Timestamp pattern: 0 differ, of 185994 judged
     only with the pattern: mutant of test-suite, jobs/job.schema.json#/$defs/JobRecord, {"jobId": "stale0000001", "kind": "collision/sweep", "status": "runnin
       hand-written: valid
       published:    1 violation(s), first at /createdAt by jobs/job.schema.json#/$defs/Timestamp/pattern: '' does not match '^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-

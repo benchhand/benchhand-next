@@ -77,7 +77,7 @@ const withoutPatternAjv = ajvFor(published, (schema) => {
 });
 
 function comparison(title) {
-  return { title, count: 0, counts: {}, differ: 0, firstChanged: 0, withoutPattern: 0, disagree: 0, shown: [] };
+  return { title, count: 0, counts: {}, differ: 0, firstChanged: 0, judgedWithoutPattern: 0, withoutPattern: 0, disagree: 0, shown: [] };
 }
 
 function add(result, testCase, python) {
@@ -85,6 +85,7 @@ function add(result, testCase, python) {
   const after = judge(newAjv, testCase);
   // Every instance is judged without the pattern too: an unchanged verdict can hide a changed reason.
   const left = !sameVerdict(judge(withoutPatternAjv, testCase), before);
+  result.judgedWithoutPattern += 1;
   const key = `${before.valid}/${after.valid}`;
   result.count += 1;
   result.counts[key] = (result.counts[key] ?? 0) + 1;
@@ -106,7 +107,10 @@ function report(result) {
   console.log(`${result.title}: ${result.count} instances`);
   console.log(`  valid hand-written/published: ${JSON.stringify(result.counts)}`);
   console.log(`  hand-written vs published: ${result.differ} differ, the first error in ${result.firstChanged}`);
-  console.log(`  hand-written vs published without the Timestamp pattern: ${result.withoutPattern} differ`);
+  console.log(
+    `  hand-written vs published without the Timestamp pattern: ${result.withoutPattern} differ, ` +
+      `of ${result.judgedWithoutPattern}`,
+  );
   console.log(result.shown.slice(0, 12).join("\n"));
   console.log(`  ajv and python disagree on ${result.disagree} published verdicts`);
   return result.withoutPattern + result.disagree;

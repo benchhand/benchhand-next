@@ -169,7 +169,7 @@ def _report(title: str, cases: list[dict[str, Any]], verdicts: dict[str, list[Ve
     print(f"{title}: {len(cases)} instances")
     print(f"  valid hand-written/published: {dict(sorted(validity.items()))}")
     print(f"  hand-written vs published: {len(differ)} differ, the first violation in {first_changed}")
-    print(f"  hand-written vs published without the Timestamp pattern: {len(left)} differ")
+    print(f"  hand-written vs published without the Timestamp pattern: {len(left)} differ, of {len(rows)}")
     for case, o, n, _ in (left or differ)[:8]:
         mark = "DIFFERS WITHOUT THE PATTERN" if left else "only with the pattern"
         where = case["schema_id"].removeprefix(CONTRACTS)
