@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeGuard
 
 from benchhand_core.record.model import Record, as_json
 
@@ -17,7 +17,7 @@ JsonMap = Mapping[str, Any]
 FACT_STATUSES = ("known", "unknown", "not_applicable")
 
 
-def is_fact(value: object) -> bool:
+def is_fact(value: object) -> TypeGuard[Mapping[str, Any]]:
     """A recorded fact (known, unknown or not applicable) in place of a list or an id (prototype
     manufacturing_intent.py:459 `_looks_like_fact`)."""
     return isinstance(value, Mapping) and value.get("status") in FACT_STATUSES
