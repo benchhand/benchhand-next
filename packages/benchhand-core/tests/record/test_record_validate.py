@@ -527,7 +527,14 @@ def test_part_drawing_datums_and_tolerance_policies_are_declared(lamp_arm: Path)
 
 @pytest.mark.parametrize(
     "junk",
-    [".DS_Store", "._part.yaml", "Thumbs.db", "desktop.ini", "Desktop.ini", "__pycache__/model.cpython-312.pyc"],
+    [
+        ".DS_Store",
+        "._part.yaml",
+        "Thumbs.db",
+        "desktop.ini",
+        "Desktop.ini",
+        "__pycache__/model.cpython-312.pyc",
+    ],
 )
 def test_os_and_tool_junk_anywhere_in_hw_changes_nothing(lamp_arm: Path, junk: str) -> None:
     # A file browser writes these into every folder it opens (test-project issue 10). The reader
