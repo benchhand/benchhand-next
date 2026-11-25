@@ -16,7 +16,7 @@ class TypeScriptGenerationError(Exception):
     """Node is missing, the ui/ packages aren't installed, or the Node generator failed."""
 
 
-def write_typescript(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
+def write_typescript(contracts: list[Contract], schemas_dir: Path, out_dir: Path) -> None:
     node = shutil.which("node")
     if node is None:
         raise TypeScriptGenerationError("node is not on PATH; the TypeScript contracts need Node (see ui/)")
@@ -25,7 +25,7 @@ def write_typescript(contracts: list[Contract], contracts_dir: Path, out_dir: Pa
     if missing:
         raise TypeScriptGenerationError(f"{', '.join(missing)} not installed: run `pnpm install` in ui/")
     out_dir.mkdir(parents=True, exist_ok=True)
-    command = [node, str(REPO_ROOT / NODE_SCRIPT), str(contracts_dir), str(out_dir)]
+    command = [node, str(REPO_ROOT / NODE_SCRIPT), str(schemas_dir), str(out_dir)]
     command += [contract.rel_path for contract in contracts]
     result = subprocess.run(command, cwd=REPO_ROOT, capture_output=True, text=True, check=False)
     if result.returncode != 0:

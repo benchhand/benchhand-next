@@ -5,52 +5,112 @@
   "description": "How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. An absent file means every gate asks",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": ["policy_version"],
   "properties": {
-    "policy_version": {"const": 1},
+    "policy_version": {
+      "const": 1
+    },
     "default": {
-      "description": "The mode of every gate without its own entry",
       "$ref": "#/$defs/mode",
+      "description": "The mode of every gate without its own entry",
       "default": "ask"
     },
     "decision": {
-      "description": "The decision that records a default other than ask",
-      "$ref": "common.schema.json#/$defs/decision"
+      "$ref": "common.schema.json#/$defs/decision",
+      "description": "The decision that records a default other than ask"
     },
     "gates": {
       "description": "Per-gate modes, keyed by the gate id flow.yaml declares",
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/gate_id"
+      },
       "type": "object",
-      "propertyNames": {"$ref": "common.schema.json#/$defs/gate_id"},
-      "additionalProperties": {"$ref": "#/$defs/gate"}
+      "additionalProperties": {
+        "$ref": "#/$defs/gate"
+      }
     }
   },
-  "if": {"required": ["default"], "properties": {"default": {"enum": ["chat", "auto"]}}},
-  "then": {"required": ["decision"]},
-  "$defs": {
-    "mode": {"enum": ["ask", "chat", "auto"]},
-    "gate": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["mode"],
-      "properties": {
-        "mode": {"$ref": "#/$defs/mode"},
-        "decision": {"$ref": "common.schema.json#/$defs/decision"}
-      },
-      "if": {"properties": {"mode": {"enum": ["chat", "auto"]}}},
-      "then": {"required": ["decision"]}
+  "required": [
+    "policy_version"
+  ],
+  "additionalProperties": false,
+  "then": {
+    "required": [
+      "decision"
+    ]
+  },
+  "if": {
+    "required": [
+      "default"
+    ],
+    "properties": {
+      "default": {
+        "enum": [
+          "chat",
+          "auto"
+        ]
+      }
     }
   },
   "examples": [
-    {"policy_version": 1},
+    {
+      "policy_version": 1
+    },
     {
       "policy_version": 1,
       "default": "ask",
       "gates": {
-        "layout_freeze": {"mode": "chat", "decision": "DR-014"},
-        "parts": {"mode": "ask"}
+        "layout_freeze": {
+          "mode": "chat",
+          "decision": "DR-014"
+        },
+        "parts": {
+          "mode": "ask"
+        }
       }
     },
-    {"policy_version": 1, "default": "auto", "decision": "DR-001"}
-  ]
+    {
+      "policy_version": 1,
+      "default": "auto",
+      "decision": "DR-001"
+    }
+  ],
+  "$defs": {
+    "mode": {
+      "enum": [
+        "ask",
+        "chat",
+        "auto"
+      ]
+    },
+    "gate": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "decision": {
+          "$ref": "common.schema.json#/$defs/decision"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "then": {
+        "required": [
+          "decision"
+        ]
+      },
+      "if": {
+        "properties": {
+          "mode": {
+            "enum": [
+              "chat",
+              "auto"
+            ]
+          }
+        }
+      }
+    }
+  }
 }

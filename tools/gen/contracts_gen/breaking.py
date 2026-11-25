@@ -1,4 +1,7 @@
-"""Breaking-change check: each contract against its version at the last release tag.
+"""Breaking-change check: each published contract against its version at the last release tag.
+
+It compares the published schemas (``SCHEMAS_OUT``), which have the same paths before and after the move to
+TypeSpec, rather than the sources under contracts/.
 
 The rules are documented in docs/contract/versioning.md. A change is breaking when an instance that
 the old schema accepted can be rejected by the new one, or when a published definition disappears.
@@ -19,7 +22,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any
 
-from .sources import CONTRACTS_DIR, SCHEMA_SUFFIX, load_contracts
+from .sources import SCHEMA_SUFFIX, SCHEMAS_OUT, load_contracts
 
 RELEASE_TAG_PATTERN = "v[0-9]*"
 
@@ -127,8 +130,8 @@ def last_release_tag(repo_root: Path) -> str | None:
 
 
 def check_against(repo_root: Path, base: str) -> list[ContractReport]:
-    """Compare the contracts in the working tree with those at git revision ``base``."""
-    new = {contract.rel_path: contract.schema for contract in load_contracts(repo_root / CONTRACTS_DIR)}
+    """Compare the published contracts in the working tree with those at git revision ``base``."""
+    new = {contract.rel_path: contract.schema for contract in load_contracts(repo_root / SCHEMAS_OUT)}
     return compare_contracts(_contracts_at(repo_root, base), new)
 
 
@@ -139,7 +142,7 @@ def compare_contracts(old: dict[str, Any], new: dict[str, Any]) -> list[Contract
     for rel_path in sorted(old):
         old_schema, new_schema = old[rel_path], new.get(rel_path)
         if new_schema is None:
-            change = BreakingChange("", "schema-removed", f"{CONTRACTS_DIR}/{rel_path} was removed")
+            change = BreakingChange("", "schema-removed", f"{rel_path} was removed")
             reports.append(ContractReport(rel_path, old_schema.get("x-version"), None, (change,)))
             continue
         scope = Scope(new, rel_path)
@@ -549,11 +552,11 @@ def _escape(token: str) -> str:
 
 
 def _contracts_at(repo_root: Path, revision: str) -> dict[str, dict[str, Any]]:
-    listing = _git(repo_root, "ls-tree", "-r", "--name-only", revision, "--", f"{CONTRACTS_DIR}/")
+    listing = _git(repo_root, "ls-tree", "-r", "--name-only", revision, "--", f"{SCHEMAS_OUT}/")
     contracts = {}
     for path in listing.splitlines():
         if path.endswith(SCHEMA_SUFFIX):
-            rel_path = path.removeprefix(f"{CONTRACTS_DIR}/")
+            rel_path = path.removeprefix(f"{SCHEMAS_OUT}/")
             contracts[rel_path] = json.loads(_git(repo_root, "show", f"{revision}:{path}"))
     return contracts
 

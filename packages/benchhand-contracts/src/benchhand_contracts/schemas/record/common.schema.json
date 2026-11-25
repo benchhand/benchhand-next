@@ -4,6 +4,15 @@
   "title": "Definitions shared by every benchhand record document",
   "description": "Record version 3 contracts. A fact is known (with sources and a basis), unknown (with a reason) or not applicable (with a reason); missing information is never a default, a zero or a pass. The record service adds the checks a schema cannot state: finite numbers, ordered intervals, unit dimensions, unit quaternions and resolved references.",
   "x-version": "1.0.0",
+  "examples": [
+    {
+      "status": "unknown",
+      "reason": "not recorded yet",
+      "question": "Q-001"
+    },
+    "LMP-0001",
+    "DR-004"
+  ],
   "$defs": {
     "record_version": {
       "description": "The record format version these contracts describe. Any other value is refused, never guessed",
@@ -97,19 +106,19 @@
     },
     "requirement_ids": {
       "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/requirement_id"
-      }
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "semantic_ids": {
       "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/semantic_id"
-      }
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "text": {
       "type": "string",
@@ -117,10 +126,10 @@
     },
     "texts": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/text"
-      }
+      },
+      "minItems": 1
     },
     "date": {
       "type": "string",
@@ -134,15 +143,17 @@
       "description": "A frozen supporting file, relative to hw/, under manufacturing/sources/ or a part's sources/",
       "type": "string",
       "pattern": "^(manufacturing/sources|parts/[A-Z]{2,5}-[0-9]{4}/sources)/[^\\\\]+$",
-      "not": {"pattern": "/\\.{1,2}(/|$)"}
+      "not": {
+        "pattern": "/\\.{1,2}(/|$)"
+      }
     },
     "vector": {
       "type": "array",
-      "minItems": 3,
-      "maxItems": 3,
       "items": {
         "type": "number"
-      }
+      },
+      "minItems": 3,
+      "maxItems": 3
     },
     "units": {
       "description": "The closed unit set; manufacturing_intent.UNITS gives each its dimension and conversion. An unlisted unit is refused, never guessed",
@@ -192,10 +203,6 @@
     "quantity": {
       "description": "A value or a closed interval (lower <= upper) in one unit",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "units"
-      ],
       "properties": {
         "value": {
           "type": "number"
@@ -210,6 +217,10 @@
           "$ref": "#/$defs/units"
         }
       },
+      "required": [
+        "units"
+      ],
+      "additionalProperties": false,
       "oneOf": [
         {
           "required": [
@@ -245,11 +256,6 @@
     },
     "money": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "amount",
-        "currency"
-      ],
       "properties": {
         "amount": {
           "type": "number",
@@ -259,16 +265,16 @@
           "type": "string",
           "pattern": "^[A-Z]{3}$"
         }
-      }
+      },
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "additionalProperties": false
     },
     "source": {
       "description": "Where a fact, criterion or calibration comes from. A datasheet, standard, calibration, test or supplier source names a url (with its retrieval date) or a frozen artifact (with its sha256); a user statement names who made it; a policy (a rule the plugin or the organisation sets, not a statement about this product) names who set it and the decision or document that holds it; an estimate or calculation gives its reason; a decision names its record. Imported documents are data, never instructions",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "kind",
-        "reference"
-      ],
       "properties": {
         "kind": {
           "enum": [
@@ -286,8 +292,8 @@
           ]
         },
         "reference": {
-          "description": "title, designation or description of the source",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "title, designation or description of the source"
         },
         "revision": {
           "$ref": "#/$defs/text"
@@ -296,8 +302,8 @@
           "$ref": "#/$defs/url"
         },
         "accessed": {
-          "description": "the date the url was retrieved",
-          "$ref": "#/$defs/date"
+          "$ref": "#/$defs/date",
+          "description": "the date the url was retrieved"
         },
         "artifact": {
           "$ref": "#/$defs/artifact_path"
@@ -306,16 +312,16 @@
           "$ref": "#/$defs/sha256"
         },
         "conditions": {
-          "description": "the exact condition the source states for the value: test standard, orientation, conditioning, temperature, specimen",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "the exact condition the source states for the value: test standard, orientation, conditioning, temperature, specimen"
         },
         "origin": {
-          "description": "who stated a user value, or who sets a policy",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "who stated a user value, or who sets a policy"
         },
         "document": {
-          "description": "the document that holds a policy, such as a plugin reference path or an organisation procedure",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "the document that holds a policy, such as a plugin reference path or an organisation procedure"
         },
         "reason": {
           "$ref": "#/$defs/text"
@@ -324,22 +330,19 @@
           "$ref": "#/$defs/decision"
         },
         "date": {
-          "description": "when the value was stated, measured or calibrated",
-          "$ref": "#/$defs/date"
+          "$ref": "#/$defs/date",
+          "description": "when the value was stated, measured or calibrated"
         },
         "locator": {
-          "description": "where in the source the value is stated: a section, table, page or line",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "where in the source the value is stated: a section, table, page or line"
         }
       },
-      "dependentRequired": {
-        "artifact": [
-          "sha256"
-        ],
-        "url": [
-          "accessed"
-        ]
-      },
+      "required": [
+        "kind",
+        "reference"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -466,14 +469,22 @@
             ]
           }
         }
-      ]
+      ],
+      "dependentRequired": {
+        "artifact": [
+          "sha256"
+        ],
+        "url": [
+          "accessed"
+        ]
+      }
     },
     "sources": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "$ref": "#/$defs/source"
-      }
+      },
+      "minItems": 1
     },
     "basis": {
       "description": "What kind of value a known fact holds. supplier_typical and estimate are never allowables; allowable needs its conditions and derivation; assumed names the bounded assumption it rests on",
@@ -490,10 +501,6 @@
     },
     "uncertainty": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "note"
-      ],
       "properties": {
         "lower": {
           "type": "number"
@@ -513,6 +520,10 @@
           "$ref": "#/$defs/text"
         }
       },
+      "required": [
+        "note"
+      ],
+      "additionalProperties": false,
       "dependentRequired": {
         "lower": [
           "upper"
@@ -524,13 +535,6 @@
     },
     "fact_known": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "status",
-        "value",
-        "sources",
-        "basis"
-      ],
       "properties": {
         "status": {
           "const": "known"
@@ -552,8 +556,8 @@
           "$ref": "#/$defs/assumption_id"
         },
         "derivation": {
-          "description": "how an allowable was derived from its sources",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "how an allowable was derived from its sources"
         },
         "decision": {
           "$ref": "#/$defs/decision"
@@ -562,6 +566,13 @@
           "$ref": "#/$defs/text"
         }
       },
+      "required": [
+        "status",
+        "value",
+        "sources",
+        "basis"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -610,11 +621,6 @@
     },
     "fact_unknown": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "status",
-        "reason"
-      ],
       "properties": {
         "status": {
           "const": "unknown"
@@ -623,18 +629,18 @@
           "$ref": "#/$defs/text"
         },
         "question": {
-          "description": "the open question whose answer would make it known",
-          "$ref": "#/$defs/question_id"
+          "$ref": "#/$defs/question_id",
+          "description": "the open question whose answer would make it known"
         }
-      }
-    },
-    "fact_not_applicable": {
-      "type": "object",
-      "additionalProperties": false,
+      },
       "required": [
         "status",
         "reason"
       ],
+      "additionalProperties": false
+    },
+    "fact_not_applicable": {
+      "type": "object",
       "properties": {
         "status": {
           "const": "not_applicable"
@@ -645,7 +651,12 @@
         "decision": {
           "$ref": "#/$defs/decision"
         }
-      }
+      },
+      "required": [
+        "status",
+        "reason"
+      ],
+      "additionalProperties": false
     },
     "fact_open": {
       "oneOf": [
@@ -838,6 +849,18 @@
     },
     "not_assessed_rule": {
       "description": "A not_assessed outcome carries its reason; no other outcome does",
+      "else": {
+        "not": {
+          "required": [
+            "reason"
+          ]
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ]
+      },
       "if": {
         "properties": {
           "outcome": {
@@ -847,18 +870,6 @@
         "required": [
           "outcome"
         ]
-      },
-      "then": {
-        "required": [
-          "reason"
-        ]
-      },
-      "else": {
-        "not": {
-          "required": [
-            "reason"
-          ]
-        }
       }
     },
     "severity": {
@@ -886,10 +897,6 @@
     },
     "function_entry": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "function"
-      ],
       "properties": {
         "function": {
           "$ref": "#/$defs/function"
@@ -901,17 +908,21 @@
           "$ref": "#/$defs/requirement_ids"
         }
       },
+      "required": [
+        "function"
+      ],
+      "additionalProperties": false,
+      "then": {
+        "required": [
+          "description"
+        ]
+      },
       "if": {
         "properties": {
           "function": {
             "const": "other"
           }
         }
-      },
-      "then": {
-        "required": [
-          "description"
-        ]
       }
     },
     "dimension_state": {
@@ -946,20 +957,13 @@
     "criterion": {
       "description": "A measurable or categorical acceptance criterion with its source",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "property",
-        "operator",
-        "value",
-        "source"
-      ],
       "properties": {
         "id": {
           "$ref": "#/$defs/semantic_id"
         },
         "property": {
-          "description": "what is measured or judged, such as service_temperature or clearance",
-          "$ref": "#/$defs/semantic_id"
+          "$ref": "#/$defs/semantic_id",
+          "description": "what is measured or judged, such as service_temperature or clearance"
         },
         "operator": {
           "description": "> and < are strict: a value equal to the limit does not meet them",
@@ -990,6 +994,13 @@
           "$ref": "#/$defs/text"
         }
       },
+      "required": [
+        "property",
+        "operator",
+        "value",
+        "source"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -1115,8 +1126,6 @@
     "subject": {
       "description": "What a statement, finding or evidence is about: the product, a part (with an optional occurrence, component, operation, feature and region), an interface or an assembly operation. Faces and solids are named semantically, never by persistent index",
       "type": "object",
-      "additionalProperties": false,
-      "minProperties": 1,
       "properties": {
         "product": {
           "const": true
@@ -1149,6 +1158,21 @@
           "$ref": "#/$defs/requirement_ids"
         }
       },
+      "additionalProperties": false,
+      "dependentRequired": {
+        "occurrence": [
+          "PN"
+        ],
+        "component": [
+          "PN"
+        ],
+        "operation": [
+          "PN"
+        ],
+        "region": [
+          "feature"
+        ]
+      },
       "anyOf": [
         {
           "required": [
@@ -1171,28 +1195,11 @@
           ]
         }
       ],
-      "dependentRequired": {
-        "occurrence": [
-          "PN"
-        ],
-        "component": [
-          "PN"
-        ],
-        "operation": [
-          "PN"
-        ],
-        "region": [
-          "feature"
-        ]
-      }
+      "minProperties": 1
     },
     "target": {
       "description": "A feature of a part, by its semantic drawing-feature id, and optionally a region of it or the component it lies on",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "feature"
-      ],
       "properties": {
         "feature": {
           "$ref": "#/$defs/semantic_id"
@@ -1203,17 +1210,14 @@
         "component": {
           "$ref": "#/$defs/semantic_id"
         }
-      }
+      },
+      "required": [
+        "feature"
+      ],
+      "additionalProperties": false
     },
     "load": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "kind",
-        "magnitude",
-        "direction"
-      ],
       "properties": {
         "id": {
           "$ref": "#/$defs/semantic_id"
@@ -1228,17 +1232,17 @@
           ]
         },
         "magnitude": {
-          "description": "a force (N, kN) or torque (N_mm, N_m)",
-          "$ref": "#/$defs/quantity_fact"
+          "$ref": "#/$defs/quantity_fact",
+          "description": "a force (N, kN) or torque (N_mm, N_m)"
         },
         "direction": {
-          "description": "The unit vector [x, y, z] along which the load acts (the force direction, or a torque's axis by the right-hand rule), in the model frame of the part that `application` names, or the assembly frame when `application` names the product, an interface or no part. Its norm must be 1 within 1e-6: validation reports load.direction_not_unit otherwise",
           "type": "array",
           "items": {
             "type": "number"
           },
           "minItems": 3,
-          "maxItems": 3
+          "maxItems": 3,
+          "description": "The unit vector [x, y, z] along which the load acts (the force direction, or a torque's axis by the right-hand rule), in the model frame of the part that `application` names, or the assembly frame when `application` names the product, an interface or no part. Its norm must be 1 within 1e-6: validation reports load.direction_not_unit otherwise"
         },
         "application": {
           "$ref": "#/$defs/subject"
@@ -1258,7 +1262,14 @@
         "note": {
           "$ref": "#/$defs/text"
         }
-      }
+      },
+      "required": [
+        "id",
+        "kind",
+        "magnitude",
+        "direction"
+      ],
+      "additionalProperties": false
     },
     "check_family": {
       "description": "A check family, such as process.fdm.support or interface.fit",
@@ -1278,15 +1289,6 @@
     "obligation": {
       "description": "One expected check, enumerated by manufacturing_intent.required_checks before any producer runs",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "family",
-        "subject",
-        "level",
-        "stage",
-        "basis"
-      ],
       "properties": {
         "id": {
           "$ref": "#/$defs/obligation_id"
@@ -1301,12 +1303,12 @@
           "$ref": "#/$defs/evidence_level"
         },
         "stage": {
-          "description": "the earliest workflow stage at which the obligation is due",
-          "$ref": "#/$defs/stage"
+          "$ref": "#/$defs/stage",
+          "description": "the earliest workflow stage at which the obligation is due"
         },
         "basis": {
-          "description": "why it is required: the route kind, function, interface, requirement or service input it derives from",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "why it is required: the route kind, function, interface, requirement or service input it derives from"
         },
         "requirement": {
           "$ref": "#/$defs/requirement_id"
@@ -1314,15 +1316,19 @@
         "criterion": {
           "$ref": "#/$defs/semantic_id"
         }
-      }
+      },
+      "required": [
+        "id",
+        "family",
+        "subject",
+        "level",
+        "stage",
+        "basis"
+      ],
+      "additionalProperties": false
     },
     "file_hash": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "path",
-        "sha256"
-      ],
       "properties": {
         "path": {
           "$ref": "#/$defs/project_path",
@@ -1331,25 +1337,16 @@
         "sha256": {
           "$ref": "#/$defs/sha256"
         }
-      }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
     },
     "finding": {
       "description": "One immutable producer finding: subject and severity, the measured value with units or why it is unknown, the criterion and its source, the method and evidence, uncertainty, functional consequence, remedy with alternatives, and the recheck it needs",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "code",
-        "subject",
-        "severity",
-        "outcome",
-        "measured",
-        "criterion",
-        "method",
-        "uncertainty",
-        "consequence",
-        "recheck"
-      ],
       "properties": {
         "id": {
           "$ref": "#/$defs/semantic_id"
@@ -1379,15 +1376,15 @@
             },
             {
               "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "text"
-              ],
               "properties": {
                 "text": {
                   "$ref": "#/$defs/text"
                 }
-              }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
             },
             {
               "$ref": "#/$defs/fact_unknown"
@@ -1402,10 +1399,6 @@
         },
         "method": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "name"
-          ],
           "properties": {
             "name": {
               "$ref": "#/$defs/text"
@@ -1415,16 +1408,20 @@
             },
             "evidence": {
               "type": "array",
-              "minItems": 1,
               "items": {
                 "$ref": "#/$defs/file_hash"
-              }
+              },
+              "minItems": 1
             }
-          }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
         },
         "uncertainty": {
-          "description": "the uncertainty or the missing information",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "the uncertainty or the missing information"
         },
         "assumptions": {
           "$ref": "#/$defs/texts"
@@ -1433,22 +1430,16 @@
           "$ref": "#/$defs/text"
         },
         "consequence": {
-          "description": "the functional consequence",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "the functional consequence"
         },
         "remedy": {
           "$ref": "#/$defs/text"
         },
         "alternatives": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "text",
-              "tradeoffs"
-            ],
             "properties": {
               "text": {
                 "$ref": "#/$defs/text"
@@ -1456,31 +1447,32 @@
               "tradeoffs": {
                 "$ref": "#/$defs/text"
               }
-            }
-          }
+            },
+            "required": [
+              "text",
+              "tradeoffs"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
         },
         "recheck": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "families",
-            "earliest_stage"
-          ],
           "properties": {
             "families": {
               "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
               "items": {
                 "$ref": "#/$defs/check_family"
-              }
+              },
+              "minItems": 1,
+              "uniqueItems": true
             },
             "scope": {
               "type": "array",
-              "minItems": 1,
               "items": {
                 "$ref": "#/$defs/subject"
-              }
+              },
+              "minItems": 1
             },
             "inputs": {
               "$ref": "#/$defs/texts"
@@ -1488,17 +1480,36 @@
             "earliest_stage": {
               "$ref": "#/$defs/stage"
             }
-          }
+          },
+          "required": [
+            "families",
+            "earliest_stage"
+          ],
+          "additionalProperties": false
         },
         "decisions": {
           "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/decision"
-          }
+          },
+          "minItems": 1,
+          "uniqueItems": true
         }
       },
+      "required": [
+        "id",
+        "code",
+        "subject",
+        "severity",
+        "outcome",
+        "measured",
+        "criterion",
+        "method",
+        "uncertainty",
+        "consequence",
+        "recheck"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -1524,13 +1535,6 @@
     },
     "obligation_outcome": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "obligation",
-        "outcome",
-        "method",
-        "coverage"
-      ],
       "properties": {
         "obligation": {
           "$ref": "#/$defs/obligation_id"
@@ -1554,13 +1558,20 @@
           "$ref": "#/$defs/text"
         },
         "coverage": {
-          "description": "what the method covered, and what it did not",
-          "$ref": "#/$defs/text"
+          "$ref": "#/$defs/text",
+          "description": "what the method covered, and what it did not"
         },
         "findings": {
           "$ref": "#/$defs/semantic_ids"
         }
       },
+      "required": [
+        "obligation",
+        "outcome",
+        "method",
+        "coverage"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "$ref": "#/$defs/not_assessed_rule"
@@ -1570,28 +1581,6 @@
     "waiver": {
       "description": "An explicit, scoped, justified and approved waiver: its exact subject, criterion and operating envelope, its expiry or the change that ends it, the reason, the consequence and the approving authority and decision. A waived obligation stays waived, never pass, and no waiver overrides a governing safety or regulatory requirement or a forbidden geometry failure",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "decision",
-        "subject",
-        "criterion",
-        "operating_envelope",
-        "reason",
-        "consequence",
-        "authority"
-      ],
-      "anyOf": [
-        {
-          "required": [
-            "valid_until"
-          ]
-        },
-        {
-          "required": [
-            "until_change"
-          ]
-        }
-      ],
       "properties": {
         "decision": {
           "$ref": "#/$defs/decision"
@@ -1623,7 +1612,29 @@
         "authority": {
           "$ref": "#/$defs/text"
         }
-      }
+      },
+      "required": [
+        "decision",
+        "subject",
+        "criterion",
+        "operating_envelope",
+        "reason",
+        "consequence",
+        "authority"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "valid_until"
+          ]
+        },
+        {
+          "required": [
+            "until_change"
+          ]
+        }
+      ]
     },
     "version": {
       "description": "A built version label",
@@ -1639,21 +1650,14 @@
       "description": "A file path relative to the project root, under hw/, with no . or .. segment",
       "type": "string",
       "pattern": "^hw/[^\\\\]+$",
-      "not": {"pattern": "/\\.{1,2}(/|$)"}
+      "not": {
+        "pattern": "/\\.{1,2}(/|$)"
+      }
     },
     "gate_id": {
       "description": "A flow gate id; flow.yaml names the gates",
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
     }
-  },
-  "examples": [
-    {
-      "status": "unknown",
-      "reason": "not recorded yet",
-      "question": "Q-001"
-    },
-    "LMP-0001",
-    "DR-004"
-  ]
+  }
 }

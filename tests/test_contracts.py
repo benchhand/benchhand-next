@@ -1,4 +1,6 @@
-"""Every contract is a valid JSON Schema 2020-12, every $ref resolves, and every example validates."""
+"""Every published contract is a valid JSON Schema 2020-12, every $ref resolves, and every example validates.
+
+The published schemas are generated from contracts/*.tsp into the benchhand_contracts package (ADR-0017)."""
 
 from __future__ import annotations
 
@@ -15,7 +17,9 @@ from jsonschema import Draft202012Validator
 from pydantic import Field, TypeAdapter
 from referencing import Registry, Resource
 
-CONTRACTS = Path(__file__).resolve().parents[1] / "contracts"
+CONTRACTS = (
+    Path(__file__).resolve().parents[1] / "packages/benchhand-contracts/src/benchhand_contracts/schemas"
+)
 SCHEMAS = sorted(CONTRACTS.rglob("*.schema.json"))
 
 

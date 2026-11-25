@@ -37,7 +37,7 @@ def _breaking(args: argparse.Namespace) -> int:
             continue
         failed = True
         print(
-            f"contracts/{report.rel_path}: breaking change since {base} without a major x-version bump "
+            f"{report.rel_path}: breaking change since {base} without a major x-version bump "
             f"({report.old_version} -> {report.new_version}):",
             file=sys.stderr,
         )

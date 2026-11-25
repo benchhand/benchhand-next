@@ -5,10 +5,6 @@
   "description": "What the user's actual machines, operators and suppliers can do, kept apart from design requirements. Nominal resolution, machine specifications and drawing labels are parameters that describe the machine, never its achieved accuracy: achievable dimensional performance comes only from calibrations, each scoped to a material, feature, orientation, setup and tool, with its evidence. The plugin's capability templates carry template: true and hold no machine numbers; a template is never a capability. Parameter names per process kind are manufacturing_intent.CAPABILITY_PARAMETERS",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "profiles"
-  ],
   "properties": {
     "profiles": {
       "type": "array",
@@ -17,2746 +13,10 @@
       }
     }
   },
-  "$defs": {
-    "parameters": {
-      "type": "object",
-      "description": "Parameters by name. A named parameter that has a hard bound is checked in every unit of its dimension; the bounds are in the qty_* and fact_* definitions below and the plausibility band (x-plausible, a warning) beside them. layer_height at most nozzle_diameter compares two facts in possibly different units, so the config loader checks it",
-      "properties": {
-        "nozzle_diameter": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_nozzle_diameter"
-            }
-          ]
-        },
-        "layer_height": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_layer_height"
-            }
-          ]
-        },
-        "hotend_max_temperature": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_hotend_max_temperature"
-            }
-          ]
-        },
-        "bed_max_temperature": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_bed_max_temperature"
-            }
-          ]
-        },
-        "max_speed": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_max_speed"
-            }
-          ]
-        },
-        "travel_x": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_travel_x"
-            }
-          ]
-        },
-        "travel_y": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_travel_y"
-            }
-          ]
-        },
-        "travel_z": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_travel_z"
-            }
-          ]
-        },
-        "spindle_max_speed": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_spindle_max_speed"
-            }
-          ]
-        },
-        "power": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_power"
-            }
-          ]
-        },
-        "pump_pressure": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_pump_pressure"
-            }
-          ]
-        },
-        "press_brake_force": {
-          "allOf": [
-            {
-              "$ref": "common.schema.json#/$defs/fact"
-            },
-            {
-              "$ref": "#/$defs/fact_press_brake_force"
-            }
-          ]
-        }
-      },
-      "propertyNames": {
-        "$ref": "common.schema.json#/$defs/semantic_id"
-      },
-      "additionalProperties": {
-        "$ref": "common.schema.json#/$defs/fact"
-      }
-    },
-    "profile": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "revision",
-        "title",
-        "process",
-        "provider",
-        "parameters",
-        "materials",
-        "calibrations"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "common.schema.json#/$defs/profile_id"
-        },
-        "revision": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "title": {
-          "$ref": "common.schema.json#/$defs/text"
-        },
-        "process": {
-          "$ref": "common.schema.json#/$defs/route_kind"
-        },
-        "provider": {
-          "enum": [
-            "local",
-            "outsourced"
-          ]
-        },
-        "template": {
-          "description": "present only on a plugin template: copy it, record your own values, then remove this flag",
-          "const": true
-        },
-        "guidance": {
-          "$ref": "common.schema.json#/$defs/texts"
-        },
-        "supplier": {
-          "$ref": "common.schema.json#/$defs/text_fact"
-        },
-        "operator": {
-          "$ref": "common.schema.json#/$defs/text_fact"
-        },
-        "machine": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "identity"
-          ],
-          "properties": {
-            "identity": {
-              "description": "make, model and the machine's own identity",
-              "$ref": "common.schema.json#/$defs/text_fact"
-            },
-            "location": {
-              "$ref": "common.schema.json#/$defs/text"
-            }
-          }
-        },
-        "envelope": {
-          "description": "The usable working envelope in the machine frame",
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "x",
-            "y",
-            "z"
-          ],
-          "properties": {
-            "x": {
-              "$ref": "common.schema.json#/$defs/quantity_fact"
-            },
-            "y": {
-              "$ref": "common.schema.json#/$defs/quantity_fact"
-            },
-            "z": {
-              "$ref": "common.schema.json#/$defs/quantity_fact"
-            }
-          }
-        },
-        "materials": {
-          "description": "The exact materials and stock the profile is approved or forbidden for; for laser, waterjet and plasma also its thickness, coating and extraction approval. An unidentified material is never approved",
-          "oneOf": [
-            {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "$ref": "#/$defs/material_approval"
-              }
-            },
-            {
-              "$ref": "common.schema.json#/$defs/fact_open"
-            }
-          ]
-        },
-        "parameters": {
-          "$ref": "#/$defs/parameters"
-        },
-        "tools": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "id",
-              "description",
-              "parameters"
-            ],
-            "properties": {
-              "id": {
-                "$ref": "common.schema.json#/$defs/semantic_id"
-              },
-              "description": {
-                "$ref": "common.schema.json#/$defs/text"
-              },
-              "parameters": {
-                "$ref": "#/$defs/parameters"
-              }
-            }
-          }
-        },
-        "workholding": {
-          "$ref": "common.schema.json#/$defs/text_fact"
-        },
-        "constraints": {
-          "$ref": "common.schema.json#/$defs/texts"
-        },
-        "calibrations": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/calibration"
-          }
-        },
-        "guidelines": {
-          "description": "The manufacturing guideline sets (id@revision) that this profile's machine layer names. They rank above every set that scope selects, and a calibration ranks above them. Sets of the generic, material and nozzle layers resolve by their scope and need no pin. It has no default",
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "$ref": "common.schema.json#/$defs/guideline_ref"
-          }
-        },
-        "source": {
-          "$ref": "common.schema.json#/$defs/source"
-        }
-      },
-      "if": {
-        "required": [
-          "template"
-        ]
-      },
-      "then": {
-        "required": [
-          "guidance"
-        ],
-        "properties": {
-          "calibrations": {
-            "maxItems": 0
-          }
-        }
-      },
-      "else": {
-        "not": {
-          "required": [
-            "guidance"
-          ]
-        }
-      }
-    },
-    "qty_nozzle_diameter": {
-      "description": "Nozzle diameter: above 0 and at most 3 mm",
-      "x-plausible": {
-        "min": 0.2,
-        "max": 1.2,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 3
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 3
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 3
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.003
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.003
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.003
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 3000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 3000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 3000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_nozzle_diameter": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_nozzle_diameter"
-          }
-        }
-      }
-    },
-    "qty_layer_height": {
-      "description": "Layer height: above 0 and at most 3 mm, the largest nozzle; a plausible layer is at most 0.8 of the nozzle diameter",
-      "x-plausible": {
-        "relative_to": "nozzle_diameter",
-        "max": 0.8
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 3
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 3
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 3
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.003
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.003
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.003
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 3000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 3000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 3000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_layer_height": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_layer_height"
-          }
-        }
-      }
-    },
-    "qty_hotend_max_temperature": {
-      "description": "Hotend limit: 0 to 500 deg_C; a plausible limit is at most 350 deg_C, which current printers reach: the Bambu Lab H2D (https://bambulab.com/uk/h2d/tech-specs, Max Nozzle Temperature 350 °C) and the Creality K2 Plus (https://www.creality.com/products/k2-series-3d-printer, Max Nozzle Temperature 350 °C)",
-      "x-plausible": {
-        "max": 350,
-        "units": "deg_C"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "deg_C",
-            "K"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "deg_C"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 500
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 500
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 500
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "K"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 273.15,
-                "maximum": 773.15
-              },
-              "lower": {
-                "minimum": 273.15,
-                "maximum": 773.15
-              },
-              "upper": {
-                "minimum": 273.15,
-                "maximum": 773.15
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_hotend_max_temperature": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_hotend_max_temperature"
-          }
-        }
-      }
-    },
-    "qty_bed_max_temperature": {
-      "description": "Bed limit: 0 to 150 deg_C",
-      "x-plausible": {
-        "max": 120,
-        "units": "deg_C"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "deg_C",
-            "K"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "deg_C"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 150
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 150
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 150
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "K"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 273.15,
-                "maximum": 423.15
-              },
-              "lower": {
-                "minimum": 273.15,
-                "maximum": 423.15
-              },
-              "upper": {
-                "minimum": 273.15,
-                "maximum": 423.15
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_bed_max_temperature": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_bed_max_temperature"
-          }
-        }
-      }
-    },
-    "qty_max_speed": {
-      "description": "Print speed: above 0 and at most 1000 mm/s. It has no separate plausibility band: current printers such as the Bambu Lab H2D reach the hard bound (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s)",
-      "properties": {
-        "units": {
-          "enum": [
-            "mm_s",
-            "m_s"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm_s"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 1000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 1000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 1000
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m_s"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 1
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 1
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 1
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_max_speed": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_max_speed"
-          }
-        }
-      }
-    },
-    "qty_travel_x": {
-      "description": "Axis travel: above 0 and at most 10 m",
-      "x-plausible": {
-        "max": 2000,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_travel_x": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_travel_x"
-          }
-        }
-      }
-    },
-    "qty_travel_y": {
-      "description": "Axis travel: above 0 and at most 10 m",
-      "x-plausible": {
-        "max": 2000,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_travel_y": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_travel_y"
-          }
-        }
-      }
-    },
-    "qty_travel_z": {
-      "description": "Axis travel: above 0 and at most 10 m",
-      "x-plausible": {
-        "max": 2000,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_travel_z": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_travel_z"
-          }
-        }
-      }
-    },
-    "qty_spindle_max_speed": {
-      "description": "Spindle limit: above 0 and at most 200000 rpm",
-      "x-plausible": {
-        "max": 60000,
-        "units": "rpm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "rpm",
-            "Hz"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "rpm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 200000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 200000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 200000
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "Hz"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 3333.333333333333
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 3333.333333333333
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 3333.333333333333
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_spindle_max_speed": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_spindle_max_speed"
-          }
-        }
-      }
-    },
-    "qty_power": {
-      "description": "Laser power: above 0 and at most 10 kW; a desktop laser stays under 300 W",
-      "x-plausible": {
-        "max": 0.3,
-        "units": "kW"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "kW",
-            "W"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "kW"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "W"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_power": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_power"
-          }
-        }
-      }
-    },
-    "qty_pump_pressure": {
-      "description": "Waterjet pump pressure: above 0 and at most 700 MPa",
-      "x-plausible": {
-        "max": 450,
-        "units": "MPa"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "MPa",
-            "GPa",
-            "bar"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "MPa"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 700
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 700
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 700
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "GPa"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.7
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.7
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.7
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "bar"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 7000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 7000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 7000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_pump_pressure": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_pump_pressure"
-          }
-        }
-      }
-    },
-    "qty_press_brake_force": {
-      "description": "Press brake force: above 0 and at most 10000 kN",
-      "properties": {
-        "units": {
-          "enum": [
-            "kN",
-            "N"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "kN"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "N"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 10000000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "fact_press_brake_force": {
-      "if": {
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_press_brake_force"
-          }
-        }
-      }
-    },
-    "qty_bridge_span": {
-      "description": "Calibrated unsupported bridge: 0 to 256 mm, the largest build volume",
-      "x-plausible": {
-        "max": 50,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 256
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 256
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 256
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 0.256
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 0.256
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 0.256
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 256000.00000000003
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 256000.00000000003
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 256000.00000000003
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_overhang_angle": {
-      "description": "Calibrated unsupported overhang, from vertical: 0 to 90 deg",
-      "x-plausible": {
-        "min": 20,
-        "max": 70,
-        "units": "deg"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "deg",
-            "rad"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "deg"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 90
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 90
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 90
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "rad"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0,
-                "maximum": 1.570796326795
-              },
-              "lower": {
-                "minimum": 0,
-                "maximum": 1.570796326795
-              },
-              "upper": {
-                "minimum": 0,
-                "maximum": 1.570796326795
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_min_wall": {
-      "description": "Calibrated thinnest wall: 0.1 to 25 mm",
-      "x-plausible": {
-        "min": 0.4,
-        "max": 3,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0.1,
-                "maximum": 25
-              },
-              "lower": {
-                "minimum": 0.1,
-                "maximum": 25
-              },
-              "upper": {
-                "minimum": 0.1,
-                "maximum": 25
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0.0001,
-                "maximum": 0.025
-              },
-              "lower": {
-                "minimum": 0.0001,
-                "maximum": 0.025
-              },
-              "upper": {
-                "minimum": 0.0001,
-                "maximum": 0.025
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 100,
-                "maximum": 25000.000000000004
-              },
-              "lower": {
-                "minimum": 100,
-                "maximum": 25000.000000000004
-              },
-              "upper": {
-                "minimum": 100,
-                "maximum": 25000.000000000004
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_min_feature": {
-      "description": "Calibrated smallest reliable pin or boss diameter: 0.2 to 20 mm",
-      "x-plausible": {
-        "min": 0.4,
-        "max": 5,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0.2,
-                "maximum": 20
-              },
-              "lower": {
-                "minimum": 0.2,
-                "maximum": 20
-              },
-              "upper": {
-                "minimum": 0.2,
-                "maximum": 20
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0.0002,
-                "maximum": 0.02
-              },
-              "lower": {
-                "minimum": 0.0002,
-                "maximum": 0.02
-              },
-              "upper": {
-                "minimum": 0.0002,
-                "maximum": 0.02
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 200,
-                "maximum": 20000
-              },
-              "lower": {
-                "minimum": 200,
-                "maximum": 20000
-              },
-              "upper": {
-                "minimum": 200,
-                "maximum": 20000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_min_hole": {
-      "description": "Calibrated smallest reliable cut hole diameter: 0.1 to 25 mm. The 0.5 to 10 mm plausibility band is a heuristic with no source table and only warns; the sourced guideline value is 2.0 mm (Protolabs, S3 in the FDM survey)",
-      "x-plausible": {
-        "min": 0.5,
-        "max": 10,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0.1,
-                "maximum": 25
-              },
-              "lower": {
-                "minimum": 0.1,
-                "maximum": 25
-              },
-              "upper": {
-                "minimum": 0.1,
-                "maximum": 25
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 0.0001,
-                "maximum": 0.025
-              },
-              "lower": {
-                "minimum": 0.0001,
-                "maximum": 0.025
-              },
-              "upper": {
-                "minimum": 0.0001,
-                "maximum": 0.025
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": 100,
-                "maximum": 25000
-              },
-              "lower": {
-                "minimum": 100,
-                "maximum": 25000
-              },
-              "upper": {
-                "minimum": 100,
-                "maximum": 25000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_deviation": {
-      "description": "Calibrated as-made minus nominal deviation: -2 to 2 mm",
-      "x-plausible": {
-        "min": -0.5,
-        "max": 0.5,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": -2,
-                "maximum": 2
-              },
-              "lower": {
-                "minimum": -2,
-                "maximum": 2
-              },
-              "upper": {
-                "minimum": -2,
-                "maximum": 2
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": -0.002,
-                "maximum": 0.002
-              },
-              "lower": {
-                "minimum": -0.002,
-                "maximum": 0.002
-              },
-              "upper": {
-                "minimum": -0.002,
-                "maximum": 0.002
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "minimum": -2000,
-                "maximum": 2000
-              },
-              "lower": {
-                "minimum": -2000,
-                "maximum": 2000
-              },
-              "upper": {
-                "minimum": -2000,
-                "maximum": 2000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_clearance_per_side": {
-      "description": "Sliding clearance per side between mating parts: above 0 to 5 mm. A fact of the machine and material, so it has no default. The 0.1 to 0.5 mm plausibility band is a heuristic with no source table and only warns; the sourced value is 0.3 mm per side (S4 in the FDM survey). A press fit is not a negative clearance: use qty_interference_per_side",
-      "x-plausible": {
-        "min": 0.1,
-        "max": 0.5,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 5
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 5
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 5
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.005
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.005
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.005
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 5000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 5000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 5000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_interference_per_side": {
-      "description": "Press-fit interference per side, shaft larger than hole: above 0 to 1 mm, never negative. A fact of the machine and material, so it has no default. The 0.05 to 0.3 mm plausibility band is a heuristic with no source table and only warns; the intended press-fit range is 0.10 to 0.15 mm per side",
-      "x-plausible": {
-        "min": 0.05,
-        "max": 0.3,
-        "units": "mm"
-      },
-      "properties": {
-        "units": {
-          "enum": [
-            "mm",
-            "m",
-            "um"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 1
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 1
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 1
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "m"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.001
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.001
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 0.001
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "um"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0,
-                "maximum": 1000
-              },
-              "lower": {
-                "exclusiveMinimum": 0,
-                "maximum": 1000
-              },
-              "upper": {
-                "exclusiveMinimum": 0,
-                "maximum": 1000
-              }
-            }
-          }
-        }
-      ]
-    },
-    "qty_min_bed_contact_area": {
-      "description": "Calibrated smallest reliable first-layer contact area: above 0 mm2. A fact of the machine and material, so it has no default. The plausibility band waits for more calibrations (#141)",
-      "properties": {
-        "units": {
-          "enum": [
-            "mm2"
-          ]
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "units"
-            ],
-            "properties": {
-              "units": {
-                "const": "mm2"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "value": {
-                "exclusiveMinimum": 0
-              },
-              "lower": {
-                "exclusiveMinimum": 0
-              },
-              "upper": {
-                "exclusiveMinimum": 0
-              }
-            }
-          }
-        }
-      ]
-    },
-    "material_approval": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "material",
-        "status",
-        "source"
-      ],
-      "properties": {
-        "material": {
-          "description": "a material profile id",
-          "$ref": "common.schema.json#/$defs/profile_id"
-        },
-        "status": {
-          "enum": [
-            "approved",
-            "forbidden"
-          ]
-        },
-        "thickness": {
-          "$ref": "common.schema.json#/$defs/quantity_fact"
-        },
-        "coating": {
-          "$ref": "common.schema.json#/$defs/text_fact"
-        },
-        "extraction": {
-          "$ref": "common.schema.json#/$defs/text_fact"
-        },
-        "operations": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "enum": [
-              "cut",
-              "score",
-              "engrave",
-              "machine",
-              "print",
-              "form",
-              "join",
-              "other"
-            ]
-          }
-        },
-        "reason": {
-          "$ref": "common.schema.json#/$defs/text"
-        },
-        "source": {
-          "$ref": "common.schema.json#/$defs/source"
-        }
-      },
-      "if": {
-        "properties": {
-          "status": {
-            "const": "forbidden"
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "reason"
-        ]
-      }
-    },
-    "calibration": {
-      "description": "One demonstrated capability: the characteristic measured, its exact scope and the measured limits with their uncertainty and evidence",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "characteristic",
-        "scope",
-        "result",
-        "source",
-        "date"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "common.schema.json#/$defs/semantic_id"
-        },
-        "characteristic": {
-          "description": "such as hole_diameter_deviation, min_wall, kerf, flatness or bridge_span",
-          "$ref": "common.schema.json#/$defs/semantic_id"
-        },
-        "scope": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "material"
-          ],
-          "properties": {
-            "material": {
-              "description": "a material profile id",
-              "$ref": "common.schema.json#/$defs/profile_id"
-            },
-            "condition": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "feature": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "size": {
-              "$ref": "common.schema.json#/$defs/quantity"
-            },
-            "thickness": {
-              "$ref": "common.schema.json#/$defs/quantity"
-            },
-            "orientation": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "setup": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "tool": {
-              "$ref": "common.schema.json#/$defs/semantic_id"
-            },
-            "finish": {
-              "$ref": "common.schema.json#/$defs/text"
-            }
-          }
-        },
-        "result": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "limits",
-            "samples"
-          ],
-          "properties": {
-            "limits": {
-              "description": "the measured range of the characteristic",
-              "$ref": "common.schema.json#/$defs/quantity"
-            },
-            "distribution": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "uncertainty": {
-              "description": "the measurement uncertainty",
-              "$ref": "common.schema.json#/$defs/quantity"
-            },
-            "samples": {
-              "type": "integer",
-              "minimum": 1,
-              "x-plausible": {
-                "min": 3
-              }
-            }
-          }
-        },
-        "source": {
-          "$ref": "common.schema.json#/$defs/source"
-        },
-        "date": {
-          "$ref": "common.schema.json#/$defs/date"
-        },
-        "valid_until": {
-          "$ref": "common.schema.json#/$defs/date"
-        },
-        "decision": {
-          "$ref": "common.schema.json#/$defs/decision"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "const": "bridge_span"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_bridge_span"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "const": "overhang_angle"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_overhang_angle"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "const": "min_wall"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_min_wall"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "const": "min_feature"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_min_feature"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "const": "min_hole"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_min_hole"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "const": "min_bed_contact_area"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_min_bed_contact_area"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "required": [
-              "characteristic"
-            ],
-            "properties": {
-              "characteristic": {
-                "enum": [
-                  "hole_diameter_deviation",
-                  "dimensional_deviation",
-                  "profile_deviation"
-                ]
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "result": {
-                "properties": {
-                  "limits": {
-                    "$ref": "#/$defs/qty_deviation"
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]
-    }
-  },
+  "required": [
+    "profiles"
+  ],
+  "additionalProperties": false,
   "examples": [
     {
       "profiles": [
@@ -2970,5 +230,2745 @@
         }
       ]
     }
-  ]
+  ],
+  "$defs": {
+    "parameters": {
+      "description": "Parameters by name. A named parameter that has a hard bound is checked in every unit of its dimension; the bounds are in the qty_* and fact_* definitions below and the plausibility band (x-plausible, a warning) beside them. layer_height at most nozzle_diameter compares two facts in possibly different units, so the config loader checks it",
+      "type": "object",
+      "properties": {
+        "nozzle_diameter": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_nozzle_diameter"
+            }
+          ]
+        },
+        "layer_height": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_layer_height"
+            }
+          ]
+        },
+        "hotend_max_temperature": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_hotend_max_temperature"
+            }
+          ]
+        },
+        "bed_max_temperature": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_bed_max_temperature"
+            }
+          ]
+        },
+        "max_speed": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_max_speed"
+            }
+          ]
+        },
+        "travel_x": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_travel_x"
+            }
+          ]
+        },
+        "travel_y": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_travel_y"
+            }
+          ]
+        },
+        "travel_z": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_travel_z"
+            }
+          ]
+        },
+        "spindle_max_speed": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_spindle_max_speed"
+            }
+          ]
+        },
+        "power": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_power"
+            }
+          ]
+        },
+        "pump_pressure": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_pump_pressure"
+            }
+          ]
+        },
+        "press_brake_force": {
+          "allOf": [
+            {
+              "$ref": "common.schema.json#/$defs/fact"
+            },
+            {
+              "$ref": "#/$defs/fact_press_brake_force"
+            }
+          ]
+        }
+      },
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/fact"
+      },
+      "propertyNames": {
+        "$ref": "common.schema.json#/$defs/semantic_id"
+      }
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/profile_id"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "$ref": "common.schema.json#/$defs/text"
+        },
+        "process": {
+          "$ref": "common.schema.json#/$defs/route_kind"
+        },
+        "provider": {
+          "enum": [
+            "local",
+            "outsourced"
+          ]
+        },
+        "template": {
+          "const": true,
+          "description": "present only on a plugin template: copy it, record your own values, then remove this flag"
+        },
+        "guidance": {
+          "$ref": "common.schema.json#/$defs/texts"
+        },
+        "supplier": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "operator": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "machine": {
+          "type": "object",
+          "properties": {
+            "identity": {
+              "$ref": "common.schema.json#/$defs/text_fact",
+              "description": "make, model and the machine's own identity"
+            },
+            "location": {
+              "$ref": "common.schema.json#/$defs/text"
+            }
+          },
+          "required": [
+            "identity"
+          ],
+          "additionalProperties": false
+        },
+        "envelope": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "$ref": "common.schema.json#/$defs/quantity_fact"
+            },
+            "y": {
+              "$ref": "common.schema.json#/$defs/quantity_fact"
+            },
+            "z": {
+              "$ref": "common.schema.json#/$defs/quantity_fact"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "z"
+          ],
+          "additionalProperties": false,
+          "description": "The usable working envelope in the machine frame"
+        },
+        "materials": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/material_approval"
+              },
+              "minItems": 1
+            },
+            {
+              "$ref": "common.schema.json#/$defs/fact_open"
+            }
+          ],
+          "description": "The exact materials and stock the profile is approved or forbidden for; for laser, waterjet and plasma also its thickness, coating and extraction approval. An unidentified material is never approved"
+        },
+        "parameters": {
+          "$ref": "#/$defs/parameters"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/semantic_id"
+              },
+              "description": {
+                "$ref": "common.schema.json#/$defs/text"
+              },
+              "parameters": {
+                "$ref": "#/$defs/parameters"
+              }
+            },
+            "required": [
+              "id",
+              "description",
+              "parameters"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "workholding": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "constraints": {
+          "$ref": "common.schema.json#/$defs/texts"
+        },
+        "calibrations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/calibration"
+          }
+        },
+        "guidelines": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/guideline_ref"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "The manufacturing guideline sets (id@revision) that this profile's machine layer names. They rank above every set that scope selects, and a calibration ranks above them. Sets of the generic, material and nozzle layers resolve by their scope and need no pin. It has no default"
+        },
+        "source": {
+          "$ref": "common.schema.json#/$defs/source"
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "title",
+        "process",
+        "provider",
+        "materials",
+        "parameters",
+        "calibrations"
+      ],
+      "additionalProperties": false,
+      "else": {
+        "not": {
+          "required": [
+            "guidance"
+          ]
+        }
+      },
+      "then": {
+        "required": [
+          "guidance"
+        ],
+        "properties": {
+          "calibrations": {
+            "maxItems": 0
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "template"
+        ]
+      }
+    },
+    "qty_nozzle_diameter": {
+      "description": "Nozzle diameter: above 0 and at most 3 mm",
+      "x-plausible": {
+        "min": 0.2,
+        "max": 1.2,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.003
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.003
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.003
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 3000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 3000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 3000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "fact_nozzle_diameter": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_nozzle_diameter"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_layer_height": {
+      "description": "Layer height: above 0 and at most 3 mm, the largest nozzle; a plausible layer is at most 0.8 of the nozzle diameter",
+      "x-plausible": {
+        "relative_to": "nozzle_diameter",
+        "max": 0.8
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.003
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.003
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.003
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 3000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 3000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 3000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "fact_layer_height": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_layer_height"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_hotend_max_temperature": {
+      "description": "Hotend limit: 0 to 500 deg_C; a plausible limit is at most 350 deg_C, which current printers reach: the Bambu Lab H2D (https://bambulab.com/uk/h2d/tech-specs, Max Nozzle Temperature 350 °C) and the Creality K2 Plus (https://www.creality.com/products/k2-series-3d-printer, Max Nozzle Temperature 350 °C)",
+      "x-plausible": {
+        "max": 350,
+        "units": "deg_C"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "deg_C"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 500
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 500
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 500
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "K"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 273.15,
+                "maximum": 773.15
+              },
+              "lower": {
+                "minimum": 273.15,
+                "maximum": 773.15
+              },
+              "upper": {
+                "minimum": 273.15,
+                "maximum": 773.15
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "deg_C",
+            "K"
+          ]
+        }
+      }
+    },
+    "fact_hotend_max_temperature": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_hotend_max_temperature"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_bed_max_temperature": {
+      "description": "Bed limit: 0 to 150 deg_C",
+      "x-plausible": {
+        "max": 120,
+        "units": "deg_C"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "deg_C"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 150
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 150
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 150
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "K"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 273.15,
+                "maximum": 423.15
+              },
+              "lower": {
+                "minimum": 273.15,
+                "maximum": 423.15
+              },
+              "upper": {
+                "minimum": 273.15,
+                "maximum": 423.15
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "deg_C",
+            "K"
+          ]
+        }
+      }
+    },
+    "fact_bed_max_temperature": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_bed_max_temperature"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_max_speed": {
+      "description": "Print speed: above 0 and at most 1000 mm/s. It has no separate plausibility band: current printers such as the Bambu Lab H2D reach the hard bound (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s)",
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm_s"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m_s"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm_s",
+            "m_s"
+          ]
+        }
+      }
+    },
+    "fact_max_speed": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_max_speed"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_travel_x": {
+      "description": "Axis travel: above 0 and at most 10 m",
+      "x-plausible": {
+        "max": 2000,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "fact_travel_x": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_travel_x"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_travel_y": {
+      "description": "Axis travel: above 0 and at most 10 m",
+      "x-plausible": {
+        "max": 2000,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "fact_travel_y": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_travel_y"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_travel_z": {
+      "description": "Axis travel: above 0 and at most 10 m",
+      "x-plausible": {
+        "max": 2000,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "fact_travel_z": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_travel_z"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_spindle_max_speed": {
+      "description": "Spindle limit: above 0 and at most 200000 rpm",
+      "x-plausible": {
+        "max": 60000,
+        "units": "rpm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "rpm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 200000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 200000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 200000
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "Hz"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 3333.333333333333
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 3333.333333333333
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 3333.333333333333
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "rpm",
+            "Hz"
+          ]
+        }
+      }
+    },
+    "fact_spindle_max_speed": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_spindle_max_speed"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_power": {
+      "description": "Laser power: above 0 and at most 10 kW; a desktop laser stays under 300 W",
+      "x-plausible": {
+        "max": 0.3,
+        "units": "kW"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "kW"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "W"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "kW",
+            "W"
+          ]
+        }
+      }
+    },
+    "fact_power": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_power"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_pump_pressure": {
+      "description": "Waterjet pump pressure: above 0 and at most 700 MPa",
+      "x-plausible": {
+        "max": 450,
+        "units": "MPa"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "MPa"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 700
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 700
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 700
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "GPa"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.7
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.7
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.7
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "bar"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 7000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 7000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 7000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "MPa",
+            "GPa",
+            "bar"
+          ]
+        }
+      }
+    },
+    "fact_pump_pressure": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_pump_pressure"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_press_brake_force": {
+      "description": "Press brake force: above 0 and at most 10000 kN",
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "kN"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "N"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 10000000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "kN",
+            "N"
+          ]
+        }
+      }
+    },
+    "fact_press_brake_force": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_press_brake_force"
+          }
+        }
+      },
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "known"
+          }
+        }
+      }
+    },
+    "qty_bridge_span": {
+      "description": "Calibrated unsupported bridge: 0 to 256 mm, the largest build volume",
+      "x-plausible": {
+        "max": 50,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 256
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 256
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 256
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 0.256
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 0.256
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 0.256
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 256000.00000000003
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 256000.00000000003
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 256000.00000000003
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_overhang_angle": {
+      "description": "Calibrated unsupported overhang, from vertical: 0 to 90 deg",
+      "x-plausible": {
+        "min": 20,
+        "max": 70,
+        "units": "deg"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "deg"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 90
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 90
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 90
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "rad"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0,
+                "maximum": 1.570796326795
+              },
+              "lower": {
+                "minimum": 0,
+                "maximum": 1.570796326795
+              },
+              "upper": {
+                "minimum": 0,
+                "maximum": 1.570796326795
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "deg",
+            "rad"
+          ]
+        }
+      }
+    },
+    "qty_min_wall": {
+      "description": "Calibrated thinnest wall: 0.1 to 25 mm",
+      "x-plausible": {
+        "min": 0.4,
+        "max": 3,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0.1,
+                "maximum": 25
+              },
+              "lower": {
+                "minimum": 0.1,
+                "maximum": 25
+              },
+              "upper": {
+                "minimum": 0.1,
+                "maximum": 25
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0.0001,
+                "maximum": 0.025
+              },
+              "lower": {
+                "minimum": 0.0001,
+                "maximum": 0.025
+              },
+              "upper": {
+                "minimum": 0.0001,
+                "maximum": 0.025
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 100,
+                "maximum": 25000.000000000004
+              },
+              "lower": {
+                "minimum": 100,
+                "maximum": 25000.000000000004
+              },
+              "upper": {
+                "minimum": 100,
+                "maximum": 25000.000000000004
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_min_feature": {
+      "description": "Calibrated smallest reliable pin or boss diameter: 0.2 to 20 mm",
+      "x-plausible": {
+        "min": 0.4,
+        "max": 5,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0.2,
+                "maximum": 20
+              },
+              "lower": {
+                "minimum": 0.2,
+                "maximum": 20
+              },
+              "upper": {
+                "minimum": 0.2,
+                "maximum": 20
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0.0002,
+                "maximum": 0.02
+              },
+              "lower": {
+                "minimum": 0.0002,
+                "maximum": 0.02
+              },
+              "upper": {
+                "minimum": 0.0002,
+                "maximum": 0.02
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 200,
+                "maximum": 20000
+              },
+              "lower": {
+                "minimum": 200,
+                "maximum": 20000
+              },
+              "upper": {
+                "minimum": 200,
+                "maximum": 20000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_min_hole": {
+      "description": "Calibrated smallest reliable cut hole diameter: 0.1 to 25 mm. The 0.5 to 10 mm plausibility band is a heuristic with no source table and only warns; the sourced guideline value is 2.0 mm (Protolabs, S3 in the FDM survey)",
+      "x-plausible": {
+        "min": 0.5,
+        "max": 10,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0.1,
+                "maximum": 25
+              },
+              "lower": {
+                "minimum": 0.1,
+                "maximum": 25
+              },
+              "upper": {
+                "minimum": 0.1,
+                "maximum": 25
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 0.0001,
+                "maximum": 0.025
+              },
+              "lower": {
+                "minimum": 0.0001,
+                "maximum": 0.025
+              },
+              "upper": {
+                "minimum": 0.0001,
+                "maximum": 0.025
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": 100,
+                "maximum": 25000
+              },
+              "lower": {
+                "minimum": 100,
+                "maximum": 25000
+              },
+              "upper": {
+                "minimum": 100,
+                "maximum": 25000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_deviation": {
+      "description": "Calibrated as-made minus nominal deviation: -2 to 2 mm",
+      "x-plausible": {
+        "min": -0.5,
+        "max": 0.5,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": -2,
+                "maximum": 2
+              },
+              "lower": {
+                "minimum": -2,
+                "maximum": 2
+              },
+              "upper": {
+                "minimum": -2,
+                "maximum": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": -0.002,
+                "maximum": 0.002
+              },
+              "lower": {
+                "minimum": -0.002,
+                "maximum": 0.002
+              },
+              "upper": {
+                "minimum": -0.002,
+                "maximum": 0.002
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "minimum": -2000,
+                "maximum": 2000
+              },
+              "lower": {
+                "minimum": -2000,
+                "maximum": 2000
+              },
+              "upper": {
+                "minimum": -2000,
+                "maximum": 2000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_clearance_per_side": {
+      "description": "Sliding clearance per side between mating parts: above 0 to 5 mm. A fact of the machine and material, so it has no default. The 0.1 to 0.5 mm plausibility band is a heuristic with no source table and only warns; the sourced value is 0.3 mm per side (S4 in the FDM survey). A press fit is not a negative clearance: use qty_interference_per_side",
+      "x-plausible": {
+        "min": 0.1,
+        "max": 0.5,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 5
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 5
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 5
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.005
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.005
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.005
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 5000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 5000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 5000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_interference_per_side": {
+      "description": "Press-fit interference per side, shaft larger than hole: above 0 to 1 mm, never negative. A fact of the machine and material, so it has no default. The 0.05 to 0.3 mm plausibility band is a heuristic with no source table and only warns; the intended press-fit range is 0.10 to 0.15 mm per side",
+      "x-plausible": {
+        "min": 0.05,
+        "max": 0.3,
+        "units": "mm"
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "m"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.001
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.001
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 0.001
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "um"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "lower": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              },
+              "upper": {
+                "exclusiveMinimum": 0,
+                "maximum": 1000
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm",
+            "m",
+            "um"
+          ]
+        }
+      }
+    },
+    "qty_min_bed_contact_area": {
+      "description": "Calibrated smallest reliable first-layer contact area: above 0 mm2. A fact of the machine and material, so it has no default. The plausibility band waits for more calibrations (#141)",
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "units"
+            ],
+            "properties": {
+              "units": {
+                "const": "mm2"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "exclusiveMinimum": 0
+              },
+              "lower": {
+                "exclusiveMinimum": 0
+              },
+              "upper": {
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "units": {
+          "enum": [
+            "mm2"
+          ]
+        }
+      }
+    },
+    "material_approval": {
+      "type": "object",
+      "properties": {
+        "material": {
+          "$ref": "common.schema.json#/$defs/profile_id",
+          "description": "a material profile id"
+        },
+        "status": {
+          "enum": [
+            "approved",
+            "forbidden"
+          ]
+        },
+        "thickness": {
+          "$ref": "common.schema.json#/$defs/quantity_fact"
+        },
+        "coating": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "extraction": {
+          "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "cut",
+              "score",
+              "engrave",
+              "machine",
+              "print",
+              "form",
+              "join",
+              "other"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "reason": {
+          "$ref": "common.schema.json#/$defs/text"
+        },
+        "source": {
+          "$ref": "common.schema.json#/$defs/source"
+        }
+      },
+      "required": [
+        "material",
+        "status",
+        "source"
+      ],
+      "additionalProperties": false,
+      "then": {
+        "required": [
+          "reason"
+        ]
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "forbidden"
+          }
+        }
+      }
+    },
+    "calibration": {
+      "description": "One demonstrated capability: the characteristic measured, its exact scope and the measured limits with their uncertainty and evidence",
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/semantic_id"
+        },
+        "characteristic": {
+          "$ref": "common.schema.json#/$defs/semantic_id",
+          "description": "such as hole_diameter_deviation, min_wall, kerf, flatness or bridge_span"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "material": {
+              "$ref": "common.schema.json#/$defs/profile_id",
+              "description": "a material profile id"
+            },
+            "condition": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "feature": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "size": {
+              "$ref": "common.schema.json#/$defs/quantity"
+            },
+            "thickness": {
+              "$ref": "common.schema.json#/$defs/quantity"
+            },
+            "orientation": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "setup": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "tool": {
+              "$ref": "common.schema.json#/$defs/semantic_id"
+            },
+            "finish": {
+              "$ref": "common.schema.json#/$defs/text"
+            }
+          },
+          "required": [
+            "material"
+          ],
+          "additionalProperties": false
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "limits": {
+              "$ref": "common.schema.json#/$defs/quantity",
+              "description": "the measured range of the characteristic"
+            },
+            "distribution": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "uncertainty": {
+              "$ref": "common.schema.json#/$defs/quantity",
+              "description": "the measurement uncertainty"
+            },
+            "samples": {
+              "type": "integer",
+              "minimum": 1,
+              "x-plausible": {
+                "min": 3
+              }
+            }
+          },
+          "required": [
+            "limits",
+            "samples"
+          ],
+          "additionalProperties": false
+        },
+        "source": {
+          "$ref": "common.schema.json#/$defs/source"
+        },
+        "date": {
+          "$ref": "common.schema.json#/$defs/date"
+        },
+        "valid_until": {
+          "$ref": "common.schema.json#/$defs/date"
+        },
+        "decision": {
+          "$ref": "common.schema.json#/$defs/decision"
+        }
+      },
+      "required": [
+        "id",
+        "characteristic",
+        "scope",
+        "result",
+        "source",
+        "date"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "const": "bridge_span"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_bridge_span"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "const": "overhang_angle"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_overhang_angle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "const": "min_wall"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_min_wall"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "const": "min_feature"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_min_feature"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "const": "min_hole"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_min_hole"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "const": "min_bed_contact_area"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_min_bed_contact_area"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "characteristic"
+            ],
+            "properties": {
+              "characteristic": {
+                "enum": [
+                  "hole_diameter_deviation",
+                  "dimensional_deviation",
+                  "profile_deviation"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "result": {
+                "properties": {
+                  "limits": {
+                    "$ref": "#/$defs/qty_deviation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
 }

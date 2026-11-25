@@ -1,0 +1,1652 @@
+import "@typespec/json-schema";
+
+using TypeSpec.JsonSchema;
+
+@jsonSchema
+@baseUri("https://benchhand.github.io/benchhand/contracts/record/manufacturing-capabilities/")
+namespace Records.ManufacturingCapabilities;
+
+/** What the user's actual machines, operators and suppliers can do, kept apart from design requirements. Nominal resolution, machine specifications and drawing labels are parameters that describe the machine, never its achieved accuracy: achievable dimensional performance comes only from calibrations, each scoped to a material, feature, orientation, setup and tool, with its evidence. The plugin's capability templates carry template: true and hold no machine numbers; a template is never a capability. Parameter names per process kind are manufacturing_intent.CAPABILITY_PARAMETERS */
+@summary("benchhand manufacturing capability profiles (hw/manufacturing/capabilities.yaml)")
+@id("https://benchhand.github.io/benchhand/contracts/record/manufacturing-capabilities.schema.json")
+@extension("x-version", "1.0.0")
+model ManufacturingCapabilities {
+  profiles: manufacturing_capabilities_profile[];
+}
+
+/** Parameters by name. A named parameter that has a hard bound is checked in every unit of its dimension; the bounds are in the qty_* and fact_* definitions below and the plausibility band (x-plausible, a warning) beside them. layer_height at most nozzle_diameter compares two facts in possibly different units, so the config loader checks it */
+@extension("propertyNames", #{ $ref: "common.schema.json#/$defs/semantic_id" })
+model parameters {
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_nozzle_diameter" }
+    ]
+  )
+  nozzle_diameter?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_layer_height" }
+    ]
+  )
+  layer_height?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_hotend_max_temperature" }
+    ]
+  )
+  hotend_max_temperature?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_bed_max_temperature" }
+    ]
+  )
+  bed_max_temperature?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_max_speed" }
+    ]
+  )
+  max_speed?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_travel_x" }
+    ]
+  )
+  travel_x?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_travel_y" }
+    ]
+  )
+  travel_y?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_travel_z" }
+    ]
+  )
+  travel_z?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_spindle_max_speed" }
+    ]
+  )
+  spindle_max_speed?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_power" }
+    ]
+  )
+  power?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_pump_pressure" }
+    ]
+  )
+  pump_pressure?: unknown;
+
+  @extension(
+    "allOf",
+    #[
+      #{ $ref: "common.schema.json#/$defs/fact" },
+      #{ $ref: "#/$defs/fact_press_brake_force" }
+    ]
+  )
+  press_brake_force?: unknown;
+
+  ...Record<Common.fact>;
+}
+
+@id("https://benchhand.github.io/benchhand/contracts/record/manufacturing-capabilities/profile.json")
+@extension("if", #{ required: #["template"] })
+@extension(
+  "then",
+  #{ required: #["guidance"], properties: #{ calibrations: #{ maxItems: 0 } } }
+)
+@extension("else", #{ not: #{ required: #["guidance"] } })
+model manufacturing_capabilities_profile {
+  id: Common.profile_id;
+
+  @minValue(1)
+  revision: integer;
+
+  title: Common.text;
+  process: Common.route_kind;
+  provider: "local" | "outsourced";
+
+  /** present only on a plugin template: copy it, record your own values, then remove this flag */
+  template?: true;
+
+  guidance?: Common.texts;
+  supplier?: Common.text_fact;
+  operator?: Common.text_fact;
+  machine?: {
+    /** make, model and the machine's own identity */
+    identity: Common.text_fact;
+
+    location?: Common.text;
+  };
+
+  /** The usable working envelope in the machine frame */
+  envelope?: {
+    x: Common.quantity_fact;
+    y: Common.quantity_fact;
+    z: Common.quantity_fact;
+  };
+
+  /** The exact materials and stock the profile is approved or forbidden for; for laser, waterjet and plasma also its thickness, coating and extraction approval. An unidentified material is never approved */
+  @oneOf
+  materials:
+    | ManufacturingCapabilitiesManufacturingCapabilitiesProfileMaterials0
+    | Common.fact_open;
+
+  parameters: parameters;
+
+  @minItems(1)
+  tools?: {
+    id: Common.semantic_id;
+    description: Common.text;
+    parameters: parameters;
+  }[];
+
+  workholding?: Common.text_fact;
+  constraints?: Common.texts;
+  calibrations: calibration[];
+
+  @doc("The manufacturing guideline sets (id@revision) that this profile's machine layer names. They rank above every set that scope selects, and a calibration ranks above them. Sets of the generic, material and nozzle layers resolve by their scope and need no pin. It has no default")
+  @minItems(1)
+  @uniqueItems
+  guidelines?: Common.guideline_ref[];
+
+  source?: Common.source;
+}
+
+@extension("x-inline", true)
+@minItems(1)
+model ManufacturingCapabilitiesManufacturingCapabilitiesProfileMaterials0
+  is material_approval[];
+
+/** Nozzle diameter: above 0 and at most 3 mm */
+@extension("x-plausible", #{ min: 0.2, max: 1.2, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 3 },
+          lower: #{ exclusiveMinimum: 0, maximum: 3 },
+          upper: #{ exclusiveMinimum: 0, maximum: 3 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 0.003 },
+          lower: #{ exclusiveMinimum: 0, maximum: 0.003 },
+          upper: #{ exclusiveMinimum: 0, maximum: 0.003 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 3000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 3000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 3000 },
+        },
+      },
+    }
+  ]
+)
+union qty_nozzle_diameter {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_nozzle_diameter" } } }
+)
+union fact_nozzle_diameter {
+  unknown,
+}
+
+/** Layer height: above 0 and at most 3 mm, the largest nozzle; a plausible layer is at most 0.8 of the nozzle diameter */
+@extension("x-plausible", #{ relative_to: "nozzle_diameter", max: 0.8 })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 3 },
+          lower: #{ exclusiveMinimum: 0, maximum: 3 },
+          upper: #{ exclusiveMinimum: 0, maximum: 3 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 0.003 },
+          lower: #{ exclusiveMinimum: 0, maximum: 0.003 },
+          upper: #{ exclusiveMinimum: 0, maximum: 0.003 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 3000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 3000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 3000 },
+        },
+      },
+    }
+  ]
+)
+union qty_layer_height {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_layer_height" } } }
+)
+union fact_layer_height {
+  unknown,
+}
+
+/** Hotend limit: 0 to 500 deg_C; a plausible limit is at most 350 deg_C, which current printers reach: the Bambu Lab H2D (https://bambulab.com/uk/h2d/tech-specs, Max Nozzle Temperature 350 °C) and the Creality K2 Plus (https://www.creality.com/products/k2-series-3d-printer, Max Nozzle Temperature 350 °C) */
+@extension("x-plausible", #{ max: 350, units: "deg_C" })
+@extension("properties", #{ units: #{ `enum`: #["deg_C", "K"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "deg_C" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 500 },
+          lower: #{ minimum: 0, maximum: 500 },
+          upper: #{ minimum: 0, maximum: 500 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "K" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 273.15, maximum: 773.15 },
+          lower: #{ minimum: 273.15, maximum: 773.15 },
+          upper: #{ minimum: 273.15, maximum: 773.15 },
+        },
+      },
+    }
+  ]
+)
+union qty_hotend_max_temperature {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_hotend_max_temperature" } } }
+)
+union fact_hotend_max_temperature {
+  unknown,
+}
+
+/** Bed limit: 0 to 150 deg_C */
+@extension("x-plausible", #{ max: 120, units: "deg_C" })
+@extension("properties", #{ units: #{ `enum`: #["deg_C", "K"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "deg_C" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 150 },
+          lower: #{ minimum: 0, maximum: 150 },
+          upper: #{ minimum: 0, maximum: 150 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "K" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 273.15, maximum: 423.15 },
+          lower: #{ minimum: 273.15, maximum: 423.15 },
+          upper: #{ minimum: 273.15, maximum: 423.15 },
+        },
+      },
+    }
+  ]
+)
+union qty_bed_max_temperature {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_bed_max_temperature" } } }
+)
+union fact_bed_max_temperature {
+  unknown,
+}
+
+/** Print speed: above 0 and at most 1000 mm/s. It has no separate plausibility band: current printers such as the Bambu Lab H2D reach the hard bound (https://bambulab.com/uk/h2d/tech-specs, Max Speed of Toolhead 1000 mm/s) */
+@extension("properties", #{ units: #{ `enum`: #["mm_s", "m_s"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm_s" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 1000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 1000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 1000 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m_s" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 1 },
+          lower: #{ exclusiveMinimum: 0, maximum: 1 },
+          upper: #{ exclusiveMinimum: 0, maximum: 1 },
+        },
+      },
+    }
+  ]
+)
+union qty_max_speed {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_max_speed" } } }
+)
+union fact_max_speed {
+  unknown,
+}
+
+/** Axis travel: above 0 and at most 10 m */
+@extension("x-plausible", #{ max: 2000, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000000 },
+        },
+      },
+    }
+  ]
+)
+union qty_travel_x {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_travel_x" } } }
+)
+union fact_travel_x {
+  unknown,
+}
+
+/** Axis travel: above 0 and at most 10 m */
+@extension("x-plausible", #{ max: 2000, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000000 },
+        },
+      },
+    }
+  ]
+)
+union qty_travel_y {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_travel_y" } } }
+)
+union fact_travel_y {
+  unknown,
+}
+
+/** Axis travel: above 0 and at most 10 m */
+@extension("x-plausible", #{ max: 2000, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000000 },
+        },
+      },
+    }
+  ]
+)
+union qty_travel_z {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_travel_z" } } }
+)
+union fact_travel_z {
+  unknown,
+}
+
+/** Spindle limit: above 0 and at most 200000 rpm */
+@extension("x-plausible", #{ max: 60000, units: "rpm" })
+@extension("properties", #{ units: #{ `enum`: #["rpm", "Hz"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "rpm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 200000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 200000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 200000 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "Hz" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 3333.333333333333 },
+          lower: #{ exclusiveMinimum: 0, maximum: 3333.333333333333 },
+          upper: #{ exclusiveMinimum: 0, maximum: 3333.333333333333 },
+        },
+      },
+    }
+  ]
+)
+union qty_spindle_max_speed {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_spindle_max_speed" } } }
+)
+union fact_spindle_max_speed {
+  unknown,
+}
+
+/** Laser power: above 0 and at most 10 kW; a desktop laser stays under 300 W */
+@extension("x-plausible", #{ max: 0.3, units: "kW" })
+@extension("properties", #{ units: #{ `enum`: #["kW", "W"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "kW" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "W" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000 },
+        },
+      },
+    }
+  ]
+)
+union qty_power {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension("then", #{ properties: #{ value: #{ $ref: "#/$defs/qty_power" } } })
+union fact_power {
+  unknown,
+}
+
+/** Waterjet pump pressure: above 0 and at most 700 MPa */
+@extension("x-plausible", #{ max: 450, units: "MPa" })
+@extension("properties", #{ units: #{ `enum`: #["MPa", "GPa", "bar"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "MPa" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 700 },
+          lower: #{ exclusiveMinimum: 0, maximum: 700 },
+          upper: #{ exclusiveMinimum: 0, maximum: 700 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "GPa" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 0.7 },
+          lower: #{ exclusiveMinimum: 0, maximum: 0.7 },
+          upper: #{ exclusiveMinimum: 0, maximum: 0.7 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "bar" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 7000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 7000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 7000 },
+        },
+      },
+    }
+  ]
+)
+union qty_pump_pressure {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_pump_pressure" } } }
+)
+union fact_pump_pressure {
+  unknown,
+}
+
+/** Press brake force: above 0 and at most 10000 kN */
+@extension("properties", #{ units: #{ `enum`: #["kN", "N"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "kN" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "N" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 10000000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 10000000 },
+        },
+      },
+    }
+  ]
+)
+union qty_press_brake_force {
+  unknown,
+}
+
+@extension(
+  "if",
+  #{ required: #["status"], properties: #{ status: #{ `const`: "known" } } }
+)
+@extension(
+  "then",
+  #{ properties: #{ value: #{ $ref: "#/$defs/qty_press_brake_force" } } }
+)
+union fact_press_brake_force {
+  unknown,
+}
+
+/** Calibrated unsupported bridge: 0 to 256 mm, the largest build volume */
+@extension("x-plausible", #{ max: 50, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 256 },
+          lower: #{ minimum: 0, maximum: 256 },
+          upper: #{ minimum: 0, maximum: 256 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 0.256 },
+          lower: #{ minimum: 0, maximum: 0.256 },
+          upper: #{ minimum: 0, maximum: 0.256 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 256000.00000000003 },
+          lower: #{ minimum: 0, maximum: 256000.00000000003 },
+          upper: #{ minimum: 0, maximum: 256000.00000000003 },
+        },
+      },
+    }
+  ]
+)
+union qty_bridge_span {
+  unknown,
+}
+
+/** Calibrated unsupported overhang, from vertical: 0 to 90 deg */
+@extension("x-plausible", #{ min: 20, max: 70, units: "deg" })
+@extension("properties", #{ units: #{ `enum`: #["deg", "rad"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "deg" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 90 },
+          lower: #{ minimum: 0, maximum: 90 },
+          upper: #{ minimum: 0, maximum: 90 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "rad" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0, maximum: 1.570796326795 },
+          lower: #{ minimum: 0, maximum: 1.570796326795 },
+          upper: #{ minimum: 0, maximum: 1.570796326795 },
+        },
+      },
+    }
+  ]
+)
+union qty_overhang_angle {
+  unknown,
+}
+
+/** Calibrated thinnest wall: 0.1 to 25 mm */
+@extension("x-plausible", #{ min: 0.4, max: 3, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0.1, maximum: 25 },
+          lower: #{ minimum: 0.1, maximum: 25 },
+          upper: #{ minimum: 0.1, maximum: 25 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0.0001, maximum: 0.025 },
+          lower: #{ minimum: 0.0001, maximum: 0.025 },
+          upper: #{ minimum: 0.0001, maximum: 0.025 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 100, maximum: 25000.000000000004 },
+          lower: #{ minimum: 100, maximum: 25000.000000000004 },
+          upper: #{ minimum: 100, maximum: 25000.000000000004 },
+        },
+      },
+    }
+  ]
+)
+union qty_min_wall {
+  unknown,
+}
+
+/** Calibrated smallest reliable pin or boss diameter: 0.2 to 20 mm */
+@extension("x-plausible", #{ min: 0.4, max: 5, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0.2, maximum: 20 },
+          lower: #{ minimum: 0.2, maximum: 20 },
+          upper: #{ minimum: 0.2, maximum: 20 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0.0002, maximum: 0.02 },
+          lower: #{ minimum: 0.0002, maximum: 0.02 },
+          upper: #{ minimum: 0.0002, maximum: 0.02 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 200, maximum: 20000 },
+          lower: #{ minimum: 200, maximum: 20000 },
+          upper: #{ minimum: 200, maximum: 20000 },
+        },
+      },
+    }
+  ]
+)
+union qty_min_feature {
+  unknown,
+}
+
+/** Calibrated smallest reliable cut hole diameter: 0.1 to 25 mm. The 0.5 to 10 mm plausibility band is a heuristic with no source table and only warns; the sourced guideline value is 2.0 mm (Protolabs, S3 in the FDM survey) */
+@extension("x-plausible", #{ min: 0.5, max: 10, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0.1, maximum: 25 },
+          lower: #{ minimum: 0.1, maximum: 25 },
+          upper: #{ minimum: 0.1, maximum: 25 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 0.0001, maximum: 0.025 },
+          lower: #{ minimum: 0.0001, maximum: 0.025 },
+          upper: #{ minimum: 0.0001, maximum: 0.025 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: 100, maximum: 25000 },
+          lower: #{ minimum: 100, maximum: 25000 },
+          upper: #{ minimum: 100, maximum: 25000 },
+        },
+      },
+    }
+  ]
+)
+union qty_min_hole {
+  unknown,
+}
+
+/** Calibrated as-made minus nominal deviation: -2 to 2 mm */
+@extension("x-plausible", #{ min: -0.5, max: 0.5, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: -2, maximum: 2 },
+          lower: #{ minimum: -2, maximum: 2 },
+          upper: #{ minimum: -2, maximum: 2 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: -0.002, maximum: 0.002 },
+          lower: #{ minimum: -0.002, maximum: 0.002 },
+          upper: #{ minimum: -0.002, maximum: 0.002 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ minimum: -2000, maximum: 2000 },
+          lower: #{ minimum: -2000, maximum: 2000 },
+          upper: #{ minimum: -2000, maximum: 2000 },
+        },
+      },
+    }
+  ]
+)
+union qty_deviation {
+  unknown,
+}
+
+/** Sliding clearance per side between mating parts: above 0 to 5 mm. A fact of the machine and material, so it has no default. The 0.1 to 0.5 mm plausibility band is a heuristic with no source table and only warns; the sourced value is 0.3 mm per side (S4 in the FDM survey). A press fit is not a negative clearance: use qty_interference_per_side */
+@extension("x-plausible", #{ min: 0.1, max: 0.5, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 5 },
+          lower: #{ exclusiveMinimum: 0, maximum: 5 },
+          upper: #{ exclusiveMinimum: 0, maximum: 5 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 0.005 },
+          lower: #{ exclusiveMinimum: 0, maximum: 0.005 },
+          upper: #{ exclusiveMinimum: 0, maximum: 0.005 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 5000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 5000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 5000 },
+        },
+      },
+    }
+  ]
+)
+union qty_clearance_per_side {
+  unknown,
+}
+
+/** Press-fit interference per side, shaft larger than hole: above 0 to 1 mm, never negative. A fact of the machine and material, so it has no default. The 0.05 to 0.3 mm plausibility band is a heuristic with no source table and only warns; the intended press-fit range is 0.10 to 0.15 mm per side */
+@extension("x-plausible", #{ min: 0.05, max: 0.3, units: "mm" })
+@extension("properties", #{ units: #{ `enum`: #["mm", "m", "um"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 1 },
+          lower: #{ exclusiveMinimum: 0, maximum: 1 },
+          upper: #{ exclusiveMinimum: 0, maximum: 1 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "m" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 0.001 },
+          lower: #{ exclusiveMinimum: 0, maximum: 0.001 },
+          upper: #{ exclusiveMinimum: 0, maximum: 0.001 },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "um" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0, maximum: 1000 },
+          lower: #{ exclusiveMinimum: 0, maximum: 1000 },
+          upper: #{ exclusiveMinimum: 0, maximum: 1000 },
+        },
+      },
+    }
+  ]
+)
+union qty_interference_per_side {
+  unknown,
+}
+
+/** Calibrated smallest reliable first-layer contact area: above 0 mm2. A fact of the machine and material, so it has no default. The plausibility band waits for more calibrations (#141) */
+@extension("properties", #{ units: #{ `enum`: #["mm2"] } })
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["units"],
+        properties: #{ units: #{ `const`: "mm2" } },
+      },
+      then: #{
+        properties: #{
+          value: #{ exclusiveMinimum: 0 },
+          lower: #{ exclusiveMinimum: 0 },
+          upper: #{ exclusiveMinimum: 0 },
+        },
+      },
+    }
+  ]
+)
+union qty_min_bed_contact_area {
+  unknown,
+}
+
+@extension("if", #{ properties: #{ status: #{ `const`: "forbidden" } } })
+@extension("then", #{ required: #["reason"] })
+model material_approval {
+  /** a material profile id */
+  material: Common.profile_id;
+
+  status: "approved" | "forbidden";
+  thickness?: Common.quantity_fact;
+  coating?: Common.text_fact;
+  extraction?: Common.text_fact;
+
+  @minItems(1)
+  @uniqueItems
+  operations?: (
+    | "cut"
+    | "score"
+    | "engrave"
+    | "machine"
+    | "print"
+    | "form"
+    | "join"
+    | "other")[];
+
+  reason?: Common.text;
+  source: Common.source;
+}
+
+/** One demonstrated capability: the characteristic measured, its exact scope and the measured limits with their uncertainty and evidence */
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{ characteristic: #{ `const`: "bridge_span" } },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{ limits: #{ $ref: "#/$defs/qty_bridge_span" } },
+          },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{ characteristic: #{ `const`: "overhang_angle" } },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{ limits: #{ $ref: "#/$defs/qty_overhang_angle" } },
+          },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{ characteristic: #{ `const`: "min_wall" } },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{ limits: #{ $ref: "#/$defs/qty_min_wall" } },
+          },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{ characteristic: #{ `const`: "min_feature" } },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{ limits: #{ $ref: "#/$defs/qty_min_feature" } },
+          },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{ characteristic: #{ `const`: "min_hole" } },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{ limits: #{ $ref: "#/$defs/qty_min_hole" } },
+          },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{ characteristic: #{ `const`: "min_bed_contact_area" } },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{
+              limits: #{ $ref: "#/$defs/qty_min_bed_contact_area" },
+            },
+          },
+        },
+      },
+    },
+    #{
+      `if`: #{
+        required: #["characteristic"],
+        properties: #{
+          characteristic: #{
+            `enum`: #[
+              "hole_diameter_deviation",
+              "dimensional_deviation",
+              "profile_deviation"
+            ],
+          },
+        },
+      },
+      then: #{
+        properties: #{
+          result: #{
+            properties: #{ limits: #{ $ref: "#/$defs/qty_deviation" } },
+          },
+        },
+      },
+    }
+  ]
+)
+model calibration {
+  id: Common.semantic_id;
+
+  /** such as hole_diameter_deviation, min_wall, kerf, flatness or bridge_span */
+  characteristic: Common.semantic_id;
+
+  scope: {
+    /** a material profile id */
+    material: Common.profile_id;
+
+    condition?: Common.text;
+    feature?: Common.text;
+    size?: Common.quantity;
+    thickness?: Common.quantity;
+    orientation?: Common.text;
+    setup?: Common.text;
+    tool?: Common.semantic_id;
+    finish?: Common.text;
+  };
+  result: {
+    /** the measured range of the characteristic */
+    limits: Common.quantity;
+
+    distribution?: Common.text;
+
+    /** the measurement uncertainty */
+    uncertainty?: Common.quantity;
+
+    @minValue(1)
+    @extension("x-plausible", #{ min: 3 })
+    samples: integer;
+  };
+  source: Common.source;
+  date: Common.date;
+  valid_until?: Common.date;
+  decision?: Common.decision;
+}
+
+@@extension(
+  ManufacturingCapabilities,
+  "examples",
+  #[
+    #{
+      profiles: #[
+        #{
+          id: "h2d",
+          revision: 1,
+          title: "Bambu Lab H2D, the user's own printer",
+          process: "fdm",
+          provider: "local",
+          machine: #{
+            identity: #{
+              status: "known",
+              value: "Bambu Lab H2D",
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "supplier",
+                  reference: "Bambu Lab H2D product page",
+                  url: "https://bambulab.com/en/h2d",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+          },
+          envelope: #{
+            x: #{
+              status: "known",
+              value: #{ value: 325, units: "mm" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+            y: #{
+              status: "known",
+              value: #{ value: 320, units: "mm" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+            z: #{
+              status: "known",
+              value: #{ value: 325, units: "mm" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Body, Build Volume, Single Nozzle Printing 325mm*320mm*325mm",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+          },
+          parameters: #{
+            nozzle_diameter: #{
+              status: "known",
+              value: #{ value: 0.4, units: "mm" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Toolhead, Included Nozzle Diameter 0.4 mm",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+            hotend_max_temperature: #{
+              status: "known",
+              value: #{ value: 350, units: "deg_C" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Toolhead, Max Nozzle Temperature 350 °C",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+            bed_max_temperature: #{
+              status: "known",
+              value: #{ value: 120, units: "deg_C" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Heatbed, Max Heatbed Temperature 120 °C",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+            max_speed: #{
+              status: "known",
+              value: #{ value: 1000, units: "mm_s" },
+              basis: "supplier_typical",
+              sources: #[
+                #{
+                  kind: "datasheet",
+                  reference: "Bambu Lab H2D tech specs, Speed, Max Speed of Toolhead 1000 mm/s",
+                  url: "https://bambulab.com/en/h2d/tech-specs",
+                  accessed: "2026-11-18",
+                }
+              ],
+            },
+            layer_height: #{
+              status: "unknown",
+              reason: "Bambu Lab publishes no layer-height range for the H2D (tech specs, accessed 2026-11-18); a calibration print would answer it",
+            },
+          },
+          tools: #[
+            #{
+              id: "nozzle_04_standard",
+              description: "Standard 0.4 mm hardened-steel hotend, supplied with the printer. Published max flow 40 mm3/s (tech specs, Speed; test: 250 mm round model, single outer wall, Bambu Lab ABS, 280 °C)",
+              parameters: #{
+                nozzle_diameter: #{
+                  status: "known",
+                  value: #{ value: 0.4, units: "mm" },
+                  basis: "supplier_typical",
+                  sources: #[
+                    #{
+                      kind: "datasheet",
+                      reference: "Bambu Lab H2D tech specs, Toolhead, Included Nozzle Diameter 0.4 mm",
+                      url: "https://bambulab.com/en/h2d/tech-specs",
+                      accessed: "2026-11-18",
+                    }
+                  ],
+                },
+              },
+            },
+            #{
+              id: "nozzle_04_high_flow",
+              description: "Optional 0.4 mm high-flow hotend, sold separately. Published max flow 65 mm3/s (tech specs, Speed, Max Flow for Hotend (Optional High Flow Hotend); same test conditions; the product page says high-flow hotends are optional equipment)",
+              parameters: #{
+                nozzle_diameter: #{
+                  status: "known",
+                  value: #{ value: 0.4, units: "mm" },
+                  basis: "supplier_typical",
+                  sources: #[
+                    #{
+                      kind: "datasheet",
+                      reference: "Bambu Lab H2D tech specs, Toolhead, Supported Nozzle Diameter 0.2 mm, 0.4 mm, 0.6 mm, 0.8 mm",
+                      url: "https://bambulab.com/en/h2d/tech-specs",
+                      accessed: "2026-11-18",
+                    }
+                  ],
+                },
+              },
+            }
+          ],
+          constraints: #[
+            "Dual-nozzle printing volume 300 x 320 x 320 mm (tech specs, Body, Build Volume, Dual Nozzle Printing, accessed 2026-11-18)",
+            "Total volume for two nozzles 350 x 320 x 320 mm, only with identical filament in both nozzles and printing with both (tech specs, Body, Build Volume; product page footnote, accessed 2026-11-18)",
+            "Active chamber heating supported, maximum chamber temperature 65 °C (tech specs, Chamber Temperature Control, accessed 2026-11-18)"
+          ],
+          materials: #[
+            #{
+              material: "petg",
+              status: "approved",
+              operations: #["print"],
+              source: #{
+                kind: "decision",
+                reference: "The user approved PETG on their own H2D on 2026-11-18; Bambu lists PETG as supported (tech specs, Supported Filament Type)",
+                decision: "DR-005",
+              },
+            }
+          ],
+          calibrations: #[],
+        }
+      ],
+    }
+  ]
+);

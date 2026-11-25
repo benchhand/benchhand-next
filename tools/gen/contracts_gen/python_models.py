@@ -1,4 +1,4 @@
-"""Pydantic v2 models and the packaged schema copies in benchhand_contracts."""
+"""Pydantic v2 models in benchhand_contracts, generated from the published schemas."""
 
 from __future__ import annotations
 
@@ -35,32 +35,24 @@ class PythonGenerationError(Exception):
     """datamodel-code-generator failed."""
 
 
-def write_python(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
+def write_python(contracts: list[Contract], schemas_dir: Path, out_dir: Path) -> None:
     """Write models for every contract into ``out_dir`` (the ``benchhand_contracts.models`` package)."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    _run_datamodel_codegen(contracts, contracts_dir, out_dir)
+    _run_datamodel_codegen(contracts, schemas_dir, out_dir)
     _stamp_sources(contracts, out_dir)
     (out_dir / "__init__.py").write_text(
         f'"""Models generated from contracts/. {GENERATED_NOTICE}"""\n', encoding="utf-8"
     )
 
 
-def write_schemas(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
-    """Copy every contract byte for byte into ``out_dir``, the package data the runtime validator loads."""
-    for contract in contracts:
-        target = out_dir / contract.rel_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(contracts_dir / contract.rel_path, target)
-
-
-def _run_datamodel_codegen(contracts: list[Contract], contracts_dir: Path, out_dir: Path) -> None:
+def _run_datamodel_codegen(contracts: list[Contract], schemas_dir: Path, out_dir: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="contracts-gen-") as scratch:
-        # Only the schema files go in, so other files under contracts/ never become models.
+        # Only the schema files go in, so no other file there ever becomes a model.
         inputs = Path(scratch, "inputs")
         for contract in contracts:
             target = inputs / contract.rel_path
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(contracts_dir / contract.rel_path, target)
+            shutil.copyfile(schemas_dir / contract.rel_path, target)
         # Ruff takes its settings from the config nearest the output file, so the output goes to a
         # directory with its own config: the result can't depend on where it is written.
         staged = Path(scratch, "out")

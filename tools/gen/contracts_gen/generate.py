@@ -1,4 +1,7 @@
-"""Regenerate every output from contracts/, and compare a fresh generation with the tree (drift check)."""
+"""Regenerate every output from contracts/, and compare a fresh generation with the tree (drift check).
+
+``contracts/*.tsp`` compiles to the published schemas (``emit``); every other output is generated from them.
+"""
 
 from __future__ import annotations
 
@@ -8,8 +11,9 @@ import tempfile
 from pathlib import Path
 
 from .docs import write_docs
+from .emit import write_published_schemas
 from .examples import write_examples
-from .python_models import write_python, write_schemas
+from .python_models import write_python
 from .sources import (
     CONTRACTS_DIR,
     DOCS_OUT,
@@ -41,11 +45,17 @@ def generate(out_root: Path, contracts_dir: Path = REPO_ROOT / CONTRACTS_DIR) ->
 
 
 def _generate_into(out_root: Path, contracts_dir: Path) -> None:
-    contracts = load_contracts(contracts_dir)
-    write_python(contracts, contracts_dir, out_root / MODELS_OUT)
-    write_schemas(contracts, contracts_dir, out_root / SCHEMAS_OUT)
+    schemas_dir = out_root / SCHEMAS_OUT
+    write_published_schemas(contracts_dir, schemas_dir)
+    generate_from_schemas(schemas_dir, out_root)
+
+
+def generate_from_schemas(schemas_dir: Path, out_root: Path) -> None:
+    """Write the models, fixtures, TypeScript and docs of the published schemas in ``schemas_dir``."""
+    contracts = load_contracts(schemas_dir)
+    write_python(contracts, schemas_dir, out_root / MODELS_OUT)
     write_examples(contracts, out_root / EXAMPLES_OUT)
-    write_typescript(contracts, contracts_dir, out_root / TYPESCRIPT_OUT)
+    write_typescript(contracts, schemas_dir, out_root / TYPESCRIPT_OUT)
     write_docs(contracts, out_root / DOCS_OUT)
 
 

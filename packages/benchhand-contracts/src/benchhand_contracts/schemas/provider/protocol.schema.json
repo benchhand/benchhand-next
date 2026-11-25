@@ -3,8 +3,8 @@
   "$id": "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json",
   "title": "benchhand provider protocol",
   "description": "Message shapes of the benchhand provider protocol. Prose rules: docs/contract/provider-protocol.md.",
-  "x-version": "1.0.0",
   "x-protocol-version": 1,
+  "x-version": "1.0.0",
   "oneOf": [
     {
       "$ref": "#/$defs/Request"
@@ -17,6 +17,57 @@
     },
     {
       "$ref": "#/$defs/ErrorResponse"
+    }
+  ],
+  "examples": [
+    {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "initialize",
+      "params": {
+        "protocolVersion": 1,
+        "minProtocolVersion": 1,
+        "host": {
+          "name": "benchhand",
+          "version": "0.1.0"
+        },
+        "capabilities": {
+          "hooks": [
+            "kernel"
+          ],
+          "features": [
+            "progress",
+            "artifacts",
+            "cancel"
+          ]
+        },
+        "limits": {
+          "maxMessageBytes": 16777216,
+          "maxInFlight": 16
+        },
+        "projectRoot": "/work/lamp"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "$/progress",
+      "params": {
+        "id": 2,
+        "fraction": 0.5,
+        "message": "LMP-0003 built"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "error": {
+        "code": -32007,
+        "message": "FreeCAD 1.0.2 is not a supported version",
+        "data": {
+          "code": "external-missing",
+          "fix": "Run `benchhand setup` to install FreeCAD 1.1.4."
+        }
+      }
     }
   ],
   "$defs": {
@@ -52,10 +103,10 @@
       "pattern": "^([a-z][a-z0-9-]*|x-[a-z0-9-]+)$"
     },
     "AbsPath": {
+      "description": "Absolute POSIX path.",
       "type": "string",
-      "pattern": "^/",
       "minLength": 2,
-      "description": "Absolute POSIX path."
+      "pattern": "^/"
     },
     "Sha256": {
       "type": "string",
@@ -130,7 +181,7 @@
             "fix": {
               "type": "string"
             },
-            "detail": {}
+            "detail": true
           },
           "required": [
             "code"
@@ -168,7 +219,6 @@
           "maximum": 16
         }
       },
-      "required": [],
       "additionalProperties": false,
       "examples": [
         {
@@ -453,7 +503,7 @@
           "type": "string",
           "maxLength": 4000
         },
-        "data": {}
+        "data": true
       },
       "required": [
         "level",
@@ -866,7 +916,7 @@
         "method": {
           "$ref": "#/$defs/Method"
         },
-        "params": {}
+        "params": true
       },
       "required": [
         "jsonrpc",
@@ -896,7 +946,7 @@
         "method": {
           "$ref": "#/$defs/Method"
         },
-        "params": {}
+        "params": true
       },
       "required": [
         "jsonrpc",
@@ -922,7 +972,7 @@
         "id": {
           "$ref": "#/$defs/RequestId"
         },
-        "result": {}
+        "result": true
       },
       "required": [
         "jsonrpc",
@@ -1000,56 +1050,5 @@
         "external-missing": -32007
       }
     }
-  },
-  "examples": [
-    {
-      "jsonrpc": "2.0",
-      "id": 1,
-      "method": "initialize",
-      "params": {
-        "protocolVersion": 1,
-        "minProtocolVersion": 1,
-        "host": {
-          "name": "benchhand",
-          "version": "0.1.0"
-        },
-        "capabilities": {
-          "hooks": [
-            "kernel"
-          ],
-          "features": [
-            "progress",
-            "artifacts",
-            "cancel"
-          ]
-        },
-        "limits": {
-          "maxMessageBytes": 16777216,
-          "maxInFlight": 16
-        },
-        "projectRoot": "/work/lamp"
-      }
-    },
-    {
-      "jsonrpc": "2.0",
-      "method": "$/progress",
-      "params": {
-        "id": 2,
-        "fraction": 0.5,
-        "message": "LMP-0003 built"
-      }
-    },
-    {
-      "jsonrpc": "2.0",
-      "id": 3,
-      "error": {
-        "code": -32007,
-        "message": "FreeCAD 1.0.2 is not a supported version",
-        "data": {
-          "code": "external-missing",
-          "fix": "Run `benchhand setup` to install FreeCAD 1.1.4."
-        }
-      }
-    }
-  ]
+  }
 }

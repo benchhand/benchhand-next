@@ -4,17 +4,6 @@
   "title": "benchhand-provider.toml",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "name",
-    "version",
-    "protocol",
-    "kinds",
-    "hooks",
-    "command",
-    "environment",
-    "needs"
-  ],
   "properties": {
     "name": {
       "type": "string",
@@ -72,12 +61,12 @@
       "minItems": 1
     },
     "timeouts": {
+      "description": "Seconds per hook method, e.g. {\"solver/solve\": 3600}.",
       "type": "object",
       "additionalProperties": {
         "type": "integer",
         "minimum": 1
-      },
-      "description": "Seconds per hook method, e.g. {\"solver/solve\": 3600}."
+      }
     },
     "environment": {
       "oneOf": [
@@ -154,6 +143,17 @@
       }
     }
   },
+  "required": [
+    "name",
+    "version",
+    "protocol",
+    "kinds",
+    "hooks",
+    "command",
+    "environment",
+    "needs"
+  ],
+  "additionalProperties": false,
   "examples": [
     {
       "name": "kernel-build123d",

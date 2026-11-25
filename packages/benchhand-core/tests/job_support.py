@@ -9,10 +9,10 @@ import sys
 import textwrap
 import time
 from collections.abc import Callable
-from pathlib import Path
+from importlib.resources import files
 from typing import Any
 
-CONTRACT = Path(__file__).resolve().parents[3] / "contracts" / "jobs" / "job.schema.json"
+CONTRACT = files("benchhand_contracts") / "schemas" / "jobs" / "job.schema.json"
 
 # A job gets this long to start on a loaded host. A test that waits longer gives up.
 STARTUP_SECONDS = 120.0

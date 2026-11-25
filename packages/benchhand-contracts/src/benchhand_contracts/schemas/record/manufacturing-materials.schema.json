@@ -5,10 +5,6 @@
   "description": "Material identity and properties with their conditions. A family profile (PLA+, nylon, PETG, aluminium) is guidance, never a grade specification; a grade profile names the manufacturer's grade. Printed, moulded, bulk, cast and wrought properties are different profiles; every property states its test standard, temperature, conditioning and, for printed forms, orientation. A typical_not_allowable profile holds only typical or estimated values, never design allowables. Density is never strength. Property names and their dimensions are manufacturing_intent.MATERIAL_PROPERTIES",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "profiles"
-  ],
   "properties": {
     "profiles": {
       "type": "array",
@@ -17,6 +13,35 @@
       }
     }
   },
+  "required": [
+    "profiles"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "profiles": [
+        {
+          "id": "petg",
+          "revision": 1,
+          "title": "PETG, printed (family)",
+          "level": "family",
+          "family": "PETG",
+          "grade": {
+            "status": "not_applicable",
+            "reason": "family guidance only; no filament grade is selected"
+          },
+          "form": "printed",
+          "process_state": {
+            "process": "fdm",
+            "conditioning": "unknown",
+            "notes": "no filament lot, drying or print orientation is recorded, so no property is stated"
+          },
+          "typical_not_allowable": true,
+          "properties": []
+        }
+      ]
+    }
+  ],
   "$defs": {
     "conditioning": {
       "description": "dry as moulded or dried, moisture-conditioned, as received, or not stated",
@@ -117,6 +142,13 @@
       ]
     },
     "fact_modulus": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_modulus"
+          }
+        }
+      },
       "if": {
         "required": [
           "status"
@@ -124,13 +156,6 @@
         "properties": {
           "status": {
             "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_modulus"
           }
         }
       }
@@ -201,6 +226,13 @@
       ]
     },
     "fact_density": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_density"
+          }
+        }
+      },
       "if": {
         "required": [
           "status"
@@ -208,13 +240,6 @@
         "properties": {
           "status": {
             "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_density"
           }
         }
       }
@@ -285,6 +310,13 @@
       ]
     },
     "fact_temperature": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_temperature"
+          }
+        }
+      },
       "if": {
         "required": [
           "status"
@@ -292,13 +324,6 @@
         "properties": {
           "status": {
             "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_temperature"
           }
         }
       }
@@ -369,6 +394,13 @@
       ]
     },
     "fact_poisson": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_poisson"
+          }
+        }
+      },
       "if": {
         "required": [
           "status"
@@ -376,13 +408,6 @@
         "properties": {
           "status": {
             "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_poisson"
           }
         }
       }
@@ -443,6 +468,13 @@
       ]
     },
     "fact_fu_fy": {
+      "then": {
+        "properties": {
+          "value": {
+            "$ref": "#/$defs/qty_fu_fy"
+          }
+        }
+      },
       "if": {
         "required": [
           "status"
@@ -450,13 +482,6 @@
         "properties": {
           "status": {
             "const": "known"
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "value": {
-            "$ref": "#/$defs/qty_fu_fy"
           }
         }
       }
@@ -473,19 +498,6 @@
     },
     "profile": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "revision",
-        "title",
-        "level",
-        "family",
-        "grade",
-        "form",
-        "process_state",
-        "typical_not_allowable",
-        "properties"
-      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/profile_id"
@@ -507,16 +519,16 @@
           "$ref": "common.schema.json#/$defs/text"
         },
         "material_family": {
-          "description": "the structured family a guideline scope matches on, such as pla, petg, pa or tpu; unknown when not stated. It has no default",
-          "$ref": "#/$defs/scope_fact"
+          "$ref": "#/$defs/scope_fact",
+          "description": "the structured family a guideline scope matches on, such as pla, petg, pa or tpu; unknown when not stated. It has no default"
         },
         "filler": {
-          "description": "the fill a guideline scope matches on, such as cf or gf; not applicable for an unfilled material. It has no default",
-          "$ref": "#/$defs/scope_fact"
+          "$ref": "#/$defs/scope_fact",
+          "description": "the fill a guideline scope matches on, such as cf or gf; not applicable for an unfilled material. It has no default"
         },
         "shore": {
-          "description": "the Shore hardness a guideline scope matches on, such as 95A or 85A. It has no default",
-          "$ref": "#/$defs/scope_fact"
+          "$ref": "#/$defs/scope_fact",
+          "description": "the Shore hardness a guideline scope matches on, such as 95A or 85A. It has no default"
         },
         "grade": {
           "$ref": "common.schema.json#/$defs/text_fact"
@@ -525,8 +537,8 @@
           "$ref": "common.schema.json#/$defs/text_fact"
         },
         "specification": {
-          "description": "the standard or datasheet designation the grade conforms to",
-          "$ref": "common.schema.json#/$defs/text_fact"
+          "$ref": "common.schema.json#/$defs/text_fact",
+          "description": "the standard or datasheet designation the grade conforms to"
         },
         "form": {
           "enum": [
@@ -544,14 +556,8 @@
         },
         "process_state": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "process",
-            "conditioning"
-          ],
           "properties": {
             "process": {
-              "description": "the route kind that made the tested material, or unknown",
               "oneOf": [
                 {
                   "$ref": "common.schema.json#/$defs/route_kind"
@@ -559,7 +565,8 @@
                 {
                   "$ref": "common.schema.json#/$defs/fact_open"
                 }
-              ]
+              ],
+              "description": "the route kind that made the tested material, or unknown"
             },
             "orientation": {
               "$ref": "common.schema.json#/$defs/text"
@@ -579,7 +586,12 @@
             "notes": {
               "$ref": "common.schema.json#/$defs/text"
             }
-          }
+          },
+          "required": [
+            "process",
+            "conditioning"
+          ],
+          "additionalProperties": false
         },
         "typical_not_allowable": {
           "type": "boolean"
@@ -591,13 +603,26 @@
           }
         },
         "guidance": {
-          "description": "family guidance and cautions, such as fibre fill wear on nozzles and mating surfaces; never a grade allowable",
-          "$ref": "common.schema.json#/$defs/texts"
+          "$ref": "common.schema.json#/$defs/texts",
+          "description": "family guidance and cautions, such as fibre fill wear on nozzles and mating surfaces; never a grade allowable"
         },
         "note": {
           "$ref": "common.schema.json#/$defs/text"
         }
       },
+      "required": [
+        "id",
+        "revision",
+        "title",
+        "level",
+        "family",
+        "grade",
+        "form",
+        "process_state",
+        "typical_not_allowable",
+        "properties"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -662,12 +687,6 @@
     },
     "property": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "name",
-        "value",
-        "conditions"
-      ],
       "properties": {
         "name": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -677,12 +696,6 @@
         },
         "conditions": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "test_standard",
-            "temperature",
-            "conditioning"
-          ],
           "properties": {
             "test_standard": {
               "$ref": "common.schema.json#/$defs/text_fact"
@@ -694,12 +707,12 @@
               "$ref": "#/$defs/conditioning"
             },
             "orientation": {
-              "description": "the print or grain orientation of the specimen",
-              "$ref": "common.schema.json#/$defs/text_fact"
+              "$ref": "common.schema.json#/$defs/text_fact",
+              "description": "the print or grain orientation of the specimen"
             },
             "gauge": {
-              "description": "allowed on elongation_at_break only; optional",
-              "$ref": "#/$defs/gauge"
+              "$ref": "#/$defs/gauge",
+              "description": "allowed on elongation_at_break only; optional"
             },
             "specimen": {
               "$ref": "common.schema.json#/$defs/text"
@@ -710,9 +723,21 @@
             "notes": {
               "$ref": "common.schema.json#/$defs/text"
             }
-          }
+          },
+          "required": [
+            "test_standard",
+            "temperature",
+            "conditioning"
+          ],
+          "additionalProperties": false
         }
       },
+      "required": [
+        "name",
+        "value",
+        "conditions"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -853,30 +878,5 @@
         }
       ]
     }
-  },
-  "examples": [
-    {
-      "profiles": [
-        {
-          "id": "petg",
-          "revision": 1,
-          "title": "PETG, printed (family)",
-          "level": "family",
-          "family": "PETG",
-          "grade": {
-            "status": "not_applicable",
-            "reason": "family guidance only; no filament grade is selected"
-          },
-          "form": "printed",
-          "process_state": {
-            "process": "fdm",
-            "conditioning": "unknown",
-            "notes": "no filament lot, drying or print orientation is recorded, so no property is stated"
-          },
-          "typical_not_allowable": true,
-          "properties": []
-        }
-      ]
-    }
-  ]
+  }
 }

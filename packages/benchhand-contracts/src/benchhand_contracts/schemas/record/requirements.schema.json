@@ -5,23 +5,11 @@
   "description": "Requirements, preferences, assumptions and open questions, kept apart: a mandatory requirement is never downgraded into a preference or an assumption to pass, and an unknown with a filled-in reason is still unknown. Record version 2 carries all four lists; preferences, assumptions and open_questions may be empty.",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "requirements"
-  ],
   "properties": {
     "preferences": {
-      "description": "What ranks feasible options; a preference never compensates a mandatory failure",
       "type": "array",
       "items": {
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "text",
-          "source",
-          "weight"
-        ],
         "properties": {
           "id": {
             "$ref": "common.schema.json#/$defs/preference_id"
@@ -45,29 +33,26 @@
           },
           "subjects": {
             "type": "array",
-            "minItems": 1,
             "items": {
               "$ref": "common.schema.json#/$defs/subject"
-            }
+            },
+            "minItems": 1
           }
-        }
-      }
-    },
-    "assumptions": {
-      "description": "Bounded statements taken as true for now, each with its owner and the obligation that would validate it",
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
+        },
         "required": [
           "id",
           "text",
-          "origin",
-          "reason",
-          "owner",
-          "validation",
-          "status"
+          "source",
+          "weight"
         ],
+        "additionalProperties": false
+      },
+      "description": "What ranks feasible options; a preference never compensates a mandatory failure"
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
         "properties": {
           "id": {
             "$ref": "common.schema.json#/$defs/assumption_id"
@@ -98,8 +83,8 @@
             "$ref": "common.schema.json#/$defs/text"
           },
           "validation": {
-            "description": "the check, test or answer that would confirm or refute it",
-            "$ref": "common.schema.json#/$defs/text"
+            "$ref": "common.schema.json#/$defs/text",
+            "description": "the check, test or answer that would confirm or refute it"
           },
           "status": {
             "enum": [
@@ -112,6 +97,21 @@
             "$ref": "common.schema.json#/$defs/decision"
           }
         },
+        "required": [
+          "id",
+          "text",
+          "origin",
+          "reason",
+          "owner",
+          "validation",
+          "status"
+        ],
+        "additionalProperties": false,
+        "then": {
+          "required": [
+            "decision"
+          ]
+        },
         "if": {
           "properties": {
             "status": {
@@ -121,28 +121,14 @@
               ]
             }
           }
-        },
-        "then": {
-          "required": [
-            "decision"
-          ]
         }
-      }
+      },
+      "description": "Bounded statements taken as true for now, each with its owner and the obligation that would validate it"
     },
     "open_questions": {
-      "description": "Questions still to answer; material_to_choice or safety_relevant open questions block a final material/process recommendation",
       "type": "array",
       "items": {
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "question",
-          "owner",
-          "material_to_choice",
-          "safety_relevant",
-          "status"
-        ],
         "properties": {
           "id": {
             "$ref": "common.schema.json#/$defs/question_id"
@@ -152,10 +138,10 @@
           },
           "subjects": {
             "type": "array",
-            "minItems": 1,
             "items": {
               "$ref": "common.schema.json#/$defs/subject"
-            }
+            },
+            "minItems": 1
           },
           "owner": {
             "$ref": "common.schema.json#/$defs/text"
@@ -174,10 +160,21 @@
           },
           "resolution": {
             "type": "object",
-            "additionalProperties": false,
+            "properties": {
+              "answer": {
+                "$ref": "common.schema.json#/$defs/text"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/source"
+              },
+              "decision": {
+                "$ref": "common.schema.json#/$defs/decision"
+              }
+            },
             "required": [
               "answer"
             ],
+            "additionalProperties": false,
             "anyOf": [
               {
                 "required": [
@@ -189,25 +186,23 @@
                   "decision"
                 ]
               }
-            ],
-            "properties": {
-              "answer": {
-                "$ref": "common.schema.json#/$defs/text"
-              },
-              "source": {
-                "$ref": "common.schema.json#/$defs/source"
-              },
-              "decision": {
-                "$ref": "common.schema.json#/$defs/decision"
-              }
-            }
+            ]
           }
         },
-        "if": {
-          "properties": {
-            "status": {
-              "const": "resolved"
-            }
+        "required": [
+          "id",
+          "question",
+          "owner",
+          "material_to_choice",
+          "safety_relevant",
+          "status"
+        ],
+        "additionalProperties": false,
+        "else": {
+          "not": {
+            "required": [
+              "resolution"
+            ]
           }
         },
         "then": {
@@ -215,29 +210,20 @@
             "resolution"
           ]
         },
-        "else": {
-          "not": {
-            "required": [
-              "resolution"
-            ]
+        "if": {
+          "properties": {
+            "status": {
+              "const": "resolved"
+            }
           }
         }
-      }
+      },
+      "description": "Questions still to answer; material_to_choice or safety_relevant open questions block a final material/process recommendation"
     },
     "requirements": {
       "type": "array",
-      "minItems": 1,
       "items": {
         "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "text",
-          "rationale",
-          "source",
-          "priority",
-          "verification"
-        ],
         "properties": {
           "id": {
             "$ref": "common.schema.json#/$defs/requirement_id"
@@ -267,11 +253,6 @@
           },
           "verification": {
             "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "method",
-              "criteria"
-            ],
             "properties": {
               "method": {
                 "type": "string",
@@ -302,34 +283,34 @@
                   "physical"
                 ]
               }
-            }
+            },
+            "required": [
+              "method",
+              "criteria"
+            ],
+            "additionalProperties": false
           },
           "subjects": {
             "type": "array",
-            "minItems": 1,
             "items": {
               "$ref": "common.schema.json#/$defs/subject"
-            }
+            },
+            "minItems": 1
           },
           "acceptance": {
-            "description": "Structured acceptance criteria; the prose criteria stay, and a final selection evaluates these, never an automatic reading of prose",
             "type": "array",
-            "minItems": 1,
             "items": {
               "$ref": "common.schema.json#/$defs/criterion"
-            }
+            },
+            "minItems": 1,
+            "description": "Structured acceptance criteria; the prose criteria stay, and a final selection evaluates these, never an automatic reading of prose"
           },
           "conditions": {
-            "description": "the service conditions the requirement holds under",
-            "$ref": "common.schema.json#/$defs/text"
+            "$ref": "common.schema.json#/$defs/text",
+            "description": "the service conditions the requirement holds under"
           },
           "risk": {
             "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "severity",
-              "consequence"
-            ],
             "properties": {
               "severity": {
                 "$ref": "common.schema.json#/$defs/consequence_severity"
@@ -337,16 +318,21 @@
               "consequence": {
                 "$ref": "common.schema.json#/$defs/text"
               }
-            }
+            },
+            "required": [
+              "severity",
+              "consequence"
+            ],
+            "additionalProperties": false
           },
           "evidence_required": {
-            "description": "The evidence levels a pass needs",
             "type": "array",
-            "minItems": 1,
-            "uniqueItems": true,
             "items": {
               "$ref": "common.schema.json#/$defs/evidence_level"
-            }
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "The evidence levels a pass needs"
           },
           "waiver_policy": {
             "enum": [
@@ -355,22 +341,14 @@
             ]
           },
           "visibility": {
-            "description": "Show-the-motion checks: from view, rendering only the window and target parts at the nominal pose, each target's own visible share of its projected area must reach min_visible_fraction (default 0.5); the check fails when any target falls short. Only transparency: transparent window parts are see-through",
             "type": "array",
-            "minItems": 1,
             "items": {
               "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "view",
-                "window",
-                "targets"
-              ],
               "properties": {
                 "view": {
-                  "description": "A render view: iso, front, side, or a dir-X-Y-Z direction in assembly coordinates",
                   "type": "string",
                   "pattern": "^(?:iso|front|side|dir-[pm](?:0|[1-9][0-9]{0,5})(?:d[0-9]{0,5}[1-9])?-[pm](?:0|[1-9][0-9]{0,5})(?:d[0-9]{0,5}[1-9])?-[pm](?:0|[1-9][0-9]{0,5})(?:d[0-9]{0,5}[1-9])?)$",
+                  "description": "A render view: iso, front, side, or a dir-X-Y-Z direction in assembly coordinates",
                   "not": {
                     "description": "a direction needs a non-zero component",
                     "pattern": "^dir-[pm]0-[pm]0-[pm]0$"
@@ -378,33 +356,55 @@
                 },
                 "window": {
                   "type": "array",
-                  "minItems": 1,
-                  "uniqueItems": true,
                   "items": {
                     "$ref": "assembly.schema.json#/$defs/part_ref"
-                  }
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
                 },
                 "targets": {
                   "type": "array",
-                  "minItems": 1,
-                  "uniqueItems": true,
                   "items": {
                     "$ref": "assembly.schema.json#/$defs/part_ref"
-                  }
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
                 },
                 "min_visible_fraction": {
                   "type": "number",
+                  "default": 0.5,
                   "exclusiveMinimum": 0,
-                  "maximum": 1,
-                  "default": 0.5
+                  "maximum": 1
                 }
-              }
-            }
+              },
+              "required": [
+                "view",
+                "window",
+                "targets"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "description": "Show-the-motion checks: from view, rendering only the window and target parts at the nominal pose, each target's own visible share of its projected area must reach min_visible_fraction (default 0.5); the check fails when any target falls short. Only transparency: transparent window parts are see-through"
           }
-        }
-      }
+        },
+        "required": [
+          "id",
+          "text",
+          "rationale",
+          "source",
+          "priority",
+          "verification"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
     }
   },
+  "required": [
+    "requirements"
+  ],
+  "additionalProperties": false,
   "examples": [
     {
       "requirements": [

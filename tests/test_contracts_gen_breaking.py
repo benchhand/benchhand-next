@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from contracts_gen.breaking import check_against, compare, compare_contracts, last_release_tag
+from contracts_gen.sources import SCHEMAS_OUT
 from jsonschema import Draft202012Validator
 
 WIDGET_ID = "https://example.invalid/widget.schema.json"
@@ -236,14 +237,14 @@ def _git(repo: Path, *args: str) -> None:
 
 
 def _write_contract(repo: Path, schema: dict[str, Any]) -> None:
-    path = repo / "contracts" / "record" / "widget.schema.json"
+    path = repo / SCHEMAS_OUT / "record" / "widget.schema.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(schema))
 
 
 @pytest.fixture
 def released_repo(tmp_path: Path) -> Path:
-    """A repository whose contracts/record/widget.schema.json was released as v1.0.0."""
+    """A repository whose published record/widget.schema.json was released as v1.0.0."""
     _git(tmp_path, "init", "-q")
     _write_contract(tmp_path, {"$id": WIDGET_ID, "x-version": "1.0.0", **OBJECT})
     _git(tmp_path, "add", ".")
@@ -267,8 +268,8 @@ def test_a_breaking_change_needs_a_major_bump_over_the_release_tag(released_repo
 
 
 def test_removing_a_released_contract_is_breaking(released_repo: Path) -> None:
-    (released_repo / "contracts" / "record" / "widget.schema.json").unlink()
-    (released_repo / "contracts" / "record" / "other.schema.json").write_text(
+    (released_repo / SCHEMAS_OUT / "record" / "widget.schema.json").unlink()
+    (released_repo / SCHEMAS_OUT / "record" / "other.schema.json").write_text(
         json.dumps({"$id": "https://example.invalid/other.schema.json", **OBJECT})
     )
     [report] = check_against(released_repo, "v1.0.0")

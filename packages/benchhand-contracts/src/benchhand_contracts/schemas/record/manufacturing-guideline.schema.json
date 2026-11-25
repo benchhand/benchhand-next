@@ -5,15 +5,6 @@
   "description": "One file of published design-for-manufacturing guidance for a process. A guideline is never a calibration: the grade of a resolved limit is the kind of the source it cites, and a resolved criterion cites a source of kind guideline (id, revision and sha256 of this file), never the inner citations. Scope is declarative selectors, never expressions; which layer a limit sits at follows from how specific its scope is. A machine is reached only through the capability profile's guidelines pin. A guideline may only tighten the limit of a less specific one; a limit that relaxes needs `relaxes` with a reason and a citation. A value a source does not publish is left out, never defaulted. Layer height, shrinkage and Z strength are not guideline limits: they are a capability parameter and material-profile properties",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "id",
-    "revision",
-    "title",
-    "scope",
-    "limits"
-  ],
   "properties": {
     "schema_version": {
       "const": 1
@@ -29,17 +20,17 @@
       "$ref": "common.schema.json#/$defs/text"
     },
     "extends": {
-      "description": "parent guideline ids, in order; a later parent is read after an earlier one",
       "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
       "items": {
         "$ref": "common.schema.json#/$defs/guideline_id"
-      }
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "parent guideline ids, in order; a later parent is read after an earlier one"
     },
     "abstract": {
-      "description": "an abstract set is reached through extends; it is matched on its own only when the capability profile's pin names it",
-      "type": "boolean"
+      "type": "boolean",
+      "description": "an abstract set is reached through extends; it is matched on its own only when the capability profile's pin names it"
     },
     "scope": {
       "$ref": "#/$defs/scope"
@@ -51,23 +42,185 @@
       }
     }
   },
+  "required": [
+    "schema_version",
+    "id",
+    "revision",
+    "title",
+    "scope",
+    "limits"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "schema_version": 1,
+      "id": "fdm.generic",
+      "revision": 2,
+      "title": "FDM generic design-for-manufacturing guidance",
+      "scope": {
+        "process": "fdm"
+      },
+      "limits": [
+        {
+          "characteristic": "overhang_angle",
+          "operator": "<=",
+          "quantity": {
+            "value": 45,
+            "units": "deg"
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Hubs, How to design parts for FDM 3D printing",
+              "url": "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/",
+              "accessed": "2026-11-18",
+              "locator": "Overhangs: an overhang can usually be printed up to 45 degrees without compromising quality"
+            },
+            {
+              "kind": "supplier",
+              "reference": "Hubs, Key design considerations for 3D printing",
+              "url": "https://www.hubs.com/knowledge-base/key-design-considerations-3d-printing/",
+              "accessed": "2026-11-18",
+              "locator": "FAQ on overhangs: try not to design parts with angles over 45 degrees"
+            }
+          ]
+        },
+        {
+          "characteristic": "bridge_span",
+          "operator": "<",
+          "quantity": {
+            "value": 5,
+            "units": "mm"
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Hubs, How to design parts for FDM 3D printing",
+              "url": "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/",
+              "accessed": "2026-11-18",
+              "locator": "Bridging, key design consideration: sagging or support marks unless the bridge is less than 5 mm"
+            }
+          ]
+        },
+        {
+          "characteristic": "min_wall",
+          "operator": ">=",
+          "quantity": {
+            "value": 0.8,
+            "units": "mm"
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Hubs, Key design considerations for 3D printing",
+              "url": "https://www.hubs.com/knowledge-base/key-design-considerations-3d-printing/",
+              "accessed": "2026-11-18",
+              "locator": "FAQ on minimal wall thickness: wall thicknesses of 0.8 mm and over"
+            },
+            {
+              "kind": "supplier",
+              "reference": "Protolabs, Fused deposition modeling (FDM)",
+              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
+              "accessed": "2026-11-18",
+              "locator": "FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm"
+            }
+          ]
+        },
+        {
+          "characteristic": "min_wall",
+          "operator": ">=",
+          "relative": {
+            "relative_to": "line_width",
+            "factor": 3,
+            "floor": {
+              "value": 0.8,
+              "units": "mm"
+            }
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Prusa Knowledge Base, Modeling with 3D printing in mind",
+              "url": "https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135",
+              "accessed": "2026-11-18",
+              "locator": "Fine details and wall thickness table, 0.4 mm nozzle: 1, 2, 3 and 4 perimeters are about 0.45, 0.9, 1.35 and 1.8 mm"
+            },
+            {
+              "kind": "supplier",
+              "reference": "Protolabs, Fused deposition modeling (FDM)",
+              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
+              "accessed": "2026-11-18",
+              "locator": "FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm (the floor)"
+            }
+          ]
+        },
+        {
+          "characteristic": "min_feature",
+          "operator": ">=",
+          "quantity": {
+            "value": 2,
+            "units": "mm"
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Protolabs, Fused deposition modeling (FDM)",
+              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
+              "accessed": "2026-11-18",
+              "locator": "FDM specifications table, Minimum Feature Size: 2.0 mm"
+            }
+          ]
+        },
+        {
+          "characteristic": "min_hole",
+          "operator": ">=",
+          "quantity": {
+            "value": 2,
+            "units": "mm"
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Protolabs, Fused deposition modeling (FDM)",
+              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
+              "accessed": "2026-11-18",
+              "locator": "FDM specifications table, Minimum Hole Diameter: 2.0 mm"
+            }
+          ]
+        },
+        {
+          "characteristic": "sliding_clearance",
+          "operator": ">=",
+          "quantity": {
+            "value": 0.3,
+            "units": "mm"
+          },
+          "citations": [
+            {
+              "kind": "supplier",
+              "reference": "Prusa Knowledge Base, Modeling with 3D printing in mind",
+              "url": "https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135",
+              "accessed": "2026-11-20",
+              "locator": "Tolerances: an initial good measurement for movable parts is at least 0.3 mm. The source does not say per side or diametral; this set reads it per side, the stricter reading"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "$defs": {
     "names": {
       "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
       "items": {
         "type": "string",
         "pattern": "^[a-z0-9][a-z0-9_.-]*$"
-      }
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "scope": {
       "description": "What the set applies to. Every selector present must match; a set with more selectors is more specific. nozzle_diameter is the interval of nozzle diameters it covers",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "process"
-      ],
       "properties": {
         "process": {
           "$ref": "common.schema.json#/$defs/route_kind"
@@ -82,6 +235,10 @@
           "$ref": "#/$defs/names"
         },
         "nozzle_diameter": {
+          "required": [
+            "lower",
+            "upper"
+          ],
           "allOf": [
             {
               "$ref": "common.schema.json#/$defs/quantity"
@@ -89,21 +246,19 @@
             {
               "$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"
             }
-          ],
-          "required": [
-            "lower",
-            "upper"
           ]
         },
         "nozzle_material": {
           "$ref": "#/$defs/names"
         }
-      }
+      },
+      "required": [
+        "process"
+      ],
+      "additionalProperties": false
     },
     "applies_to": {
       "type": "object",
-      "additionalProperties": false,
-      "minProperties": 1,
       "properties": {
         "orientation": {
           "$ref": "common.schema.json#/$defs/semantic_id"
@@ -111,17 +266,13 @@
         "feature": {
           "$ref": "common.schema.json#/$defs/semantic_id"
         }
-      }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
     },
     "relative": {
       "description": "factor times the profile's line width (or nozzle diameter), never below floor",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "relative_to",
-        "factor",
-        "floor"
-      ],
       "properties": {
         "relative_to": {
           "enum": [
@@ -134,25 +285,26 @@
           "exclusiveMinimum": 0
         },
         "floor": {
+          "required": [
+            "value"
+          ],
           "allOf": [
             {
               "$ref": "common.schema.json#/$defs/quantity"
             }
-          ],
-          "required": [
-            "value"
           ]
         }
-      }
+      },
+      "required": [
+        "relative_to",
+        "factor",
+        "floor"
+      ],
+      "additionalProperties": false
     },
     "relaxes": {
       "description": "a limit less strict than the less specific one it overrides needs the reason and the source",
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "reason",
-        "citation"
-      ],
       "properties": {
         "reason": {
           "$ref": "common.schema.json#/$defs/text"
@@ -160,16 +312,15 @@
         "citation": {
           "$ref": "common.schema.json#/$defs/source"
         }
-      }
+      },
+      "required": [
+        "reason",
+        "citation"
+      ],
+      "additionalProperties": false
     },
     "limit": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "characteristic",
-        "operator",
-        "citations"
-      ],
       "properties": {
         "characteristic": {
           "description": "only a characteristic whose quantity the capability schema bounds, so no limit holds an unbounded value",
@@ -200,17 +351,18 @@
           ]
         },
         "quantity": {
-          "description": "the limit as a value (>=, <=) or an interval (between), in one unit",
-          "$ref": "common.schema.json#/$defs/quantity"
+          "$ref": "common.schema.json#/$defs/quantity",
+          "description": "the limit as a value (>=, <=) or an interval (between), in one unit"
         },
         "relative": {
           "$ref": "#/$defs/relative"
         },
         "quantities": {
-          "description": "the discrete nozzle diameters a one_of limit on nozzle_diameter allows, each one value; compared as whole micrometres",
           "type": "array",
-          "minItems": 1,
           "items": {
+            "required": [
+              "value"
+            ],
             "allOf": [
               {
                 "$ref": "common.schema.json#/$defs/quantity"
@@ -218,35 +370,34 @@
               {
                 "$ref": "manufacturing-capabilities.schema.json#/$defs/qty_nozzle_diameter"
               }
-            ],
-            "required": [
-              "value"
             ]
-          }
+          },
+          "minItems": 1,
+          "description": "the discrete nozzle diameters a one_of limit on nozzle_diameter allows, each one value; compared as whole micrometres"
         },
         "value": {
+          "minItems": 1,
+          "uniqueItems": true,
           "description": "the categorical requirement of equals and one_of, such as enclosure true or nozzle_material hardened_steel; no default",
+          "items": {
+            "minLength": 1,
+            "type": [
+              "string",
+              "boolean"
+            ]
+          },
           "type": [
             "string",
             "boolean",
             "array"
-          ],
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": [
-              "string",
-              "boolean"
-            ],
-            "minLength": 1
-          }
+          ]
         },
         "applies_to": {
           "$ref": "#/$defs/applies_to"
         },
         "disputed": {
-          "description": "true when the cited sources disagree; the stricter value applies",
-          "type": "boolean"
+          "type": "boolean",
+          "description": "true when the cited sources disagree; the stricter value applies"
         },
         "relaxes": {
           "$ref": "#/$defs/relaxes"
@@ -255,6 +406,12 @@
           "$ref": "common.schema.json#/$defs/sources"
         }
       },
+      "required": [
+        "characteristic",
+        "operator",
+        "citations"
+      ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -764,162 +921,5 @@
         }
       ]
     }
-  },
-  "examples": [
-    {
-      "schema_version": 1,
-      "id": "fdm.generic",
-      "revision": 2,
-      "title": "FDM generic design-for-manufacturing guidance",
-      "scope": {
-        "process": "fdm"
-      },
-      "limits": [
-        {
-          "characteristic": "overhang_angle",
-          "operator": "<=",
-          "quantity": {
-            "value": 45,
-            "units": "deg"
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Hubs, How to design parts for FDM 3D printing",
-              "url": "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/",
-              "accessed": "2026-11-18",
-              "locator": "Overhangs: an overhang can usually be printed up to 45 degrees without compromising quality"
-            },
-            {
-              "kind": "supplier",
-              "reference": "Hubs, Key design considerations for 3D printing",
-              "url": "https://www.hubs.com/knowledge-base/key-design-considerations-3d-printing/",
-              "accessed": "2026-11-18",
-              "locator": "FAQ on overhangs: try not to design parts with angles over 45 degrees"
-            }
-          ]
-        },
-        {
-          "characteristic": "bridge_span",
-          "operator": "<",
-          "quantity": {
-            "value": 5,
-            "units": "mm"
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Hubs, How to design parts for FDM 3D printing",
-              "url": "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/",
-              "accessed": "2026-11-18",
-              "locator": "Bridging, key design consideration: sagging or support marks unless the bridge is less than 5 mm"
-            }
-          ]
-        },
-        {
-          "characteristic": "min_wall",
-          "operator": ">=",
-          "quantity": {
-            "value": 0.8,
-            "units": "mm"
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Hubs, Key design considerations for 3D printing",
-              "url": "https://www.hubs.com/knowledge-base/key-design-considerations-3d-printing/",
-              "accessed": "2026-11-18",
-              "locator": "FAQ on minimal wall thickness: wall thicknesses of 0.8 mm and over"
-            },
-            {
-              "kind": "supplier",
-              "reference": "Protolabs, Fused deposition modeling (FDM)",
-              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
-              "accessed": "2026-11-18",
-              "locator": "FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm"
-            }
-          ]
-        },
-        {
-          "characteristic": "min_wall",
-          "operator": ">=",
-          "relative": {
-            "relative_to": "line_width",
-            "factor": 3,
-            "floor": {
-              "value": 0.8,
-              "units": "mm"
-            }
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Prusa Knowledge Base, Modeling with 3D printing in mind",
-              "url": "https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135",
-              "accessed": "2026-11-18",
-              "locator": "Fine details and wall thickness table, 0.4 mm nozzle: 1, 2, 3 and 4 perimeters are about 0.45, 0.9, 1.35 and 1.8 mm"
-            },
-            {
-              "kind": "supplier",
-              "reference": "Protolabs, Fused deposition modeling (FDM)",
-              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
-              "accessed": "2026-11-18",
-              "locator": "FDM specifications table, Unsupported/Supported Walls: minimum 0.8 mm (the floor)"
-            }
-          ]
-        },
-        {
-          "characteristic": "min_feature",
-          "operator": ">=",
-          "quantity": {
-            "value": 2.0,
-            "units": "mm"
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Protolabs, Fused deposition modeling (FDM)",
-              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
-              "accessed": "2026-11-18",
-              "locator": "FDM specifications table, Minimum Feature Size: 2.0 mm"
-            }
-          ]
-        },
-        {
-          "characteristic": "min_hole",
-          "operator": ">=",
-          "quantity": {
-            "value": 2.0,
-            "units": "mm"
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Protolabs, Fused deposition modeling (FDM)",
-              "url": "https://www.protolabs.com/services/3d-printing/fused-deposition-modeling/",
-              "accessed": "2026-11-18",
-              "locator": "FDM specifications table, Minimum Hole Diameter: 2.0 mm"
-            }
-          ]
-        },
-        {
-          "characteristic": "sliding_clearance",
-          "operator": ">=",
-          "quantity": {
-            "value": 0.3,
-            "units": "mm"
-          },
-          "citations": [
-            {
-              "kind": "supplier",
-              "reference": "Prusa Knowledge Base, Modeling with 3D printing in mind",
-              "url": "https://help.prusa3d.com/article/modeling-with-3d-printing-in-mind_164135",
-              "accessed": "2026-11-20",
-              "locator": "Tolerances: an initial good measurement for movable parts is at least 0.3 mm. The source does not say per side or diametral; this set reads it per side, the stricter reading"
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  }
 }

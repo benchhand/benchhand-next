@@ -5,10 +5,6 @@
   "description": "Accepted evidence per requirement, part, component, interface or operation, one entry per evidence level: CAD-valid, geometrically manufacturable, process planned, simulation-supported and physically validated are independent facets. A pass or fail cites its artifacts or sealed bundle and the configuration, material, process and conditions it applies to; physically validated evidence also records the specimen, protocol, instrument calibration, results, date, approver and scope. Planned and unknown are never a pass, and waived stays waived",
   "x-version": "1.0.0",
   "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "entries"
-  ],
   "properties": {
     "entries": {
       "type": "array",
@@ -17,6 +13,70 @@
       }
     }
   },
+  "required": [
+    "entries"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "entries": [
+        {
+          "id": "EV-001",
+          "requirement": "REQ-001",
+          "subject": {
+            "PN": "TST-0001"
+          },
+          "level": "physically_validated",
+          "result": "pass",
+          "method": "coupon load test",
+          "criterion": {
+            "property": "load",
+            "operator": ">=",
+            "value": 11,
+            "units": "N",
+            "source": {
+              "kind": "user",
+              "reference": "bench test request",
+              "origin": "the user"
+            }
+          },
+          "configuration": {
+            "version": "v1",
+            "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "rev": "X1"
+          },
+          "artifacts": [
+            {
+              "path": "hw/manufacturing/sources/test.csv",
+              "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          ],
+          "physical": {
+            "specimen": "coupon 1",
+            "configuration": "v1",
+            "material": "TST lot 1",
+            "process": "print",
+            "protocol": "TST protocol",
+            "instrument": "TST scale, calibrated",
+            "results": "12 N",
+            "date": "2026-01-02",
+            "approver": "lead",
+            "scope": "coupon only"
+          }
+        },
+        {
+          "id": "EV-002",
+          "requirement": "REQ-002",
+          "subject": {
+            "PN": "TST-0001"
+          },
+          "level": "process_planned",
+          "result": "planned",
+          "method": "print trial"
+        }
+      ]
+    }
+  ],
   "$defs": {
     "fingerprint_domain": {
       "enum": [
@@ -42,14 +102,6 @@
     },
     "entry": {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "subject",
-        "level",
-        "result",
-        "method"
-      ],
       "properties": {
         "id": {
           "$ref": "common.schema.json#/$defs/evidence_id"
@@ -86,11 +138,6 @@
         },
         "configuration": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "version",
-            "manifest_sha256"
-          ],
           "properties": {
             "version": {
               "$ref": "common.schema.json#/$defs/version"
@@ -104,33 +151,33 @@
             "geometry_sha256": {
               "$ref": "common.schema.json#/$defs/sha256"
             }
-          }
+          },
+          "required": [
+            "version",
+            "manifest_sha256"
+          ],
+          "additionalProperties": false
         },
         "fingerprints": {
-          "description": "sha256 of each normalized dependency the evidence relied on, by domain; a changed fingerprint makes the evidence stale until an impact assessment carries it forward",
-          "type": "object",
           "minProperties": 1,
+          "description": "sha256 of each normalized dependency the evidence relied on, by domain; a changed fingerprint makes the evidence stale until an impact assessment carries it forward",
           "propertyNames": {
             "$ref": "#/$defs/fingerprint_domain"
           },
+          "type": "object",
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/sha256"
           }
         },
         "artifacts": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "common.schema.json#/$defs/file_hash"
-          }
+          },
+          "minItems": 1
         },
         "bundle": {
           "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "path",
-            "manifest_sha256"
-          ],
           "properties": {
             "path": {
               "$ref": "common.schema.json#/$defs/project_path"
@@ -138,7 +185,12 @@
             "manifest_sha256": {
               "$ref": "common.schema.json#/$defs/sha256"
             }
-          }
+          },
+          "required": [
+            "path",
+            "manifest_sha256"
+          ],
+          "additionalProperties": false
         },
         "tool": {
           "$ref": "common.schema.json#/$defs/text"
@@ -154,7 +206,47 @@
         },
         "physical": {
           "type": "object",
-          "additionalProperties": false,
+          "properties": {
+            "specimen": {
+              "$ref": "common.schema.json#/$defs/text",
+              "description": "the actual item tested: coupon, part or assembly, with its identity"
+            },
+            "configuration": {
+              "$ref": "common.schema.json#/$defs/text",
+              "description": "the as-built configuration and revision"
+            },
+            "material": {
+              "$ref": "common.schema.json#/$defs/text",
+              "description": "the material and lot as used"
+            },
+            "process": {
+              "$ref": "common.schema.json#/$defs/text",
+              "description": "the route and settings as used"
+            },
+            "protocol": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "setup": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "instrument": {
+              "$ref": "common.schema.json#/$defs/text",
+              "description": "the instrument and its calibration"
+            },
+            "results": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "date": {
+              "$ref": "common.schema.json#/$defs/date"
+            },
+            "approver": {
+              "$ref": "common.schema.json#/$defs/text"
+            },
+            "scope": {
+              "$ref": "common.schema.json#/$defs/text",
+              "description": "what the result covers: a coupon covers its coupon scope, not assembly or end-use life"
+            }
+          },
           "required": [
             "specimen",
             "configuration",
@@ -167,75 +259,31 @@
             "approver",
             "scope"
           ],
-          "properties": {
-            "specimen": {
-              "description": "the actual item tested: coupon, part or assembly, with its identity",
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "configuration": {
-              "description": "the as-built configuration and revision",
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "material": {
-              "description": "the material and lot as used",
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "process": {
-              "description": "the route and settings as used",
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "protocol": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "setup": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "instrument": {
-              "description": "the instrument and its calibration",
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "results": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "date": {
-              "$ref": "common.schema.json#/$defs/date"
-            },
-            "approver": {
-              "$ref": "common.schema.json#/$defs/text"
-            },
-            "scope": {
-              "description": "what the result covers: a coupon covers its coupon scope, not assembly or end-use life",
-              "$ref": "common.schema.json#/$defs/text"
-            }
-          }
+          "additionalProperties": false
         },
         "waiver": {
           "$ref": "common.schema.json#/$defs/waiver"
         },
         "decisions": {
           "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
           "items": {
             "$ref": "common.schema.json#/$defs/decision"
-          }
+          },
+          "minItems": 1,
+          "uniqueItems": true
         },
         "note": {
           "$ref": "common.schema.json#/$defs/text"
         }
       },
-      "anyOf": [
-        {
-          "required": [
-            "requirement"
-          ]
-        },
-        {
-          "required": [
-            "obligation"
-          ]
-        }
+      "required": [
+        "id",
+        "subject",
+        "level",
+        "result",
+        "method"
       ],
+      "additionalProperties": false,
       "allOf": [
         {
           "if": {
@@ -308,67 +356,19 @@
             }
           }
         }
-      ]
-    }
-  },
-  "examples": [
-    {
-      "entries": [
+      ],
+      "anyOf": [
         {
-          "id": "EV-001",
-          "requirement": "REQ-001",
-          "subject": {
-            "PN": "TST-0001"
-          },
-          "level": "physically_validated",
-          "result": "pass",
-          "method": "coupon load test",
-          "criterion": {
-            "property": "load",
-            "operator": ">=",
-            "value": 11,
-            "units": "N",
-            "source": {
-              "kind": "user",
-              "reference": "bench test request",
-              "origin": "the user"
-            }
-          },
-          "configuration": {
-            "version": "v1",
-            "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "rev": "X1"
-          },
-          "artifacts": [
-            {
-              "path": "hw/manufacturing/sources/test.csv",
-              "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-            }
-          ],
-          "physical": {
-            "specimen": "coupon 1",
-            "configuration": "v1",
-            "material": "TST lot 1",
-            "process": "print",
-            "protocol": "TST protocol",
-            "instrument": "TST scale, calibrated",
-            "results": "12 N",
-            "date": "2026-01-02",
-            "approver": "lead",
-            "scope": "coupon only"
-          }
+          "required": [
+            "requirement"
+          ]
         },
         {
-          "id": "EV-002",
-          "requirement": "REQ-002",
-          "subject": {
-            "PN": "TST-0001"
-          },
-          "level": "process_planned",
-          "result": "planned",
-          "method": "print trial"
+          "required": [
+            "obligation"
+          ]
         }
       ]
     }
-  ]
+  }
 }

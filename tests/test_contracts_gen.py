@@ -1,4 +1,5 @@
-"""The contract generator in tools/gen (ADR-0017): discovery, outputs, fixtures, docs and drift."""
+"""The contract generator in tools/gen (ADR-0017): TypeSpec to the published schemas, then the models,
+fixtures, TypeScript and docs generated from those, and drift."""
 
 from __future__ import annotations
 
@@ -15,31 +16,38 @@ import pytest
 from benchhand_contracts import ContractViolation, validate
 from benchhand_contracts.validation import ContractValidator
 from contracts_gen.docs import write_docs
+from contracts_gen.emit import TSP, TypeSpecError, write_published_schemas
 from contracts_gen.examples import ExampleError, contract_registry, write_examples
 from contracts_gen.generate import drift, generate
-from contracts_gen.python_models import write_python, write_schemas
+from contracts_gen.python_models import write_python
 from contracts_gen.sources import (
     CONTRACTS_DIR,
     DOCS_OUT,
     EXAMPLES_OUT,
     MODELS_OUT,
     REPO_ROOT,
+    SCHEMAS_OUT,
     TYPESCRIPT_OUT,
     ContractSourceError,
     load_contracts,
 )
 from contracts_gen.typescript import write_typescript
 
-NODE_READY = shutil.which("node") is not None and all(
-    (REPO_ROOT / "ui" / "shared" / "node_modules" / name).is_dir()
-    for name in ("ajv", "json-schema-to-typescript")
+NODE_READY = (
+    shutil.which("node") is not None
+    and all(
+        (REPO_ROOT / "ui" / "shared" / "node_modules" / name).is_dir()
+        for name in ("ajv", "json-schema-to-typescript")
+    )
+    and (REPO_ROOT / CONTRACTS_DIR / TSP).is_file()
 )
-needs_node = pytest.mark.skipif(not NODE_READY, reason="needs node and `pnpm install` in ui/")
+needs_node = pytest.mark.skipif(not NODE_READY, reason="needs node and `pnpm install` in ui/ and contracts/")
 
 # A directory no real contract uses, so the copied contracts tree can never already have it.
 SYNTHETIC_DIR = "generator-test"
 SYNTHETIC_PACKAGE = "generator_test"  # datamodel-codegen's module name for SYNTHETIC_DIR
 NEW_ID = f"https://benchhand.github.io/benchhand/contracts/{SYNTHETIC_DIR}/widget.schema.json"
+NEW_SOURCE = f"contracts/{SYNTHETIC_DIR}/widget.tsp"
 NEW_SCHEMA: dict[str, Any] = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": NEW_ID,
@@ -65,18 +73,69 @@ NEW_SCHEMA: dict[str, Any] = {
 }
 
 
+# NEW_SCHEMA's core, as TypeSpec: a closed root with a local and a cross-contract $ref, a condition, an open
+# nested object, and examples.
+NEW_TYPESPEC = f"""import "@typespec/json-schema";
+import "../provider/protocol.tsp";
+
+using TypeSpec.JsonSchema;
+
+@jsonSchema
+@baseUri("https://benchhand.github.io/benchhand/contracts/{SYNTHETIC_DIR}/widget/")
+namespace GeneratorTest.Widget;
+
+/** A widget. */
+@summary("widget")
+@id("{NEW_ID}")
+@extension("x-version", "1.0.0")
+@extension("allOf", #[#{{ `if`: #{{ required: #["kind"] }}, `then`: #{{ required: #["part"] }} }}])
+model Widget {{
+  part: PartNumber;
+  kind?: Provider.Protocol.HookKind;
+  notes?: {{
+    text?: string;
+    ...Record<unknown>;
+  }};
+}}
+
+@extension("examples", #["LMP-0003"])
+@pattern("^[A-Z]{{3}}-[0-9]{{4}}$")
+scalar PartNumber extends string;
+
+@@extension(Widget, "examples", #[#{{ part: "LMP-0003", kind: "kernel" }}]);
+"""
+
+
 @pytest.fixture
-def contracts_dir(tmp_path: Path) -> Path:
-    """The repository's contracts plus a new schema in a new directory."""
-    target = tmp_path / CONTRACTS_DIR
-    shutil.copytree(REPO_ROOT / CONTRACTS_DIR, target)
+def schemas_dir(tmp_path: Path) -> Path:
+    """The published schemas plus a new one in a new directory: the input of every generator after emit."""
+    target = tmp_path / "schemas"
+    shutil.copytree(REPO_ROOT / SCHEMAS_OUT, target)
     (target / SYNTHETIC_DIR).mkdir()
     (target / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(NEW_SCHEMA, indent=2))
     return target
 
 
-def test_load_contracts_discovers_every_schema_file(contracts_dir: Path) -> None:
-    rel_paths = [contract.rel_path for contract in load_contracts(contracts_dir)]
+@pytest.fixture
+def contracts_dir(tmp_path: Path) -> Path:
+    """The repository's TypeSpec contracts plus a new contract in a new directory."""
+    target = tmp_path / CONTRACTS_DIR
+    source = REPO_ROOT / CONTRACTS_DIR
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("node_modules", "tsp-output"))
+    (target / "node_modules").symlink_to(source / "node_modules")
+    (target / SYNTHETIC_DIR).mkdir()
+    _write_widget(target, NEW_TYPESPEC)
+    main = target / "main.tsp"
+    main.write_text(main.read_text() + f'import "./{SYNTHETIC_DIR}/widget.tsp";\n')
+    return target
+
+
+def _write_widget(contracts_dir: Path, source: str) -> None:
+    (contracts_dir / SYNTHETIC_DIR / "widget.tsp").write_text(source)
+
+
+def test_load_contracts_discovers_every_schema_file(schemas_dir: Path) -> None:
+    rel_paths = [contract.rel_path for contract in load_contracts(schemas_dir)]
     assert rel_paths == sorted(rel_paths)
     assert {
         "provider/protocol.schema.json",
@@ -85,25 +144,61 @@ def test_load_contracts_discovers_every_schema_file(contracts_dir: Path) -> None
     } <= set(rel_paths)
 
 
-def test_load_contracts_refuses_an_absolute_ref(contracts_dir: Path) -> None:
+def test_load_contracts_refuses_an_absolute_ref(schemas_dir: Path) -> None:
     schema = {**NEW_SCHEMA, "properties": {"part": {"$ref": "https://example.com/other.schema.json"}}}
-    (contracts_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
     with pytest.raises(ContractSourceError, match="must be relative"):
-        load_contracts(contracts_dir)
+        load_contracts(schemas_dir)
+
+
+@needs_node
+def test_a_typespec_contract_is_published_under_its_id_with_file_relative_refs(
+    contracts_dir: Path, tmp_path: Path
+) -> None:
+    write_published_schemas(contracts_dir, tmp_path)
+    published = json.loads((tmp_path / SYNTHETIC_DIR / "widget.schema.json").read_text())
+    assert published == {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": NEW_ID,
+        "title": "widget",
+        "description": "A widget.",
+        "x-version": "1.0.0",
+        "type": "object",
+        "properties": {
+            "part": {"$ref": "#/$defs/PartNumber"},
+            "kind": {"$ref": "../provider/protocol.schema.json#/$defs/HookKind"},
+            "notes": {"type": "object", "properties": {"text": {"type": "string"}}},
+        },
+        "required": ["part"],
+        "additionalProperties": False,
+        "allOf": NEW_SCHEMA["allOf"],
+        "examples": NEW_SCHEMA["examples"],
+        "$defs": {"PartNumber": NEW_SCHEMA["$defs"]["PartNumber"]},
+    }
+    # The repository's own contracts come out as they are published.
+    for path in sorted((REPO_ROOT / SCHEMAS_OUT).rglob("*.schema.json")):
+        rel_path = path.relative_to(REPO_ROOT / SCHEMAS_OUT)
+        assert (tmp_path / rel_path).read_bytes() == path.read_bytes(), rel_path
+
+
+@needs_node
+def test_a_typespec_warning_fails_the_compile(contracts_dir: Path, tmp_path: Path) -> None:
+    # The JSON Schema emitter warns about a scalar it can't map; --warn-as-error makes that a failure.
+    _write_widget(
+        contracts_dir, NEW_TYPESPEC + "\nscalar Unmapped;\n\nmodel Holder {\n  value: Unmapped;\n}\n"
+    )
+    with pytest.raises(TypeSpecError, match="unknown-scalar"):
+        write_published_schemas(contracts_dir, tmp_path)
 
 
 def test_python_models_cover_a_new_schema_without_generator_changes(
-    contracts_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    schemas_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    contracts = load_contracts(contracts_dir)
+    contracts = load_contracts(schemas_dir)
     out = tmp_path / "out" / "generated_models"
-    write_python(contracts, contracts_dir, out)
+    write_python(contracts, schemas_dir, out)
     header = (out / SYNTHETIC_PACKAGE / "widget_schema.py").read_text().splitlines()[:2]
-    assert header[1] == f"# Source: contracts/{SYNTHETIC_DIR}/widget.schema.json"
-    write_schemas(contracts, contracts_dir, tmp_path / "schemas")
-    assert (tmp_path / "schemas" / SYNTHETIC_DIR / "widget.schema.json").read_bytes() == (
-        contracts_dir / SYNTHETIC_DIR / "widget.schema.json"
-    ).read_bytes()
+    assert header[1] == f"# Source: {NEW_SOURCE}"
     # The module imports, so its $ref into ../provider/protocol became a working cross-package import.
     monkeypatch.syspath_prepend(str(out.parent))
     try:
@@ -120,12 +215,12 @@ def test_python_models_cover_a_new_schema_without_generator_changes(
             del sys.modules[name]
 
 
-def test_fixtures_hold_valid_examples_and_rejected_mutations(contracts_dir: Path, tmp_path: Path) -> None:
-    contracts = load_contracts(contracts_dir)
+def test_fixtures_hold_valid_examples_and_rejected_mutations(schemas_dir: Path, tmp_path: Path) -> None:
+    contracts = load_contracts(schemas_dir)
     write_examples(contracts, tmp_path)
     registry = contract_registry(contracts)
     document = json.loads((tmp_path / SYNTHETIC_DIR / "widget.examples.json").read_text())
-    assert document["$comment"].endswith(f"Source: contracts/{SYNTHETIC_DIR}/widget.schema.json")
+    assert document["$comment"].endswith(f"Source: {NEW_SOURCE}")
     cases = {case["schema_id"]: case for case in document["cases"]}
     assert set(cases) == {NEW_ID, f"{NEW_ID}#/$defs/PartNumber"}
     for schema_id, case in cases.items():
@@ -166,19 +261,19 @@ def test_fixtures_hold_valid_examples_and_rejected_mutations(contracts_dir: Path
     ids=["invalid-root-example", "invalid-nested-example", "no-invalid-fixture"],
 )
 def test_examples_that_cant_be_fixtures_fail_generation(
-    contracts_dir: Path, tmp_path: Path, changes: dict[str, Any], message: str
+    schemas_dir: Path, tmp_path: Path, changes: dict[str, Any], message: str
 ) -> None:
     schema = {**NEW_SCHEMA, **changes}
-    (contracts_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
     with pytest.raises(ExampleError, match=message):
-        write_examples(load_contracts(contracts_dir), tmp_path)
+        write_examples(load_contracts(schemas_dir), tmp_path)
 
 
-def test_docs_render_each_contract_and_an_index(contracts_dir: Path, tmp_path: Path) -> None:
-    write_docs(load_contracts(contracts_dir), tmp_path)
+def test_docs_render_each_contract_and_an_index(schemas_dir: Path, tmp_path: Path) -> None:
+    write_docs(load_contracts(schemas_dir), tmp_path)
     page = (tmp_path / SYNTHETIC_DIR / "widget.md").read_text()
     assert page.startswith("# widget\n\nGenerated by tools/gen (`just contracts`). Do not edit.")
-    assert f"](../../../../contracts/{SYNTHETIC_DIR}/widget.schema.json)" in page
+    assert f"](../../../../{NEW_SOURCE})" in page
     assert "| `part` | [`PartNumber`](#partnumber) | yes |" in page
     assert "| `kind` | [`HookKind`](../provider/protocol.md#hookkind) | no |" in page
     assert "### `Unused`" in page
@@ -188,11 +283,11 @@ def test_docs_render_each_contract_and_an_index(contracts_dir: Path, tmp_path: P
 
 
 @needs_node
-def test_typescript_exports_a_type_and_a_validator_per_def(contracts_dir: Path, tmp_path: Path) -> None:
+def test_typescript_exports_a_type_and_a_validator_per_def(schemas_dir: Path, tmp_path: Path) -> None:
     """The generator fails on a $def without a type; the types it writes compile, aliases included."""
     out = tmp_path / "contracts"
-    contracts = load_contracts(contracts_dir)
-    write_typescript(contracts, contracts_dir, out)
+    contracts = load_contracts(schemas_dir)
+    write_typescript(contracts, schemas_dir, out)
     for contract in contracts:
         types = (out / f"{contract.stem}.ts").read_text()
         validators = (out / f"{contract.stem}.validate.d.ts").read_text()
@@ -250,20 +345,21 @@ console.log(JSON.stringify(results));
             assert not any(result["invalid"]), result
 
 
-PROTOCOL_ID = "https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json"
-EDGE_CASES: list[tuple[str, Any, bool]] = [
-    ("HookId", "kernel", True),
-    ("HookId", "kernel\n", False),  # Python's re lets $ match before a final newline; ECMAScript doesn't
-    ("ProgressParams", {"id": 1, "fraction": 0.5}, True),
-    ("ProgressParams", {"id": 1, "fraction": 2}, False),
-    ("ProgressParams", {"id": 1, "fraction": float("nan")}, False),
-    ("ProgressParams", {"id": 1, "fraction": float("inf")}, False),
+CONTRACTS_BASE = "https://benchhand.github.io/benchhand/contracts/"
+EDGE_CASES: list[tuple[str, str, Any, bool]] = [
+    ("provider/protocol", "HookId", "kernel", True),
+    # Python's re lets $ match before a final newline; ECMAScript doesn't
+    ("provider/protocol", "HookId", "kernel\n", False),
+    ("provider/protocol", "ProgressParams", {"id": 1, "fraction": 0.5}, True),
+    ("provider/protocol", "ProgressParams", {"id": 1, "fraction": 2}, False),
+    ("provider/protocol", "ProgressParams", {"id": 1, "fraction": float("nan")}, False),
+    ("provider/protocol", "ProgressParams", {"id": 1, "fraction": float("inf")}, False),
 ]
 
 
-def _python_accepts(name: str, instance: Any) -> bool:
+def _python_accepts(stem: str, name: str, instance: Any) -> bool:
     try:
-        validate(f"{PROTOCOL_ID}#/$defs/{name}", instance)
+        validate(f"{CONTRACTS_BASE}{stem}.schema.json#/$defs/{name}", instance)
     except ContractViolation:
         return False
     return True
@@ -272,20 +368,21 @@ def _python_accepts(name: str, instance: Any) -> bool:
 @needs_node
 def test_python_and_ajv_validators_agree_on_edge_cases(tmp_path: Path) -> None:
     # json.dumps writes NaN and Infinity as the JavaScript literals, so the cases are a JS expression.
-    cases = json.dumps([[name, instance] for name, instance, _ in EDGE_CASES])
+    modules = {stem: (REPO_ROOT / TYPESCRIPT_OUT / f"{stem}.validate.js").as_uri() for stem, *_ in EDGE_CASES}
+    cases = json.dumps([[modules[stem], name, instance] for stem, name, instance, _ in EDGE_CASES])
     runner = tmp_path / "run.mjs"
     runner.write_text(
-        "const validators = await import(process.argv[2]);\n"
         f"const cases = {cases};\n"
-        "console.log(JSON.stringify(cases.map(([name, value]) => validators['validate' + name](value))));\n"
+        "const results = [];\n"
+        "for (const [module, name, value] of cases) {\n"
+        "  results.push((await import(module))['validate' + name](value));\n"
+        "}\n"
+        "console.log(JSON.stringify(results));\n"
     )
-    module = REPO_ROOT / TYPESCRIPT_OUT / "provider" / "protocol.validate.js"
-    output = subprocess.run(
-        ["node", str(runner), module.as_uri()], capture_output=True, text=True, check=True
-    ).stdout
-    expected = [valid for _, _, valid in EDGE_CASES]
+    output = subprocess.run(["node", str(runner)], capture_output=True, text=True, check=True).stdout
+    expected = [valid for *_, valid in EDGE_CASES]
     assert json.loads(output) == expected
-    assert [_python_accepts(name, instance) for name, instance, _ in EDGE_CASES] == expected
+    assert [_python_accepts(stem, name, instance) for stem, name, instance, _ in EDGE_CASES] == expected
 
 
 @needs_node
@@ -304,8 +401,7 @@ def test_generation_is_deterministic_and_drift_is_reported(contracts_dir: Path, 
     ]
 
     # A failed regeneration leaves the previous outputs in place.
-    schema = {**NEW_SCHEMA, "examples": [{"part": "lowercase"}]}
-    (contracts_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    _write_widget(contracts_dir, NEW_TYPESPEC.replace('part: "LMP-0003", kind', 'part: "lowercase", kind'))
     with pytest.raises(ExampleError):
         generate(tree, contracts_dir)
     assert model.read_text().endswith("# hand edit\n")
