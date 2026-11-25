@@ -364,6 +364,37 @@ The agent writes `model.py` (CadQuery or build123d) for real geometry. Routine w
 - **Calculators:** `fits.lookup`, `fits.stackup`, `fea.case_from_requirement` and `motion.pose`.
 - **Layout skeleton:** `layout.from_concept` writes each inferred value as a bounded assumption, which must be accepted or edited at LAYOUT freeze. The draft can never be frozen as it is.
 
+### 12a. Documentation set: annotations, groups, materials and finish
+
+STEP AP242 stays the primary deliverable for every released version. Everything in this section is added beside it and is built from the same version, so the STEP, the drawings, the FreeCAD document and the viewer always show the same names, groups and materials.
+
+**One annotation set per part and assembly** (a new contract, `contracts/record/annotations`). The tools derive it from the record and the user can edit it; nothing is drawn by hand:
+
+- **Groups:** the assembly tree (subassemblies), plus a sourcing group for every part: make, buy or existing (`make_buy`, including the `existing` value from prototype PR #333). Fasteners and purchased hardware go in buy; reference and construction geometry go in its own group.
+- **Callout targets:** each part, and each recognised feature (hole, thread, slot, fit, sealing face), with a label: part number, name, material and finish.
+- **Materials:** one material per body, from the record. It drives the section hatch, the render appearance, the mass, and the label.
+- **Surface finish:** per part and per face where it matters (Ra, process such as anodise, powder coat, polish), from requirements and the DFM review.
+- **Notes:** general and per-group notes, and weld callouts for welded joints.
+- **Assembly order:** numbered steps from the assembly sequence (the motion and interference data already orders them), each step naming the parts it adds and the fasteners with their torque.
+
+**Outputs, each with the ADR-0018 baseline:**
+
+| Output | What it holds | Baseline | Richer version |
+|---|---|---|---|
+| Part drawings (TechDraw, ported) | Views, dimensions, tolerances, sections with material hatch, detail views, centre marks, title block, plus surface finish symbols, weld symbols and notes | PDF and SVG sheets, and a text list of views, dimensions and symbols | none |
+| Keynoted section details | In the style of FreeCAD's `ArchDetail.FCStd` example: a section through the assembly in which every region is hatched by material and labelled with a leader (part number, material, finish, sourcing group) | PNG and SVG, plus the keynote list as text | Viewer layer |
+| Assembly drawings (ported, extended) | Exploded view, balloons, parts list grouped by make, buy and existing, and one sheet per assembly step with the step's parts and fasteners | PDF and SVG, the parts list as CSV, the steps as text | Step-through in the viewer |
+| Labelled views | A render with numbered callouts and a legend, for the person and for the agent's own review | PNG and the legend as text | Interactive viewer: hover or click a part, switch groups (sourcing, subassembly, material) on and off, step through the assembly order |
+| FreeCAD document | A structured `.FCStd`: an Assembly with joints, one group per subassembly and per sourcing group, a Construction group, named bodies with materials assigned, sketches with construction geometry kept, and the TechDraw pages inside | The file, and its object tree as text | none |
+
+Reference examples, shipped with FreeCAD 1.1 under `share/examples`:
+- `ArchDetail.FCStd`: 40 material objects and one section, with every layer labelled by leader on one TechDraw page. This is the model for keynoted details.
+- `AssemblyExample.FCStd`: a named Assembly with links, joints and a joint group.
+- `EngineBlock.FCStd`: named feature groups and a Construction group.
+- `BIMExample.FCStd`: 24 groups, dimensions and an annotation on a page.
+
+The acceptance tests compare the object tree and page contents against these patterns, not the pixels.
+
 ### 13. Client capability research (as of 2026-11; recheck at implementation)
 
 | Host | Skills (native) | Prompts | Resources | Image results | Form elicitation | URL elicitation | Tasks | MCP Apps | Install route |
@@ -471,10 +502,19 @@ Code is reused only where it is already clean and fits the new boundaries (secti
   - Providers: kernel-cadquery and kernel-build123d, freecad (managed install and compatibility probe), solver-calculix, collision-fcl, render-chromium, checks-process (CEL dispatch) and store-fs.
   - `benchhand-sdk`.
   - The output, inspect, generator, calculator, motion, drawing, analysis, BOM and release tools.
+  - The documentation set (section 12a):
+    - the annotation-set contract;
+    - surface finish, weld symbols and notes on part drawings;
+    - keynoted section details;
+    - assembly drawings grouped by make, buy and existing, with one sheet per assembly step;
+    - labelled views as PNG;
+    - the structured `.FCStd` export (`cad-app` `document.export`);
+    - STEP AP242 stays the primary deliverable.
   - Provider-declared CLI subcommands.
 - [ ] **Phase 5: preview host and the richer interactions.**
   - The preview host plus `ui/`: viewer, concept, gallery, gate card and flow view (React Flow).
   - `preview.*`, `viewer.*` and `concept.*`, draft preview, and `layout.from_concept`.
+  - Viewer layers from the annotation set: callouts, a legend, group toggles (sourcing, subassembly, material) and assembly-step playback.
   - MCP Apps shells, image results, and the tasks adapter behind a flag (no form elicitation, ADR-0018).
   - `benchhand serve`.
 - [ ] **Phase 6: harness integration.**
