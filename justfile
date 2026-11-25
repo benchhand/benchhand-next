@@ -53,8 +53,8 @@ contracts-format:
 # - orphan_definitions: record/common and record/drawing are libraries; their $defs are published API that
 #   other contracts refer to, and each has a validator of its own.
 # - simple_properties_identifiers: property names such as requires-python are part of the published shape.
-# required_properties_in_properties runs on its own: the findings it keeps are listed by location, each with
-# its reason, in tools/gen/contracts_gen/lint.py, and any other finding fails.
+# required_properties_in_properties runs on its own: the findings it keeps are listed by location and by the
+# property name required there, each with its reason, in tools/gen/contracts_gen/lint.py; any other fails.
 contracts-lint:
     #!/usr/bin/env bash
     set -euo pipefail
