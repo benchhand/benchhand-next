@@ -1,0 +1,8 @@
+emit:
+  - "@typespec/json-schema"
+options:
+  "@typespec/json-schema":
+    emitter-output-dir: "{output-dir}"
+    file-type: json
+    bundleId: "contracts.schema.json"
+    seal-object-schemas: true
