@@ -137,8 +137,15 @@ sequenceDiagram
     alt vN isn't built, is reached through a link, or fails its seal
       E-->>S: BuiltVersionError, before any packet or snapshot read
     else built and sealed
-      E->>E: read its bound packets in hw/checks/vN/
-      E->>R: read_document: the snapshot documents vN was built from
+      E->>E: read its bound packets in hw/checks/vN/, each seal verified on the bytes on disk
+      E->>E: upgrade a record_version 2 packet in memory with migrate's rules, nothing written back
+      alt a packet still breaks the v3 contract after the upgrade
+        E->>E: finding packet.unupgradable, the packet counts as nothing
+      end
+      E->>R: read the snapshot documents vN was built from, a record_version 2 snapshot upgraded in memory the same way
+      alt a snapshot document can't be upgraded
+        E->>E: build staleness NotComputed
+      end
       E-->>S: BuiltVersion
       S->>E: assess(record, built, today)
       E->>E: expected obligations, sealed packets, evidence ledger, waivers
@@ -147,7 +154,7 @@ sequenceDiagram
       else the acceptance inventory can't be read, e.g. a linked source file
         E->>E: acceptance refused, with a reason
       else
-        E->>E: acceptance formed: the inventory and its acceptance_digest
+        E->>E: acceptance formed: the inventory hashes the files on disk, and its acceptance_digest follows
       end
       E-->>S: EvidenceAssessment: statuses, facets, findings, complete, acceptance
     end

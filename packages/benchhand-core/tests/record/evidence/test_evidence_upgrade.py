@@ -211,3 +211,25 @@ def test_a_v2_built_versions_evidence_digest_is_the_one_of_its_bytes(migrated_v2
     """Pin: the digest of a v2 built version, computed before the reader upgraded anything, is unchanged,
     so a digest already recorded for one stays valid."""
     assert dumped(migrated_v2)["acceptance"]["evidence_sha256"] == V2_EVIDENCE_SHA256
+
+
+@pytest.mark.parametrize("form", [2, 3])
+def test_a_consistent_packet_earns_its_obligation_status_in_both_forms(
+    form: int, migrated_v2: Path, tmp_path: Path
+) -> None:
+    """The pinned fixture's packet contradicts itself (a fail outcome under a pass result), so assessment
+    refuses it in both forms. With the outcome and the aggregate agreeing, the v2 packet, upgraded in
+    memory, and its v3 twin each supply the obligation's status."""
+    root = migrated_v2 if form == 2 else rebuilt_in_v3(migrated_v2, tmp_path)
+    result_json = root / PACKET / "result.json"
+    data = json.loads(result_json.read_text(encoding="utf-8"))
+    assert data["record_version"] == form
+    data["outcomes"][0]["outcome"] = "pass"
+    result_json.write_text(json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
+    seal(root / PACKET, version_manifest_sha256=_version_sha(root))
+    result = dumped(root)
+    assert "packet.invalid" not in codes(result)
+    assert "packet.unupgradable" not in codes(result)
+    [status] = [s for s in result["statuses"] if s["obligation"]["id"] == "cad.readback@LMP-0001"]
+    assert status["result"] == "pass"
+    assert status["sources"] == [PACKET]
