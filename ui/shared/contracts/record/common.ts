@@ -357,7 +357,7 @@ export type CheckFamily = string;
  */
 export type FindingCode = string;
 /**
- * family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+ * family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
  */
 export type ObligationId = string;
 export type Waiver = {

@@ -5,7 +5,7 @@ export type Entry = Entry1 & {
   id: string;
   requirement?: string;
   /**
-   * family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+   * family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
    */
   obligation?: string;
   subject: Subject;
@@ -259,7 +259,7 @@ export type Waiver = {
   decision: string;
   subject: Subject;
   /**
-   * family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+   * family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
    */
   obligation?: string;
   criterion: string;

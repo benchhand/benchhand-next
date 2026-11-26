@@ -7,7 +7,9 @@ prototype test (reference/skills/cad-record/tests/test_evidence.py) it is ported
 
 from __future__ import annotations
 
+import itertools
 import json
+import re
 import shutil
 from dataclasses import replace
 from datetime import date
@@ -54,7 +56,7 @@ def codes(result: dict[str, Any]) -> set[str]:
 
 
 def expected(root: Path) -> dict[str, dict[str, Any]]:
-    return {o.id: as_json(o) for o in required_checks(view(load_record(root)))}
+    return {o.id: as_json(o) for o in required_checks(view(load_record(root))).obligations}
 
 
 def packet(
@@ -166,7 +168,7 @@ def test_lamp_arm_obligations_match_the_prototype(lamp_arm: Path) -> None:
     """manufacturing_intent.py:2642 required_checks, on the same record before and after conversion. The
     one difference is v3's heat-set key rename (hole_d -> hole_diameter_mm) in the basis text."""
     golden = json.loads((Path(__file__).parent / "lamp_arm_obligations.412b5d9.json").read_text())
-    ours = [as_json(o) for o in required_checks(view(load_record(lamp_arm)))]
+    ours = [as_json(o) for o in required_checks(view(load_record(lamp_arm))).obligations]
     theirs = [
         {**o, "basis": o["basis"].replace("declared hole_d ", "declared hole_diameter_mm ")}
         for o in golden["obligations"]
@@ -780,6 +782,116 @@ def test_evidence_of_another_occurrence_or_region_credits_nothing(
     assert "evidence.subject" in codes(found)
 
 
+def write_policy(root: Path, *subjects: dict[str, Any]) -> str:
+    """An approved evidence policy asking cad_valid evidence of each subject; returns the rebuilt v1's
+    manifest sha256."""
+    product = yaml.safe_load((root / "hw/product.yaml").read_text(encoding="utf-8"))
+    rows = [{"subject": subject, "level": "cad_valid"} for subject in subjects]
+    product["use_case"]["evidence_policy"] = {"obligations": rows, "decision": APPROVED}
+    write_yaml(root / "hw/product.yaml", product)
+    return build(root)
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "ids"),
+    [
+        (
+            {"PN": "LMP-0011", "occurrence": "@ring-base"},
+            {"PN": "LMP-0011", "occurrence": "@ring-elbow"},
+            ("policy.cad_valid@LMP-0011@ring-base", "policy.cad_valid@LMP-0011@ring-elbow"),
+        ),
+        (
+            {"PN": "LMP-0001", "feature": "seat", "region": "upper"},
+            {"PN": "LMP-0001", "feature": "seat", "region": "lower"},
+            ("policy.cad_valid@LMP-0001#seat:upper", "policy.cad_valid@LMP-0001#seat:lower"),
+        ),
+    ],
+)
+def test_policy_rows_at_two_occurrences_or_regions_are_two_obligations(
+    built: tuple[Path, str], first: dict[str, Any], second: dict[str, Any], ids: tuple[str, str]
+) -> None:
+    """Two policy rows on one part at different occurrences or regions are two obligations: evidence of
+    the first passes it and leaves the second unknown. The prototype's anchor leaves both out
+    (manufacturing_intent.py:2621), so it keeps the first row and drops the second."""
+    root, _ = built
+    version_sha = write_policy(root, first, second)
+    assert {i for i in expected(root) if i.startswith("policy.cad_valid@")} == set(ids)
+    entry = ledger_entry(root, version_sha, obligation=ids[0], subject=first)
+    entry["fingerprints"] = current_fingerprints(root, first)
+    write_ledger(root, entry)
+    found = statuses(run(root))
+    assert found[ids[0]]["result"] == "pass"
+    assert found[ids[1]]["result"] == "unknown"
+
+
+def test_an_obligation_id_naming_two_checks_credits_neither(built: tuple[Path, str]) -> None:
+    """Policy rows whose subjects differ only in the requirements they serve share one id. Each check under
+    it stays unknown with no credit, and a finding names the collision."""
+    root, _ = built
+    first = {"PN": "LMP-0001", "requirements": ["REQ-001"]}
+    second = {"PN": "LMP-0001", "requirements": ["REQ-002"]}
+    version_sha = write_policy(root, first, second)
+    target = "policy.cad_valid@LMP-0001"
+    entry = ledger_entry(root, version_sha, obligation=target, subject=first)
+    entry["fingerprints"] = current_fingerprints(root, first)
+    write_ledger(root, entry)
+    result = run(root)
+    colliding = [s for s in result["statuses"] if s["obligation"]["id"] == target]
+    assert [s["obligation"]["subject"] for s in colliding] == [first, second]
+    assert [s["result"] for s in colliding] == ["unknown", "unknown"]
+    [finding] = [f for f in result["findings"] if f["code"] == "obligation.id_collision"]
+    assert finding["subject"] == target
+
+
+# A part anchor, read back by the grammar of common.tsp obligation_id.
+PART_ANCHOR = re.compile(
+    r"^(?P<PN>[A-Z]{2,5}-[0-9]{4})(?P<occurrence>@[a-z][a-z0-9_-]*)?(?:\.(?P<component>[a-z][a-z0-9_]*))?"
+    r"(?:/(?P<operation>[a-z][a-z0-9_]*))?(?:#(?P<feature>[a-z][a-z0-9_]*)(?::(?P<region>[a-z][a-z0-9_]*))?)?$"
+)
+
+
+def part_subjects() -> list[dict[str, str]]:
+    """Every combination of a part subject's optional segments, a region only with its feature."""
+    values = {"occurrence": "@ring-base_2", "component": "hub", "operation": "print", "feature": "seat"}
+    found = []
+    for present in itertools.product((False, True), repeat=len(values)):
+        chosen = {k: v for (k, v), on in zip(values.items(), present, strict=True) if on}
+        subject = {"PN": "LMP-0011"} | chosen
+        found.append(subject)
+        if "feature" in subject:
+            found.append(subject | {"region": "upper"})
+    return found
+
+
+@pytest.mark.parametrize("subject", part_subjects(), ids=lambda s: "+".join(s))
+def test_a_part_anchor_reads_back_as_its_subject(subject: dict[str, str]) -> None:
+    """No anchor segment's characters include a later delimiter, so the obligation id of each combination
+    of a part's occurrence, component, operation, feature and region reads back as its subject."""
+    from benchhand_contracts.models.record.common_schema import Obligation
+    from benchhand_core.record.evidence.obligations import obligation_anchor
+
+    anchor = obligation_anchor(subject)
+    parsed = PART_ANCHOR.match(anchor)
+    assert parsed is not None, anchor
+    assert {k: v for k, v in parsed.groupdict().items() if v} == subject
+    data = {"family": "policy.cad_valid", "subject": subject, "level": "cad_valid", "stage": "layout"}
+    Obligation.model_validate(data | {"id": f"policy.cad_valid@{anchor}", "basis": "TST"})
+
+
+@pytest.mark.parametrize("key", ["occurrence", "component", "operation", "feature", "region"])
+def test_a_subject_name_holding_an_anchor_delimiter_is_refused(key: str) -> None:
+    """A name holding a later delimiter would read back as another subject; the subject refuses it."""
+    from benchhand_contracts.models.record.common_schema import Obligation
+    from benchhand_core.record.evidence.obligations import obligation_anchor
+    from pydantic import ValidationError
+
+    subject = {"PN": "LMP-0011", "feature": "seat"} | {key: "@ring.base" if key == "occurrence" else "a:b"}
+    data = {"family": "policy.cad_valid", "subject": subject, "level": "cad_valid", "stage": "layout"}
+    ident = f"policy.cad_valid@{obligation_anchor(subject)}"
+    with pytest.raises(ValidationError):
+        Obligation.model_validate(data | {"id": ident, "basis": "TST"})
+
+
 def test_an_entry_at_another_level_credits_nothing(built: tuple[Path, str]) -> None:
     """Levels are independent facets: a cad_valid entry never passes a physically_validated obligation (a
     prototype gap, evidence.py:932-951)."""
@@ -815,7 +927,7 @@ def test_physical_evidence_without_its_test_credits_nothing(built: tuple[Path, s
 
     root, _ = built
     record = load_record(root)
-    expected_by_id = {o.id: o for o in required_checks(view(record))}
+    expected_by_id = {o.id: o for o in required_checks(view(record)).obligations}
     placed, _ = inventory(record.assembly, record.parts)
     ctx = EntryContext(
         view(record),

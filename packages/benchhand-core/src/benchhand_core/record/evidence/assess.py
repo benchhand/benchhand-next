@@ -9,6 +9,7 @@ accepted ledger. Pure over (record, built version, today): no I/O and no clock.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date
@@ -44,6 +45,7 @@ from benchhand_core.record.rules.assembly import Inventory, Occurrence, inventor
 
 FINDINGS = "hw/manufacturing/findings.yaml"
 EVIDENCE = "hw/manufacturing/evidence.yaml"
+PRODUCT = "hw/product.yaml"
 NOT_COMPUTED = "not_computed"
 __all__ = ["EvidenceAssessment", "assess"]
 
@@ -80,6 +82,7 @@ class _State:
     expected: tuple[Obligation, ...]
     by_id: dict[str, Obligation]
     candidates: dict[str, list[Candidate]]
+    collisions: frozenset[str] = frozenset()
     findings: list[Finding] = field(default_factory=list)
     waivers: dict[str, JsonMap] = field(default_factory=dict)
     entry_results: dict[str, str] = field(default_factory=dict)
@@ -270,6 +273,36 @@ def _dispositions(state: _State) -> None:
                 state.critical.append(entry)
 
 
+def _forced_unknown(state: _State, obligation: Obligation) -> str | None:
+    """Why `obligation` stays unknown whatever its evidence shows (a pass, a waiver, a planned entry), None
+    when its evidence decides it."""
+    if obligation.id in state.collisions:
+        return f"{obligation.id} names more than one check; none of them is credited"
+    if uncovered_route(obligation):
+        # common.tsp route_kind: a kind with no check contract reports unknown coverage; the prototype lets
+        # its evidence stand
+        return f"{obligation.id}: its route kind has no check contract; coverage stays unknown"
+    return None
+
+
+def _collisions(state: _State) -> None:
+    """An obligation id enumerated for more than one check. Only the approved evidence policy names free
+    subjects, so only its rows can collide."""
+    for ident in sorted(state.collisions):
+        subjects = "; ".join(
+            f"{json.dumps(subject_of(o), sort_keys=True)} at {o.level.value}"
+            for o in state.expected
+            if o.id == ident
+        )
+        message = (
+            f"{ident} names more than one check ({subjects}): each stays unknown and earns no credit; give "
+            "each evidence policy row a subject of its own"
+        )
+        pointer = "/use_case/evidence_policy/obligations"
+        code = "obligation.id_collision"
+        state.findings.append(_finding(code, "error", PRODUCT, message, pointer=pointer, subject=ident))
+
+
 def _statuses(state: _State) -> list[dict[str, Any]]:
     """One status per obligation from all its evidence (evidence.py:835-841)."""
     statuses = []
@@ -277,10 +310,9 @@ def _statuses(state: _State) -> list[dict[str, Any]]:
         found = state.candidates[obligation.id]
         result = best([r for r, _, _ in found], obligation.id in state.waivers)
         reasons = list(dict.fromkeys(reason for _, _, reason in found if reason))
-        if uncovered_route(obligation) and result != "unknown":
-            # common.tsp route_kind: a kind with no check contract reports unknown coverage, whatever its
-            # evidence shows (a pass, a waiver, a planned entry); the prototype lets each stand
-            reasons.append(f"{obligation.id}: its route kind has no check contract; coverage stays unknown")
+        forced = _forced_unknown(state, obligation)
+        if forced is not None and result != "unknown":
+            reasons.append(forced)
             result = "unknown"
         status: dict[str, Any] = {
             "obligation": as_json(obligation),
@@ -352,7 +384,8 @@ def assess(record: Record, built: BuiltVersion, today: date) -> EvidenceAssessme
     """The evidence assessment of `record` for the built version `built`; `today` judges valid_until."""
     record_view = with_guideline_digests(view(record), built.guidelines)
     placed, _ = inventory(record.assembly, record.parts)
-    expected = required_checks(record_view)
+    checks = required_checks(record_view)
+    expected = checks.obligations
     state = _State(
         record_view,
         placed,
@@ -361,7 +394,9 @@ def assess(record: Record, built: BuiltVersion, today: date) -> EvidenceAssessme
         expected,
         {o.id: o for o in expected},
         {o.id: [] for o in expected},
+        checks.collisions,
     )
+    _collisions(state)
     _record_sources(state)
     _packet_sources(state)
     _guideline_refusals(state)

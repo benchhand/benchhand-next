@@ -35,7 +35,7 @@ export type ObligationOutcome = {
   [k: string]: unknown;
 } & {
   /**
-   * family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+   * family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
    */
   obligation: string;
   /**
@@ -133,7 +133,7 @@ export type Finding = {
    */
   code: string;
   /**
-   * family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+   * family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
    */
   obligation?: string;
   subject: Subject;
@@ -388,7 +388,7 @@ export interface BenchhandManufacturingIntentCheckResultResultJsonOfAHwChecksVSB
  */
 export interface Obligation {
   /**
-   * family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+   * family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
    */
   id: string;
   /**

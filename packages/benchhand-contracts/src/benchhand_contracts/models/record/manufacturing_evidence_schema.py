@@ -114,11 +114,11 @@ class Entry1(ContractModel):
     obligation: Annotated[
         str | None,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ] = None
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     subject: common_schema.Subject1 | common_schema.Subject2 | common_schema.Subject3 | common_schema.Subject4
     """
@@ -164,11 +164,11 @@ class Entry2(ContractModel):
     obligation: Annotated[
         str,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ]
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     subject: common_schema.Subject1 | common_schema.Subject2 | common_schema.Subject3 | common_schema.Subject4
     """

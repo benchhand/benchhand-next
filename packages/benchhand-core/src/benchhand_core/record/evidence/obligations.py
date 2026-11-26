@@ -9,6 +9,7 @@ unknown route kind gets process.<kind>.coverage, which no handler can pass.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from benchhand_contracts.models.record.common_schema import Obligation
@@ -156,18 +157,24 @@ NO_INTENT = {"status": "unknown", "reason": "part.yaml has no intent"}
 Add = Callable[..., None]
 
 
+def _part_anchor(subject: Mapping[str, Any]) -> str:
+    """PN[@occurrence][.component][/operation][#feature[:region]]. No segment's characters include a later
+    delimiter (common.tsp occurrence_ref and semantic_id), so an anchor reads back one way. The contract makes
+    a region a region of its feature (common.tsp subject dependentRequired), so a region follows one."""
+    anchor = str(subject["PN"]) + str(subject.get("occurrence") or "")
+    for key, mark in (("component", "."), ("operation", "/"), ("feature", "#")):
+        if subject.get(key):
+            anchor += f"{mark}{subject[key]}"
+    if subject.get("feature") and subject.get("region"):
+        anchor += f":{subject['region']}"
+    return anchor
+
+
 def obligation_anchor(subject: Mapping[str, Any]) -> str:
-    """product, PN[.component][/operation][#feature], IF[#feature], REQ or op:<id>
-    (manufacturing_intent.py:2621)."""
+    """product, PN[@occurrence][.component][/operation][#feature[:region]], IF[#feature], REQ or op:<id>
+    (manufacturing_intent.py:2621, which leaves out the occurrence and the region)."""
     if subject.get("PN"):
-        anchor = str(subject["PN"])
-        if subject.get("component"):
-            anchor += f".{subject['component']}"
-        if subject.get("operation"):
-            anchor += f"/{subject['operation']}"
-        if subject.get("feature"):
-            anchor += f"#{subject['feature']}"
-        return anchor
+        return _part_anchor(subject)
     if subject.get("interface"):
         return str(subject["interface"]) + (f"#{subject['feature']}" if subject.get("feature") else "")
     if subject.get("assembly_operation"):
@@ -578,10 +585,23 @@ def _requirement_checks(record: RecordView, add: Add) -> None:
             add(f"policy.{level}", subject, level, stage, basis, requirement=requirement)
 
 
-def required_checks(record: RecordView) -> tuple[Obligation, ...]:
-    """Every check obligation the record implies, sorted by id (manufacturing_intent.py:2642). The first
-    obligation enumerated for an id wins."""
-    found: dict[str, Obligation] = {}
+@dataclass(frozen=True)
+class RequiredChecks:
+    """Every obligation the record implies, sorted by id, and the ids enumerated for more than one check."""
+
+    obligations: tuple[Obligation, ...]
+    collisions: frozenset[str]
+
+
+def _same_check(one: Obligation, other: Obligation) -> bool:
+    return (one.subject, one.level, one.stage) == (other.subject, other.level, other.stage)
+
+
+def required_checks(record: RecordView) -> RequiredChecks:
+    """Every check obligation the record implies, sorted by id (manufacturing_intent.py:2642). A check
+    enumerated again under its id keeps its first basis. An id enumerated for another subject, level or stage
+    is a collision: every check under it is kept, where the prototype keeps the first and drops the rest."""
+    found: dict[str, list[Obligation]] = {}
 
     def add(
         family: str, subject: Mapping[str, Any], level: str, stage: str, basis: str, **named: str
@@ -589,8 +609,6 @@ def required_checks(record: RecordView) -> tuple[Obligation, ...]:
         """`named` holds the optional requirement and criterion the obligation derives from."""
         clean = {key: value for key, value in subject.items() if value is not None}
         ident = f"{family}@{obligation_anchor(clean)}"
-        if ident in found:
-            return
         data: dict[str, Any] = {
             "id": ident,
             "family": family,
@@ -600,7 +618,10 @@ def required_checks(record: RecordView) -> tuple[Obligation, ...]:
             "basis": basis,
         }
         data.update({key: value for key, value in named.items() if value})
-        found[ident] = Obligation.model_validate(data)
+        made = Obligation.model_validate(data)
+        same_id = found.setdefault(ident, [])
+        if not any(_same_check(kept, made) for kept in same_id):
+            same_id.append(made)
 
     add(
         "intent.use_case",
@@ -616,4 +637,7 @@ def required_checks(record: RecordView) -> tuple[Obligation, ...]:
         _interface_checks(if_id, interface, add)
     _assembly_checks(record, add)
     _requirement_checks(record, add)
-    return tuple(found[key] for key in sorted(found))
+    return RequiredChecks(
+        tuple(obligation for key in sorted(found) for obligation in found[key]),
+        frozenset(key for key, kept in found.items() if len(kept) > 1),
+    )

@@ -725,11 +725,11 @@ class Obligation(ContractModel):
     id: Annotated[
         str,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ]
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     family: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*$")]
     """
@@ -793,11 +793,11 @@ class ObligationOutcome(ContractModel):
     obligation: Annotated[
         str,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ]
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     outcome: Outcome
     reason: NotAssessedReason | None = None
@@ -834,11 +834,11 @@ class Waiver1(ContractModel):
     obligation: Annotated[
         str | None,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ] = None
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     criterion: Annotated[str, Field(min_length=1)]
     operating_envelope: Annotated[str, Field(min_length=1)]
@@ -869,11 +869,11 @@ class Waiver2(ContractModel):
     obligation: Annotated[
         str | None,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ] = None
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     criterion: Annotated[str, Field(min_length=1)]
     operating_envelope: Annotated[str, Field(min_length=1)]
@@ -946,11 +946,11 @@ class Finding(ContractModel):
     obligation: Annotated[
         str | None,
         Field(
-            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
+            pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$"
         ),
     ] = None
     """
-    family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>
+    family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
     """
     subject: Subject1 | Subject2 | Subject3 | Subject4
     """

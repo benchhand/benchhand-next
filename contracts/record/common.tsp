@@ -9,7 +9,7 @@ namespace Records.Common;
 /** Record version 3 contracts. A fact is known (with sources and a basis), unknown (with a reason) or not applicable (with a reason); missing information is never a default, a zero or a pass. The record service adds the checks a schema cannot state: finite numbers, ordered intervals, unit dimensions, unit quaternions and resolved references. */
 @summary("Definitions shared by every benchhand record document")
 @id("https://benchhand.github.io/benchhand/contracts/record/common.schema.json")
-@extension("x-version", "1.0.0")
+@extension("x-version", "1.1.0")
 union Common {
   unknown,
 }
@@ -722,8 +722,8 @@ scalar check_family extends string;
 @pattern("^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)+$")
 scalar finding_code extends string;
 
-@doc("family@anchor: anchor is product, a PN with optional .component, /operation and #feature, an IF with optional #feature, a REQ, or op:<assembly operation>")
-@pattern("^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$")
+@doc("family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>")
+@pattern("^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)*@(product|[A-Z]{2,5}-[0-9]{4}(@[a-z][a-z0-9_-]*)?(\\.[a-z][a-z0-9_]*)?(/[a-z][a-z0-9_]*)?(#[a-z][a-z0-9_]*(:[a-z][a-z0-9_]*)?)?|IF-[0-9]{3}(#[a-z][a-z0-9_]*)?|REQ-[0-9]{3}|op:[a-z][a-z0-9_-]*)$")
 scalar obligation_id extends string;
 
 /** One expected check, enumerated by manufacturing_intent.required_checks before any producer runs */
