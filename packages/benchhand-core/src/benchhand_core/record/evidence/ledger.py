@@ -19,6 +19,7 @@ from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion
 from benchhand_core.record.evidence.digest import MANIFEST
 from benchhand_core.record.evidence.obligations import obligation_anchor, subject_of
+from benchhand_core.record.evidence.paths import entry_problems as path_problems
 from benchhand_core.record.evidence.results import LEVELS, PHYSICAL
 from benchhand_core.record.evidence.view import JsonMap, RecordView, items, mapping
 from benchhand_core.record.evidence.waivers import WaiverScope, waiver_problem
@@ -232,11 +233,17 @@ def _bytes(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement | No
 
 
 def judge_entry(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement:
-    """The status one ledger entry shows, before it is credited to any target (evidence.py:941). Whether it
-    speaks to a target's level and subject is `credit`'s question."""
+    """The status one ledger entry shows, before it is credited to any target (evidence.py:941). An entry
+    citing a file the record cannot hold is unknown (evidence.py:947-949). Whether it speaks to a target's
+    level and subject is `credit`'s question."""
     ident, result = entry.get("id"), entry.get("result")
     named = entry.get("obligation")
     obligation = ctx.expected.get(named) if isinstance(named, str) else None
+    refused = path_problems(ctx.built.path_verdicts, entry)
+    if refused:
+        about = obligation.id if obligation else None
+        found = tuple(entry_finding(p.code, index, f"{ident}: {p.message}", about) for p in refused)
+        return EntryJudgement("unknown", (f"{ident} cites files the record cannot hold",), found)
     if result in ("planned", "unknown"):
         return EntryJudgement(str(result), (f"{ident} is {result}",))
     if result == "waived":

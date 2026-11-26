@@ -465,6 +465,68 @@ def test_physical_evidence_covers_its_own_subject_only(built: tuple[Path, str]) 
     assert "evidence.subject" in codes(result)
 
 
+# Path rules
+
+
+def scratch_entry(root: Path, manifest_sha: str) -> dict[str, Any]:
+    scratch = root / "hw/.cad/objects/readback"
+    scratch.parent.mkdir(parents=True)
+    scratch.write_text("readback ok\n", encoding="utf-8")
+    artifacts = [{"path": "hw/.cad/objects/readback", "sha256": sha256(scratch)}]
+    return ledger_entry(root, manifest_sha, artifacts=artifacts)
+
+
+def test_a_scratch_artifact_earns_no_credit_and_refuses_the_digest(built: tuple[Path, str]) -> None:
+    """evidence.py:947-949, evidence_paths.py:135: a correctly hashed file under hw/.cad/ is scratch, not the
+    record; the entry is unknown and the acceptance inventory refuses (evidence.py:1292)."""
+    root, version_sha = built
+    write_ledger(root, scratch_entry(root, version_sha))
+    result = run(root)
+    assert statuses(result)[READBACK]["result"] == "unknown"
+    assert "evidence.scratch_path" in codes(result)
+    assert result["acceptance"]["status"] == "refused"
+
+
+def test_a_managed_artifact_named_only_in_prose_earns_no_credit(built: tuple[Path, str]) -> None:
+    """evidence_paths.py:202: prose citing a record result the entry's artifacts do not list."""
+    root, version_sha = built
+    photo = root / "hw/captures/v1/bench/photo.png"
+    photo.parent.mkdir(parents=True)
+    photo.write_bytes(b"png")
+    write_ledger(root, ledger_entry(root, version_sha, note="see hw/captures/v1/bench/photo.png"))
+    result = run(root)
+    assert statuses(result)[READBACK]["result"] == "unknown"
+    assert "evidence.uncited_artifact" in codes(result)
+    assert result["acceptance"]["status"] == "refused"
+
+
+def test_an_entry_resting_on_a_refused_entry_earns_no_credit(built: tuple[Path, str]) -> None:
+    """evidence.py:801-806, evidence_paths.py:238: an entry whose prose names a refused entry is unknown."""
+    root, version_sha = built
+    refused = scratch_entry(root, version_sha)
+    reliant = ledger_entry(root, version_sha, id="EV-002", obligation=ROUTE, note="as EV-001 measured")
+    reliant["level"] = "process_planned"
+    write_ledger(root, refused, reliant)
+    result = run(root)
+    assert statuses(result)[ROUTE]["result"] == "unknown"
+    assert "EV-002 rests on refused evidence EV-001" in statuses(result)[ROUTE]["reasons"]
+    assert "evidence.refused_dependency" in codes(result)
+
+
+def test_an_untracked_file_of_a_git_project_earns_no_credit(built: tuple[Path, str]) -> None:
+    """evidence_paths.py:157: in a git work tree a cited file outside the managed locations must be
+    tracked."""
+    import subprocess
+
+    root, version_sha = built
+    write_ledger(root, ledger_entry(root, version_sha))
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "hw/product.yaml"], check=True)
+    assert statuses(run(root))[READBACK]["result"] == "unknown"
+    subprocess.run(["git", "-C", str(root), "add", "hw/docs/readback.txt"], check=True)
+    assert statuses(run(root))[READBACK]["result"] == "pass"
+
+
 # Ledger credit: level and subject per target
 
 

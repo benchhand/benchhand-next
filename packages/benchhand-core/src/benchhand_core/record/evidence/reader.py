@@ -36,7 +36,9 @@ from benchhand_core.record.evidence.digest import (
     cited_bundles,
     cited_paths,
 )
-from benchhand_core.record.evidence.view import view
+from benchhand_core.record.evidence.path_judge import judge_all
+from benchhand_core.record.evidence.paths import PathQuery, disposition_queries, entry_queries
+from benchhand_core.record.evidence.view import RecordView, view
 from benchhand_core.record.finding import Finding
 from benchhand_core.record.model import MANUFACTURING_MODELS, Record
 from benchhand_core.record.rules.assembly import inventory
@@ -288,6 +290,16 @@ def _sources(root: Path) -> list[str]:
     return found
 
 
+def ledger_queries(record: RecordView) -> set[PathQuery]:
+    """Every path the evidence and findings ledgers cite, structured or in prose."""
+    found: set[PathQuery] = set()
+    for entry in record.evidence:
+        found |= entry_queries(entry)
+    for disposition in record.dispositions:
+        found |= disposition_queries(disposition)
+    return found
+
+
 def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion:
     """What the evidence of `record` (the current record of the project at `root`) reads about built
     `version`. BuiltVersionError when it is not built or its directory fails its seal."""
@@ -313,6 +325,7 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
     files = {path: file_state(root, path) for path in sorted(wanted)}
     files = {path: state for path, state in files.items() if path not in LEDGER_FILES or state.sha256}
     bundles = {path: bundle_problems(root, path) for path in cited_bundles(view(record))}
+    verdicts = judge_all(root, ledger_queries(view(record)))
     return BuiltVersion(
         label=version,
         manifest_sha256=manifest_sha,
@@ -322,4 +335,5 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
         current_geometry=geometry,
         files=files,
         bundle_seals=bundles,
+        path_verdicts=verdicts,
     )

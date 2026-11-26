@@ -23,9 +23,16 @@ from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion, ChangedSinceBuild, NotComputed, Packet
 from benchhand_core.record.evidence.digest import acceptance_digest, acceptance_inventory, expected_digest
 from benchhand_core.record.evidence.joints import joint_results
-from benchhand_core.record.evidence.ledger import EntryContext, credit, entry_targets, judge_entry
+from benchhand_core.record.evidence.ledger import (
+    EntryContext,
+    EntryJudgement,
+    credit,
+    entry_targets,
+    judge_entry,
+)
 from benchhand_core.record.evidence.obligations import required_checks, subject_of
 from benchhand_core.record.evidence.packets import Candidate, OutcomeReading, packet_problems, read_outcomes
+from benchhand_core.record.evidence.paths import PATH_CODES, dependents, disposition_problems
 from benchhand_core.record.evidence.results import LEVELS, NOT_REQUIRED, best, facets, worst
 from benchhand_core.record.evidence.use_case import assess_use_case
 from benchhand_core.record.evidence.view import JsonMap, RecordView, items, mapping, view
@@ -35,6 +42,7 @@ from benchhand_core.record.model import Record, as_json
 from benchhand_core.record.rules.assembly import Inventory, Occurrence, inventory
 
 FINDINGS = "hw/manufacturing/findings.yaml"
+EVIDENCE = "hw/manufacturing/evidence.yaml"
 NOT_COMPUTED = "not_computed"
 __all__ = ["EvidenceAssessment", "assess"]
 
@@ -130,12 +138,48 @@ def _packet_sources(state: _State) -> None:
         read_outcomes(packet, state.by_id, state.built.staleness, stale, reading)
 
 
+def _reliant(state: _State, judged: dict[str, EntryJudgement]) -> None:
+    """An entry resting on an entry the path rules refuse is unknown too, directly or through others
+    (evidence.py:801-806, evidence_paths.py:238)."""
+    refused = {ident for ident, found in judged.items() if any(f.code in PATH_CODES for f in found.findings)}
+    reliant = dependents(state.record.evidence, refused) if refused else {}
+    for index, entry in enumerate(state.record.evidence):
+        ident = str(entry.get("id"))
+        if ident not in reliant:
+            continue
+        names = ", ".join(reliant[ident])
+        message = (
+            f"{ident} relies on {names}, which the record refuses. Its evidence earns no credit until the "
+            "dependency is promoted into the record"
+        )
+        finding = _finding(
+            "evidence.refused_dependency", "error", EVIDENCE, message, pointer=f"/entries/{index}"
+        )
+        reason = f"{ident} rests on refused evidence {names}"
+        judged[ident] = EntryJudgement("unknown", (reason,), (*judged[ident].findings, finding))
+
+
+def _path_refusals(state: _State) -> None:
+    """Path findings of the finding dispositions (evidence.py:819-823); with the entries' own, they refuse
+    the acceptance inventory (evidence.py:1292-1294)."""
+    for index, disposition in enumerate(state.record.dispositions):
+        for problem in disposition_problems(state.built.path_verdicts, disposition):
+            message = f"finding {disposition.get('finding')}: {problem.message}"
+            pointer = f"/dispositions/{index}"
+            state.findings.append(_finding(problem.code, "error", FINDINGS, message, pointer=pointer))
+
+
 def _ledger_sources(state: _State) -> None:
     """The accepted ledger (evidence.py:792-816)."""
     context = EntryContext(state.record, state.placed, state.by_id, state.built, state.today)
+    judgements = {
+        str(entry.get("id")): judge_entry(entry, index, context)
+        for index, entry in enumerate(state.record.evidence)
+    }
+    _reliant(state, judgements)
     for index, entry in enumerate(state.record.evidence):
         ident = str(entry.get("id"))
-        judged = judge_entry(entry, index, context)
+        judged = judgements[ident]
         state.findings.extend(judged.findings)
         targets = entry_targets(entry, state.expected)
         credited = [credit(entry, index, judged, state.by_id[target], context) for target in targets]
@@ -280,6 +324,9 @@ def _verification(state: _State, table: Mapping[str, Mapping[str, str]]) -> None
 
 
 def _acceptance(state: _State) -> dict[str, Any]:
+    refusals = [f for f in state.findings if f.code in PATH_CODES or f.code == "evidence.refused_dependency"]
+    if refusals:
+        return {"status": "refused", "reason": "; ".join(f"{f.path}: {f.message}" for f in refusals)}
     found, reason = acceptance_inventory(state.record, state.accepted, state.built.files)
     if found is None:
         return {"status": "refused", "reason": reason}
@@ -303,6 +350,7 @@ def assess(record: Record, built: BuiltVersion, today: date) -> EvidenceAssessme
     _record_sources(state)
     _packet_sources(state)
     _ledger_sources(state)
+    _path_refusals(state)
     _dispositions(state)
     statuses = _statuses(state)
     table = _facets(state, statuses)

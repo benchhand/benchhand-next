@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from benchhand_core.record.evidence.paths import PathQuery, Verdict
 from benchhand_core.record.finding import Finding
 
 
@@ -52,8 +53,8 @@ class BuiltVersion:
     """A built version and what was read about it. `current_geometry` maps each PN to the sha256 of its
     current hw/parts/<PN>/model.py; `files` maps an hw/ path to its state, for every file the acceptance
     inventory and the ledger entries cite; `bundle_seals` maps each bundle a ledger entry cites to why it
-    fails its seal (empty when every payload file verifies); `packet_findings` are the bundles the reader
-    refused."""
+    fails its seal (empty when every payload file verifies); `path_verdicts` judges every path the ledgers
+    cite against the project's filesystem and git; `packet_findings` are the bundles the reader refused."""
 
     label: str
     manifest_sha256: str
@@ -63,3 +64,4 @@ class BuiltVersion:
     current_geometry: Mapping[str, str | None] = field(default_factory=dict)
     files: Mapping[str, FileState] = field(default_factory=dict)
     bundle_seals: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    path_verdicts: Mapping[PathQuery, Verdict] = field(default_factory=dict)
