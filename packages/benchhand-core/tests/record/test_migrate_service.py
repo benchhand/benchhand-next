@@ -504,11 +504,12 @@ def test_resume_after_a_stopped_apply_finishes_it_byte_identically(
 def test_undo_after_a_stopped_apply_puts_the_record_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop_after: int
 ) -> None:
-    root = _copy(LAMP_ARM_HW, tmp_path)
+    root = _copy(LAMP_ARM_HW, tmp_path / "project")
     before = _tree(root / "hw")
     _crash_after(root, monkeypatch, stop_after)
     [backup] = _backups(root)
-    undone = undo(backup)
+    (tmp_path / "alias").symlink_to(root)  # the backup named through another spelling of the project's path
+    undone = undo(tmp_path / "alias" / backup.relative_to(root))
     assert undone.status == MigrationStatus.undone, undone.refusals
     assert len(undone.written) == stop_after
     assert _tree(root / "hw") == before  # the lock is gone too

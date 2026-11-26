@@ -665,7 +665,7 @@ def _undo_locked(root: Path, backup: Path, entries: list[Entry]) -> Migration:
 def undo(backup: Path) -> Migration:
     """Put back the files an apply changed, from its COMPLETE backup: each file that holds the bytes the
     migration wrote gets its preimage back. The lock, if it names this backup, goes once undo has finished."""
-    backup = backup.absolute()
+    backup = backup.resolve()
     root = recovery.project_of(backup)
     if root is None or not backup.is_dir():
         reason = "it is not a directory" if root is not None else f"it is not under {recovery.BACKUPS}/"
@@ -685,7 +685,7 @@ def undo(backup: Path) -> Migration:
     if isinstance(entries, str):
         return _refused(None, _backup_unusable(backup, entries))
     held = recovery.read_lock(root)
-    if held is not None and held != backup:
+    if held is not None and (isinstance(held, str) or held.resolve() != backup):
         return _refused(None, recovery.locked(root, held))
     lock = root / recovery.LOCK_PATH if held is not None else recovery.acquire_lock(root, backup)
     if isinstance(lock, Finding):
