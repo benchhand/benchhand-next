@@ -8,7 +8,7 @@ has already met its contracts on read, so this view only regroups the documents:
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, TypeGuard
 
 from benchhand_core.record.model import Record, as_json
@@ -50,6 +50,7 @@ class RecordView:
     dispositions: tuple[JsonMap, ...]
     verification: tuple[JsonMap, ...]
     approved: frozenset[str]
+    selection: JsonMap = field(default_factory=dict)
 
     @property
     def use_case(self) -> JsonMap:
@@ -99,4 +100,5 @@ def view(record: Record) -> RecordView:
         dispositions=_ledger(record, "findings", "dispositions"),
         verification=tuple(as_json(row) for row in record.verification),
         approved=frozenset(ident for ident, decision in record.decisions.items() if decision.approves),
+        selection=as_json(record.manufacturing["selection"]) if "selection" in record.manufacturing else {},
     )

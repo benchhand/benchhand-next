@@ -761,3 +761,22 @@ def test_a_link_in_the_sources_refuses_the_digest(built: tuple[Path, str]) -> No
     acceptance = run(root)["acceptance"]
     assert acceptance["status"] == "refused"
     assert "symbolic link" in acceptance["reason"]
+
+
+@pytest.mark.parametrize("linked", ["hw/manufacturing/sources", "hw/manufacturing/findings.yaml"])
+def test_a_linked_ledger_file_or_empty_sources_root_refuses_the_digest(
+    built: tuple[Path, str], tmp_path: Path, linked: str
+) -> None:
+    """evidence.py:1306-1307, 1261: a linked sources root, even an empty one, and a linked ledger file refuse
+    the inventory; neither may silently drop out of it."""
+    root, _ = built
+    target = tmp_path / "elsewhere"
+    if linked.endswith(".yaml"):
+        target.write_text("dispositions: []\n", encoding="utf-8")
+    else:
+        target.mkdir()
+    (root / linked).parent.mkdir(parents=True, exist_ok=True)
+    (root / linked).symlink_to(target)
+    acceptance = run(root)["acceptance"]
+    assert acceptance["status"] == "refused"
+    assert f"{linked} lies behind or is a symbolic link" in acceptance["reason"]

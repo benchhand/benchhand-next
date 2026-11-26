@@ -1,0 +1,15 @@
+{
+ "evidence_sha256": "afef8ab9dfdf9639f4db72603daf7ff3b482f635596c14532485004cbf7ac0f6",
+ "expected_sha256": "d23c7e21de038aee58bd516e09b5ccf4551dcfc105f402dbf416a688cb580886",
+ "inventory": {
+  "hw/captures/v1/bench/manifest.json": "d7a97be398f9cb5e387fb1464f60c8b20c31e6e10cad43c0f78b2a100ff463b2",
+  "hw/checks/v1/cad/manifest.json": "4b5d27bdbf9418535d287b0363b51409ac496924b018446311ece792a0358af4",
+  "hw/docs/readback.txt": "eb611e37f0be6479e1edec7c17108171795562f37b70fcdce82bea453fd1a447",
+  "hw/manufacturing/evidence.yaml": "2f9592096c5a1607e18567220bbd510c76c87fa8ff5598072de928639c28b928",
+  "hw/manufacturing/sources/curves/creep.csv": "06f0301694c55bab2d2a4f9a4915132099a21d0a438427291893d353e0197367",
+  "hw/manufacturing/sources/datasheet.txt": "414be5604d3d214590b50b9980b0c9d3e9c32dcf2647ee834b3a6cd18b8fcd07",
+  "hw/parts/LMP-0001/sources/coupon.txt": "a844400fffc9566e9f59c9f59e330919ad2c3304a434d7064ac6ea46d4827269",
+  "hw/verification.csv": "b151d45095af7b0e48597c6afd224defaed4aa33a3a20e78399de6db980802ae"
+ },
+ "source": "prototype 412b5d9 evidence.acceptance_inventory and expected_digest on digest_case"
+}

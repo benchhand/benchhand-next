@@ -266,6 +266,9 @@ def _staleness(
     return ChangedSinceBuild(fp.changed_domains(before, after))
 
 
+MISSING = "is missing"
+
+
 def file_state(root: Path, path: str) -> FileState:
     """The sha256 of the regular file at the project path `path`, or why it cannot be read: an unnormalized
     or escaping path, a link anywhere on the way, or a missing file (evidence.py:1261)."""
@@ -277,11 +280,15 @@ def file_state(root: Path, path: str) -> FileState:
         if current.is_symlink():
             return FileState(problem="lies behind or is a symbolic link")
     if not current.is_file():
-        return FileState(problem="is missing")
+        return FileState(problem=MISSING)
     return FileState(sha256=_sha256(current))
 
 
 def _sources(root: Path) -> list[str]:
+    """Every file below the sources directory, and each link there, which the inventory refuses; the
+    directory itself when it is a link, even an empty one (evidence.py:1306-1313)."""
+    if linked_on_the_way(root, root / SOURCES_DIR) is not None:
+        return [SOURCES_DIR]
     found = []
     for directory, folders, names in os.walk(root / SOURCES_DIR, followlinks=False):
         rel = Path(directory).relative_to(root).as_posix()
@@ -323,7 +330,11 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
     packets, packet_findings = collect_packets(root, version, manifest_sha)
     wanted = cited_paths(view(record), packets) | set(LEDGER_FILES) | set(_sources(root))
     files = {path: file_state(root, path) for path in sorted(wanted)}
-    files = {path: state for path, state in files.items() if path not in LEDGER_FILES or state.sha256}
+    files = {
+        path: state
+        for path, state in files.items()
+        if path not in LEDGER_FILES or state.problem != MISSING  # a linked ledger file stays, to be refused
+    }
     bundles = {path: bundle_problems(root, path) for path in cited_bundles(view(record))}
     verdicts = judge_all(root, ledger_queries(view(record)))
     return BuiltVersion(

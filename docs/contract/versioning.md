@@ -94,3 +94,7 @@ Before the first release nothing is published, so a narrowing keeps its version.
 ## Provisional contracts
 
 `record/bundle-manifest.schema.json` (version `0.1.0`) is provisional. It holds only the keys of a sealed directory's `manifest.json` that the evidence service reads: `files`, `version_manifest_sha256` and each built part's `source_sha256`. It accepts every other key unread. Phase 2's versioning work (snapshot, seal and verify) owns it and extends it, and gives it version `1.0.0` when it is complete.
+
+## The acceptance digest
+
+The v3 acceptance digest (`evidence_sha256` of `record/evidence-assessment`) covers every source artifact the record names. It also covers the files the prototype's digest covers: the ledgers, `verification.csv`, cited artifacts and bundle manifests, the sealed packet manifests, and every file under `hw/manufacturing/sources/`. The prototype's digest covers only the artifacts that its source readers collect, so a bought part's procurement specification falls outside it. A v3 digest is therefore not byte-compatible with a prototype digest. That is safe: migrate refuses a frozen record whose digest inputs change, and a v3 freeze records a new digest.

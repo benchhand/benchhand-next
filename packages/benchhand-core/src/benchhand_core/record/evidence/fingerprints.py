@@ -161,7 +161,13 @@ def artifacts_named(value: Any) -> dict[str, Any]:
 
 
 def record_artifacts(record: RecordView) -> dict[str, Any]:
-    """Every source artifact (relative to hw/) the record's documents name, with the first sha256 named."""
+    """Every source artifact (relative to hw/) the record names, with the first sha256 named: the record
+    documents, the selection and the ledger entries' source and criterion source
+    (manufacturing_intent.py:1340 `source`, 2230, 2253-2264)."""
+    ledger = [
+        [mapping(entry).get("source"), mapping(mapping(entry).get("criterion")).get("source")]
+        for entry in record.evidence
+    ]
     return artifacts_named(
         [
             record.product,
@@ -171,6 +177,8 @@ def record_artifacts(record: RecordView) -> dict[str, Any]:
             list(record.parts.values()),
             list(record.materials.values()),
             list(record.capabilities.values()),
+            record.selection,
+            ledger,
         ]
     )
 

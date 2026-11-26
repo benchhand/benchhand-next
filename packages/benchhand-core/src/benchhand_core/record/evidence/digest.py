@@ -71,7 +71,7 @@ def inventory_paths(
     """Every hw/ path of the acceptance inventory, given the files the reader found (it lists the ledger
     files that exist and every file below the sources directory)."""
     present = {path for path in LEDGER_FILES if path in files}
-    sources = {path for path in files if path.startswith(f"{SOURCES_DIR}/")}
+    sources = {path for path in files if path == SOURCES_DIR or path.startswith(f"{SOURCES_DIR}/")}
     return cited_paths(record, packets) | present | sources
 
 
