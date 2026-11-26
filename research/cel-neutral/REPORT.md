@@ -27,7 +27,7 @@ Recommendation, which is for the owner to decide:
 - Keep cel-expr-python as the Python engine and checker at load.
 - Make cel-core the Rust engine, behind the same small adapter, pinned and held to the shared suite.
 - Use `@bufbuild/cel` in the browser, to evaluate CheckedExprs only.
-- Use cel-go in CI as the reference checker and the conformance oracle.
+- Use cel-go in CI as the reference checker and the conformance oracle, through a small tool over `cel.dev/cel-go/tools/compiler`. That package reads our env YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI checks the same way, 7 of 7, but writes no CheckedExpr, so it serves for authoring and `rules test` only.
 - Generate the descriptor set and environment YAML with the contracts (ADR-0017).
 
 For Rust, the owner's ask then comes down to a required Rust conformance job, a Rust adapter crate, and contract types for Rust providers. Whether a host component moves to Rust is a plan section 4 (D12) decision. As of this report, D12 says "no Rust".
@@ -237,6 +237,46 @@ What this means for the design:
 - **The shared suite misses the checker gap.** cel-core scores 99.9% and still accepts `decision.status == 1`. cel-spec's simple tests check that good expressions pass, not that bad ones fail. benchhand's own suite needs reject cases, like the seven in the typed demo, run on every checker.
 - **cel-js is out.** At 63% with no CheckedExpr input, it can't run the rules the host checked.
 
+## The cel-expr CLI and cel-go's compiler package
+
+`cel-expr` (github.com/cel-expr/skills, `cmd/cel-expr`, Apache-2.0) is a cel-go CLI with the subcommands `env`, `compile`, `eval`, `conformance`, `prompt` and `mcp`. The repository has 4 stars and was last pushed on 2026-11-25.
+
+### Two builds tested
+
+| | v0.4.0 release (2026-08-27) | main at a41927f (2026-11-25) |
+|---|---|---|
+| Source | Signed release binary, macOS arm64 | `go install github.com/cel-expr/skills/cmd/cel-expr@a41927f`, about 60 s. **Unsigned and unreleased.** |
+| Checksum | Matches `checksums.txt` (`46b1d1ef…ca1c`) | Not applicable |
+| cosign signature and SLSA provenance | **Not verified.** cosign and slsa-verifier aren't installed, and the safety net refused the `checksums.txt.pem` download. The bundle's certificate names the workflow `cel-expr/skills/.github/workflows/release.yml@refs/tags/v0.4.0`, issued by GitHub Actions OIDC. I read that identity, but it isn't a verification. | Not applicable |
+| `-format policy`, `-proto_db`, `conformance` | Not present | Present |
+| Typed demo: good rules compiled | 6 of 6, exit 0 | 6 of 6, exit 0 |
+| Typed demo: bad rules rejected | 7 of 7, exit 1, including `decision.status == 1` | 7 of 7, exit 1 |
+
+A pinned install for CI should verify both the signature and the provenance, once a release carries `-format` and policy support.
+
+### What it reads and writes
+
+- **Environment.** JSON only; YAML is refused with a JSON parse error. The layout is cel-go's `env.Config`, but each variable has a `type` string (`list<string>`, a message name) where cel-go has `type_name` and `params`. The CLI converts its own `Config` struct to cel-go's. So our env YAML needs a mechanical conversion, `cli/env_json.py`, which is 12 lines for plain types. The generator could write both forms.
+- **Types.** `-fds` takes a binary FileDescriptorSet; our `types.binpb` loads as is. `-proto_db` is a boolean, not a path: it resolves declared type names from the protobuf registry compiled into the binary (well-known and test types), or from a database a fork installs at init time. benchhand doesn't need it.
+- **Errors.** cel-go's text: `ERROR: <input>:1:17: found no matching overload for '_==_' applied to '(string, int)'`, then the source line and a caret. For a policy file, the location is the YAML file, line and column. A rule's own path in a benchhand file, for example `flow.yaml#/gates/…`, still has to come from the host.
+- **Output.** `compile` prints a JSON Schema of the fields the rule reads and of its output type. It writes **no CheckedExpr**, at either version; the source has no CheckedExpr code and no output flag. The inputSchema also has a bug: `has(part.mass_target)` reports the field as `boolean`, where the field is a `double`.
+- **Tests.** `eval -tests` and `-bindings` take JSON test cases. Our JSON records are bound to the generated proto types. Each run prints pass or fail per case, node and branch coverage, and exits 1 when a case fails.
+
+So the CLI can't replace `go/cmpchecked`, and it can't write the CheckedExprs that the browser and providers evaluate. It is a good tool for authoring and for a `rules test` step. As the CI reference checker, it covers checking only.
+
+### The library route: `cel.dev/cel-go/tools/compiler`
+
+cel-go is moving to the module path `cel.dev/cel-go`. From 2026-09-08, `github.com/google/cel-go/tools/compiler` holds only aliases, and the tagged modules are `cel.dev/cel-go` v0.33.4 and `cel.dev/cel-go/tools` and `/policy` v0.33.3. The package gives:
+
+- `EnvironmentFile(path)`, which reads the env as YAML (cel-go's `env.Config`, so **our env YAML as is**), or as a textproto or binary `cel.expr.conformance.Environment`.
+- `TypeDescriptorSetFile(path)`. It infers the format from the extension and takes `.binarypb`, `.fds` or `.pb`, so buf's `.binpb` has to be renamed.
+- `CompiledExpression{Path}`, which reads a CheckedExpr, and `FileExpression` for a `.cel` or `.celpolicy` file.
+- `NewCompiler` always adds the `optional` and `bindings` extensions.
+
+`go-policy/compilerfile` (85 lines) loads our two artefacts with those options, with no adapter code. It accepted 6 of 6 rules and rejected 7 of 7, and wrote each CheckedExpr to `generated/checked/cel-go-tools/`. cel-expr-python, cel-go, cel-core and @bufbuild/cel each evaluated all 6 of them.
+
+The CI reference checker is therefore a small Go tool over `tools/compiler`. That's the same amount of code as `go/cmpchecked`, not a CLI we download. Use the CLI beside it for `rules test` and for authors.
+
 ## The recommended design
 
 ### Where checking happens
@@ -244,7 +284,7 @@ What this means for the design:
 The checker runs in two places, and an evaluator anywhere.
 
 1. **At load, in the host.** The Python host checks every rule with cel-expr-python against the generated descriptor set and env YAML, as ADR-0014 already requires: a typo fails at load. Errors carry the rule's file path, for example `flow.yaml#/gates/PROVISIONAL/requires/0`, and the line, column and caret (Kubernetes rows 4 and 5). Each slot's output type is checked too: `requires` and `when` must be `bool`.
-2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
+2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. The cel-go side is a small tool over `cel.dev/cel-go/tools/compiler`, which loads the generated artefacts with `EnvironmentFile` and `TypeDescriptorSetFile` and writes CheckedExprs (`go-policy/compilerfile`). The `cel-expr` CLI runs the typed `rules test` cases (`eval -tests`, with coverage). cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
 
 A successful check produces a **compiled rules bundle**:
 
@@ -357,7 +397,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
     - TypeScript: @bufbuild/cel, evaluating CheckedExprs only.
 
     An engine without a checker may only run rules a checker has already checked.
-8. **Run one conformance suite on every engine in CI.** Use cel-spec's simple tests in protobuf JSON, plus the project's own typed cases. The typed cases include rules that must fail the check: a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable. Also fail CI when the checkers disagree on a shipped rule. Pin each engine's version and options, and record them.
+8. **Run one conformance suite on every engine in CI.** Use cel-spec's simple tests in protobuf JSON, plus the project's own typed cases. The typed cases include rules that must fail the check: a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable. Also fail CI when the checkers disagree on a shipped rule. Pin each engine's version and options, and record them. For the cel-go reference, use a small tool over `cel.dev/cel-go/tools/compiler`, which reads the environment YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI can run typed test cases, but it writes no CheckedExpr. Install it only from a release whose signature and provenance you verify.
 9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
 10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
