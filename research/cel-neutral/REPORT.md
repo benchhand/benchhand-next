@@ -29,7 +29,7 @@ Recommendation, which is for the owner to decide:
 - Use `@bufbuild/cel` in the browser, to evaluate CheckedExprs only.
 - Use cel-go in CI as the reference checker and the conformance oracle, through a small tool over `cel.dev/cel-go/tools/compiler`. That package reads our env YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI checks the same way, 7 of 7, but writes no CheckedExpr, so it serves for authoring and `rules test` only.
 - Generate the descriptor set and environment YAML with the contracts (ADR-0017).
-- Write rule lists as cel-policy files (`.celpolicy`), compiled by cel-go's policy compiler to one CheckedExpr each. A benchhand `{when, then}` list is a cel-policy `match` block. cel-expr-python evaluated the compiled policy. cel-core and @bufbuild/cel evaluated it once policy `variables` were left out, because those compile to `cel.@block`, which neither runtime has.
+- Write rule lists as cel-policy files (`.celpolicy`), **pending the owner's decision**. `benchhand rules compile` and CI compile them with the pinned cel-go reference checker into the rules bundle, and the host refuses a list whose compiled entry is missing or stale. Standalone expressions are still checked at load by cel-expr-python. A benchhand `{when, then}` list is a cel-policy `match` block whose final choice is unconditional; dispatch's final choice outputs `"unknown"`, which keeps no match → UNKNOWN.
 - Vendor three of the six cel-expr/skills agent skills into a harness-plugins `rules` plugin: `cel-testing`, `cel-debugging`, and `cel-authoring` with its environment step replaced. As shipped, `cel-authoring` has the agent hand-write the environment and build descriptors with `protoc`, which the generated environment replaces.
 
 For Rust, the owner's ask then comes down to a required Rust conformance job, a Rust adapter crate, and contract types for Rust providers. Whether a host component moves to Rust is a plan section 4 (D12) decision. As of this report, D12 says "no Rust".
@@ -322,13 +322,15 @@ A `*.rules.yaml` in the plan is an ordered, first-match list of `{when, then}`. 
 
 ### Should benchhand adopt the format?
 
-Yes, as the source format of rule lists, with three conditions:
+Recommended, **pending the owner's decision**: yes, for rule lists only, compiled ahead of load.
 
-1. **Compile with cel-go's policy compiler at authoring and in CI,** and ship the CheckedExpr in the rules bundle. The Python host, Rust and the browser then evaluate the bundle, and none of them needs a policy parser. The host check at load needs a policy compiler in Python. As of cel-expr-python 0.1.4, that means cel-go in CI and a CheckedExpr loaded at start, or a Python port of the composer. cel-expr-python 0.1.4 has no policy API, and I didn't ask upstream about one.
-2. **Restrict the profile until the evaluators catch up:** `match` only, an unconditional last choice, and no `variables`. Lift each restriction when cel-core and @bufbuild/cel pass the `block_ext` suite.
-3. **Keep `flow.yaml` as benchhand's own schema.** Gates, edges and `void_scope` are structure, not rule lists. Only `*.rules.yaml` becomes `.celpolicy`.
+- **Rule lists are compiled, not checked at load.** `benchhand rules compile`, and the same step in CI, runs the pinned cel-go reference checker (see "The reference checker") on every `flow/*.celpolicy`. It writes each list's CheckedExpr into the rules bundle, with the list's output type, the SHA-256 of the exact source bytes, the profile digest and the checker identity.
+- **The host refuses a missing or stale artefact.** At load, the host hashes each rule-list source and looks it up in the bundle. A list with no entry, a different source digest or a different profile digest stops the load. The error names the file and the command to run. The host then evaluates the CheckedExpr with cel-expr-python, which has no policy API (0.1.4) but reads the compiled form.
+- **Standalone CEL is still checked at load.** Gate `requires`, edge guards, `void_scope` and every other single expression in `flow.yaml` are checked by cel-expr-python when the host loads them, as ADR-0014 requires now.
+- **No match still means UNKNOWN.** cel-policy returns `optional.none()` from a `match` whose choices are all conditional, and that needs the optional extension in every evaluator, which the browser lacks. The supported profile therefore requires an unconditional final choice ("The supported policy profile"). A dispatch list ends with `- output: '"unknown"'`, the rule-list schema reserves the value `unknown`, and the host records it as UNKNOWN coverage, never PASS. A list whose outputs are lists ends with an explicit sentinel of the same type, so the compiler's output-type check still holds.
+- **`flow.yaml` keeps its own schema.** Gates, edges and `void_scope` are structure, not rule lists.
 
-This changes plan section 5 slightly. The rule lists become cel-policy files, checked by a policy compiler, rather than a benchhand-defined `{when, then}` shape that the host interprets itself.
+The alternative is to compile policy source at load, inside the host, with a pinned compiler. That is either the same cel-go tool shipped with benchhand and run as a subprocess, or a Python port of cel-go's policy composer over cel-expr-python. The port would parse the YAML, check each condition and output, and compose the nested conditionals. An edit then takes effect without a compile step. The cost is a Go binary on the host's load path, or a second composer that must pass the cel-policy conformance suite to stay equal to cel-go's. The recommended path keeps one composer and moves the compile step to authoring time, at the cost of a compile step after every edit.
 
 ## The cel-expr/skills agent skills
 
@@ -362,7 +364,7 @@ Vendoring means a copy with a recorded upstream commit, as `reference/` does for
 
 The checker runs in two places, and an evaluator anywhere.
 
-1. **At load, in the host.** The Python host checks every rule with cel-expr-python against the generated descriptor set and env YAML, as ADR-0014 already requires: a typo fails at load. Errors carry the rule's file path, for example `flow.yaml#/gates/PROVISIONAL/requires/0`, and the line, column and caret (Kubernetes rows 4 and 5). Each slot's output type is checked too: `requires` and `when` must be `bool`.
+1. **At load, in the host.** The Python host checks every standalone expression (gate `requires`, edge guards, `void_scope`) with cel-expr-python against the profile, as ADR-0014 already requires: a typo fails at load. Errors carry the rule's file path, for example `flow.yaml#/gates/PROVISIONAL/requires/0`, and the line, column and caret (Kubernetes rows 4 and 5). Each slot's output type is checked too: `requires` and `when` must be `bool`. Rule lists aren't compiled at load: the host loads their CheckedExprs from the bundle and refuses a list whose entry is missing or stale ("Should benchhand adopt the format?").
 2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. The cel-go side is a small tool over `cel.dev/cel-go/tools/compiler`, which loads the generated artefacts with `EnvironmentFile` and `TypeDescriptorSetFile` and writes CheckedExprs (`go-policy/compilerfile`). The `cel-expr` CLI runs the typed `rules test` cases (`eval -tests`, with coverage). cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
 
 A successful check produces a **compiled rules bundle**:
@@ -439,9 +441,16 @@ These three make Rust providers first-rate. A Rust host component is a different
 
 ## Proposed changes to plan section 5 and ADR-0014
 
-These are proposals. Nothing in `docs/` changes in this branch.
+These are proposals. Nothing in `docs/` changes in this branch. The rule-list path is **pending the owner's decision**; the text below is the recommended path.
 
 ### Plan section 5, "Flow engine and rules (D14)"
+
+Replace the **Rule lists** bullet. Current text: "Rule lists replace the tables. Each is an ordered, first-match list of `{when: <CEL>, then: <value>}`, validated against its schema:" Proposed, with the four sub-bullets kept and the dispatch one changed:
+
+> - **Rule lists** replace the tables. Each is a cel-policy file (`flow/*.celpolicy`): one `match` block of `{condition, output}` choices, evaluated first-match, whose final choice is unconditional. The supported policy profile (plan section 5, CEL engines) limits the other features. Rule lists are compiled, not checked at load. `benchhand rules compile`, and the same step in CI, runs the pinned cel-go reference checker. It writes one CheckedExpr per list into the rules bundle, bound to the SHA-256 of the list's source bytes. The host refuses to load a list whose bundle entry is missing or stale, and names the command to run.
+>   - **process-check dispatch:** process × operation × material → handlers. The final choice outputs `"unknown"`, a value the rule-list schema reserves, and the host records it as UNKNOWN coverage.
+
+In the **Interpreter** bullet, "compiles every CEL expression once at start" becomes "compiles every standalone CEL expression in `flow.yaml` once at start, and loads the compiled rule lists from the bundle".
 
 Replace the **Interpreter** bullet's type sentence. Current text: "CEL activation variables are typed from the contracts (D17), so the CEL type-checker catches wrong field names." Proposed:
 
@@ -450,7 +459,7 @@ Replace the **Interpreter** bullet's type sentence. Current text: "CEL activatio
 Replace the **CEL runtime** bullet. Current text: "`cel-expr-python`, Google's C++-backed binding, which is young (0.1.x). A Rust-backed binding is the fallback behind one small adapter interface. The conformance suite runs the same expressions on both." Proposed:
 
 > - **CEL engines**, each behind the same five-operation adapter (`load`, `check`, `program`, `eval`, `identity`). The Python host checks and evaluates with `cel-expr-python`. Rust components and providers use `cel-core`, with `cel-cxx` as the fallback. The browser evaluates checked rules with `@bufbuild/cel` and doesn't check. CI checks with `cel-go` as the reference. A Python fallback is a pyo3 binding over `cel-core`.
-> - **Compiled rules.** The host checks every rule at load and writes a rules bundle. The bundle holds each rule's CheckedExpr and output type, plus the digests of the env YAML and descriptor set, and the checker's identity. An evaluator in any language runs the bundle without checking again and refuses a digest that differs from its own environment. The bundle shape lives in `contracts/`.
+> - **Compiled rules.** The rules bundle holds the CheckedExpr of every rule list, compiled by `benchhand rules compile` or CI, and of every standalone expression, checked by the host at load. Each entry has its output type, the SHA-256 of its source bytes, the profile digest and the checker's identity. An evaluator in any language runs the bundle without checking again and refuses an entry whose profile digest differs from its own. The bundle shape lives in `contracts/`.
 > - **Conformance.** One suite runs on every engine in CI: cel-spec's simple tests in protobuf JSON, plus benchhand's typed accept and reject cases. CI also fails when cel-go, cel-expr-python and cel-core disagree on whether a shipped rule checks. The environment may enable only extensions that every executing engine has.
 
 Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `cel-core` (it has the checker and reads CheckedExprs) and TypeScript from `cel-js` to `@bufbuild/cel` (it evaluates CheckedExprs). If the owner wants a Rust host component, the "no Rust" choice under the table changes too; see the open questions.
@@ -459,7 +468,7 @@ Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `
 
 ADR-0014 is accepted, so this is an amendment to its Consequences, or a new ADR that ADR-0014 links to; the owner picks. Proposed text:
 
-> CEL is compiled and type-checked at load, against types generated from the contracts. The generated artefacts are a FileDescriptorSet and a cel-go environment YAML per rule scope, and only structural scopes are typed. A rule crosses a language boundary as a `cel.expr.CheckedExpr`, together with the digest of the environment it was checked against. Every runtime runs its own CEL engine behind one adapter interface, and every engine passes one shared conformance suite in CI. That suite includes rules that must fail the check. The engine choices and the suite live in plan section 5, not in this ADR, so changing an engine doesn't reopen the decision.
+> CEL is compiled and type-checked before it runs, against types generated from the contracts. A standalone expression is checked at load. A rule list is a cel-policy file, compiled by a pinned reference checker ahead of load; the host refuses a rule list whose compiled form is missing or doesn't match its source. The generated artefacts are a FileDescriptorSet and a cel-go environment YAML per rule scope, and only structural scopes are typed. A rule crosses a language boundary as a `cel.expr.CheckedExpr`, together with the digest of the environment it was checked against. Every runtime runs its own CEL engine behind one adapter interface, and every engine passes one shared conformance suite in CI. That suite includes rules that must fail the check. The engine choices and the suite live in plan section 5, not in this ADR, so changing an engine doesn't reopen the decision.
 
 ## CEL adoption standard
 
