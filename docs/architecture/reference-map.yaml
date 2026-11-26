@@ -1,0 +1,1068 @@
+# Where each piece of the prototype (benchhand/benchhand, the local
+# cad-agent) ends up in benchhand-next. One entry per prototype script,
+# skill, agent and harness module, plus the resource directories they use.
+# `just reference-map` checks it against the reference copy and writes
+# docs/architecture/function-map.md.
+#
+# The reference copy is the prototype at reference_commit, read-only, named
+# by BENCHHAND_REFERENCE_DIR. It has no agents/ directory, so the agent
+# sources are looked up in this repository's reference/ too. Without a copy
+# the check covers this file and the function map only.
+#
+# path: a file, a directory with a trailing `/`, or a glob.
+# home: a path or a CLI command, or a list of them.
+# phase: 0 to 7, from the Steps in docs/design-plan.md.
+# status: planned, in-progress, ported or dropped (with a reason).
+# basis: inferred where the design-plan table doesn't name the home.
+reference_commit: 412b5d9ae2faa420f909c1f50cc98a696651539f
+entries:
+
+  # cad-analysis
+  - path: skills/cad-analysis/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-analysis/scripts/ccx_failure.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_conditions.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_linearise.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_modes.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_near_support.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_part_selection.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_reaction.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_static.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_stress.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/fea_stress_study.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/freecad_lookup.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+    note: "managed install and compatibility probe"
+    basis: inferred
+  - path: skills/cad-analysis/scripts/mesh_quality.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/stop_extrema.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/stop_reaction.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/scripts/stop_statics.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+  - path: skills/cad-analysis/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-bom
+  - path: skills/cad-bom/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-bom/scripts/bom.py
+    home: packages/benchhand-core/src/benchhand_core/bom/
+    phase: 4
+    status: planned
+  - path: skills/cad-bom/fixtures/
+    home: packages/benchhand-core/tests/
+    phase: 4
+    status: planned
+    note: "a test fixture builder"
+    basis: inferred
+
+  # cad-concept
+  - path: skills/cad-concept/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-concept/scripts/concept.py
+    home:
+      - providers/viewer-ocp/
+      - ui/concept/
+    phase: 5
+    status: planned
+  - path: skills/cad-concept/scripts/serve.py
+    home: packages/benchhand/src/benchhand/preview/
+    phase: 5
+    status: planned
+    note: "the preview host; keep the Host-header and DNS-rebinding guard"
+  - path: skills/cad-concept/assets/
+    home: ui/concept/
+    phase: 5
+    status: planned
+  - path: skills/cad-concept/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-design
+  - path: skills/cad-design/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-design/scripts/build_reference.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "builds the reference parts: a conformance fixture"
+    basis: inferred
+  - path: skills/cad-design/scripts/form_check.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/__init__.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/additive.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/core.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/dispatch.py
+    home:
+      - flow/dispatch.rules.yaml
+      - providers/checks-process/
+    phase: 2
+    status: planned
+    note: "the closed dispatch table becomes a CEL rule list"
+  - path: skills/cad-design/scripts/process_checks/machining.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/purchased.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/route.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/secondary.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/shaping.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/process_checks/sheet.py
+    home: providers/checks-process/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/scripts/review_render.py
+    home:
+      - providers/render-chromium/
+      - ui/
+    phase: 4
+    status: planned
+  - path: skills/cad-design/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-drawings
+  - path: skills/cad-drawings/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-drawings/scripts/assembly_check.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/assembly_drawing.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/assembly_geometry.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/assembly_sheet.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/assembly_techdraw_job.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/completeness.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/drawing.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/drawing_contract.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/drawing_document.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/drawing_draft.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/drawing_intent.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/drawing_merge.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/export_job.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/feature_coverage.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/feature_geometry.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/feature_recognition.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/freecad_runtime.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/freecad_views.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/layout_check.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/part_views.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/section_hatch.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/shared_module.py
+    status: dropped
+    reason: "loads a sibling script by path; providers replace that"
+    basis: inferred
+  - path: skills/cad-drawings/scripts/sheet.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/sheet_export.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/scripts/techdraw_job.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-drawings/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-fits
+  - path: skills/cad-fits/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-fits/scripts/fits.py
+    home: packages/benchhand-core/src/benchhand_core/fits/
+    phase: 4
+    status: planned
+  - path: skills/cad-fits/scripts/stackup.py
+    home: packages/benchhand-core/src/benchhand_core/fits/
+    phase: 4
+    status: planned
+  - path: skills/cad-fits/data/
+    home: packages/benchhand-core/src/benchhand_core/fits/
+    phase: 4
+    status: planned
+    note: "iso286.json is a candidate to keep"
+  - path: skills/cad-fits/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-flow
+  - path: skills/cad-flow/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-flow/scripts/clean_envs.py
+    home: packages/benchhand-provider/src/benchhand_provider/envs.py
+    phase: 4
+    status: planned
+    note: "environments keyed by dependency set"
+    basis: inferred
+  - path: skills/cad-flow/scripts/fea_solvers.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+    basis: inferred
+  - path: skills/cad-flow/scripts/fea_solvers_job.py
+    home: providers/solver-calculix/
+    phase: 4
+    status: planned
+    basis: inferred
+  - path: skills/cad-flow/scripts/flow_profile.py
+    home: packages/benchhand-core/src/benchhand_core/flow/profile.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-flow/scripts/preflight.py
+    home: packages/benchhand/src/benchhand/cli/doctor.py
+    phase: 3
+    status: planned
+  - path: skills/cad-flow/scripts/process_lifecycle.py
+    home:
+      - packages/benchhand-core/src/benchhand_core/jobs/identity.py
+      - packages/benchhand-core/src/benchhand_core/jobs/process.py
+      - packages/benchhand-core/src/benchhand_core/jobs/supervisor.py
+    phase: 1
+    status: ported
+  - path: skills/cad-flow/scripts/run.py
+    home: packages/benchhand-provider/src/benchhand_provider/envs.py
+    phase: 4
+    status: planned
+    note: "environments keyed by dependency set"
+    basis: inferred
+  - path: skills/cad-flow/scripts/scratch.py
+    home: packages/benchhand-core/src/benchhand_core/work/
+    phase: 2
+    status: planned
+  - path: skills/cad-flow/scripts/setup.py
+    home: packages/benchhand/src/benchhand/cli/setup.py
+    phase: 3
+    status: planned
+  - path: skills/cad-flow/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-model
+  - path: skills/cad-model/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-model/scripts/cad_model.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the build, check and diff entry point becomes provider hooks"
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/__init__.py
+    status: dropped
+    reason: "a package docstring only"
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/agreement.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the inspect hook"
+  - path: skills/cad-model/scripts/cadmodel/build.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the kernel build hook"
+  - path: skills/cad-model/scripts/cadmodel/check.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the inspect hook"
+  - path: skills/cad-model/scripts/cadmodel/components.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/diff.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the inspect hook"
+  - path: skills/cad-model/scripts/cadmodel/fillets.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/fonts.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/holes.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/manufacture.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the manufacturing outputs"
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/mesh.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the inspect hook"
+  - path: skills/cad-model/scripts/cadmodel/motion.py
+    status: dropped
+    reason: "loads sibling modules by path; service boundaries replace that"
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/occ.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/occ_derived.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/orientation.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/provenance.py
+    home: packages/benchhand-core/src/benchhand_core/middleware/provenance.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/record.py
+    status: dropped
+    reason: "loads sibling modules by path; service boundaries replace that"
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/runner.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the kernel build hook"
+  - path: skills/cad-model/scripts/cadmodel/safe.py
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/cadmodel/scriptenv.py
+    home: packages/benchhand-provider/src/benchhand_provider/envs.py
+    phase: 4
+    status: planned
+    note: "provider environments"
+  - path: skills/cad-model/scripts/cadmodel/stepfile.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the inspect hook"
+  - path: skills/cad-model/scripts/cadmodel/store.py
+    home: packages/benchhand-core/src/benchhand_core/middleware/cache.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-model/scripts/cadmodel/threemf.py
+    home:
+      - providers/kernel-cadquery/
+      - providers/kernel-build123d/
+    phase: 4
+    status: planned
+    note: "the inspect hook"
+  - path: skills/cad-model/scripts/run_build123d.py
+    home: providers/kernel-build123d/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/scripts/run_cadquery.py
+    home: providers/kernel-cadquery/
+    phase: 4
+    status: planned
+  - path: skills/cad-model/NOTICE
+    home: packages/benchhand-sdk/src/benchhand_sdk/
+    phase: 4
+    status: planned
+    note: "carry the attribution of the adapted Booleans"
+    basis: inferred
+  - path: skills/cad-model/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-motion
+  - path: skills/cad-motion/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-motion/scripts/access.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/code_shas.py
+    home: packages/benchhand-core/src/benchhand_core/middleware/provenance.py
+    phase: 2
+    status: planned
+    note: "the recipe of what a producer published"
+    basis: inferred
+  - path: skills/cad-motion/scripts/continuous.py
+    home: providers/collision-fcl/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/coupling.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/engagement.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/freecad_assembly.py
+    home: providers/freecad/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/incremental.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/merge_sweeps.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/mesh_bound.py
+    home: providers/collision-fcl/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/motion.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/motion_glb.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/pair_measure.py
+    home: providers/collision-fcl/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/pair_policy.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/plan.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/play.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/pose.py
+    home: providers/collision-fcl/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/spot_check.py
+    home: providers/collision-fcl/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/subsystems.py
+    home: packages/benchhand-core/src/benchhand_core/motion/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/scripts/sweep.py
+    home: providers/collision-fcl/
+    phase: 4
+    status: planned
+  - path: skills/cad-motion/references/
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+
+  # cad-recheck
+  - path: skills/cad-recheck/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-recheck/scripts/stamp.py
+    home: packages/benchhand-core/src/benchhand_core/recheck/
+    phase: 2
+    status: planned
+    note: "verify belongs with versions"
+
+  # cad-record
+  - path: skills/cad-record/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-record/scripts/assembly_data.py
+    home: packages/benchhand-core/src/benchhand_core/record/rules/assembly.py
+    phase: 1
+    status: ported
+    basis: inferred
+  - path: skills/cad-record/scripts/assembly_operations.py
+    home: packages/benchhand-core/src/benchhand_core/record/rules/assembly.py
+    phase: 2
+    status: planned
+    note: "assembly steps and joint evidence"
+    basis: inferred
+  - path: skills/cad-record/scripts/build_guide.py
+    home: packages/benchhand-core/src/benchhand_core/record/docs/
+    phase: 4
+    status: planned
+    note: "the documentation set"
+    basis: inferred
+  - path: skills/cad-record/scripts/cad_api.py
+    status: dropped
+    reason: "generated from contracts/ (ADR-0017)"
+    basis: inferred
+  - path: skills/cad-record/scripts/check_packet.py
+    home: packages/benchhand-core/src/benchhand_core/record/evidence/packets.py
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1"
+    basis: inferred
+  - path: skills/cad-record/scripts/cli.py
+    home: packages/benchhand/src/benchhand/cli/
+    phase: 3
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/decision_records.py
+    home: packages/benchhand-core/src/benchhand_core/flow/decisions.py
+    phase: 2
+    status: planned
+    note: "decision records are in Phase 2"
+  - path: skills/cad-record/scripts/design_rules.py
+    home: packages/benchhand-core/src/benchhand_core/record/rules/interfaces.py
+    phase: 2
+    status: planned
+    note: "partly covered by the interface rules already ported"
+    basis: inferred
+  - path: skills/cad-record/scripts/emit.py
+    home: packages/benchhand-core/src/benchhand_core/flow/envelope.py
+    phase: 2
+    status: planned
+    note: "the result envelope"
+    basis: inferred
+  - path: skills/cad-record/scripts/evidence.py
+    home: packages/benchhand-core/src/benchhand_core/record/evidence/
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1"
+  - path: skills/cad-record/scripts/evidence_paths.py
+    home:
+      - packages/benchhand-core/src/benchhand_core/record/evidence/paths.py
+      - packages/benchhand-core/src/benchhand_core/record/evidence/path_judge.py
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1"
+    basis: inferred
+  - path: skills/cad-record/scripts/fail_fast.py
+    home: flow/checks-by-iteration.rules.yaml
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/flow_profile_gate.py
+    home: packages/benchhand-core/src/benchhand_core/flow/profile.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/generated_docs.py
+    home: packages/benchhand-core/src/benchhand_core/record/docs/
+    phase: 4
+    status: planned
+    note: "the documentation set"
+    basis: inferred
+  - path: skills/cad-record/scripts/guidelines.py
+    home:
+      - packages/benchhand-core/src/benchhand_core/record/evidence/guidelines.py
+      - packages/benchhand-core/src/benchhand_core/record/evidence/guideline_files.py
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1"
+    basis: inferred
+  - path: skills/cad-record/scripts/impact.py
+    home: packages/benchhand-core/src/benchhand_core/flow/impact.py
+    phase: 2
+    status: planned
+    note: "VOID cascade and change impact"
+    basis: inferred
+  - path: skills/cad-record/scripts/layout.py
+    home: packages/benchhand-core/src/benchhand_core/record/documents.py
+    phase: 2
+    status: planned
+    note: "paths are in documents.py; sealed bundles come later"
+    basis: inferred
+  - path: skills/cad-record/scripts/machine_profile.py
+    home: packages/benchhand-core/src/benchhand_core/record/machine_profile.py
+    phase: 3
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/manufacturing_intent.py
+    home: packages/benchhand-core/src/benchhand_core/record/evidence/use_case.py
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1"
+    basis: inferred
+  - path: skills/cad-record/scripts/prune.py
+    home: packages/benchhand-core/src/benchhand_core/record/versions/prune.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/release.py
+    home: packages/benchhand-core/src/benchhand_core/record/release/
+    phase: 4
+    status: planned
+    note: "release packaging is built in Phase 4"
+  - path: skills/cad-record/scripts/sarif.py
+    home: packages/benchhand-core/src/benchhand_core/record/sarif.py
+    phase: 3
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/schema_registry.py
+    home: packages/benchhand-contracts/src/benchhand_contracts/validation.py
+    phase: 1
+    status: ported
+    basis: inferred
+  - path: skills/cad-record/scripts/selection.py
+    home: packages/benchhand-core/src/benchhand_core/record/selection.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/stages.py
+    home: flow/flow.yaml
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/store.py
+    home: packages/benchhand-core/src/benchhand_core/middleware/cache.py
+    phase: 2
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/scripts/validate.py
+    home: packages/benchhand-core/src/benchhand_core/record/validate.py
+    phase: 1
+    status: ported
+  - path: skills/cad-record/scripts/yaml_loader.py
+    home: packages/benchhand-core/src/benchhand_core/record/formats.py
+    phase: 1
+    status: ported
+    basis: inferred
+  - path: skills/cad-record/assets/docs-templates/
+    home: packages/benchhand-core/src/benchhand_core/record/docs/
+    phase: 4
+    status: planned
+    basis: inferred
+  - path: skills/cad-record/assets/manufacturing/
+    home: packages/benchhand-core/src/benchhand_core/record/evidence/
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1: guideline and material-profile data"
+    basis: inferred
+  - path: skills/cad-record/assets/project-template/
+    home: packages/benchhand/src/benchhand/cli/
+    phase: 3
+    status: planned
+    note: "project scaffold"
+    basis: inferred
+  - path: skills/cad-record/layout.json
+    home: packages/benchhand-core/src/benchhand_core/record/migrate/
+    phase: 1
+    status: in-progress
+    note: "in progress, Phase 1: migrate locates a record by its layout"
+    basis: inferred
+  - path: skills/cad-record/references/
+    home: flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-record/schemas/
+    home: contracts/record/
+    phase: 1
+    status: ported
+    note: "schemas redesigned as TypeSpec"
+  - path: skills/cad-record/vendor/
+    home: packages/benchhand-core/src/benchhand_core/record/sarif.py
+    phase: 3
+    status: planned
+    note: "the pinned SARIF schema"
+    basis: inferred
+
+  # cad-render
+  - path: skills/cad-render/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-render/scripts/compare_renders.py
+    home: providers/render-chromium/
+    phase: 4
+    status: planned
+  - path: skills/cad-render/scripts/materials.py
+    home: providers/render-chromium/
+    phase: 4
+    status: planned
+  - path: skills/cad-render/scripts/parity_policy.py
+    home: providers/render-chromium/
+    phase: 4
+    status: planned
+  - path: skills/cad-render/scripts/render.py
+    home: providers/render-chromium/
+    phase: 4
+    status: planned
+  - path: skills/cad-render/scripts/versions.py
+    home: providers/render-chromium/
+    phase: 4
+    status: planned
+  - path: skills/cad-render/assets/
+    home: providers/render-chromium/
+    phase: 4
+    status: planned
+
+  # cad-review-dfm
+  - path: skills/cad-review-dfm/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+    note: "the review stage guide and its agent"
+
+  # cad-review-mech
+  - path: skills/cad-review-mech/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+    note: "the review stage guide and its agent"
+
+  # cad-viewer
+  - path: skills/cad-viewer/SKILL.md
+    home:
+      - flow/flow.yaml
+      - flow/guides/
+    phase: 2
+    status: planned
+  - path: skills/cad-viewer/scripts/cadviewer/__init__.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/scripts/cadviewer/capture.py
+    home:
+      - providers/viewer-ocp/
+      - providers/render-chromium/
+    phase: 5
+    status: planned
+    note: "the presenter captures through headless Chromium"
+    basis: inferred
+  - path: skills/cad-viewer/scripts/cadviewer/gallery.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/scripts/cadviewer/host.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/scripts/cadviewer/motion.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/scripts/cadviewer/record.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/scripts/cadviewer/session.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/scripts/viewer.py
+    home:
+      - providers/viewer-ocp/
+      - ui/viewer/
+    phase: 5
+    status: planned
+  - path: skills/cad-viewer/assets/
+    home: ui/viewer/
+    phase: 5
+    status: planned
+
+  # agents-and-harness
+  - path: agents/cad-analyst.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: agents/cad-clerk.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: agents/cad-concept-designer.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: agents/cad-dfm-reviewer.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: agents/cad-mech-reviewer.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: agents/cad-part-designer.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: agents/cad-sourcing-researcher.md
+    home: harness/agents/
+    phase: 6
+    status: planned
+    note: "neutral source; `benchhand install` renders each host"
+  - path: harness/generate.py
+    home: harness/generate.py
+    phase: 6
+    status: planned
+    note: "keep the tier and model rendering and CHEAP_ELIGIBLE"
+  - path: harness/install.py
+    home: packages/benchhand/src/benchhand/cli/install.py
+    phase: 6
+    status: planned
+    note: "`benchhand install`"
+  - path: harness/claude/agents/
+    status: dropped
+    reason: "generated by `benchhand install` from the agent sources"
+    basis: inferred
+  - path: harness/codex/agents/
+    status: dropped
+    reason: "generated by `benchhand install` from the agent sources"
+    basis: inferred
+  - path: harness/kiro/agents/
+    status: dropped
+    reason: "generated by `benchhand install` from the agent sources"
+    basis: inferred
+  - path: harness/opencode/agents/
+    status: dropped
+    reason: "generated by `benchhand install` from the agent sources"
+    basis: inferred
+  - path: harness/opencode/commands/cad-flow.md
+    home: harness/
+    phase: 6
+    status: planned
+    note: "the OpenCode command template"
+    basis: inferred
+
+  # examples
+  - path: examples/lamp-arm/
+    home: examples/lamp-arm/
+    phase: 7
+    status: planned
+    note: "golden fixture; a copy is in reference/examples/"

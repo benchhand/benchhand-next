@@ -3,7 +3,7 @@
 default: check
 
 # Lint, type-check and test everything, and check the generated contract code.
-check: lint typecheck test test-wheel contracts-check
+check: lint typecheck test test-wheel contracts-check reference-map
 
 lint:
     uv run ruff check .
@@ -109,3 +109,10 @@ reference-changes:
     echo "Since $ref ($since):"
     gh pr list -R "$repo" --state merged --search "merged:>$since" --json number,title,mergedAt --jq '.[] | "  merged #\(.number) \(.title)"'
     gh pr list -R "$repo" --state open --json number,title,updatedAt --jq '.[] | "  open   #\(.number) \(.title)"'
+
+# Check docs/architecture/reference-map.yaml, and with `--write` regenerate docs/architecture/function-map.md from it.
+# Offline and fast. Set BENCHHAND_REFERENCE_DIR to a read-only copy of the prototype at release.toml's
+# reference_commit to also check that every prototype script, skill, agent and harness module has an entry and
+# that no entry names a path that is gone.
+reference-map *args:
+    PYTHONPATH=tools/map uv run python -m reference_map {{args}}
