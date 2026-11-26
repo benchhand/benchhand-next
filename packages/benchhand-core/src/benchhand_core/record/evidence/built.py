@@ -62,8 +62,9 @@ class BuiltVersion:
     staleness: ChangedSinceBuild | NotComputed
     packets: tuple[Packet, ...] = ()
     packet_findings: tuple[Finding, ...] = ()
-    # every check bundle that is sealed and bound to this build, its packet valid or not: the inventory
-    # holds them all (evidence.py:1207 collects them before packet_problems refuses any)
+    # every check bundle sealed and bound to this build whose result.json is a required-check packet (it has
+    # expected and outcomes), valid or not: the inventory holds them all (evidence.py:1207 collects them
+    # before packet_problems refuses any)
     bound_bundles: tuple[str, ...] = ()
     current_geometry: Mapping[str, str | None] = field(default_factory=dict)
     files: Mapping[str, FileState] = field(default_factory=dict)

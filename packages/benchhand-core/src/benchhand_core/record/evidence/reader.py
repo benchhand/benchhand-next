@@ -170,20 +170,29 @@ def _bound_problem(root: Path, directory: Path, version: str, version_sha: str) 
     return None
 
 
-def _packet_problem(directory: Path) -> tuple[Any, str | None]:
-    """The parsed result.json of a sealed, bound check bundle and why it is no valid packet."""
+def _collected(directory: Path) -> tuple[Any, str | None]:
+    """The parsed result.json of a sealed, bound check bundle, and why it is not collected at all: it does not
+    parse, or it is no required-check packet (no `expected` and `outcomes`; evidence.py:1185-1196). Only a
+    collected packet enters the acceptance inventory, whatever its contract check says."""
     try:
         data = json.loads((directory / "result.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         return None, f"cannot read result.json: {error}"
+    if not (isinstance(data, dict) and "expected" in data and "outcomes" in data):
+        return None, "result.json is not a required-check packet: it has no expected and outcomes"
+    return data, None
+
+
+def _contract_problem(data: Any) -> str | None:
+    """Why a collected packet breaks the v3 manufacturing-check-result contract."""
     # TODO(migrate): packets and snapshots stay at record_version 3 (orchestrator decision). When the migrate
     # service merges, verify the seal on the raw bytes first, then upgrade a record_version 2 packet in
     # memory by migrate's rules; until then a v2 packet breaks this contract and counts as nothing.
     found = contracts.violations("manufacturing-check-result", data)
     if found:
         where = found[0].pointer or "/"
-        return None, f"result.json breaks manufacturing-check-result at {where}: {found[0].message}"
-    return data, None
+        return f"result.json breaks manufacturing-check-result at {where}: {found[0].message}"
+    return None
 
 
 def _packet_invalid(bundle: str, message: str) -> Finding:
@@ -197,7 +206,8 @@ def collect_packets(
     """The packets sealed for `version` under hw/checks/<V>/<S>/result.json, and a packet.invalid finding for
     each bundle that is behind a link, has no result.json, is unreadable, no packet, unsealed, stale or bound
     to another build (evidence.py:1207). The prototype skips a bundle without result.json; here a damaged
-    packet cannot disappear that way. Also returns every sealed, bound bundle, its packet valid or not."""
+    packet cannot disappear that way. Also returns every sealed, bound bundle holding a collected packet,
+    which the inventory holds whether or not the packet meets its contract."""
     checks = f"hw/checks/{version}"
     folder = root / checks
     link = linked_on_the_way(root, folder) if folder.exists() or folder.is_symlink() else None
@@ -209,8 +219,10 @@ def collect_packets(
         data: Any = None
         problem = _bound_problem(root, directory, version, version_sha)
         if problem is None:
+            data, problem = _collected(directory)
+        if problem is None:
             bound.append(bundle)
-            data, problem = _packet_problem(directory)
+            problem = _contract_problem(data)
         if problem is not None:
             findings.append(_packet_invalid(bundle, problem))
             continue

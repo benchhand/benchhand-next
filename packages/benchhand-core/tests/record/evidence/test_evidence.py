@@ -510,6 +510,38 @@ def test_a_bound_packet_refused_for_its_contract_stays_in_the_inventory(
     assert "hw/checks/v1/cad/manifest.json" in result["acceptance"]["inventory"]
 
 
+def test_a_sealed_bundle_that_is_no_packet_stays_out_of_the_inventory(
+    built: tuple[Path, str], write_packet: WritePacket
+) -> None:
+    """evidence.py:1185-1228: a sealed, bound result.json without expected and outcomes is never collected,
+    so it is packet.invalid and the inventory does not hold it."""
+    root, version_sha = built
+    write_packet(root, "cad", {}, version_sha)
+    result = run(root)
+    [finding] = [f for f in result["findings"] if f["code"] == "packet.invalid"]
+    assert "no expected and outcomes" in finding["message"]
+    assert "hw/checks/v1/cad/manifest.json" not in result["acceptance"]["inventory"]
+
+
+def test_an_artifact_a_project_guideline_cites_is_in_the_inventory(built: tuple[Path, str]) -> None:
+    """manufacturing-guideline.tsp citations: a project guideline citing a file under the part's sources
+    holds that file in the inventory, so changing it changes the digest."""
+    root, _ = built
+    cited = root / "hw/parts/LMP-0001/sources/coupon.txt"
+    cited.parent.mkdir(parents=True, exist_ok=True)
+    cited.write_text("coupon run 1\n", encoding="utf-8")
+    guideline = yaml.safe_load((SHIPPED / "fdm.nozzle.d0_4.yaml").read_text(encoding="utf-8"))
+    guideline["id"] = "fdm.project.coupon"
+    guideline.pop("extends", None)
+    citation = {"kind": "test", "reference": "coupon", "artifact": "parts/LMP-0001/sources/coupon.txt"}
+    guideline["limits"][0]["citations"] = [{**citation, "sha256": sha256(cited)}]
+    write_yaml(root / "hw/manufacturing/guidelines/fdm.project.coupon.yaml", guideline)
+    before = run(root)["acceptance"]
+    assert "hw/parts/LMP-0001/sources/coupon.txt" in before["inventory"]
+    cited.write_text("coupon run 2\n", encoding="utf-8")
+    assert run(root)["acceptance"]["evidence_sha256"] != before["evidence_sha256"]
+
+
 # The ledger
 
 

@@ -51,6 +51,8 @@ class RecordView:
     verification: tuple[JsonMap, ...]
     approved: frozenset[str]
     selection: JsonMap = field(default_factory=dict)
+    # the project's own guideline sets (hw/manufacturing/guidelines/), by file stem order
+    guidelines: tuple[JsonMap, ...] = ()
     # capability profile id -> material profile name -> id@revision -> sha256 of every guideline set it
     # resolves through (guidelines.record_digests); empty until `with_guideline_digests`
     guideline_digests: Mapping[str, Mapping[str, Mapping[str, str]]] = field(default_factory=dict)
@@ -104,4 +106,5 @@ def view(record: Record) -> RecordView:
         verification=tuple(as_json(row) for row in record.verification),
         approved=frozenset(ident for ident, decision in record.decisions.items() if decision.approves),
         selection=as_json(record.manufacturing["selection"]) if "selection" in record.manufacturing else {},
+        guidelines=tuple(as_json(record.guidelines[stem]) for stem in sorted(record.guidelines)),
     )
