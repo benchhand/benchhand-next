@@ -132,6 +132,7 @@ Equal env YAML and descriptor-set hashes don't prove that two engines run the sa
 - `variables`: each declaration as a CEL type name, a primitive or a message;
 - `extensions`: each extension with a pinned version, in cel-go's numbering;
 - `options`: `cross_type_numeric_comparisons` and `homogeneous_aggregate_literals`, both `false`, from `scopes.yaml`'s `profile_options`;
+- `checkers_of_record`: the checkers (engine and version) whose bundles an evaluator may run, from `scopes.yaml`'s `profile_checkers_of_record`;
 - `container` and `manifest_version`.
 
 The **profile digest** is the SHA-256 of the manifest's canonical JSON, RFC 8785 (JCS). It is never taken over protobuf bytes. `gen/profile.py` refuses a manifest with a float, a non-ASCII string or an integer above 2^53. For that subset, JCS is sorted keys with no whitespace, which each language's standard JSON encoder produces: Python's `json.dumps(sort_keys=True)`, Go's `encoding/json` with HTML escaping off, serde_json without `preserve_order`, and a key-sorting `JSON.stringify` in TypeScript. All four computed the same digests (`generated/profile/digests.txt`; gate_guard `38f0f9a90603…`).
