@@ -1,3 +1,4 @@
+ok aggregate exit=1: ../policy/bad/aggregate.celpolicy: restricted profile: only first-match is supported, not aggregate
 ok always_false exit=1: ERROR: ../policy/bad/always_false.celpolicy:7:7: Condition is always false
 ok field exit=1: ERROR: ../policy/bad/field.celpolicy:7:22: undefined field 'make_bye'
 ok no_final_choice exit=1: ../policy/bad/no_final_choice.celpolicy: restricted profile: the last choice must be unconditional, so no match is an explicit output

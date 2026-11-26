@@ -5,6 +5,8 @@
 //
 //	go run ./celcheck rules <profile> <rules.yaml>   check accept, reject and profile cases; write a bundle
 //	go run ./celcheck policy <profile> <file.celpolicy> <name>   compile a policy into its profile's bundle
+//	go run ./celcheck probe-policy <profile> <file.celpolicy> <name>   the same without the restricted-profile
+//	  check: a research probe of features outside the supported policy profile, never the production path
 //
 // `rules` writes generated/checked/cel-go-ref/ and results/typed-demo/celcheck.json. It fails when an
 // accept case doesn't check, a reject case checks, or a profile case that uses an excluded function or
@@ -100,14 +102,16 @@ func checkRules(root string, p *profile.Profile, e *cel.Env, src string) []profi
 	return records
 }
 
-func compilePolicy(root string, p *profile.Profile, e *cel.Env, src, name string) error {
+func compilePolicy(root string, p *profile.Profile, e *cel.Env, src, name string, restricted bool) error {
 	source := must(os.ReadFile(src))
 	parsed, iss := must(policy.NewParser()).Parse(policy.ByteSource(source, src))
 	if iss.Err() != nil {
 		return iss.Err()
 	}
-	if err := restrictedProfile(parsed); err != nil {
-		return fmt.Errorf("%s: %w", src, err)
+	if restricted {
+		if err := restrictedProfile(parsed); err != nil {
+			return fmt.Errorf("%s: %w", src, err)
+		}
 	}
 	ast, iss := policy.Compile(e, parsed)
 	if iss.Err() != nil {
@@ -123,14 +127,17 @@ func compilePolicy(root string, p *profile.Profile, e *cel.Env, src, name string
 	return nil
 }
 
-// restrictedProfile refuses what the supported policy profile excludes, before the compiler runs: a
-// nested rule, policy variables, and a match with no unconditional last choice (its output would be an
-// optional, so no match wouldn't mean UNKNOWN and the evaluator would need the optional extension).
-// The profile with bindings in its manifest is the one exception for variables, kept to show the
-// cel.@block form.
+// restrictedProfile refuses what the supported policy profile excludes, before the compiler runs: the
+// aggregate semantic (only first-match is supported), a nested rule, policy variables, and a match with
+// no unconditional last choice (its output would be an optional, so no match wouldn't mean UNKNOWN and
+// the evaluator would need the optional extension).
 func restrictedProfile(p *policy.Policy) error {
 	r := p.Rule()
-	if len(r.Variables()) > 0 && !strings.HasSuffix(os.Args[2], "_bindings") {
+	// A zero Rule reports the default semantic, first-match; cel-go doesn't export the constants.
+	if r.Semantic() != (&policy.Rule{}).Semantic() {
+		return fmt.Errorf("restricted profile: only first-match is supported, not aggregate")
+	}
+	if len(r.Variables()) > 0 {
 		return fmt.Errorf("restricted profile: policy variables need cel.@block in every evaluator")
 	}
 	matches := r.Matches()
@@ -147,7 +154,7 @@ func restrictedProfile(p *policy.Policy) error {
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "usage: celcheck rules <profile> <rules.yaml> | policy <profile> <file> <name>")
+		fmt.Fprintln(os.Stderr, "usage: celcheck rules <profile> <rules.yaml> | policy|probe-policy <profile> <file> <name>")
 		os.Exit(2)
 	}
 	root := must(filepath.Abs(".."))
@@ -162,8 +169,8 @@ func main() {
 				os.Exit(1)
 			}
 		}
-	case "policy":
-		if err := compilePolicy(root, p, e, os.Args[3], os.Args[4]); err != nil {
+	case "policy", "probe-policy":
+		if err := compilePolicy(root, p, e, os.Args[3], os.Args[4], os.Args[1] == "policy"); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
