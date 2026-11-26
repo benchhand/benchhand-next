@@ -1,0 +1,7 @@
+kept 1640 tests in 21 files
+dropped 507: container
+dropped 135: typeEnv
+dropped 24: value kind typeValue
+dropped 21: typedResult
+dropped 13: conformance message types
+dropped 4: bindings

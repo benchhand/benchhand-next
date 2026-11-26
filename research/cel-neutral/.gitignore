@@ -1,4 +1,7 @@
 py/.venv/
 ts/node_modules/
 rust/target/
+rust-cxx/target/
 go/bin/
+# Raw runner output; run conformance/run.sh to rebuild it. summary.md and failures-*.txt are kept.
+conformance/results/*.jsonl

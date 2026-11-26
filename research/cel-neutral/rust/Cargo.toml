@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.105"
+base64 = "0.22.1"
 cel = { version = "=0.16.1", features = ["json"] }
 cel-core = "=0.5.1"
 cel-core-proto = "=0.5.1"

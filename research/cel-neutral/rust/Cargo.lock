@@ -186,6 +186,7 @@ name = "cel_neutral_rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "cel",
  "cel-core",
  "cel-core-proto",

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.105"
+base64 = "0.22.1"
 cel-cxx = { git = "https://github.com/xjasonli/cel-cxx", rev = "58138da", version = "0.2.5" }
 prost = "0.14"
 prost-reflect = { version = "0.16", features = ["serde"] }
