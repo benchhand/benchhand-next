@@ -854,6 +854,33 @@ def test_an_unrecognised_route_kind_stays_unknown(lamp_arm: Path, write_packet: 
     assert any("no check contract" in message for message in unexpected)
 
 
+@pytest.mark.parametrize("result", ["waived", "planned"])
+def test_an_unrecognised_route_kind_is_neither_waived_nor_planned(lamp_arm: Path, result: str) -> None:
+    """common.tsp route_kind: the final status of a coverage obligation with no check contract is unknown,
+    whatever the evidence, also an approved waiver or a planned entry."""
+    part = lamp_arm / "hw/parts/LMP-0001/part.yaml"
+    part.write_text(
+        part.read_text(encoding="utf-8").replace("kind: drilling", "kind: boring"), encoding="utf-8"
+    )
+    version_sha = build(lamp_arm)
+    coverage = "process.boring.coverage@LMP-0001/finish_holes"
+    subject = {"PN": "LMP-0001", "operation": "finish_holes"}
+    if result == "waived":
+        entry = waived_entry(lamp_arm, version_sha, coverage, subject=subject)
+        entry["subject"] = subject
+    else:
+        entry = ledger_entry(
+            lamp_arm, version_sha, obligation=coverage, level="process_planned", subject=subject
+        )
+        entry["result"] = "planned"
+        entry["fingerprints"] = current_fingerprints(lamp_arm, subject)
+    write_ledger(lamp_arm, entry)
+    found = statuses(run(lamp_arm))[coverage]
+    assert found["result"] == "unknown"
+    assert "waiver" not in found
+    assert any("no check contract" in reason for reason in found["reasons"])
+
+
 # Joint temperatures
 
 

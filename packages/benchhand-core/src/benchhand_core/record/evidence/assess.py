@@ -31,7 +31,7 @@ from benchhand_core.record.evidence.ledger import (
     entry_targets,
     judge_entry,
 )
-from benchhand_core.record.evidence.obligations import required_checks, subject_of
+from benchhand_core.record.evidence.obligations import required_checks, subject_of, uncovered_route
 from benchhand_core.record.evidence.packets import Candidate, OutcomeReading, packet_problems, read_outcomes
 from benchhand_core.record.evidence.paths import PATH_CODES, dependents, disposition_problems
 from benchhand_core.record.evidence.results import LEVELS, NOT_REQUIRED, best, facets, worst
@@ -276,11 +276,17 @@ def _statuses(state: _State) -> list[dict[str, Any]]:
     for obligation in state.expected:
         found = state.candidates[obligation.id]
         result = best([r for r, _, _ in found], obligation.id in state.waivers)
+        reasons = list(dict.fromkeys(reason for _, _, reason in found if reason))
+        if uncovered_route(obligation) and result != "unknown":
+            # common.tsp route_kind: a kind with no check contract reports unknown coverage, whatever its
+            # evidence shows (a pass, a waiver, a planned entry); the prototype lets each stand
+            reasons.append(f"{obligation.id}: its route kind has no check contract; coverage stays unknown")
+            result = "unknown"
         status: dict[str, Any] = {
             "obligation": as_json(obligation),
             "result": result,
             "sources": list(dict.fromkeys(s for _, s, _ in found)),
-            "reasons": list(dict.fromkeys(reason for _, _, reason in found if reason)),
+            "reasons": reasons,
         }
         if result == "waived" and state.waivers.get(obligation.id):
             status["waiver"] = dict(state.waivers[obligation.id])
