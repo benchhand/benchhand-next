@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import posixpath
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +29,13 @@ from benchhand_core.record.evidence.built import (
     NotComputed,
     Packet,
 )
-from benchhand_core.record.evidence.digest import LEDGER_FILES, MANIFEST, SOURCES_DIR, cited_paths
+from benchhand_core.record.evidence.digest import (
+    LEDGER_FILES,
+    MANIFEST,
+    SOURCES_DIR,
+    cited_bundles,
+    cited_paths,
+)
 from benchhand_core.record.evidence.view import view
 from benchhand_core.record.finding import Finding
 from benchhand_core.record.model import MANUFACTURING_MODELS, Record
@@ -109,12 +116,42 @@ def seal_problems(directory: Path) -> list[str]:
     return problems
 
 
-def _stale(problems: list[str]) -> str:
+def linked_on_the_way(root: Path, path: Path) -> str | None:
+    """The first symbolic link on the way from the project `root` to `path`, `path` itself included, as a
+    project path; None when there is none. A seal is only as good as the directory it is read from."""
+    current = root
+    for part in path.relative_to(root).parts:
+        current = current / part
+        if current.is_symlink():
+            return current.relative_to(root).as_posix()
+    return None
+
+
+def bundle_problems(root: Path, bundle: str) -> tuple[str, ...]:
+    """Why the sealed bundle at project path `bundle` does not verify: a link on the way to it, or a payload
+    file that is missing, changed or unlisted against its manifest. Empty when it verifies."""
+    if not bundle.startswith("hw/") or posixpath.normpath(bundle) != bundle or "\\" in bundle:
+        return (f"{bundle} is not a normalized path inside hw/",)
+    directory = root / bundle
+    link = linked_on_the_way(root, directory)
+    if link is not None:
+        return (f"{link} is a symbolic link",)
+    if not (directory / MANIFEST).is_file():
+        return (f"{bundle} has no {MANIFEST}",)
+    return tuple(seal_problems(directory))
+
+
+def _stale(problems: Sequence[str]) -> str:
     return f"stale: {problems[0]}" + (f" (+{len(problems) - 1} more)" if len(problems) > 1 else "")
 
 
-def _packet_problem(directory: Path, version: str, version_sha: str) -> tuple[Any, str | None]:
+def _packet_problem(root: Path, directory: Path, version: str, version_sha: str) -> tuple[Any, str | None]:
     """The parsed result.json of a check bundle and why it is no valid packet (evidence.py:1185)."""
+    link = linked_on_the_way(root, directory)
+    if link is not None:
+        return None, f"{link} is a symbolic link"
+    if not (directory / "result.json").is_file():
+        return None, "it has no result.json"
     try:
         data = json.loads((directory / "result.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -134,23 +171,29 @@ def _packet_problem(directory: Path, version: str, version_sha: str) -> tuple[An
     return data, None
 
 
+def _packet_invalid(bundle: str, message: str) -> Finding:
+    data = {"code": "packet.invalid", "severity": "error", "path": f"{bundle}/result.json"}
+    return Finding.model_validate({**data, "message": f"{bundle}: {message}"})
+
+
 def collect_packets(
-    hw: Path, version: str, version_sha: str
+    root: Path, version: str, version_sha: str
 ) -> tuple[tuple[Packet, ...], tuple[Finding, ...]]:
     """The packets sealed for `version` under hw/checks/<V>/<S>/result.json, and a packet.invalid finding for
-    each bundle that is unreadable, no packet, unsealed, stale or bound to another build
-    (evidence.py:1207)."""
-    root = hw / "checks" / version
+    each bundle that is behind a link, has no result.json, is unreadable, no packet, unsealed, stale or bound
+    to another build (evidence.py:1207). The prototype skips a bundle without result.json; here a damaged
+    packet cannot disappear that way."""
+    checks = f"hw/checks/{version}"
+    folder = root / checks
+    link = linked_on_the_way(root, folder) if folder.exists() or folder.is_symlink() else None
+    if link is not None:
+        return (), (_packet_invalid(checks, f"{link} is a symbolic link"),)
     packets, findings = [], []
-    for directory in sorted(root.iterdir()) if root.is_dir() and not root.is_symlink() else []:
-        if not (directory / "result.json").is_file():
-            continue
-        bundle = f"hw/checks/{version}/{directory.name}"
-        data, problem = _packet_problem(directory, version, version_sha)
+    for directory in sorted(folder.iterdir()) if folder.is_dir() else []:
+        bundle = f"{checks}/{directory.name}"
+        data, problem = _packet_problem(root, directory, version, version_sha)
         if problem is not None:
-            message = f"{bundle}: {problem}"
-            data = {"code": "packet.invalid", "severity": "error", "path": f"{bundle}/result.json"}
-            findings.append(Finding.model_validate({**data, "message": message}))
+            findings.append(_packet_invalid(bundle, problem))
             continue
         packets.append(Packet(bundle, _sha256(directory / MANIFEST), data))
     return tuple(packets), tuple(findings)
@@ -250,6 +293,10 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
     `version`. BuiltVersionError when it is not built or its directory fails its seal."""
     hw = root / documents.HW
     folder = hw / "versions" / version
+    link = linked_on_the_way(root, folder) if folder.exists() or folder.is_symlink() else None
+    if link is not None:
+        message = f"{link} is a symbolic link; a seal read through it proves nothing"
+        raise BuiltVersionError(f"hw/versions/{version}", message)
     if not (folder / MANIFEST).is_file():
         raise BuiltVersionError(f"hw/versions/{version}/{MANIFEST}", f"{version} is not a built version")
     problems = seal_problems(folder)
@@ -261,10 +308,11 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
     assert manifest is not None
     manifest_sha = _sha256(folder / MANIFEST)
     geometry = current_geometry(hw)
-    packets, packet_findings = collect_packets(hw, version, manifest_sha)
+    packets, packet_findings = collect_packets(root, version, manifest_sha)
     wanted = cited_paths(view(record), packets) | set(LEDGER_FILES) | set(_sources(root))
     files = {path: file_state(root, path) for path in sorted(wanted)}
     files = {path: state for path, state in files.items() if path not in LEDGER_FILES or state.sha256}
+    bundles = {path: bundle_problems(root, path) for path in cited_bundles(view(record))}
     return BuiltVersion(
         label=version,
         manifest_sha256=manifest_sha,
@@ -273,4 +321,5 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
         packet_findings=packet_findings,
         current_geometry=geometry,
         files=files,
+        bundle_seals=bundles,
     )

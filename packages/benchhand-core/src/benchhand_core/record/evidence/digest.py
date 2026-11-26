@@ -44,6 +44,12 @@ def acceptance_digest(inventory: Mapping[str, str]) -> str:
     return canonical_sha({"schema": INVENTORY_SCHEMA, "files": pairs})
 
 
+def cited_bundles(record: RecordView) -> set[str]:
+    """The sealed bundles (hw/<kind>/<V>/<S>) the ledger entries cite, which must verify in full."""
+    found = {mapping(entry.get("bundle")).get("path") for entry in record.evidence}
+    return {path for path in found if isinstance(path, str)}
+
+
 def cited_paths(record: RecordView, packets: Iterable[Packet]) -> set[str]:
     """The hw/ paths the inventory needs beside the ledger files and the sources directory: cited
     artifacts and bundle manifests, dispositioned and packet bundle manifests, and named source artifacts."""

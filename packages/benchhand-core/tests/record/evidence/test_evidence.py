@@ -316,6 +316,79 @@ def test_a_snapshot_that_does_not_read_leaves_staleness_not_computed(built: tupl
     assert isinstance(built_version.staleness, NotComputed)
 
 
+# Seals
+
+
+def test_a_linked_check_bundle_counts_as_nothing(
+    built: tuple[Path, str], write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """A seal read through a link proves nothing: a check bundle that is a link is packet.invalid."""
+    root, version_sha = built
+    bundle = write_packet(root, "cad", packet(root, {READBACK: "pass"}), version_sha)
+    elsewhere = tmp_path / "elsewhere"
+    bundle.rename(elsewhere)
+    bundle.symlink_to(elsewhere, target_is_directory=True)
+    result = run(root)
+    assert statuses(result)[READBACK]["result"] == "unknown"
+    assert any(
+        "is a symbolic link" in f["message"] for f in result["findings"] if f["code"] == "packet.invalid"
+    )
+    assert result["complete"] is False
+
+
+def test_a_linked_version_root_is_refused(built: tuple[Path, str], tmp_path: Path) -> None:
+    """A version directory reached through a link is no build."""
+    root, _ = built
+    versions = root / "hw/versions"
+    elsewhere = tmp_path / "versions-elsewhere"
+    versions.rename(elsewhere)
+    versions.symlink_to(elsewhere, target_is_directory=True)
+    with pytest.raises(BuiltVersionError, match="hw/versions is a symbolic link"):
+        read_built_version(root, load_record(root), "v1")
+
+
+def test_a_bundle_without_its_result_is_packet_invalid(
+    built: tuple[Path, str], write_packet: WritePacket
+) -> None:
+    """A damaged packet cannot disappear: a check bundle without result.json is packet.invalid and the
+    assessment is incomplete (the prototype skips it, evidence.py:1219)."""
+    root, version_sha = built
+    bundle = write_packet(root, "cad", packet(root, {READBACK: "pass"}), version_sha)
+    (bundle / "result.json").unlink()
+    result = run(root)
+    assert any(
+        "has no result.json" in f["message"] for f in result["findings"] if f["code"] == "packet.invalid"
+    )
+    assert result["complete"] is False
+
+
+def test_a_cited_bundle_is_verified_in_full(built: tuple[Path, str]) -> None:
+    """A ledger entry citing a bundle relies on every payload file: an edited, added or removed file fails
+    the seal even though the manifest's own sha256 is unchanged."""
+    root, version_sha = built
+    bundle = root / "hw/captures/v1/bench"
+    bundle.mkdir(parents=True)
+    (bundle / "photo.txt").write_text("bench photo\n", encoding="utf-8")
+    manifest_sha = seal(bundle)
+    entry = ledger_entry(
+        root, version_sha, bundle={"path": "hw/captures/v1/bench", "manifest_sha256": manifest_sha}
+    )
+    write_ledger(root, entry)
+    assert statuses(run(root))[READBACK]["result"] == "pass"
+    for change in ("edit", "add", "remove"):
+        if change == "edit":
+            (bundle / "photo.txt").write_text("another photo\n", encoding="utf-8")
+        elif change == "add":
+            (bundle / "photo.txt").write_text("bench photo\n", encoding="utf-8")
+            (bundle / "extra.txt").write_text("extra\n", encoding="utf-8")
+        else:
+            (bundle / "extra.txt").unlink()
+            (bundle / "photo.txt").unlink()
+        result = run(root)
+        assert statuses(result)[READBACK]["result"] == "stale", change
+        assert "evidence.bundle_seal" in codes(result), change
+
+
 # The ledger
 
 

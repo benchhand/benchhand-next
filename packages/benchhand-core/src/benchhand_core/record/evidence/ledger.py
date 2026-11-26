@@ -202,6 +202,15 @@ def _bytes(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement | No
     """Cited bytes that changed make the evidence stale; evidence sealed for another version needs an
     approving impact decision (evidence.py:991-1005)."""
     ident, label = entry.get("id"), ctx.built.label
+    bundle = entry.get("bundle")
+    if isinstance(bundle, Mapping):
+        path = str(bundle.get("path"))
+        problems = ctx.built.bundle_seals.get(path, (f"{path} was not verified",))
+        if problems:
+            message = f"{ident} cites {path}, which fails its seal: {'; '.join(problems)}"
+            finding = entry_finding("evidence.bundle_seal", index, message)
+            reason = f"stale: {ident} cites {path}, which fails its seal"
+            return EntryJudgement("stale", (reason,), (finding,))
     claimed = _cited(entry)
     files = ctx.built.files
     drifted = sorted(path for path, sha in claimed.items() if getattr(files.get(path), "sha256", None) != sha)

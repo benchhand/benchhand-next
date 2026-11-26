@@ -51,7 +51,9 @@ class FileState:
 class BuiltVersion:
     """A built version and what was read about it. `current_geometry` maps each PN to the sha256 of its
     current hw/parts/<PN>/model.py; `files` maps an hw/ path to its state, for every file the acceptance
-    inventory and the ledger entries cite; `packet_findings` are the bundles the reader refused."""
+    inventory and the ledger entries cite; `bundle_seals` maps each bundle a ledger entry cites to why it
+    fails its seal (empty when every payload file verifies); `packet_findings` are the bundles the reader
+    refused."""
 
     label: str
     manifest_sha256: str
@@ -60,3 +62,4 @@ class BuiltVersion:
     packet_findings: tuple[Finding, ...] = ()
     current_geometry: Mapping[str, str | None] = field(default_factory=dict)
     files: Mapping[str, FileState] = field(default_factory=dict)
+    bundle_seals: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
