@@ -179,7 +179,7 @@ stateDiagram-v2
 
 - White states are stages, named by the record contract's `stage` enum. Purple states are gates.
 - Blue is PROVISIONAL, teal is APPROVED and dark grey is VOID. These are the three statuses of a gate decision, `kind: gate`, in `hw/decisions/`.
-- **Open** (red, dotted): engineering change. The record contract has `flow.change`, and the prototype reopens affected parts as L3 and then affected cases as L4. Neither the plan nor an ADR says how `flow.yaml` represents it; the in-review migrate lane refuses frozen records until "the Phase 2 flow engine can record an engineering change". The plan's [Open questions](../design-plan.md#open-questions) don't list it.
+- **Open** (red, dotted): engineering change. The record contract has `flow.change`, and the prototype reopens affected parts as L3 and then affected cases as L4. Neither the plan nor an ADR says how `flow.yaml` represents it; the migrate service refuses frozen records until "the Phase 2 flow engine can record an engineering change". The plan's [Open questions](../design-plan.md#open-questions) don't list it.
 - The VOID cascade example uses v4 and v5 for illustration.
 - In the prototype the statuses were MADR `proposed`, `accepted` and `rejected`. The record contract renames them `provisional`, `approved` and `void`.
 
@@ -202,4 +202,4 @@ stateDiagram-v2
 - `docs/adr/`: [0003](../adr/0003-gates-guide.md) (gates guide; modes ask, chat, auto) and [0014](../adr/0014-flow-rules-cel.md) (the flow is data, the rules are CEL), each under "Decision".
 - `docs/contract/record-migration.md`: [Decision record format](../contract/record-migration.md#decision-record-format): `kind: gate` with `approved`, `provisional` or `void`, and the prototype's MADR statuses.
 - Contracts on `main`: `contracts/record/common.tsp` (`stage`), `contracts/record/product.tsp` (`flow.frozen`, `flow.change`), `contracts/record/decision.tsp` (gate statuses).
-- In review: `docs/contract/record-migration.md` "Dry run and apply", its "Frozen records" paragraph, on branch `pi-subagents/task-1-c25b8e0-b8d5-s0-t0`.
+- `docs/contract/record-migration.md`: [Dry run and apply](../contract/record-migration.md#dry-run-and-apply), its "Frozen records" paragraph.

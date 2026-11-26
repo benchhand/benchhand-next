@@ -19,7 +19,7 @@ The generated pages come from their own generator. Don't edit them by hand.
 
 ## Legend
 
-Every hand-written page uses these styles. The status is relative to `main` at `c8f21de`.
+Every hand-written page uses these styles. The status is relative to `main` at `d974f57`.
 
 ```mermaid
 flowchart LR

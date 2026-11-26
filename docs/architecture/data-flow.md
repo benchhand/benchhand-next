@@ -195,58 +195,79 @@ sequenceDiagram
 sequenceDiagram
   autonumber
   actor A as Person or agent at a shell
-  %% in-review: migrate
-  participant CLI as benchhand record migrate, in review, Phase 1
-  participant M as migrate and undo, in review, Phase 1
+  participant CLI as benchhand record migrate, on main
+  participant M as migrate and undo, on main
   participant T as Temporary copy of the migrated record
+  participant O as hw/.benchhand-migrate.owner
   participant L as hw/.benchhand-migrate.lock
   participant B as Backup in .benchhand/migrate-backups/
   participant HW as hw/ files
 
-  %% in-review: migrate
-  rect rgb(255, 243, 224)
-    A->>CLI: benchhand record migrate HW
-    CLI->>M: migrate(root)
-    M->>HW: read record_version and every file the rules touch
-    M->>M: refuse a frozen record, migrate.frozen_anchor, or an unsupported version
-    M->>M: apply RULES per file, giving FileChange: rules and a unified diff
-    M->>T: validate the migrated record in a new temporary directory
-    M-->>CLI: Migration with status ready, refused or current
-    CLI-->>A: diffs and findings, nothing written
-    A->>CLI: benchhand record migrate --apply HW
-    CLI->>M: migrate(root, apply=True)
-    M->>L: create with O_CREAT and O_EXCL, else migrate.locked
-    M->>T: plan again and validate the migrated copy
-    M->>B: preimages of the files to change, manifest.json with both sha256 values, then COMPLETE
-    M->>HW: check no file was added or removed since the plan
-    M->>HW: write each changed file by a synced temp file and rename, hw/product.yaml last
-    alt every write succeeds
-      M->>HW: validate the record again
-      M->>L: remove
-      M-->>CLI: status applied, with the undo command
-    else a write fails or a file changed meanwhile
-      M-->>CLI: status failed, the lock stays
-      A->>CLI: --apply --resume HW reuses the backup, or --undo BACKUP
-    end
-    A->>CLI: benchhand record migrate --undo BACKUP
-    CLI->>M: undo(backup)
-    M->>B: refuse a backup without COMPLETE, migrate.backup_incomplete
-    M->>HW: put each preimage back where the file holds the migrated bytes, hw/product.yaml first
-    M->>M: leave a file something else changed, migrate.undo_skipped
-    M-->>CLI: status undone
+  A->>CLI: benchhand record migrate HW
+  CLI->>M: migrate(root)
+  M->>HW: read record_version and every file the rules touch
+  M->>M: refuse a frozen record, migrate.frozen_anchor, or an unsupported version
+  M->>M: apply RULES per file, giving FileChange: rules and a unified diff
+  M->>T: validate the migrated record in a new temporary directory
+  M-->>CLI: Migration with status ready, refused or current
+  CLI-->>A: diffs and findings, nothing written
+
+  A->>CLI: benchhand record migrate --apply HW
+  CLI->>M: migrate(root, apply=True)
+  M->>L: check the lock
+  M->>O: create with O_CREAT and O_EXCL, naming pid, host and start time, else migrate.locked
+  M->>L: read it again: a held lock refuses a fresh apply, migrate.locked names --resume and --undo
+  M->>L: write atomically, naming the new backup
+  M->>T: plan again and validate the migrated copy
+  M->>B: preimages and manifest.json with both sha256 values, synced and read back
+  M->>B: publish COMPLETE atomically, holding the manifest sha256
+  M->>HW: check no file was added or removed since the plan
+  M->>HW: write each changed file: synced temp file, re-hash, rename, hw/product.yaml last
+  alt every write succeeds
+    M->>HW: sync every target directory, validate the record again
+    M->>L: remove
+    M-->>CLI: status applied, with the undo command
+  else stopped after COMPLETE
+    M-->>CLI: status failed, the lock stays
   end
+  M->>O: remove
+
+  opt the next run after a stopped apply
+    A->>CLI: benchhand record migrate --apply --resume HW
+    CLI->>M: migrate(root, apply=True, resume=True)
+    alt the backup is COMPLETE
+      M->>B: sync COMPLETE again and reuse the backup
+      M->>HW: each file must hold its preimage or its migrated bytes, else migrate.changed_meanwhile
+      M->>HW: write the rest, giving the bytes of a clean run
+    else the backup is unfinished
+      M->>B: mark it ABANDONED and keep it, migrate.backup_abandoned
+      M->>B: make a new backup beside it and apply as a fresh run
+    end
+  end
+
+  A->>CLI: benchhand record migrate --undo BACKUP
+  CLI->>M: undo(backup)
+  M->>O: take ownership, as apply does
+  M->>B: refuse without a valid COMPLETE, migrate.backup_incomplete, or with files that don't match the manifest, migrate.backup_unusable
+  M->>L: refuse a lock that names another backup, else point the lock at this backup
+  M->>HW: put each preimage back where the file holds the migrated bytes, hw/product.yaml first
+  M->>M: leave a file something else changed, migrate.undo_skipped
+  M->>L: remove
+  M->>O: remove
+  M-->>CLI: status undone
+  Note over A,HW: Every backup stays until someone deletes it by hand under .benchhand/migrate-backups/
 ```
 
 ## Legend
 
 - Each participant's name carries its status: "on main", "in review, Phase 1", "Phase N" (planned) or "open phase" (named in the plan, with no phase in its Steps). See the [legend](README.md#legend).
-- Orange-shaded steps run code that is in review, Phase 1: evidence on branch `pi-subagents/task-2-3d60620-6b98-s0-t0`, migrate on branch `pi-subagents/task-1-c25b8e0-b8d5-s0-t0`.
+- Orange-shaded steps run code that is in review, Phase 1: evidence, on branch `pi-subagents/task-2-3d60620-6b98-s0-t0`.
 - A solid arrow is a call or a message, and a dashed arrow is its reply. An open arrowhead is a notification.
 - **Open: 30 s or 50 s.** ADR-0018 sends work over about 30 s to a job handle; plan section 11 and provider-protocol section 8 say about 50 s. The diagrams follow ADR-0018, the later decision.
 - **Open: provider request to job.** The plan says the server manages provider workers and jobs, and that `$/progress` feeds job-handle status. `JobService` runs a command under a supervisor, and no document says how a provider request becomes such a job.
 - **Open: the cancel tool.** The plan names `jobs.start`, `jobs.status` and `jobs.result`, and `jobs.*` for Phase 3; no cancel tool name.
 - **Open: release refusals.** The plan names refusal checks and the acceptance digest against the freeze, and section 12a names the context and tooling refusal. It doesn't list the rest.
-- **Open: migrate entry point.** The plan's CLI list (D1) has no `record migrate`, and no MCP tool for migration is named. The migrate lane added the CLI subcommand.
+- **Open: migrate entry point.** The plan's CLI list (D1) has no `record migrate`, and no MCP tool for migration is named. `main` has the CLI subcommand.
 - None of these are in the plan's [Open questions](../design-plan.md#open-questions).
 
 ## Sources
@@ -269,6 +290,7 @@ sequenceDiagram
   - `docs/design-plan.md`: [Steps (phased)](../design-plan.md#steps-phased), Phase 4 ("Release packaging (`hw/releases/<REV>/`, refusal checks and the acceptance digest against the freeze)"); [12a. Documentation set](../design-plan.md#12a-documentation-set-annotations-groups-materials-and-finish) (STEP AP242 as the primary deliverable, `product.step` and `product.glb`, the context and tooling refusal).
   - Prototype `skills/cad-flow/references/flow.md` "Gate control" at `412b5d9`: RELEASE is a single human gate, and a release decision that isn't approved is refused.
 - (e) Migrate:
-  - In review: `docs/contract/record-migration.md` "Dry run and apply", and `packages/benchhand-core/src/benchhand_core/record/migrate/` (`service.py` `migrate`, `undo`, `MigrationStatus`; `recovery.py`) and `packages/benchhand/src/benchhand/cli.py`, on branch `pi-subagents/task-1-c25b8e0-b8d5-s0-t0`.
+  - `docs/contract/record-migration.md`: [Dry run and apply](../contract/record-migration.md#dry-run-and-apply), on `main`.
+  - Code on `main`: `packages/benchhand-core/src/benchhand_core/record/migrate/` (`service.py` `migrate`, `undo`, `MigrationStatus`; `recovery.py` `acquire_owner`, `write_lock`, `write_backup`, `abandon`) and `packages/benchhand/src/benchhand/cli.py` (`record migrate`).
   - `docs/design-plan.md`: [Steps (phased)](../design-plan.md#steps-phased), Phase 1 ("typed reads and writes, validate, migrate and evidence").
   - `docs/phases/phase-0-1.md`: [Not built, which the plan puts in Phase 1](../phases/phase-0-1.md#not-built-which-the-plan-puts-in-phase-1).
