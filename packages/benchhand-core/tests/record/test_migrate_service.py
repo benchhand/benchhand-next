@@ -6,17 +6,20 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 from benchhand_core.record.migrate import MigrationStatus, migrate, recovery, service, undo
-from benchhand_core.record.migrate.inventory import LOCK_NAME, TEMP_SUFFIX
+from benchhand_core.record.migrate.inventory import LOCK_NAME, OWNER_NAME, TEMP_SUFFIX
 from benchhand_core.record.store import load_record
 from benchhand_core.record.validate import validate
 
 from .conftest import LAMP_ARM_HW, TEMPLATE_HW
 
 LAMP_ARM_CHANGES = 10  # the files a lamp-arm migration changes
+OWN = (LOCK_NAME, OWNER_NAME)  # the service's files under hw/
 
 
 def _tree(hw: Path) -> dict[str, bytes]:
@@ -544,30 +547,257 @@ def test_a_stop_after_the_last_write_is_resumed_or_undone_from_record_version_3(
             assert _tree(root / "hw") == before
 
 
-def test_a_stop_before_the_backup_is_complete_wrote_nothing_and_resume_starts_again(
+def _crash_publishing_complete(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run an apply killed while it publishes COMPLETE: after the marker's temp file is synced, before its
+    rename. A killed process removes neither its lock nor its owner file."""
+    real_replace = os.replace
+
+    def crash_on_complete(source: str | Path, target: str | Path) -> None:
+        if Path(target).name == recovery.COMPLETE:
+            raise _Crash
+        real_replace(source, target)
+
+    monkeypatch.setattr(os, "replace", crash_on_complete)
+    monkeypatch.setattr(recovery, "clear_lock", lambda root: None)
+    monkeypatch.setattr(recovery, "release_owner", lambda owner: None)
+    with pytest.raises(_Crash):
+        migrate(root, apply=True)
+    monkeypatch.undo()
+
+
+def test_a_stop_while_publishing_complete_wrote_nothing_and_resume_backs_up_again_beside_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     expected = _clean_run(tmp_path)
     root = _copy(LAMP_ARM_HW, tmp_path / "crashed")
     before = _tree(root / "hw")
-    real_new = recovery._write_new
+    _crash_publishing_complete(root, monkeypatch)
+    assert {path: data for path, data in _tree(root / "hw").items() if path not in OWN} == before
+    [unfinished] = _backups(root)
+    kept = _tree(unfinished)
+    assert not recovery.is_complete(unfinished)
+    # the killed process still owns the record until its owner file is removed by hand
+    [owned] = migrate(root, apply=True, resume=True).refusals
+    assert (owned.code, owned.path) == ("migrate.locked", f"hw/{OWNER_NAME}")
+    assert f"delete hw/{OWNER_NAME}" in (owned.action or "")
+    (root / "hw" / OWNER_NAME).unlink()
+    assert _codes(undo(unfinished).refusals) == ["migrate.backup_incomplete"]
+    assert "wrote nothing" in (migrate(root, apply=True).refusals[0].action or "")
+    resumed = migrate(root, apply=True, resume=True)
+    assert resumed.status == MigrationStatus.applied, resumed.refusals
+    assert _codes(resumed.findings)[0] == "migrate.backup_abandoned"
+    assert _tree(root / "hw") == expected
+    first, second = _backups(root)
+    assert first == unfinished and resumed.backup == second and recovery.is_complete(second)
+    assert _tree(unfinished) == {**kept, recovery.ABANDONED: _tree(unfinished)[recovery.ABANDONED]}
 
-    def crash_on_complete(target: Path, data: bytes) -> None:
-        if target.name == recovery.COMPLETE:
-            raise _Crash
-        real_new(target, data)
 
-    monkeypatch.setattr(recovery, "_write_new", crash_on_complete)
-    monkeypatch.setattr(recovery, "release_lock", lambda lock: None)  # a killed process leaves its lock
+def test_a_resume_of_an_unfinished_backup_on_a_record_already_at_version_3_marks_it_abandoned(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    _crash_publishing_complete(root, monkeypatch)
+    (root / "hw" / OWNER_NAME).unlink()
+    [unfinished] = _backups(root)
+    product = root / "hw" / "product.yaml"
+    assert "record_version: 2\n" in product.read_text()
+    product.write_text(product.read_text().replace("record_version: 2\n", "record_version: 3\n"))
+    result = migrate(root, apply=True, resume=True)
+    assert result.status == MigrationStatus.current
+    assert _codes(result.findings)[:2] == ["migrate.backup_abandoned", "migrate.current"]
+    assert (unfinished / recovery.ABANDONED).is_file()
+    assert recovery.read_lock(root) is None and _backups(root) == [unfinished]  # none deleted, none new
+
+
+def test_a_complete_marker_that_does_not_hold_the_manifest_hash_is_not_complete(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    result = migrate(root, apply=True)
+    assert result.backup is not None
+    marker = result.backup / recovery.COMPLETE
+    assert marker.read_text().strip() == recovery.sha256((result.backup / recovery.MANIFEST).read_bytes())
+    for text in ("", "complete\n"):
+        marker.write_text(text)
+        assert not recovery.is_complete(result.backup)
+        assert _codes(undo(result.backup).refusals) == ["migrate.backup_incomplete"]
+
+
+def test_two_resumes_race_and_exactly_one_proceeds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    expected = _clean_run(tmp_path)
+    root = _copy(LAMP_ARM_HW, tmp_path / "crashed")
+    _crash_after(root, monkeypatch, 1)
+    real_acquire = recovery.acquire_owner
+    both_ready = threading.Barrier(2)
+    loser_tried = threading.Event()
+
+    def acquire_together(where: Path) -> object:
+        both_ready.wait(timeout=30)  # both have checked the stale lock; now both try to own the record
+        owner = real_acquire(where)
+        if isinstance(owner, Path):
+            assert loser_tried.wait(timeout=30)  # the winner owns the record while the loser tries
+        else:
+            loser_tried.set()
+        return owner
+
+    monkeypatch.setattr(recovery, "acquire_owner", acquire_together)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: migrate(root, apply=True, resume=True), range(2)))
+    monkeypatch.undo()
+    statuses = sorted(result.status.value for result in results)
+    assert statuses == ["applied", "refused"]
+    [loser] = [result for result in results if result.status == MigrationStatus.refused]
+    assert [(f.code, f.path) for f in loser.refusals] == [("migrate.locked", f"hw/{OWNER_NAME}")]
+    assert loser.written == ()
+    assert _tree(root / "hw") == expected
+    assert len(_backups(root)) == 1
+
+
+@pytest.mark.parametrize("stop", ["after-complete", "before-complete"])
+def test_a_linked_backup_directory_is_refused_by_resume_and_undo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop: str
+) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path / "project")
+    if stop == "after-complete":
+        _crash_after(root, monkeypatch, 1)
+    else:
+        _crash_publishing_complete(root, monkeypatch)
+        (root / "hw" / OWNER_NAME).unlink()
+    [backup] = _backups(root)
+    moved = tmp_path / "elsewhere"
+    shutil.move(root / recovery.BACKUPS, moved)
+    (root / recovery.BACKUPS).symlink_to(moved)
+    hw, elsewhere = _tree(root / "hw"), _tree(moved)
+    for result in (migrate(root, apply=True, resume=True), undo(backup)):
+        assert [(f.code, f.path) for f in result.refusals] == [
+            ("migrate.unsupported_layout", recovery.BACKUPS)
+        ]
+    assert (_tree(root / "hw"), _tree(moved)) == (hw, elsewhere)  # nothing abandoned, restored or written
+
+
+def test_a_fresh_apply_refuses_a_linked_benchhand_directory_before_it_writes_a_backup(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path / "project")
+    (tmp_path / "elsewhere").mkdir()
+    (root / ".benchhand").symlink_to(tmp_path / "elsewhere")
+    before = _tree(root / "hw")
+    result = migrate(root, apply=True)
+    assert result.status == MigrationStatus.refused
+    assert _codes(result.refusals) == ["migrate.backup_failed"]
+    assert list((tmp_path / "elsewhere").iterdir()) == []
+    assert _tree(root / "hw") == before
+
+
+def test_undo_refuses_a_linked_hw_target_or_target_directory_before_it_writes(tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    cases = {
+        "hw/decisions": lambda root: _relink(root / "hw" / "decisions", outside / "decisions"),
+        "hw/bom.csv": lambda root: _relink(root / "hw" / "bom.csv", outside / "bom.csv"),
+        "hw": lambda root: _relink(root / "hw", outside / "hw"),
+    }
+    for path, relink in cases.items():
+        root = _copy(LAMP_ARM_HW, tmp_path / path.replace("/", "-"))
+        result = migrate(root, apply=True)
+        assert result.backup is not None
+        relink(root)
+        moved = _tree(outside)
+        refusals = undo(result.backup).refusals
+        code = "migrate.symlink_hw" if path == "hw" else "migrate.unsupported_layout"
+        assert [(f.code, f.path) for f in refusals] == [(code, path)]
+        assert _tree(outside) == moved  # the record the link points to is left as it is
+        shutil.rmtree(outside)
+        outside.mkdir()
+
+
+def _relink(path: Path, moved: Path) -> None:
+    """Move `path` to `moved` and leave a symbolic link to it in its place."""
+    shutil.move(path, moved)
+    path.symlink_to(moved)
+
+
+def test_a_linked_product_yaml_is_refused_before_it_is_read(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path / "project")
+    _relink(root / "hw" / "product.yaml", tmp_path / "product.yaml")
+    os.chmod(tmp_path / "product.yaml", 0)  # reading it would refuse with record.unreadable instead
+    try:
+        for apply in (False, True):
+            result = migrate(root, apply=apply)
+            assert [(f.code, f.path) for f in result.refusals] == [
+                ("migrate.unsupported_layout", "hw/product.yaml")
+            ]
+    finally:
+        os.chmod(tmp_path / "product.yaml", 0o644)
+    assert not (root / ".benchhand").exists()
+
+
+def _crash_on_directory_sync(monkeypatch: pytest.MonkeyPatch, directory: Path, nth: int) -> None:
+    """Kill the process at the `nth` sync of `directory`: after a rename into it, before that sync."""
+    real_sync = recovery.fsync_directory
+    seen = [0]
+
+    def crash_on_nth(path: Path) -> None:
+        if path == directory:
+            seen[0] += 1
+            if seen[0] == nth:
+                raise _Crash
+        real_sync(path)
+
+    monkeypatch.setattr(recovery, "fsync_directory", crash_on_nth)
+
+
+def _recording_syncs(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    real_sync = recovery.fsync_directory
+    synced: list[Path] = []
+
+    def record(path: Path) -> None:
+        synced.append(path)
+        real_sync(path)
+
+    monkeypatch.setattr(recovery, "fsync_directory", record)
+    return synced
+
+
+def test_a_retry_after_a_rename_before_its_directory_sync_syncs_that_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = _clean_run(tmp_path)
+    root = _copy(LAMP_ARM_HW, tmp_path / "crashed")
+    decisions = root / "hw" / "decisions"
+    renamed = [change for change in migrate(root).changes if change.path.startswith("hw/decisions/")]
+    _crash_on_directory_sync(monkeypatch, decisions, len(renamed))  # the last decision is renamed, unsynced
     with pytest.raises(_Crash):
         migrate(root, apply=True)
     monkeypatch.undo()
-    assert {path: data for path, data in _tree(root / "hw").items() if path != LOCK_NAME} == before
-    [backup] = _backups(root)
-    assert _codes(undo(backup).refusals) == ["migrate.backup_incomplete"]
-    assert "wrote nothing" in (migrate(root, apply=True).refusals[0].action or "")
-    assert migrate(root, apply=True, resume=True).status == MigrationStatus.applied
+    synced = _recording_syncs(monkeypatch)
+    resumed = migrate(root, apply=True, resume=True)
+    monkeypatch.undo()
+    assert resumed.status == MigrationStatus.applied, resumed.refusals
+    assert not [path for path in resumed.written if path.startswith("hw/decisions/")]  # nothing left to write
+    assert decisions in synced  # yet its directory is synced before the lock goes
     assert _tree(root / "hw") == expected
+
+
+def test_a_stop_inside_undo_keeps_the_record_locked_and_undo_again_finishes_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    before = _tree(root / "hw")
+    result = migrate(root, apply=True)
+    assert result.backup is not None
+    decisions = root / "hw" / "decisions"
+    restored = [change for change in result.changes if change.path.startswith("hw/decisions/")]
+    _crash_on_directory_sync(monkeypatch, decisions, len(restored))  # the last decision restored, unsynced
+    with pytest.raises(_Crash):
+        undo(result.backup)
+    monkeypatch.undo()
+    assert recovery.read_lock(root) == result.backup
+    for dry_or_apply in (False, True):  # no new backup of a half-restored record
+        assert _codes(migrate(root, apply=dry_or_apply).refusals) == ["migrate.locked"]
+    synced = _recording_syncs(monkeypatch)
+    again = undo(result.backup)
+    monkeypatch.undo()
+    assert again.status == MigrationStatus.undone, again.refusals
+    assert not [path for path in again.written if path.startswith("hw/decisions/")]  # nothing left to write
+    assert decisions in synced
+    assert _tree(root / "hw") == before
     assert len(_backups(root)) == 1
 
 

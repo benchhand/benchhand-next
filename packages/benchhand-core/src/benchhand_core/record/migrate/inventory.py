@@ -21,7 +21,8 @@ from benchhand_core.record.ignore import is_junk
 # Version snapshots, check bundles and releases are sealed: their bytes are what a digest or a seal states,
 # so no rule rewrites them, even when they hold v2 forms.
 SEALED = ("hw/versions", "hw/checks", "hw/releases")
-LOCK_NAME = ".benchhand-migrate.lock"
+LOCK_NAME = ".benchhand-migrate.lock"  # recovery state: the backup of the apply that holds the record
+OWNER_NAME = ".benchhand-migrate.owner"  # the process running a migration or an undo now
 TEMP_SUFFIX = ".benchhand-migrate.tmp"
 
 
@@ -43,8 +44,8 @@ class ScanError(Exception):
 
 
 def is_own(name: str) -> bool:
-    """The service's lock file, or a temporary file it writes beside a file it changes."""
-    return name == LOCK_NAME or name.endswith(TEMP_SUFFIX)
+    """The service's lock and owner files, or a temporary file it writes beside a file it changes."""
+    return name in (LOCK_NAME, OWNER_NAME) or name.endswith(TEMP_SUFFIX)
 
 
 def is_sealed(path: str) -> bool:

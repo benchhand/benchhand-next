@@ -1,16 +1,23 @@
-"""How an apply is undone, and what keeps it from racing another migration.
+"""How an apply is undone, and what keeps two migrations apart.
 
 Before apply writes anything, it copies the exact bytes of every file it will change (its preimages; not a
 snapshot of hw/) to .benchhand/migrate-backups/<UTC time>/hw/<path>. Beside them, manifest.json lists each
 path (relative to hw/), the sha256 of its preimage and of its migrated bytes. Each file, the manifest and
-their directories are synced; each file is read back against the manifest; a COMPLETE marker is written and
-synced last. Only then does apply write. `benchhand record migrate --undo <backup>` puts those files back, so
-the record is as it was, whatever else is under hw/ and whatever git's state.
+their directories are synced, and each file is read back against the manifest. Last, a COMPLETE marker that
+holds the manifest's sha256 is published atomically (temp file, sync, rename, directory sync). Only then does
+apply write. No target is written before COMPLETE, so every manifest's preimages are original bytes.
 
-The lock, hw/.benchhand-migrate.lock, is created with O_EXCL and names the backup it belongs to. It keeps a
-second migration out. It does not stop other writers: stop every other process that writes under hw/ first.
-An apply that stops after its backup is COMPLETE leaves the lock, so the next run must either --resume with
-that backup or --undo it; a second backup of a partly migrated tree is never made.
+Two files under hw/ keep migrations apart:
+- hw/.benchhand-migrate.owner, created with O_CREAT|O_EXCL by every apply, resume and undo and removed when it
+  ends, names the process (pid, host, start time) that is running one now. A second process is refused.
+- hw/.benchhand-migrate.lock is durable recovery state: it names the backup of the apply that holds the
+  record. It stays when an apply stops after its backup is COMPLETE, so the next run must --resume with that
+  backup or --undo it.
+
+A backup is never deleted by the service. One that a stopped apply left unfinished is marked ABANDONED, and
+--resume makes a new backup beside it; the user may delete old backups by hand. A symbolic link at the
+backup directory or any of its ancestors under the project is refused before the service creates or reads
+it. The owner file keeps out a second migration only: stop every other process that writes under hw/ first.
 """
 
 from __future__ import annotations
@@ -19,6 +26,8 @@ import hashlib
 import json
 import os
 import shlex
+import socket
+import stat
 import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -26,12 +35,14 @@ from pathlib import Path, PurePosixPath
 
 from benchhand_core.record import documents
 from benchhand_core.record.finding import Finding, Severity, error
-from benchhand_core.record.migrate.inventory import LOCK_NAME, TEMP_SUFFIX
+from benchhand_core.record.migrate.inventory import LOCK_NAME, OWNER_NAME, TEMP_SUFFIX
 
 BACKUPS = ".benchhand/migrate-backups"
 LOCK_PATH = f"{documents.HW}/{LOCK_NAME}"
+OWNER_PATH = f"{documents.HW}/{OWNER_NAME}"
 MANIFEST = "manifest.json"
 COMPLETE = "COMPLETE"
+ABANDONED = "ABANDONED"
 MANIFEST_FORMAT = 1
 
 
@@ -62,6 +73,43 @@ def _write_new(target: Path, data: bytes) -> None:
         os.fsync(stream.fileno())
 
 
+def publish(target: Path, data: bytes) -> None:
+    """Write `target` atomically: a synced temp file beside it, renamed over it, then the directory synced."""
+    handle, temporary = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=TEMP_SUFFIX)
+    try:
+        with os.fdopen(handle, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
+    fsync_directory(target.parent)
+
+
+def _unlink_synced(path: Path) -> None:
+    path.unlink()
+    fsync_directory(path.parent)
+
+
+def is_link(path: Path) -> bool:
+    try:
+        return stat.S_ISLNK(os.lstat(path).st_mode)
+    except FileNotFoundError:
+        return False
+
+
+def linked_part(base: Path, relative: str) -> str | None:
+    """The first of `relative`'s parts below `base`, itself included, that is a symbolic link, as a path
+    relative to `base`; None when there is none."""
+    parts = PurePosixPath(relative).parts
+    for depth in range(1, len(parts) + 1):
+        if is_link(base.joinpath(*parts[:depth])):
+            return PurePosixPath(*parts[:depth]).as_posix()
+    return None
+
+
 # --- the backup -----------------------------------------------------------------------------------------
 
 
@@ -88,24 +136,35 @@ def new_backup(root: Path) -> Path:
 
 
 def project_of(backup: Path) -> Path | None:
-    """The project root a backup path belongs to, or None when it is not under .benchhand/migrate-backups/."""
+    """The project root a backup path names, by its spelling, or None when it is not
+    <project>/.benchhand/migrate-backups/<name>."""
     backup = backup.absolute()
     if backup.parent.name != PurePosixPath(BACKUPS).name or backup.parent.parent.name != ".benchhand":
         return None
     return backup.parent.parent.parent
 
 
-def _inside(root: Path, path: Path) -> None:
-    resolved = path.resolve()
-    if resolved != root and root not in resolved.parents:
-        raise OSError(f"{path} resolves to {resolved}, outside the project")
+def backup_link(root: Path, backup: Path) -> str | None:
+    """The project-relative path of a symbolic link at `backup` (a backup of `root`) or at any of its
+    ancestors under `root`; None when there is none."""
+    return linked_part(root, f"{BACKUPS}/{backup.name}")
+
+
+def _makedirs(root: Path, backup: Path) -> None:
+    """Create `backup` and its missing ancestors under `root`, refusing a symbolic link among them."""
+    for directory in (root / ".benchhand", root / BACKUPS):
+        if is_link(directory):
+            raise OSError(f"{directory.relative_to(root)} is a symbolic link")
+        directory.mkdir(exist_ok=True)
+    if backup_link(root, backup) is not None:
+        raise OSError(f"{BACKUPS} or {backup.name} is a symbolic link")
+    backup.mkdir(exist_ok=False)
 
 
 def write_backup(root: Path, backup: Path, preimages: list[Preimage]) -> None:
     """Write the preimages, the manifest and then COMPLETE to `backup`, syncing each and reading each file
     back; raises OSError when any step fails, before COMPLETE exists."""
-    backup.mkdir(parents=True, exist_ok=False)
-    _inside(root, backup)
+    _makedirs(root, backup)
     files = backup / documents.HW
     directories = {backup, files, backup.parent, backup.parent.parent, root}
     files.mkdir()
@@ -125,8 +184,7 @@ def write_backup(root: Path, backup: Path, preimages: list[Preimage]) -> None:
     manifest = read_manifest(backup)
     if isinstance(manifest, str):
         raise OSError(manifest)
-    _write_new(backup / COMPLETE, b"complete\n")
-    fsync_directory(backup)
+    publish(backup / COMPLETE, f"{sha256((backup / MANIFEST).read_bytes())}\n".encode())
 
 
 def read_manifest(backup: Path) -> list[Entry] | str:
@@ -152,26 +210,40 @@ def read_manifest(backup: Path) -> list[Entry] | str:
 
 
 def is_complete(backup: Path) -> bool:
-    return (backup / COMPLETE).is_file()
-
-
-# --- the lock -------------------------------------------------------------------------------------------
-
-
-def acquire_lock(root: Path, backup: Path) -> Path | Finding:
-    """Create the lock, naming `backup`, and sync it; a refusal when the lock exists."""
-    lock = root / LOCK_PATH
+    """Whether `backup` has a COMPLETE marker that holds its manifest's sha256."""
     try:
-        handle = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
-    except FileExistsError:
-        return locked(root, read_lock(root))
-    record = {"pid": os.getpid(), "started": datetime.now(UTC).isoformat(), "backup": str(backup)}
-    with os.fdopen(handle, "w", encoding="utf-8") as stream:
-        stream.write(json.dumps(record) + "\n")
-        stream.flush()
-        os.fsync(stream.fileno())
-    fsync_directory(lock.parent)
-    return lock
+        marker = (backup / COMPLETE).read_text(encoding="utf-8").strip()
+        return marker == sha256((backup / MANIFEST).read_bytes())
+    except OSError:
+        return False
+
+
+def sync_complete(backup: Path) -> None:
+    """Sync the COMPLETE marker and the directories that name it again, before a resume or an undo writes."""
+    handle = os.open(backup / COMPLETE, os.O_RDONLY)
+    try:
+        os.fsync(handle)
+    finally:
+        os.close(handle)
+    fsync_directory(backup)
+    fsync_directory(backup.parent)
+
+
+def abandon(backup: Path, reason: str) -> bool:
+    """Mark an unfinished backup ABANDONED, leaving every file in it; False when there is no directory."""
+    if not backup.is_dir():
+        return False
+    publish(backup / ABANDONED, f"{reason}\n".encode())
+    return True
+
+
+# --- the lock: recovery state ---------------------------------------------------------------------------
+
+
+def write_lock(root: Path, backup: Path) -> None:
+    """Point the lock at `backup`, atomically and durably. Only the owner calls it."""
+    record = {"started": datetime.now(UTC).isoformat(), "backup": str(backup)}
+    publish(root / LOCK_PATH, (json.dumps(record) + "\n").encode())
 
 
 def read_lock(root: Path) -> Path | str | None:
@@ -191,10 +263,15 @@ def locked(root: Path, held: Path | str | None) -> Finding:
             f"If a migration is running, wait for it. If one stopped (a crash), finish it with: "
             f"{resume_command(root)}; or put the files it changed back with: {undo_command(held)}"
         )
-    else:
+    elif isinstance(held, Path):
         action = (
             f"If a migration is running, wait for it. If one stopped before its backup was COMPLETE, it "
-            f"wrote nothing: run {resume_command(root)} to start again, or delete {LOCK_PATH}"
+            f"wrote nothing: run {resume_command(root)} to start again"
+        )
+    else:
+        action = (
+            f"The lock was left by a migration that stopped while it started, before it wrote anything: "
+            f"if no migration is running, delete {LOCK_PATH}"
         )
     return error(
         "migrate.locked",
@@ -205,11 +282,86 @@ def locked(root: Path, held: Path | str | None) -> Finding:
     )
 
 
-def release_lock(lock: Path) -> Finding | None:
+def clear_lock(root: Path) -> Finding | None:
     try:
-        lock.unlink()
+        _unlink_synced(root / LOCK_PATH)
+    except FileNotFoundError:
+        return None
     except OSError as failure:
         return cleanup_failed(LOCK_PATH, failure, f"Delete {LOCK_PATH} by hand.")
+    return None
+
+
+# --- the owner: the process running a migration now -----------------------------------------------------
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _owned_by(root: Path) -> str:
+    """Who an existing owner file names, for a refusal."""
+    try:
+        record = json.loads((root / OWNER_PATH).read_text(encoding="utf-8"))
+        pid, host = int(record["pid"]), str(record["host"])
+        state = ""
+        if host == socket.gethostname():
+            state = ", which is running" if _alive(pid) else ", which is no longer running"
+        return f"process {pid} on {host}{state}, since {record['started']}"
+    except (OSError, ValueError, KeyError, TypeError):
+        return "a process that did not finish writing the owner file"
+
+
+def acquire_owner(root: Path) -> Path | Finding:
+    """Create the owner file with O_CREAT|O_EXCL and sync it and hw/; a refusal when another process owns
+    the record."""
+    owner = root / OWNER_PATH
+    try:
+        handle = os.open(owner, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        return error(
+            "migrate.locked",
+            OWNER_PATH,
+            f"another process is migrating or undoing this record: {_owned_by(root)}",
+            action=f"Wait for it to finish. If it is not running (it was killed), delete {OWNER_PATH}, "
+            "then run the command again.",
+        )
+    record = {"pid": os.getpid(), "host": socket.gethostname(), "started": datetime.now(UTC).isoformat()}
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(record) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        fsync_directory(owner.parent)
+    except BaseException:  # this process never owned the record: let the next one in
+        owner.unlink(missing_ok=True)
+        raise
+    return owner
+
+
+def owner_refusal(root: Path) -> Finding | None:
+    """The refusal for a dry run while another process owns the record."""
+    if not (root / OWNER_PATH).exists():
+        return None
+    return error(
+        "migrate.locked",
+        OWNER_PATH,
+        f"another process is migrating or undoing this record: {_owned_by(root)}",
+        action=f"Wait for it to finish. If it is not running (it was killed), delete {OWNER_PATH}.",
+    )
+
+
+def release_owner(owner: Path) -> Finding | None:
+    try:
+        _unlink_synced(owner)
+    except OSError as failure:
+        return cleanup_failed(OWNER_PATH, failure, f"Delete {OWNER_PATH} by hand.")
     return None
 
 
@@ -259,3 +411,10 @@ def write_durably(target: Path, data: bytes, expected_sha256: str) -> None:
         fsync_directory(target.parent)
     except OSError as failure:
         raise NotDurable(failure) from failure
+
+
+def sync_parents(root: Path, paths: list[str]) -> None:
+    """Sync the directory of each of `paths` (project-relative), so that a rename a stopped run made before
+    its directory sync is durable; raises OSError."""
+    for directory in sorted({(root / path).parent for path in paths}):
+        fsync_directory(directory)

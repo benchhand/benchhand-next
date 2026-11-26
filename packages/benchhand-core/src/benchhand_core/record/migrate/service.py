@@ -5,13 +5,15 @@ A dry run, the default, writes nothing under the project. It returns every file 
 and a unified diff) and every finding, and it validates a real copy of the migrated record in a temporary
 directory, so `remaining` lists what the migration cannot fix.
 
-Apply writes in place. It takes hw/.benchhand-migrate.lock, plans again, validates the migrated copy, and
+Apply, resume and undo each run as the record's one owner (hw/.benchhand-migrate.owner, created with O_EXCL).
+Apply points hw/.benchhand-migrate.lock at a new backup, plans again, validates the migrated copy, and
 writes a backup of the preimages of the files it will change (recovery.py). Only once that backup is COMPLETE
 does it write: only the changed files, each re-hashed after its temp file is synced and just before the
-rename, with hw/product.yaml last. If apply stops after the backup is COMPLETE, the lock stays: a rerun
+rename, with hw/product.yaml last. Before it removes the lock, it syncs the directory of every target, so a
+rename a stopped run made is durable. If apply stops after the backup is COMPLETE, the lock stays: a rerun
 finishes the migration with --resume, reusing that backup's preimages, or `--undo <backup>` puts the files
 back. Every rule changes nothing on its own output, so a resumed apply writes the bytes a clean run writes.
-Another process writing under hw/ must be stopped first: the lock keeps out only a second migration.
+Another process writing under hw/ must be stopped first: the owner file keeps out only a second migration.
 """
 
 from __future__ import annotations
@@ -286,14 +288,14 @@ def _checked(root: Path, from_version: int, product: Any) -> _Plan:
 
 @dataclass
 class _Run:
-    """One apply under the lock: its backup, and whether that backup is COMPLETE (from here on the lock stays
-    when apply stops, since files may have been written)."""
+    """One apply or resume, run by the owner: its backup, whether that backup is COMPLETE (from here on the
+    lock stays when apply stops, since files may have been written), and every file it migrates."""
 
     root: Path
-    lock: Path
     backup: Path
     complete: bool = False
     written: list[str] = field(default_factory=list)
+    targets: list[str] = field(default_factory=list)  # project-relative
 
     def recover(self) -> str:
         """How to finish or revert this run, for a failure finding."""
@@ -347,13 +349,13 @@ def _write_failed(run: _Run, path: str, failure: OSError) -> Finding:
     )
 
 
-def _not_durable(run: _Run, path: str, failure: OSError) -> Finding:
+def _not_durable(path: str, failure: OSError, recover: str) -> Finding:
     return error(
         "migrate.not_durable",
         path,
         f"the file was replaced, but syncing its directory failed ({failure.strerror or failure}), so the "
-        "change may not survive a power loss; it is listed in `written`",
-        action=f"Fix the disk or file system. {run.recover()}.",
+        "change may not survive a power loss",
+        action=f"Fix the disk or file system. {recover}.",
     )
 
 
@@ -366,7 +368,7 @@ def _write_one(run: _Run, change: FileChange) -> Finding | None:
         return _changed_meanwhile(run, change.path, "the file changed after the migration read it")
     except recovery.NotDurable as failure:
         run.written.append(change.path)
-        return _not_durable(run, change.path, failure.failure)
+        return _not_durable(change.path, failure.failure, run.recover())
     except OSError as failure:
         return _write_failed(run, change.path, failure)
     run.written.append(change.path)
@@ -378,6 +380,10 @@ def _write_all(run: _Run, migration: Migration) -> Migration:
         refusal = _write_one(run, change)
         if refusal is not None:
             return _stopped(run, migration, refusal)
+    try:  # a stopped run may have renamed a file it never synced the directory of
+        recovery.sync_parents(run.root, run.targets)
+    except OSError as failure:
+        return _stopped(run, migration, _not_durable(documents.HW, failure, run.recover()))
     remaining = tuple(validate(run.root))
     if _blocking(remaining):
         note = error(
@@ -414,8 +420,8 @@ def _write_backup(run: _Run, changes: tuple[FileChange, ...]) -> Finding | None:
             "migrate.backup_failed",
             recovery.BACKUPS,
             f"cannot write the backup {run.backup}: {failure.strerror or failure}",
-            action="Free space or fix permissions under .benchhand/, then migrate again; nothing was "
-            "written.",
+            action="Free space, fix permissions, or replace a symbolic link under .benchhand/ with a "
+            "directory, then migrate again; nothing was written.",
         )
     run.complete = True
     return None
@@ -435,6 +441,7 @@ def _fresh(run: _Run, from_version: int, product: Any) -> Migration:
     plan = _checked(run.root, from_version, product)
     if plan.migration.status == MigrationStatus.refused:
         return plan.migration
+    run.targets = [change.path for change in plan.migration.changes]
     failed = _write_backup(run, plan.migration.changes)
     if failed is not None:
         findings = (*plan.migration.findings, failed)
@@ -475,12 +482,16 @@ def _resume_check(run: _Run, changes: tuple[FileChange, ...], entries: list[Entr
 
 def _resumed(run: _Run, from_version: int, product: Any) -> Migration:
     """Finish the apply that left the lock, from its COMPLETE backup."""
-    run.complete = True
     entries = recovery.read_manifest(run.backup)
     if isinstance(entries, str):
         unusable = _backup_unusable(run.backup, entries)
         return _stopped(run, Migration(MigrationStatus.failed, from_version), unusable)
+    run.targets = [f"{documents.HW}/{entry.path}" for entry in entries]
     resumed = Migration(MigrationStatus.failed, from_version, recovery=recovery.undo_command(run.backup))
+    try:
+        recovery.sync_complete(run.backup)
+    except OSError as failure:
+        return _stopped(run, resumed, _not_durable(_backup_path(run.backup), failure, run.recover()))
     if from_version == RECORD_VERSION:  # hw/product.yaml was written last: every file was
         found = _resume_check(run, (), entries)
         if found is not None:
@@ -512,49 +523,153 @@ def _backup_unusable(backup: Path, reason: str) -> Finding:
     )
 
 
-def _start(root: Path, from_version: int | None, resume: bool) -> _Run | Finding:
-    """Take the lock for a new apply, or take over the one a stopped apply left for --resume."""
-    held = recovery.read_lock(root)
-    if held is None and resume:
+def _linked(root: Path, relative: str, what: str) -> Finding:
+    return error(
+        "migrate.unsupported_layout",
+        relative,
+        f"{relative} is a symbolic link; the service does not {what} through one",
+        action="Replace the link with the directory or file it points to, then run the command again; "
+        "nothing was changed.",
+    )
+
+
+def _own_backup(root: Path, held: Path) -> Path | Finding:
+    """The backup a lock names, as a path under this project, with no symbolic link on the way. The lock
+    stores the backup under the resolved project root, so its spelling is compared, not resolved."""
+    if recovery.project_of(held) != root:
+        return recovery.locked(root, held)
+    backup = root / recovery.BACKUPS / held.name
+    link = recovery.backup_link(root, backup)
+    return backup if link is None else _linked(root, link, "recover a backup")
+
+
+def _abandon(backup: Path, why: str) -> Finding:
+    """Leave an unfinished backup where it is, marked ABANDONED: the note, or the refusal when the marker
+    cannot be written."""
+    try:
+        recovery.abandon(backup, f"left unfinished by a stopped apply; {why}")
+    except OSError as failure:
         return error(
-            "migrate.not_interrupted",
-            recovery.LOCK_PATH,
-            "there is no stopped migration to resume: the record has no migration lock",
-            action="Run the migration without --resume.",
+            "migrate.backup_failed",
+            _backup_path(backup),
+            f"cannot mark the unfinished backup {backup} {recovery.ABANDONED}: {failure.strerror or failure}",
+            action="Fix permissions or free space, then run the command again; nothing was written.",
         )
+    return info(
+        "migrate.backup_abandoned",
+        _backup_path(backup),
+        f"the unfinished backup {backup} of the stopped apply is marked {recovery.ABANDONED}, left in place",
+        action="That apply wrote nothing. Delete the directory by hand when you no longer want it.",
+    )
+
+
+def _abandon_and_start(root: Path, backup: Path) -> tuple[_Run, Finding] | Finding:
+    """Mark an unfinished backup ABANDONED and point the lock at a new one beside it."""
+    fresh = recovery.new_backup(root)
+    note = _abandon(backup, f"--resume continued in {fresh.name}")
+    if note.severity == Severity.error:
+        return note
+    try:
+        recovery.write_lock(root, fresh)
+    except OSError as failure:
+        return _lock_failed(failure)
+    return _Run(root, fresh), note
+
+
+def _lock_failed(failure: OSError) -> Finding:
+    return error(
+        "migrate.lock_failed",
+        recovery.LOCK_PATH,
+        f"cannot write the migration lock: {failure.strerror or failure}",
+        action="Fix permissions or free space, then run the command again; nothing was written.",
+    )
+
+
+def _not_interrupted() -> Finding:
+    return error(
+        "migrate.not_interrupted",
+        recovery.LOCK_PATH,
+        "there is no stopped migration to resume: the record has no migration lock",
+        action="Run the migration without --resume.",
+    )
+
+
+def _lock_state(root: Path, resume: bool) -> Path | Finding | None:
+    """What the lock says to an apply: None (no lock) for a fresh apply, the backup a resume reuses or
+    replaces, or the refusal. Read before the run takes ownership, and again once it owns the record."""
+    held = recovery.read_lock(root)
+    if held is None:
+        return _not_interrupted() if resume else None
+    if not resume or isinstance(held, str):
+        return recovery.locked(root, held)
+    return _own_backup(root, held)
+
+
+def _run_for(root: Path, from_version: int, resume: bool) -> tuple[_Run | None, Finding | None] | Finding:
+    """The run the owner starts: a fresh apply, a resume of a COMPLETE backup, or a fresh apply beside an
+    abandoned backup, each with an optional note; a refusal; or no run when a stale lock sits on a record
+    nothing migrated."""
+    held = _lock_state(root, resume)
+    if isinstance(held, Finding):
+        return held
     if held is None:
         backup = recovery.new_backup(root)
-        lock = recovery.acquire_lock(root, backup)
-        return lock if isinstance(lock, Finding) else _Run(root, lock, backup)
-    if not resume or isinstance(held, str) or recovery.project_of(held) != root:
-        return recovery.locked(root, held)
-    if not recovery.is_complete(held):
-        if held.exists():  # the stopped apply wrote nothing; its unfinished backup of this project goes
-            shutil.rmtree(held)
-    return _Run(root, root / recovery.LOCK_PATH, held, complete=recovery.is_complete(held))
+        try:
+            recovery.write_lock(root, backup)
+        except OSError as failure:
+            return _lock_failed(failure)
+        return _Run(root, backup), None
+    if recovery.is_complete(held):
+        return _Run(root, held, complete=True), None
+    if from_version == RECORD_VERSION:
+        note = _abandon(held, f"the record was already record_version {RECORD_VERSION}")
+        return note if note.severity == Severity.error else (None, note)
+    return _abandon_and_start(root, held)
 
 
-def _apply(root: Path, from_version: int, product: Any, resume: bool) -> Migration:
-    run = _start(root, from_version, resume)
-    if isinstance(run, Finding):
-        return _refused(from_version, run)
-    if from_version == RECORD_VERSION and not run.complete:  # a stale lock on a record nothing migrated
-        released = recovery.release_lock(run.lock)
+def _owned_apply(root: Path, from_version: int, product: Any, resume: bool) -> Migration:
+    started = _run_for(root, from_version, resume)
+    if isinstance(started, Finding):
+        return _refused(from_version, started)
+    run, note = started
+    if run is None:  # nothing was written before the backup was COMPLETE; the record was already v3
+        cleared = recovery.clear_lock(root)
         current = _current(root)
-        return current if released is None else replace(current, findings=(*current.findings, released))
+        found = (note, *current.findings, cleared)
+        return replace(current, findings=tuple(finding for finding in found if finding is not None))
     try:
-        if run.complete:
-            result = _resumed(run, from_version, product)
-        else:
-            result = _fresh(run, from_version, product)
+        result = _resumed(run, from_version, product) if run.complete else _fresh(run, from_version, product)
     except BaseException:
         if not run.complete:
-            recovery.release_lock(run.lock)
+            recovery.clear_lock(root)
         raise
+    if note is not None:
+        result = replace(result, findings=(note, *result.findings))
     if result.status != MigrationStatus.applied and run.complete:
         return result  # the lock stays: the next run must --resume or --undo
-    released = recovery.release_lock(run.lock)
+    cleared = recovery.clear_lock(root)
+    return result if cleared is None else replace(result, findings=(*result.findings, cleared))
+
+
+def _owned(root: Path, work: Any) -> Migration:
+    """Run `work()` as the owner of the record's migration; a refusal when another process owns it."""
+    try:
+        owner = recovery.acquire_owner(root)
+    except OSError as failure:
+        return _refused(None, _lock_failed(failure))
+    if isinstance(owner, Finding):
+        return _refused(None, owner)
+    try:
+        result: Migration = work()
+    finally:
+        released = recovery.release_owner(owner)
     return result if released is None else replace(result, findings=(*result.findings, released))
+
+
+def _held(root: Path) -> Finding | None:
+    """The refusal when a migration owns the record now or a stopped one holds its lock."""
+    held = recovery.read_lock(root)
+    return recovery.owner_refusal(root) or (None if held is None else recovery.locked(root, held))
 
 
 def _current(root: Path) -> Migration:
@@ -580,16 +695,21 @@ def migrate(root: Path, *, apply: bool = False, resume: bool = False) -> Migrati
     if link is not None:
         return _refused(None, link)
     root = root.resolve()
+    if recovery.is_link(root / documents.PRODUCT.path):
+        return _refused(None, _linked(root, documents.PRODUCT.path, "read the record version"))
     found, product, refusals = source_version(root)
     if refusals or found is None:
         return _refused(found, *refusals)
-    if found == RECORD_VERSION and not (apply and resume):
-        return _current(root)
-    if apply:
-        return _apply(root, found, product, resume)
-    held = recovery.read_lock(root)
+    if apply and (found != RECORD_VERSION or resume):
+        stale = _lock_state(root, resume)  # checked again once the run owns the record
+        if isinstance(stale, Finding):
+            return _refused(found, stale)
+        return _owned(root, lambda: _owned_apply(root, found, product, resume))
+    held = _held(root)
     if held is not None:
-        return _refused(found, recovery.locked(root, held))
+        return _refused(found, held)
+    if found == RECORD_VERSION:
+        return _current(root)
     return _checked(root, found, product).migration
 
 
@@ -625,10 +745,20 @@ def _restore_plan(root: Path, entries: list[Entry], backup: Path) -> tuple[list[
     return restore, skipped
 
 
-def _undo_locked(root: Path, backup: Path, entries: list[Entry]) -> Migration:
+def _undo_failed(path: str, failure: BaseException, command: str) -> Finding:
+    return error(
+        "migrate.undo_failed",
+        path,
+        f"cannot restore it: {failure}",
+        action=f"Stop every other process that writes under hw/, fix the cause, then run: {command}",
+    )
+
+
+def _restore(root: Path, backup: Path, entries: list[Entry]) -> Migration:
     restore, skipped = _restore_plan(root, entries, backup)
     written: list[str] = []
     command = recovery.undo_command(backup)
+    stopped = Migration(MigrationStatus.failed, None, recovery=command, backup=backup)
     for entry in restore:  # hw/product.yaml first, so a stopped undo leaves a record a rerun of undo finishes
         path = f"{documents.HW}/{entry.path}"
         data = (backup / documents.HW / entry.path).read_bytes()
@@ -637,61 +767,92 @@ def _undo_locked(root: Path, backup: Path, entries: list[Entry]) -> Migration:
         except (recovery.ChangedMeanwhile, recovery.NotDurable, OSError) as failure:
             if isinstance(failure, recovery.NotDurable):
                 written.append(path)
-            refusal = error(
-                "migrate.undo_failed",
-                path,
-                f"cannot restore it: {failure}",
-                action=f"Stop every other process that writes under hw/, fix the cause, then run: {command}",
-            )
-            return Migration(
-                MigrationStatus.failed,
-                None,
-                findings=(*skipped, refusal),
-                written=tuple(written),
-                recovery=command,
-                backup=backup,
-            )
+            refusal = _undo_failed(path, failure, command)
+            return replace(stopped, findings=(*skipped, refusal), written=tuple(written))
         written.append(path)
-    return Migration(
-        MigrationStatus.undone,
-        None,
-        findings=tuple(skipped),
-        written=tuple(written),
-        recovery=command,
-        backup=backup,
-    )
+    try:  # a stopped undo may have renamed a file it never synced the directory of
+        recovery.sync_parents(root, [f"{documents.HW}/{entry.path}" for entry in entries])
+    except OSError as failure:
+        refusal = _not_durable(documents.HW, failure, f"Run: {command}")
+        return replace(stopped, findings=(*skipped, refusal), written=tuple(written))
+    return replace(stopped, status=MigrationStatus.undone, findings=tuple(skipped), written=tuple(written))
 
 
-def undo(backup: Path) -> Migration:
-    """Put back the files an apply changed, from its COMPLETE backup: each file that holds the bytes the
-    migration wrote gets its preimage back. The lock, if it names this backup, goes once undo has finished."""
-    backup = backup.resolve()
-    root = recovery.project_of(backup)
-    if root is None or not backup.is_dir():
-        reason = "it is not a directory" if root is not None else f"it is not under {recovery.BACKUPS}/"
-        return _refused(None, _backup_unusable(backup, reason))
+def _undo_links(root: Path, backup: Path, entries: list[Entry]) -> Finding | None:
+    """A refusal for a symbolic link at hw/, a target, or a target's parent directory, or on the way to the
+    backup."""
+    link = recovery.backup_link(root, backup)
+    if link is not None:
+        return _linked(root, link, "recover a backup")
+    for entry in entries:
+        link = recovery.linked_part(root, f"{documents.HW}/{entry.path}")
+        if link is not None:
+            return _linked(root, link, "restore a file")
+    return None
+
+
+def _undo_lock_refusal(root: Path, backup: Path) -> Finding | None:
+    """The refusal when the lock names another backup, or cannot be read. Checked before undo takes
+    ownership, and again once it owns the record."""
+    held = recovery.read_lock(root)
+    if held is not None and (isinstance(held, str) or _own_backup(root, held) != backup):
+        return recovery.locked(root, held)
+    return None
+
+
+def _owned_undo(root: Path, backup: Path) -> Migration:
     if not recovery.is_complete(backup):
         return _refused(
             None,
             error(
                 "migrate.backup_incomplete",
                 _backup_path(backup),
-                f"the backup {backup} has no {recovery.COMPLETE} marker: the apply stopped before it wrote "
-                "any file",
-                action=f"Nothing needs undoing. Delete {backup}, and {recovery.LOCK_PATH} if it names it.",
+                f"the backup {backup} has no valid {recovery.COMPLETE} marker: the apply stopped before it "
+                "wrote any file",
+                action=f"Nothing needs undoing. If {recovery.LOCK_PATH} names this backup, run "
+                f"{recovery.resume_command(root)} to migrate again; you may delete the backup by hand.",
             ),
         )
     entries = recovery.read_manifest(backup)
     if isinstance(entries, str):
         return _refused(None, _backup_unusable(backup, entries))
-    held = recovery.read_lock(root)
-    if held is not None and (isinstance(held, str) or held.resolve() != backup):
-        return _refused(None, recovery.locked(root, held))
-    lock = root / recovery.LOCK_PATH if held is not None else recovery.acquire_lock(root, backup)
-    if isinstance(lock, Finding):
-        return _refused(None, lock)
-    result = _undo_locked(root, backup, entries)
+    links = _undo_links(root, backup, entries)
+    if links is not None:
+        return _refused(None, links)
+    held = _undo_lock_refusal(root, backup)
+    if held is not None:
+        return _refused(None, held)
+    try:
+        if recovery.read_lock(root) is None:  # a stopped undo must keep a fresh apply from backing up a
+            recovery.write_lock(root, backup)  # half-restored record
+        recovery.sync_complete(backup)
+    except OSError as failure:
+        return _refused(None, _lock_failed(failure))
+    result = _restore(root, backup, entries)
     if result.status != MigrationStatus.undone:
         return result
-    released = recovery.release_lock(lock)
-    return result if released is None else replace(result, findings=(*result.findings, released))
+    cleared = recovery.clear_lock(root)
+    return result if cleared is None else replace(result, findings=(*result.findings, cleared))
+
+
+def undo(backup: Path) -> Migration:
+    """Put back the files an apply changed, from its COMPLETE backup: each file that holds the bytes the
+    migration wrote gets its preimage back. The lock goes once undo has finished."""
+    spelled = backup.absolute()
+    project = recovery.project_of(spelled)
+    if project is None:
+        return _refused(None, _backup_unusable(spelled, f"it is not under {recovery.BACKUPS}/"))
+    root = project.resolve()
+    backup = root / recovery.BACKUPS / spelled.name
+    link = _hw_link(root)
+    if link is not None:
+        return _refused(None, link)
+    link_on_way = recovery.backup_link(root, backup)
+    if link_on_way is not None:
+        return _refused(None, _linked(root, link_on_way, "recover a backup"))
+    if not backup.is_dir():
+        return _refused(None, _backup_unusable(backup, "it is not a directory"))
+    stale = _undo_lock_refusal(root, backup)
+    if stale is not None:
+        return _refused(None, stale)
+    return _owned(root, lambda: _owned_undo(root, backup))
