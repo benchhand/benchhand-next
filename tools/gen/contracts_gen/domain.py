@@ -56,6 +56,15 @@ _MEMBER_TRANSLATION = str.maketrans(
 )
 
 
+@dataclass(frozen=True)
+class Field:
+    """One property of a class: its name, the type as a short phrase, and whether the schema requires it."""
+
+    name: str
+    type: str
+    required: bool
+
+
 @dataclass
 class ClassNode:
     """One class: a contract root, a named ``$defs`` object or union, an inline object, or a union branch."""
@@ -67,6 +76,9 @@ class ClassNode:
     stereotype: str = ""
     """``abstract`` for a discriminated union, ``union`` for another union, or empty."""
     members: list[str] = field(default_factory=list)
+    """The Mermaid member lines: ``name?: type`` with the characters Mermaid can't hold replaced."""
+    fields: list[Field] = field(default_factory=list)
+    """The same properties as ``members``, unaltered, for the renderers that aren't Mermaid."""
 
 
 @dataclass(frozen=True)
@@ -412,7 +424,9 @@ class _Builder:
             self._member(cursor, node, name, prop, name in required)
         values = _map_values(schema)
         if values is not None:  # the other keys of an object with named properties too
-            node.members.append(_safe(f"[key]: {self.registry.type_label(cursor.stem, values)}"))
+            key_type = self.registry.type_label(cursor.stem, values)
+            node.members.append(_safe(f"[key]: {key_type}"))
+            node.fields.append(Field("[key]", key_type, required=False))
             for target in self._targets(cursor.child("key"), values, _Hold().times(0, None)):
                 cardinality = target.hold.cardinality(required=False)
                 self.relations.append(Relation(cursor.id, target.id, target.kind, "[key]", cardinality))
@@ -430,6 +444,7 @@ class _Builder:
         node.stereotype = "abstract" if found else "union"
         if found and not any(member.startswith(f"{found[0]}") for member in node.members):
             node.members.append(f"{found[0]}: discriminator")
+            node.fields.append(Field(found[0], "discriminator", required=True))
         for index, branch in enumerate(branches):
             child = self._branch(cursor, branch, found[1][index] if found else str(index + 1))
             self.relations.append(Relation(cursor.id, child, "inheritance"))
@@ -454,6 +469,7 @@ class _Builder:
     def _member(self, cursor: _Cursor, node: ClassNode, name: str, prop: Any, required: bool) -> None:
         label = self.registry.type_label(cursor.stem, prop)
         node.members.append(_safe(f"{name}{'' if required else '?'}: {label}"))
+        node.fields.append(Field(name, label, required))
         for target in self._targets(cursor.child(name), prop, _Hold()):
             cardinality = target.hold.cardinality(required)
             self.relations.append(Relation(cursor.id, target.id, target.kind, name, cardinality))
