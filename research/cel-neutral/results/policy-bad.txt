@@ -1,0 +1,6 @@
+ok always_false exit=1: ERROR: ../policy/bad/always_false.celpolicy:7:7: Condition is always false
+ok field exit=1: ERROR: ../policy/bad/field.celpolicy:7:22: undefined field 'make_bye'
+ok no_final_choice exit=1: ../policy/bad/no_final_choice.celpolicy: restricted profile: the last choice must be unconditional, so no match is an explicit output
+ok not_caught_false_expression exit=0: output type list(string)
+ok output_type exit=1: ERROR: ../policy/bad/output_type.celpolicy:9:16: incompatible output types: block has output type string, but previous outputs have type list(string)
+ok unreachable exit=1: ERROR: ../policy/bad/unreachable.celpolicy:9:7: match creates unreachable outputs

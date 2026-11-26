@@ -1,0 +1,9 @@
+name: not_caught_false_expression
+description: >-
+  A condition that is always false but isn't the literal false. The compiler
+  accepts it: its reachability checks look only at literal conditions.
+rule:
+  match:
+    - condition: iteration == "commit" && iteration != "commit"
+      output: '["catalog_check"]'
+    - output: '["form_check"]'

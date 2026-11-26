@@ -1,0 +1,9 @@
+name: bad_output_type
+description: >-
+  A string output among list(string) outputs: the compiler's output-type
+  assignability check rejects it.
+rule:
+  match:
+    - condition: iteration == "commit"
+      output: '["form_check"]'
+    - output: '"form_check"'

@@ -375,7 +375,14 @@ A policy has:
 - a `match` block (first-match) or an `aggregate` block, which collects every matching output into a list;
 - choices with a `condition`, an optional `explanation`, and an `output` or a nested `rule`.
 
-The compiler requires every output path to have the same type. A `match` with no unconditional last choice returns an optional, and an empty `aggregate` returns `[]`.
+What the compiler checks, read from `cel.dev/cel-go/policy@v0.33.3/compiler.go` and confirmed on `policy/bad/`:
+
+- **Output-type assignability** (`checkMatchOutputTypesAgree`): each output's type must be assignable to the previous outputs' type, or the other way round. A `string` among `list(string)` outputs fails (`output_type.celpolicy`). Assignability isn't equality: a `dyn` output is assignable to anything.
+- **A literal `false` condition** is an error, "Condition is always false" (`always_false.celpolicy`). An expression that is always false but isn't the literal passes: `iteration == "commit" && iteration != "commit"` compiles (`not_caught_false_expression.celpolicy`).
+- **Exhaustive branches**: a choice whose condition is literally true (or absent), before the last choice of a first-match block, is an error, "match creates unreachable outputs" (`unreachable.celpolicy`). Only a literal condition counts as exhaustive.
+- **The ordinary type check** of every condition and output (`field.celpolicy`).
+
+It doesn't check that a `match` is complete. A `match` with no unconditional last choice compiles, and its output becomes an optional (`no_final_choice.celpolicy`); an empty `aggregate` returns `[]`.
 
 ### benchhand's rule lists are a subset
 
@@ -384,15 +391,16 @@ A `*.rules.yaml` in the plan is an ordered, first-match list of `{when, then}`. 
 - `variables`, the same idea as the Kubernetes report's row 20;
 - `explanation`, a CEL string per choice, which is close to row 14 (`message_expr`);
 - `aggregate`, for "run every check whose condition holds";
-- the output-type agreement check, which is row 5 for rule lists;
-- reachability errors, for example a choice after an unconditional one.
+- the output-type assignability check, which is row 5 for rule lists;
+- reachability errors for literal conditions: a literal `false`, or a choice after an unconditional one.
 
 ### Tested
 
 | Step | Tool | Result |
 |---|---|---|
 | Compile the policy against the generated descriptor set | `cel-expr compile -format policy` (main, unsigned) | Exit 0. Output type `list(string)` |
-| Compile a policy with a wrong field and a `string` output among `list(string)` outputs | the same | Exit 1, both errors, each at its file, line and column in the `.celpolicy`, with a caret |
+| Compile a policy with a wrong field and a `string` output among `list(string)` outputs | the same | Exit 1, both errors, each at its file, line and column in the `.celpolicy`, with a caret. That run used a scratch file; the committed equivalents are `policy/bad/field.celpolicy` and `policy/bad/output_type.celpolicy`, rerun with `celcheck` (`results/policy-bad.txt`) |
+| Compile the six files in `policy/bad/` | `policy/bad/run.sh` (`go/celcheck`) | 5 refused as expected, 1 accepted as expected (`not_caught_false_expression`) |
 | Evaluate four cases on real proto types | `cel-expr eval -format policy -tests policy/tests.json` | 4 of 4 pass; node coverage 80%, branch coverage 80% |
 | Compile to one CheckedExpr | `go/celcheck policy` (over `cel.dev/cel-go/policy` v0.33.3) | `policy.Compile` returns one checked AST. With `variables` it is `cel.@block([iteration == "commit"], … @index0 …)`. Without them it is nested `?:` |
 | Evaluate that CheckedExpr, with `variables` | cel-expr-python, cel-core, @bufbuild/cel | cel-expr-python 4 of 4. cel-core and @bufbuild/cel fail: neither has a runtime `cel.@block` |
@@ -402,7 +410,20 @@ A `*.rules.yaml` in the plan is an ordered, first-match list of `{when, then}`. 
 
 - **The policy format** is implemented by cel-go (`cel.dev/cel-go/policy`), cel-cpp (`policy/cel_policy.cc`) and cel-java. Those three run the conformance suite.
 - **cel-expr-python, cel-core and @bufbuild/cel have no policy parser.** They don't need one: a compiled policy is a single CheckedExpr. cel-expr-python also runs the `cel.@block` form, because cel-cpp's runtime has the block extension.
-- **The `cel.@block` form is the portability limit.** In the shared suite, only cel-core passed `block_ext`, and only through its parser macro. At runtime it doesn't accept the `cel.@block` call that cel-go's composer writes. A policy that has to run on cel-core or in the browser can't use `variables` until those engines evaluate `cel.@block`. It also needs an unconditional last choice in each `match`, or the optional extension in every engine.
+- **The `cel.@block` form is the portability limit.** In the shared suite, only cel-core passed `block_ext`, and only through its parser macro. At runtime it doesn't accept the `cel.@block` call that cel-go's composer writes. cel-go declares that call in bindings version 1, which neither cel-expr-python's env config nor the cel-core and @bufbuild/cel adapters offer, so their adapters refuse the `checks_by_iteration_bindings` profile at load (`results/typed-demo/policy-*.json`).
+
+### The supported policy profile
+
+The profile is what the evaluators were shown to run, and nothing more:
+
+- one flat first-match `match` block, with no nested `rule` and no `aggregate`;
+- an unconditional final choice;
+- no `variables`;
+- conditions and outputs in the rule list's profile manifest, which for the browser is the restricted profile (no optional or bindings extension).
+
+`go/celcheck policy` refuses the first three before the compiler runs (`policy/bad/no_final_choice.celpolicy`, exit 1). The flat `checks_by_iteration_flat.celpolicy` compiles to nested `?:` and passes 4 of 4 on cel-expr-python, cel-core and @bufbuild/cel (`results/typed-demo/policy-*.json`).
+
+Each further feature, such as `variables`, `aggregate`, nested rules or `explanation`, is added only when tests of its emitted CheckedExpr pass on every target evaluator. The compiler's output isn't enough: `variables` compiled and still failed on two of three evaluators.
 
 ### Should benchhand adopt the format?
 
@@ -590,7 +611,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
 9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
 10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
-12. **Write a rule list as a cel-policy file.** An ordered first-match list is a cel-policy `match` block. Compile it with a policy compiler (cel-go, cel-cpp or cel-java), which checks that every output has the same type and that no choice is unreachable. Ship the one CheckedExpr it produces. Use policy `variables` only if every engine that runs the policy evaluates `cel.@block`. Check: the policy conformance cases and the project's suite on each evaluator.
+12. **Write a rule list as a cel-policy file, in the supported policy profile.** An ordered first-match list is a cel-policy `match` block. The profile is what was shown to run on every evaluator: one flat `match`, an unconditional final choice, and no `variables`. Compile it with a pinned policy compiler and ship the one CheckedExpr it produces. Know what the compiler checks: output-type assignability, a literal `false` condition, and a literally true choice before the last one. It doesn't catch a condition that is false without being the literal, or a `match` with no final choice. Add each further feature only when tests of its emitted CheckedExpr pass on every target evaluator. Check: the compile step refuses what the profile excludes, and the policy test cases run on each evaluator.
 13. **Point rule-writing agents at the generated environment.** Agent skills and MCP tools for CEL read the generated environment and descriptor set, and never write their own: use the `cel-expr` MCP server in fixed-environment mode. When no generated environment covers a scope, the agent stops and asks for one. Check: the plugin's skills carry no environment-authoring step.
 
 ## Reproduce the results
@@ -606,6 +627,7 @@ From `research/cel-neutral/`, with the builds already in place:
 | The `cel-expr` CLI on the typed demo | `cd py && uv run python ../cli/env_json.py ../generated/env/gate_guard.env.yaml ../cli/gate_guard.env.json`, then `cli/compile_demo.sh <cel-expr> cli/gate_guard.env.json` | seconds |
 | The reference checker on the typed demo; the `tools/compiler` probe | `cd go && go run ./celcheck rules gate_guard ../typedemo/gate_guard.yaml`; `go run ./toolscompiler` | seconds |
 | The rule list as a policy | `cel-expr eval -format policy -env cli/checks_by_iteration.env.json -fds generated/types.binpb -expr policy/checks_by_iteration.celpolicy -tests policy/tests.json`; `cd go && go run ./celcheck policy <profile> ../policy/<name>.celpolicy <name>`; then the `policy_demo` program in `py/`, `rust/` and `ts/` | seconds each |
+| The policies the compiler or profile must refuse | `policy/bad/run.sh`, which writes `results/policy-bad.txt` | seconds |
 
 The typed demo exits non-zero on cel-core (the `string == int` rule), on @bufbuild/cel (no checker) and on cel-js (the two `dyn` wrappers). Each exit code reports an engine finding listed above.
 

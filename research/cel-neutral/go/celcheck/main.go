@@ -106,6 +106,9 @@ func compilePolicy(root string, p *profile.Profile, e *cel.Env, src, name string
 	if iss.Err() != nil {
 		return iss.Err()
 	}
+	if err := restrictedProfile(parsed); err != nil {
+		return fmt.Errorf("%s: %w", src, err)
+	}
 	ast, iss := policy.Compile(e, parsed)
 	if iss.Err() != nil {
 		return iss.Err()
@@ -117,6 +120,28 @@ func compilePolicy(root string, p *profile.Profile, e *cel.Env, src, name string
 	rel := must(filepath.Rel(root, must(filepath.Abs(src))))
 	must(0, p.WriteBundle(dir, checker(), map[string]string{file: string(source)}, map[string]string{file: rel}))
 	fmt.Printf("output type %s\n%s\n", ast.OutputType(), strings.ReplaceAll(must(cel.AstToString(ast)), "\n", " "))
+	return nil
+}
+
+// restrictedProfile refuses what the supported policy profile excludes, before the compiler runs: a
+// nested rule, policy variables, and a match with no unconditional last choice (its output would be an
+// optional, so no match wouldn't mean UNKNOWN and the evaluator would need the optional extension).
+// The profile with bindings in its manifest is the one exception for variables, kept to show the
+// cel.@block form.
+func restrictedProfile(p *policy.Policy) error {
+	r := p.Rule()
+	if len(r.Variables()) > 0 && !strings.HasSuffix(os.Args[2], "_bindings") {
+		return fmt.Errorf("restricted profile: policy variables need cel.@block in every evaluator")
+	}
+	matches := r.Matches()
+	for _, m := range matches {
+		if m.HasRule() {
+			return fmt.Errorf("restricted profile: nested rules aren't supported")
+		}
+	}
+	if len(matches) == 0 || matches[len(matches)-1].Condition().Value != "true" && matches[len(matches)-1].Condition().Value != "" {
+		return fmt.Errorf("restricted profile: the last choice must be unconditional, so no match is an explicit output")
+	}
 	return nil
 }
 

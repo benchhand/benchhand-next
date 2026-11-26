@@ -1,0 +1,9 @@
+name: bad_always_false
+description: >-
+  A literal false condition: the compiler reports "Condition is always
+  false". It only catches the literal, not an expression that is false.
+rule:
+  match:
+    - condition: 'false'
+      output: '["catalog_check"]'
+    - output: '["form_check"]'
