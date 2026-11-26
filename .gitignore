@@ -10,3 +10,6 @@ build/
 .cad-work/
 .review/
 contracts/tsp-output/
+
+# pi installs project packages here (.pi/settings.json)
+.pi/npm/

@@ -21,7 +21,7 @@ What run 1 changes in the design (section 11 of the plan):
 - **On 2026-07-28 a form must use multi round-trip** (`InputRequiredResult`, then the client retries the call with the answer). A mid-call request fails with `NoBackChannelError`. The benchhand server must use the SDK's `Resolve(Elicit)` path, never `ctx.elicit`.
 - **Form elicitation can't be trusted headless, even when advertised.** Claude Code `-p` failed through the probe bug above, Codex auto-cancels, and OpenCode hangs and then drops the connection. The gate chain must try a form only in an interactive session. It must also bound the wait (about 30 s), and fall back to the chat channel on an error, a cancel or a timeout. A cancel is no answer, and the gate stays open.
 - **Claude Code advertises the tasks extension** (`io.modelcontextprotocol/tasks`), so long jobs can use tasks there once the SDK implements it.
-- **Pi times out at 60 s, and progress doesn't extend that.** Job handles stay the main path for anything longer than about 50 s.
+- **Pi times out at 60 s, and progress doesn't extend that.** Job handles stay the main path for anything longer than about 30 s (ADR-0018).
 - **Claude Desktop has no forms and times out before 75 s.** It also hides resources from the agent, so anything the agent must read goes through a tool result, not a resource. It is the only host so far that draws an MCP App widget, which makes it the first target for the preview host.
 - **The model doesn't always see images.** Codex `exec` got the PNG but didn't show it to the model. Snapshots for the agent's own review need a text summary (bounding box, mass, visible parts) beside the image.
 

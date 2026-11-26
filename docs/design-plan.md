@@ -19,7 +19,7 @@ Status: revision 4. It applies the 7 review comments on revision 3 and the tempo
 | D11 | Steering | Guidance comes from the server, and skills are minimal. One bootstrap skill and the server `instructions` tell the agent to call `flow.guide`. That tool returns the current stage's instructions, the relevant tools and the next action (section 9). |
 | D12 | Language | Chosen as a greenfield design, without weighing reuse: a **Python** host and core, kernel and FreeCAD providers in their own Python environments, and **TypeScript** for the browser UIs. Rust is not used. Existing code is a behavioural reference, not something carried over wholesale: each module is rewritten where that gives cleaner separation, better abstraction or other gains, and kept only where it is already clean (section 4). |
 | D13 | Provider protocol | Providers are out-of-process JSON-RPC 2.0 plugins on the slopvac 3.0 plugin protocol, plus progress and artifact messages. Each provider runs in its own environment, which also keeps the kernels' OCP versions apart (section 6). |
-| D17 | Contracts | Every contract has one machine-readable source in JSON Schema 2020-12 under `contracts/`: the provider protocol, MCP tool inputs and outputs, the result envelope, the record schemas, `flow.yaml` and policy files. Python models, TypeScript types, MCP tool schemas and reference docs are generated from it. A CI check fails on drift, and runtime validation enforces the contracts at every boundary (section 6a). |
+| D17 | Contracts | Every owned contract has one machine-readable source in TypeSpec under `contracts/`, emitted to JSON Schema 2020-12 (ADR-0017): the provider protocol, MCP tool inputs and outputs, the result envelope, the record schemas, `flow.yaml` and policy files. Python models, TypeScript types, MCP tool schemas and reference docs are generated from the published schemas. A CI check fails on drift, and runtime validation enforces the contracts at every boundary (section 6a). |
 | D14 | Flow and rules | One rules language: **CEL**. The stage and gate graph is structure, so it is data (`flow.yaml`): nodes, gates and edges. Every condition in it is CEL: transition guards, gate requirements, VOID cascade scope, check selection and process dispatch. Decision tables become ordered CEL rule lists. GoRules ZEN is dropped. React Flow renders the flow state (section 5). |
 | D15 | Repo | Work happens in a temporary new repo, `benchhand/benchhand-next`, set up as a two-level uv workspace plus a pnpm UI workspace. The current repo, `github.com/benchhand/benchhand` (checked out locally as `cad-agent`), stays the reference until `benchhand-next` matches it on the golden end-to-end run. Then the two are swapped (see "Repo swap"). |
 | D16 | Capability probe | A dev-only tool (`tools/probe/`), run by hand in each host. It isn't shipped to end users and isn't run in CI. |
@@ -54,8 +54,8 @@ Intended outcome:
    │  bootstrap skill + server instructions: "call flow.guide"
    ▼  stdio (default) | streamable HTTP on loopback (--http)
  benchhand MCP server  ── one process per harness session, started from the MCP config
-   ├── MCP surface: tools · resources · prompts · skills-over-MCP · elicitation · Apps · tasks/jobs
-   ├── interaction layer: picks App / form / chat / image / URL per client capability
+   ├── MCP surface: tools · resources · prompts · skills-over-MCP · Apps · tasks/jobs (no elicitation in v1, ADR-0018)
+   ├── interaction layer: picks App / chat / image / URL per client capability
    ├── preview host (loopback HTTP): viewer, concept, gate page, flow view, prototype pages
    └── core
         ├── flow engine: flow.yaml graph + state machine, CEL guards, decision records, policy
@@ -86,7 +86,7 @@ benchhand/
     render-chromium/  viewer-ocp/  checks-process/  store-fs/  policy-default/
   ui/                            pnpm workspace (TypeScript, React); built to static assets in packages/benchhand
     viewer/  concept/  gate-card/  flow-view/  shared/
-  contracts/                     JSON Schema 2020-12 sources: provider protocol, MCP tools, envelope, record, flow, policy (D17)
+  contracts/                     TypeSpec sources, emitted to the published JSON Schema 2020-12: provider protocol, MCP tools, envelope, record, flow, policy (D17)
   flow/                          flow.yaml, guides/<stage>.md, CEL rule lists (*.rules.yaml), policies
   harness/                       install templates: MCP registration, bootstrap skill, agent profiles
   container/                     OCI image (FreeCAD AppImage extracted, kernels, Chromium)
@@ -103,7 +103,7 @@ History: `git filter-repo` brings over the test suites, examples, schemas and ha
 3. Move the open beads, the issues that should survive, and the release tags to keep.
 4. Update the Claude plugin marketplace (`/plugin marketplace add benchhand/benchhand`), the PyPI project URLs, the GHCR image path and the docs links.
 
-Until the swap, everything that carries the repo name is set from one variable (`BENCHHAND_REPO`) in CI and in the templates: the plugin marketplace, the image tags and the docs links. The swap is then a single change.
+Until the swap, everything that carries the repo name reads it from one place, `release.toml` (ADR-0015), in CI and in the templates: the plugin marketplace, the image tags and the docs links. The swap is then a single change.
 
 ### 3. Transport: stdio vs localhost HTTP (D10)
 
@@ -202,7 +202,7 @@ This is modelled on the slopvac 3.0 plugin protocol (`slopvac/docs/contract/plug
 
 Every boundary has one machine-readable contract, and no hand-written copy of it exists anywhere.
 
-- **Source of truth:** JSON Schema 2020-12 files under `contracts/`. They are language-neutral, which suits a protocol that providers in any language implement. They are versioned with `$id` and a semver per contract. The files cover:
+- **Source of truth:** TypeSpec under `contracts/` (ADR-0017). `tsp compile` emits a JSON Schema 2020-12 bundle, and a tested normaliser splits it into one published schema per contract. The published schemas are committed; they are language-neutral, which suits a protocol that providers in any language implement, and every generator and validator reads them. They are versioned with `$id` and a semver per contract. The contracts cover:
   - the provider protocol: the `initialize` exchange, every hook's params and result, and errors;
   - each MCP tool's input and output (`outputSchema` and `structuredContent`);
   - the result envelope (`status`, `findings`, `artifacts`, `next_actions`);
@@ -260,7 +260,7 @@ Extensibility: a provider manifest may declare `[cli]` subcommands, which are mo
   So the config entry stays the same command as without the container, `uvx benchhand@<ver> mcp --container`. That small launcher:
   1. resolves the project directory from the working directory, from MCP `roots` when the client sends them, or from `--project`;
   2. picks the container runtime (see "Container runtime" below) and checks that it is reachable, or else serves a one-tool error server whose `env.doctor` explains the fix, so the harness doesn't just show "server failed";
-  3. pulls the pinned image (`ghcr.io/<BENCHHAND_REPO>:<ver>`) if it is missing, reporting progress on stderr;
+  3. pulls the pinned image (`ghcr.io/<repo>:<ver>`, with `repo` from `release.toml`) if it is missing, reporting progress on stderr;
   4. picks a free loopback port for the preview host;
   5. starts `<runtime> run -i --rm --init --name benchhand-<session> --label benchhand.launcher=<pid> -v <project>:<project> -w <project> --user <uid>:<gid> -p 127.0.0.1:<port>:<port> -e BENCHHAND_PREVIEW_PORT=<port> <image> mcp` as a child, pumps stdio both ways, and **supervises it** instead of `exec`-ing (see "Container termination").
 
@@ -336,7 +336,7 @@ URL-mode elicitation is not used, and since ADR-0018 neither is form mode: the b
 Rules:
 - An empty or declined answer means no answer, and the gate stays open. Codex auto-review has been seen answering with empty content (openai/codex#23383).
 - Images are downscaled to stay under client limits: Claude Code `MAX_MCP_OUTPUT_TOKENS` defaults to 25k, and Codex has `output_token_limit`.
-- A tool that can run longer than about 50 s returns a task or a job handle. Codex `tool_timeout_sec` defaults to 60 s, and Pi's timeout is 60 s, reset by progress.
+- A tool that can run longer than about 30 s returns a task or a job handle (ADR-0018). Codex `tool_timeout_sec` defaults to 60 s, and Pi's timeout is 60 s, reset by progress.
 - Everything is local. Claude.ai web connectors can't reach localhost.
 
 The server is built on the MCP Python SDK v2 (2026-07-28 plus every earlier revision). The SDK has no tasks extension yet (python-sdk#2806), so job handles are the main path and the tasks adapter sits behind a flag. Apps are built with FastMCP `apps` helpers or raw `ui://` resources with `_meta.ui`.
@@ -523,10 +523,10 @@ Every phase ends at a review gate. When a phase's work is done:
 3. Stop. Send the summary to the owner and wait for approval before starting the next phase. Work for the next phase may sit on an unmerged branch, but it isn't merged and the phase box isn't ticked until the owner approves.
 
 - [ ] **Phase 0: repo and contracts.**
-  - Create the temporary `benchhand/benchhand-next` repo: uv workspace, pnpm `ui/`, CI, the complexity ratchet and the slopvac prose check. Keep the repo name in a single `BENCHHAND_REPO` variable.
+  - Create the temporary `benchhand/benchhand-next` repo: uv workspace, pnpm `ui/`, CI, the complexity ratchet and the slopvac prose check. Keep the repo name in one place, `release.toml` (ADR-0015).
   - Import the reference material (tests, examples, schemas) with `git filter-repo` to keep its history. Production code is written fresh.
   - Write ADRs for D1–D17.
-  - Write the provider protocol contract (slopvac v1 plus progress and artifacts) as prose in `docs/contract/`, with its JSON Schema in `contracts/`.
+  - Write the provider protocol contract (slopvac v1 plus progress and artifacts) as prose in `docs/contract/`, with its contract in `contracts/`.
   - Run the dev probe by hand in the 7 hosts and commit `docs/client-support.md`.
 - [ ] **Phase 1: contracts and core.**
   - Write `contracts/` (record, envelope, provider protocol, flow, policy) and the codegen with its CI drift check.
@@ -541,7 +541,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - Scoped approvals (ADR-0019): the approval scope in the decision contract, `changed_since_approval`, and the gate packet's changed-since-approval section.
   - Cut `flow/guides/*.md` from the current SKILL.md and `flow.md` prose.
   - Closes `c7q.2`, `c7q.3`, `c7q.4` and `c7q.14`.
-  - Record contract additions, made with the move to TypeSpec:
+  - Record contract additions, in TypeSpec (the move happened in Phase 1, ADR-0017):
     - `make_buy: existing` and the occurrence `role` (section 12a);
     - the annotation set (section 12a);
     - the `place` step kind with `retained_by`, and test-coupon evidence with test conditions (section 12b).

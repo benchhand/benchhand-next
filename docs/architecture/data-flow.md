@@ -337,7 +337,7 @@ sequenceDiagram
 - **Open: tool calls and flow.stage.** Plan section 5 puts CEL guards on transitions. No source says whether a tool call such as `model.build` is checked against the stage.
 - **Open: artifact placement.** The host verifies a provider's artifacts and moves them into `hw/`. No source says which component writes them; the typed record store handles YAML, CSV and decisions only.
 - **Open: a freeze without a digest.** `read_built_version` or `assess` can refuse, and on `main` that path ends at a refused acceptance with no `evidence_sha256`. `product.yaml` allows `flow.frozen` without `evidence_sha256`, and a release refuses that freeze. No source says whether the freeze tool records such a freeze or refuses it.
-- **Open: 30 s or 50 s.** ADR-0018 sends work over about 30 s to a job handle; plan section 11 and provider-protocol section 8 say about 50 s. The diagrams follow ADR-0018, the later decision.
+- **Settled: 30 s.** Work that can run past about 30 s returns a job handle (ADR-0018). Plan section 11 and provider-protocol section 8 said about 50 s until 2026-11-26 and now follow ADR-0018.
 - **Open: provider request to job.** The plan says the server manages provider workers and jobs, and that `$/progress` feeds job-handle status. `JobService` runs a command under a supervisor, and no document says how a provider request becomes such a job.
 - **Open: the cancel tool.** The plan names `jobs.start`, `jobs.status` and `jobs.result`, and `jobs.*` for Phase 3; no cancel tool name.
 - **Open: release refusals.** The plan names refusal checks and the acceptance digest against the freeze, and section 12a names the context and tooling refusal. It doesn't list the rest.

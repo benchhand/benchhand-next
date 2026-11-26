@@ -153,7 +153,7 @@ summary = "Check the build123d environment."
 | `shutdown` reply | 5 s | `exit` is sent, then the kill rule applies. |
 | Exit after `exit` | 2 s | The process group is killed. |
 
-MCP-level deadlines are separate. A tool whose provider work can run past about 50 s returns a job handle or a task to the client (plan section 11), while the provider request keeps running under these timers.
+MCP-level deadlines are separate. A tool whose provider work can run past about 30 s returns a job handle or a task to the client (plan section 11, ADR-0018), while the provider request keeps running under these timers.
 
 ## 9. Compatibility
 

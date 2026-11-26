@@ -144,19 +144,16 @@ flowchart TB
 
 ## Where the plan and the code differ
 
+The contract source, the repo name, the TypeSpec timing, forms and the long-call threshold were settled in the plan on 2026-11-26, following ADR-0015, ADR-0017 and ADR-0018.
+
 | Topic | Plan | ADRs and `main` |
 |---|---|---|
-| Contract source | Section 2, section 6a and D17: hand-written JSON Schema 2020-12 under `contracts/` | ADR-0017, revised: TypeSpec under `contracts/`, compiled to the published JSON Schema |
-| Repo name | Section 2 and Phase 0: one `BENCHHAND_REPO` variable in CI and the templates | ADR-0015: `release.toml` is the only place that names the repo; `main` has `release.toml` `repo` |
 | Core to provider runtime | Section 2 lists the packages and states no edges between them | `benchhand-core` declares `benchhand-provider`, and doesn't import it |
 | Declared, unused | Not stated | `benchhand-provider` declares `benchhand-contracts`, and doesn't import it yet |
 | Phase 1 contracts | Phase 1: record, envelope, provider protocol, flow, policy | No envelope or flow contract on `main`; `docs/phases/phase-0-1.md` doesn't list them as not built |
 | Envelope phase | Phase 1 writes the envelope contract; Phase 2 lists "the result envelope and `next_actions`" | Two phases name the envelope; neither is on `main` |
 | Annotation-set phase | Phase 2 lists the annotation set as a record contract addition; Phase 4 lists "the annotation-set contract" | Two phases name it; neither is on `main` |
 | Phase 1 services | Phase 1: migrate and evidence | Both are on `main`. `docs/phases/phase-0-1.md` still lists both under "Not built": migrate as "built on a branch, not yet reviewed", and evidence as "Nothing writes evidence or checks what it cites". The evidence service now checks what evidence cites, and still writes nothing: `evidence/reader.py` only reads |
-| TypeSpec timing | Phase 2: the record additions are "made with the move to TypeSpec" | ADR-0017: the move to TypeSpec happened in Phase 1, as `docs/phases/phase-0-1.md` now states |
-| Forms | Section 1 lists elicitation and forms | ADR-0018: no form elicitation in v1; section 11 was updated, section 1 wasn't |
-| Long calls | Section 11 and provider-protocol section 8: about 50 s | ADR-0018: about 30 s |
 | CLI | D1 and section 7: `mcp`, `serve`, `install`, `doctor`, `setup`, `policy`, `debug call` | `main` has `version` and `record migrate`, and D1 lists neither |
 | Golden fixture | Section 2: `examples/lamp-arm/` | Only `reference/examples/lamp-arm/` |
 | Tools | Section 2 lists `tools/probe/` | `main` also has `tools/gen/` and `tools/equiv/` |
