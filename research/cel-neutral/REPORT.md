@@ -178,3 +178,61 @@ Two gaps apply to every engine:
 
 - **Enum values aren't checked.** The schema's `enum` becomes a CEL `string`, so `decision.status == "aproved"` passes the check and is always false. cel-expr-python type-checked it as `BOOL`. Kubernetes has the same gap. A load-time lint can compare string literals against the enum the field's schema lists.
 - **Heterogeneous equality depends on the checker.** cel-core and the runtime semantics of every engine treat `string == int` as `false`, not as an error. Only a checker that follows cel-go stops it.
+
+## Conformance
+
+### The suite
+
+`conformance/suite.json` is cel-spec's own simple tests in their protobuf JSON form (`cel.expr.conformance.test.SimpleTestFile`), exported by `ts/export_suite.ts` from @bufbuild/cel-spec 0.6.2. It keeps every test that needs no declarations, bindings, container or conformance message types and expects a scalar, a list, a map or an evaluation error. That is 1640 of cel-spec's 2344 tests in 21 files. `conformance/suite-summary.txt` counts the rest by reason; 507 of them need a container.
+
+Each engine has one runner (`go/conformance`, `py/conformance.py`, `rust/src/bin/conformance.rs`, `rust-cxx/src/bin/conformance.rs`, `ts/conformance.ts`). A runner builds the environment from `conformance/env.yaml` and runs every test. It checks the test unless the test sets `disableCheck`, then evaluates. It writes each result as a `cel.expr.Value` in protobuf JSON. `conformance/compare.py` applies cel-spec's matching rules: maps ignore order, any NaN matches NaN, and an unset result means `true`. `conformance/run.sh` runs everything in about 15 seconds.
+
+### Results
+
+| File | Tests | cel-go | cel-expr-python | cel-core | cel-cxx | cel 0.16 | @bufbuild/cel | cel-js |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| basic | 39 | 39 | 39 | 39 | 35 | 39 | 39 | 36 |
+| bindings_ext | 5 | 5 | 5 | 5 | 5 | 5 | 0 | 5 |
+| block_ext | 22 | 0 | 0 | 22 | 0 | 0 | 0 | 0 |
+| comparisons | 352 | 352 | 352 | 352 | 336 | 324 | 352 | 300 |
+| conversions | 87 | 87 | 86 | 87 | 87 | 87 | 87 | 75 |
+| dynamic | 53 | 53 | 53 | 53 | 43 | 17 | 53 | 0 |
+| encoders_ext | 4 | 4 | 4 | 4 | 4 | 4 | 0 | 0 |
+| fields | 48 | 45 | 47 | 48 | 41 | 42 | 41 | 35 |
+| fp_math | 30 | 30 | 30 | 30 | 29 | 30 | 30 | 30 |
+| integer_math | 64 | 64 | 64 | 64 | 61 | 64 | 64 | 62 |
+| lists | 39 | 39 | 39 | 39 | 39 | 39 | 39 | 34 |
+| logic | 30 | 30 | 30 | 30 | 21 | 30 | 30 | 25 |
+| macros | 44 | 44 | 44 | 44 | 44 | 44 | 44 | 42 |
+| macros2 | 46 | 46 | 40 | 46 | 46 | 46 | 8 | 0 |
+| math_ext | 199 | 199 | 199 | 199 | 199 | 199 | 17 | 0 |
+| optionals | 59 | 57 | 59 | 58 | 59 | 59 | 1 | 21 |
+| parse | 192 | 192 | 192 | 192 | 175 | 192 | 192 | 166 |
+| plumbing | 4 | 4 | 4 | 4 | 4 | 4 | 4 | 4 |
+| string | 51 | 51 | 51 | 51 | 51 | 51 | 51 | 51 |
+| string_ext | 199 | 197 | 199 | 199 | 172 | 199 | 199 | 97 |
+| timestamps | 73 | 73 | 73 | 73 | 61 | 71 | 73 | 54 |
+| **All** | **1640** | **1611** | **1610** | **1639** | **1512** | **1546** | **1324** | **1037** |
+| Share | | 98.2% | 98.2% | 99.9% | 92.2% | 94.3% | 80.7% | 63.2% |
+| Failures that are `disableCheck` tests the checker rejected | | 0 | 0 | 0 | 87 | 0 | 0 | 0 |
+
+`results/summary.md` holds the same table, and `results/failures-<engine>.txt` lists every failure with the expected and actual result.
+
+### The differences
+
+| Engine | Failures | Causes |
+|---|---:|---|
+| cel-go 0.30.0 | 29 | `cel.block` isn't public (22). Three map literals that cel-spec rejects (two with a repeated key, one with a float key) evaluate instead of failing. Two optional lookups on a map return `false` instead of an error. `indexOf` and `lastIndexOf` with an out-of-range start return a value. |
+| cel-expr-python 0.1.4 | 30 | `cel.block` (22). `transformMap` fails with "no overload for cel.@mapInsert" (6), a gap in the binding's comprehensions extension. `string(-0.0045)` gives `-0.0044999999999999997`. One repeated map key. |
+| cel-core 0.5.1 | 1 | `optional_type` isn't declared. It is the only engine that runs `cel.block`. |
+| cel-cxx 0.2.5 | 128 | 87 `disableCheck` tests: the Rust API compiles only with the checker, so tests that cel-spec runs unchecked fail at the check. `cel.block` (22). 12 timestamp and duration range errors aren't raised. Backtick-quoted field names are refused (6), which looks like a parser option off in cel-cxx's defaults (assumption). One repeated map key. cel-expr-python wraps the same cel-cpp and passes all of these, so the gaps come from cel-cxx's build or options, not from cel-cpp. |
+| cel 0.16.1 | 94 | No protobuf support: wrapper and `google.protobuf.Value` literals fail with "unexpected type" (64). `cel.block` (22). Backtick field names don't parse (6). Two duration overflows aren't raised. |
+| @bufbuild/cel 0.6.2 | 316 | Only the strings extension ships, so math (182), optionals (58), two-variable comprehensions (38), bindings (5) and encoders (4) fail. `cel.block` (22). Backtick field names (6). One repeated map key. |
+| cel-js 8.0.0 | 603 | No extension libraries: math (199), strings (102), two-variable comprehensions (46), encoders (4). Optional types are partial (38). No `google.protobuf` struct literals (53 of `dynamic`). It also has standard-library gaps: there is no `int(uint)`, two equal byte literals compare `false`, and some timestamp conversions are missing. |
+
+What this means for the design:
+
+- **The checkers agree on the core language.** cel-go, cel-expr-python and cel-core differ on 30 tests at most, and almost all of them are `cel.block`, which is an optimiser artefact rather than a rule-author feature. So a rule that one of these three checks will mean the same thing on the others.
+- **Extensions are the main divergence.** The environment for benchhand rules may enable only extensions every executing engine has. With @bufbuild/cel in the browser, that is strings alone, unless the browser only evaluates CheckedExprs that don't use the others. The adapter's load step should refuse an env YAML that names an extension the engine lacks; in this spike each adapter maps names by hand.
+- **The shared suite misses the checker gap.** cel-core scores 99.9% and still accepts `decision.status == 1`. cel-spec's simple tests check that good expressions pass, not that bad ones fail. benchhand's own suite needs reject cases, like the seven in the typed demo, run on every checker.
+- **cel-js is out.** At 63% with no CheckedExpr input, it can't run the rules the host checked.
