@@ -236,3 +236,82 @@ What this means for the design:
 - **Extensions are the main divergence.** The environment for benchhand rules may enable only extensions every executing engine has. With @bufbuild/cel in the browser, that is strings alone, unless the browser only evaluates CheckedExprs that don't use the others. The adapter's load step should refuse an env YAML that names an extension the engine lacks; in this spike each adapter maps names by hand.
 - **The shared suite misses the checker gap.** cel-core scores 99.9% and still accepts `decision.status == 1`. cel-spec's simple tests check that good expressions pass, not that bad ones fail. benchhand's own suite needs reject cases, like the seven in the typed demo, run on every checker.
 - **cel-js is out.** At 63% with no CheckedExpr input, it can't run the rules the host checked.
+
+## The recommended design
+
+### Where checking happens
+
+The checker runs in two places, and an evaluator anywhere.
+
+1. **At load, in the host.** The Python host checks every rule with cel-expr-python against the generated descriptor set and env YAML, as ADR-0014 already requires: a typo fails at load. Errors carry the rule's file path, for example `flow.yaml#/gates/PROVISIONAL/requires/0`, and the line, column and caret (Kubernetes rows 4 and 5). Each slot's output type is checked too: `requires` and `when` must be `bool`.
+2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
+
+A successful check produces a **compiled rules bundle**:
+
+- the CheckedExpr of each rule, keyed by its file path;
+- the rule's output type;
+- the digest of the env YAML and of the descriptor set it was checked against;
+- the checker's identity (engine, version, options), as Kubernetes row 11 asks.
+
+The host writes the bundle at load, as a cache, and on request (`benchhand rules compile`). A provider's publish step can write one too. The bundle shape is a contract like any other, so it is defined in `contracts/` (ADR-0017), not in an engine's code.
+
+An evaluator only needs the bundle. It compares the two digests with its own environment and refuses a mismatch, then runs each CheckedExpr without checking again. That is how the browser runs typed rules with @bufbuild/cel, which has no public checker. A CheckedExpr's digest comes from a deterministic re-encoding, because writers emit map entries in any order.
+
+So checking is a separate step that ships CheckedExprs, with one condition: the host still checks at load, because users and policy providers can change rules between releases.
+
+### The engine in each runtime
+
+| Runtime | Engine | Checks | Evaluates | Reads |
+|---|---|---|---|---|
+| Python host | cel-expr-python | Yes, at load | Yes | env YAML, descriptor set, CheckedExpr |
+| Rust component or provider | cel-core, through the adapter crate; cel-cxx as the fallback if cel-core stalls | Yes | Yes | env YAML (adapter), descriptor set, CheckedExpr |
+| Browser (preview host, gate card) | @bufbuild/cel | No | CheckedExprs from the bundle | descriptor set, CheckedExpr |
+| CI | cel-go | Yes, the reference, plus cost | The conformance oracle | env YAML, descriptor set, CheckedExpr |
+| Python fallback | the pyo3 binding over cel-core | Yes | Yes | the same as cel-core |
+
+A provider in any other language either takes CheckedExprs from the host or uses its language's engine, and passes the same suite.
+
+### The adapter interface
+
+Every runtime wraps its engine in the same five operations. Each operation names a cross-language artefact, not a type from one engine:
+
+```text
+load(env_yaml, descriptor_set)  -> Environment | [Issue]   refuse an unknown extension or version
+check(env, path, expr, slot)    -> CheckedExpr | [Issue]   absent where the engine has no checker
+program(env, checked_expr)      -> Program | [Issue]       refuse a CheckedExpr from another environment
+eval(program, activation)       -> Value | EvalError       activation: variable -> record (JSON) or message
+identity()                      -> {engine, version, options}
+```
+
+- An `Issue` is `{path, line, column, message}`.
+- A `Value` leaves the adapter as `cel.expr.Value` protobuf JSON, the encoding the conformance runners already use. So results compare across languages with one comparator.
+- `eval` returns an error for a rule that fails to compile or evaluate, and the caller records it as a finding with coverage UNKNOWN, not PASS (Kubernetes row 6). The adapter tests assert this.
+
+The spike has most of this per language already: `rust/src/lib.rs` (load), `rust-py/src/lib.rs` (check, program and eval for Python over Rust), and the runners' value encoders. cel-expr-python's adapter is the thinnest, because the binding reads both artefacts itself.
+
+### What gives Rust equal standing
+
+Three things, all of which this design needs anyway:
+
+1. **A required Rust job in CI.** It runs the shared suite, the typed accept and reject cases, and the differential check on cel-core.
+2. **A Rust adapter crate** (`benchhand-cel`) with the five operations over cel-core. It reads the same generated artefacts and the bundle.
+3. **Contract types for Rust providers.** `typify` structs for host code (D17), plus the descriptor set for rule activations, so a Rust provider needs no second schema.
+
+These three make Rust providers first-rate. A Rust host component is a different decision. The pyo3 measurement says crossing from the Python host into a Rust component is cheap: 87 lines for the CEL part, and one abi3 wheel per platform. Plan section 4 (D12) still says "Python host and core; no Rust". Moving the flow interpreter or another host component to Rust means changing D12, which is the owner's call.
+
+### Alignment with the Kubernetes adopt table
+
+| Kubernetes row | Part of this design that carries it |
+|---|---|
+| 1. Structural activation scopes | `celgen.py` refuses a union on a reachable path at generation; `scopes.txt` reports each refusal with its path |
+| 2. Flat unions | Unchanged: a scope omits the union field until the contract flattens it |
+| 3. `dyn` escape hatch | Not used. cel-js shows the cost: a field typed `dyn` lost two type errors in the demo |
+| 4, 5. Compile at load with paths; output type per slot | Host check at load, all issues returned; the bundle records each output type |
+| 6. Never pass a broken rule | The adapter's `eval` contract |
+| 7, 8. Cost | Bounds and a timeout in every adapter; cel-go's static estimate in CI |
+| 9. Environment profiles | One env YAML per profile, generated; the bundle records which one |
+| 11. Pin runtime behaviour | `identity()` in every adapter and in the bundle |
+| 12, 13. Known-function test; library discipline | `load` refuses unknown extensions; the extension list is the intersection of the executing engines |
+| 24. Absent versus null | Optional scalars have presence and nullable ones are wrappers, so `has()` works in every engine that reads protos |
+| 25. Table-driven rule tests | `typedemo/*.yaml` is that format; a `rules test` command runs it on the host engine |
+| 26. Environment as data | Adopted now. cel-expr-python reads message-typed variables from the env YAML, which the Kubernetes report left unverified |
