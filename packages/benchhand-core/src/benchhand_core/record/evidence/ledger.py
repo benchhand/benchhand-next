@@ -128,18 +128,26 @@ def entry_targets(entry: JsonMap, expected: Sequence[Obligation]) -> list[str]:
     return [o.id for o in expected if o.requirement == requirement and o.family in families]
 
 
-def _waived(entry: JsonMap, index: int, obligation: Obligation | None, ctx: EntryContext) -> EntryJudgement:
-    ident, subject = entry.get("id"), mapping(entry.get("subject"))
-    waiver = mapping(entry.get("waiver"))
-    scope = WaiverScope(
-        subject=subject,
+def waiver_scope(entry: JsonMap, obligation: Obligation | None) -> WaiverScope:
+    """What a waived entry asks to cover for one target: the entry's subject, the target obligation and the
+    requirements that govern the target, read from the obligation's own requirement and subject
+    (evidence.py:340-348 `_requirements_of`), with the entry's requirement."""
+    governing = ()
+    if obligation is not None:
+        found = {obligation.requirement, *items(subject_of(obligation).get("requirements"))}
+        governing = tuple(sorted(str(ident) for ident in found if ident))
+    return WaiverScope(
+        subject=mapping(entry.get("subject")),
         obligation=obligation.id if obligation else None,
         family=obligation.family if obligation else None,
-        obligation_requirements=tuple(
-            {obligation.requirement, *items(subject.get("requirements"))} - {None} if obligation else ()
-        ),
+        obligation_requirements=governing,
         requirements=(entry["requirement"],) if entry.get("requirement") else (),
     )
+
+
+def _waived(entry: JsonMap, index: int, obligation: Obligation | None, ctx: EntryContext) -> EntryJudgement:
+    ident, waiver = entry.get("id"), mapping(entry.get("waiver"))
+    scope = waiver_scope(entry, obligation)
     problem = waiver_problem(waiver, scope, ctx.record, ctx.today)
     if problem is not None:
         finding = entry_finding(problem.code, index, f"{ident}: {problem.message}", scope.obligation)
@@ -241,7 +249,9 @@ def _physical_gap(entry: JsonMap) -> list[str]:
     return [name for name in PHYSICAL_FIELDS if not physical.get(name)]
 
 
-def credit(entry: JsonMap, index: int, judged: EntryJudgement, obligation: Obligation) -> EntryJudgement:
+def credit(
+    entry: JsonMap, index: int, judged: EntryJudgement, obligation: Obligation, ctx: EntryContext
+) -> EntryJudgement:
     """What the judged entry credits one target: its judgement when the entry is evidence at the target's own
     level, about the target's exact location, and (for a physically_validated pass or fail) carries every
     physical test field the manufacturing-evidence contract requires; otherwise unknown, with a finding.
@@ -269,4 +279,7 @@ def credit(entry: JsonMap, index: int, judged: EntryJudgement, obligation: Oblig
         message = f"{ident} is physical evidence without {', '.join(missing)}: record the test it reports"
         finding = entry_finding("evidence.physical_fields", index, message, obligation.id)
         return EntryJudgement("unknown", (f"{ident} does not record its physical test",), (finding,))
+    if judged.result == "waived":
+        # the waiver must stand for this target and the requirements that govern it, not the entry's alone
+        return _waived(entry, index, obligation, ctx)
     return judged

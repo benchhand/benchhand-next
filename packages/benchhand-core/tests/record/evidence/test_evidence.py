@@ -445,15 +445,19 @@ def test_an_inferred_target_is_credited_only_at_its_own_location(built: tuple[Pa
     assert statuses(run(root))["requirement.cad_valid@REQ-001"]["result"] == "pass"
 
 
-def test_physical_evidence_without_its_test_credits_nothing(lamp_arm: Path) -> None:
+def test_physical_evidence_without_its_test_credits_nothing(built: tuple[Path, str]) -> None:
     """A physically_validated pass needs the physical test fields the contract requires
     (manufacturing-evidence.tsp `physical`); an entry read leniently without them credits nothing."""
-    from benchhand_core.record.evidence.ledger import EntryJudgement, credit
+    from benchhand_core.record.evidence.ledger import EntryContext, EntryJudgement, credit
 
-    trial = next(o for o in required_checks(view(load_record(lamp_arm))) if o.id == TRIAL)
+    root, _ = built
+    record = load_record(root)
+    expected_by_id = {o.id: o for o in required_checks(view(record))}
+    placed, _ = inventory(record.assembly, record.parts)
+    ctx = EntryContext(view(record), placed, expected_by_id, read_built_version(root, record, "v1"), TODAY)
     entry = {"id": "EV-001", "obligation": TRIAL, "subject": {"PN": "LMP-0001", "operation": "print"}}
     entry |= {"level": "physically_validated", "result": "pass", "physical": {"specimen": "coupon 1"}}
-    given = credit(entry, 0, EntryJudgement("pass", ("EV-001 pass",)), trial)
+    given = credit(entry, 0, EntryJudgement("pass", ("EV-001 pass",)), expected_by_id[TRIAL], ctx)
     assert given.result == "unknown"
     assert [f.code for f in given.findings] == ["evidence.physical_fields"]
 
@@ -553,6 +557,29 @@ def test_a_mandatory_requirement_of_a_safety_critical_use_case_cannot_be_waived(
     assert waiver_problem(waiver(), scope, record, TODAY).code == "waiver.forbidden"  # type: ignore[union-attr]
     critical = WaiverScope(subject={"PN": "LMP-0001"}, critical=True)
     assert waiver_problem(waiver(), critical, record, TODAY).code == "waiver.forbidden"  # type: ignore[union-attr]
+
+
+def test_a_waiver_checks_the_requirements_of_its_target(built: tuple[Path, str]) -> None:
+    """evidence.py:340-348: the requirements that govern a waived target come from the obligation's subject,
+    not the entry's. A policy obligation for LMP-0001 under REQ-002, which forbids waivers, stays unwaived
+    when the waiving entry names the part alone."""
+    root, _ = built
+    requirements = yaml.safe_load((root / "hw/requirements.yaml").read_text(encoding="utf-8"))
+    requirements["requirements"][1]["waiver_policy"] = "forbidden"
+    write_yaml(root / "hw/requirements.yaml", requirements)
+    product = yaml.safe_load((root / "hw/product.yaml").read_text(encoding="utf-8"))
+    policy_subject = {"PN": "LMP-0001", "requirements": ["REQ-002"]}
+    product["use_case"]["evidence_policy"] = {
+        "obligations": [{"subject": policy_subject, "level": "process_planned"}],
+        "decision": APPROVED,
+    }
+    write_yaml(root / "hw/product.yaml", product)
+    version_sha = build(root)
+    target = "policy.process_planned@LMP-0001"
+    write_ledger(root, waived_entry(root, version_sha, target))
+    result = run(root)
+    assert statuses(result)[target]["result"] == "unknown"
+    assert "waiver.forbidden" in codes(result)
 
 
 # Facets and the acceptance digest
