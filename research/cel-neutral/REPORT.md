@@ -361,3 +361,44 @@ This section applies to any project that adopts CEL, so it can become a harness-
 9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
 10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
+
+## Reproduce the results
+
+From `research/cel-neutral/`, with the builds already in place:
+
+| What | Command | Time here |
+|---|---|---|
+| Regenerate the types | `cd py && uv run python ../gen/celgen.py ../scopes.yaml --out ../generated`, then `cd ../generated && buf build --exclude-source-info -o types.binpb` | seconds |
+| Typed demo, per engine | The `typed_demo` program in `go/`, `py/`, `rust/`, `rust-cxx/` (binary `cel_neutral_cxx`) and `ts/` | seconds each |
+| Typed demo through the pyo3 binding | `cd rust-py && maturin build --release`, then `cd py && uv run --with <wheel> python rust_binding_demo.py` | 50 s build |
+| Shared suite on all seven engines | `conformance/run.sh` | 15 s |
+
+The typed demo exits non-zero on cel-core (the `string == int` rule), on @bufbuild/cel (no checker) and on cel-js (the two `dyn` wrappers). Each exit code reports an engine finding listed above.
+
+Builds in this worktree:
+
+- The cel-cxx release build, with its Bazel build of cel-cpp, came from the previous run. This run added a second binary to it, which relinked in 14 s without rebuilding cel-cpp.
+- The pyo3 binding compiled cel-core again in the release profile (50 s, pure Rust).
+- No other engine was built from source.
+
+`target/`, `node_modules/`, `.venv/` and the raw `results/*.jsonl` are ignored and not committed.
+
+## Untested, and the risks
+
+- **ferricel and rscel weren't run.** Their rows come from their documentation.
+- **A CheckedExpr against a different environment wasn't tested.** The bundle's digest check is a design requirement, not a measured behaviour.
+- **Two cel-cxx causes are assumptions.** The backtick and timestamp-range failures are read as defaults in cel-cxx's build. They weren't traced into its cel-cpp version.
+- **cel-core in a browser was out of scope.** It compiles to WebAssembly in principle; that would give one Rust engine in every runtime, but this run built no new engine.
+- **The `cel.expr.conformance.Environment` proto and the `celtest` suite format weren't exercised.**
+- **cel-core's maintenance is the main risk** of the Rust choice: one maintainer, and no push since 2026-02-16. The mitigations are a pinned version, the differential check in CI, and the licence (MIT OR Apache-2.0), which allows a fork.
+- **@bufbuild/cel is beta, and its checker isn't public.** The browser plan depends only on its evaluator reading CheckedExprs. That worked in 0.6.2 for all 18 shipped rules here; whether its own test suite covers checked input is unverified.
+- **The suite covers 1640 of cel-spec's 2344 simple tests.** The rest need declarations, bindings or the conformance message types, and adding them means a typed-value encoder in every runner.
+
+## Open questions for the owner
+
+1. **What does Rust's equal standing cover?** Rust providers only, which this design gives without a plan change? Or a Rust host component, such as the flow interpreter behind pyo3, which changes D12's "no Rust"?
+2. **cel-core or cel-cxx for Rust?** cel-core is pure Rust and passed 1639 of 1640, but it has one maintainer and a known checker gap. cel-cxx shares cel-cpp's checker with the Python host, but it needs Bazel and a C++ toolchain in every Rust build, and it has no CheckedExpr API.
+3. **Is the rules bundle user-facing?** It could be a `benchhand rules compile` command whose output lives in the project, or an internal cache the host writes at load and hands to the browser and providers.
+4. **Does the browser evaluate rules, or only show results the host computed?** If it only shows results, @bufbuild/cel isn't needed and the extension set isn't limited to strings.
+5. **Amend ADR-0014 or write a new ADR** for the artefacts, the bundle and the engine set?
+6. **Report the gaps upstream?** The gaps are cel-core's `string == int` check, cel-expr-python's `transformMap`, and cel-cxx's `disableCheck` entry point and timestamp range.
