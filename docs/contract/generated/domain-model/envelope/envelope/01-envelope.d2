@@ -1,0 +1,50 @@
+...@../../classes
+direction: right
+
+"aggregate__envelope_envelope": {
+  class: aggregate
+  label: "envelope"
+  "envelope_envelope": {
+    class: document
+    label: "envelope"
+    shape: sql_table
+    "status": "enum ok|refused|pending|error" { constraint: "req" }
+    "verdict": "enum pass|fail|unknown"
+    "reason": "string"
+    "payload": "any"
+    "findings": "finding[]" { constraint: "req" }
+    "next_actions": "EnvelopeNextAction[]" { constraint: "req" }
+    "artifacts": "Artifact[]"
+    "guidance": "string"
+    "job": "JobHandle"
+  }
+  "envelope_envelope__EnvelopeNextAction": {
+    class: owned
+    label: "EnvelopeNextAction"
+    shape: sql_table
+    "tool": "string" { constraint: "req" }
+    "arguments": "object"
+    "reason": "string" { constraint: "req" }
+    "needs_user": "boolean" { constraint: "req" }
+  }
+}
+"stub__common_finding": {
+  class: stub
+  label: "finding\n(common/finding)"
+  link: "../../common/finding/01-finding.svg"
+}
+"stub__jobs_job__JobHandle": {
+  class: stub
+  label: "JobHandle\n(jobs/job)"
+  link: "../../jobs/job/01-job.svg"
+}
+"stub__provider_protocol__Artifact": {
+  class: stub
+  label: "Artifact\n(provider/protocol)"
+  link: "../../provider/protocol/03-initializeparams.svg"
+}
+
+"aggregate__envelope_envelope"."envelope_envelope"."findings" -> "stub__common_finding": "findings [0..*]" { class: association }
+"aggregate__envelope_envelope"."envelope_envelope"."next_actions" -> "aggregate__envelope_envelope"."envelope_envelope__EnvelopeNextAction": "next_actions [0..*]" { class: composition }
+"aggregate__envelope_envelope"."envelope_envelope"."artifacts" -> "stub__provider_protocol__Artifact": "artifacts [0..*]" { class: association }
+"aggregate__envelope_envelope"."envelope_envelope"."job" -> "stub__jobs_job__JobHandle": "job [0..1]" { class: association }

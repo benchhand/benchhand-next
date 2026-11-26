@@ -4,6 +4,29 @@ direction: right
 "aggregate__jobs_job": {
   class: aggregate
   label: "job"
+  "jobs_job__JobHandle": {
+    class: owned
+    label: "JobHandle"
+    shape: sql_table
+    "jobId": "JobId" { constraint: "req" }
+    "kind": "JobKind" { constraint: "req" }
+    "status": "JobStatus = queued|running|succeeded|failed|cancelled" { constraint: "req" }
+    "progress": "JobProgress" { constraint: "req" }
+    "resultPath": "string or null" { constraint: "req" }
+    "logPath": "string" { constraint: "req" }
+    "exitCode": "ExitCode" { constraint: "req" }
+    "error": "string or null" { constraint: "req" }
+    "createdAt": "Timestamp" { constraint: "req" }
+    "startedAt": "OptionalTimestamp" { constraint: "req" }
+    "finishedAt": "OptionalTimestamp" { constraint: "req" }
+  }
+  "jobs_job__JobProgress": {
+    class: owned
+    label: "JobProgress"
+    shape: sql_table
+    "fraction": "number or null" { constraint: "req" }
+    "message": "string or null" { constraint: "req" }
+  }
   "jobs_job": {
     class: union
     label: "job  «union»"
@@ -30,13 +53,6 @@ direction: right
     "startedAt": "OptionalTimestamp" { constraint: "req" }
     "finishedAt": "OptionalTimestamp" { constraint: "req" }
   }
-  "jobs_job__JobProgress": {
-    class: owned
-    label: "JobProgress"
-    shape: sql_table
-    "fraction": "number or null" { constraint: "req" }
-    "message": "string or null" { constraint: "req" }
-  }
   "jobs_job__ProcessIdentity": {
     class: owned
     label: "ProcessIdentity"
@@ -44,26 +60,10 @@ direction: right
     "pid": "integer" { constraint: "req" }
     "identity": "string" { constraint: "req" }
   }
-  "jobs_job__JobHandle": {
-    class: owned
-    label: "JobHandle"
-    shape: sql_table
-    "jobId": "JobId" { constraint: "req" }
-    "kind": "JobKind" { constraint: "req" }
-    "status": "JobStatus = queued|running|succeeded|failed|cancelled" { constraint: "req" }
-    "progress": "JobProgress" { constraint: "req" }
-    "resultPath": "string or null" { constraint: "req" }
-    "logPath": "string" { constraint: "req" }
-    "exitCode": "ExitCode" { constraint: "req" }
-    "error": "string or null" { constraint: "req" }
-    "createdAt": "Timestamp" { constraint: "req" }
-    "startedAt": "OptionalTimestamp" { constraint: "req" }
-    "finishedAt": "OptionalTimestamp" { constraint: "req" }
-  }
 }
 
 "aggregate__jobs_job"."jobs_job__JobRecord" -> "aggregate__jobs_job"."jobs_job": { class: inheritance }
 "aggregate__jobs_job"."jobs_job__JobHandle" -> "aggregate__jobs_job"."jobs_job": { class: inheritance }
+"aggregate__jobs_job"."jobs_job__JobHandle"."progress" -> "aggregate__jobs_job"."jobs_job__JobProgress": "progress [1]" { class: composition }
 "aggregate__jobs_job"."jobs_job__JobRecord"."progress" -> "aggregate__jobs_job"."jobs_job__JobProgress": "progress [1]" { class: composition }
 "aggregate__jobs_job"."jobs_job__JobRecord" -> "aggregate__jobs_job"."jobs_job__ProcessIdentity": "owner [1]\nprocess [0..1]" { class: composition }
-"aggregate__jobs_job"."jobs_job__JobHandle"."progress" -> "aggregate__jobs_job"."jobs_job__JobProgress": "progress [1]" { class: composition }

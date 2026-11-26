@@ -92,7 +92,7 @@ class Sourcing(Enum):
     catalogue = "catalogue"
 
 
-class Status5(Enum):
+class Status6(Enum):
     """
     conditional while material-to-choice or safety inputs are missing
     """
@@ -106,7 +106,7 @@ class Recommendation(ContractModel):
         extra="forbid",
         populate_by_name=True,
     )
-    status: Status5
+    status: Status6
     """
     conditional while material-to-choice or safety inputs are missing
     """

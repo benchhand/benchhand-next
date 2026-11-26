@@ -32,6 +32,7 @@
 //   pydantic's Rust regex engine read alike.
 
 import "./common/finding.tsp";
+import "./envelope/envelope.tsp";
 import "./jobs/job.tsp";
 import "./provider/manifest.tsp";
 import "./provider/protocol.tsp";

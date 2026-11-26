@@ -14,6 +14,31 @@ A long-running job of the job service. JobRecord is the run record kept at <proj
 
 ## Types
 
+### `JobHandle`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `jobId` | `JobId` | yes |  |
+| `kind` | `JobKind` | yes |  |
+| `status` | `JobStatus = queued\|running\|succeeded\|failed\|cancelled` | yes |  |
+| `progress` | `JobProgress` | yes |  |
+| `resultPath` | `string or null` | yes | The job's result file. Set only once the job succeeded and wrote it; null otherwise. |
+| `logPath` | `string` | yes |  |
+| `exitCode` | `ExitCode` | yes |  |
+| `error` | `string or null` | yes |  |
+| `createdAt` | `Timestamp` | yes |  |
+| `startedAt` | `OptionalTimestamp` | yes |  |
+| `finishedAt` | `OptionalTimestamp` | yes |  |
+
+### `JobProgress`
+
+The last progress the job reported: the same fraction and message as a provider $/progress notification. Both are null until the first report.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `fraction` | `number or null` | yes |  |
+| `message` | `string or null` | yes |  |
+
 ### `job` «union»
 
 No fields of its own.
@@ -39,15 +64,6 @@ No fields of its own.
 | `startedAt` | `OptionalTimestamp` | yes |  |
 | `finishedAt` | `OptionalTimestamp` | yes |  |
 
-### `JobProgress`
-
-The last progress the job reported: the same fraction and message as a provider $/progress notification. Both are null until the first report.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `fraction` | `number or null` | yes |  |
-| `message` | `string or null` | yes |  |
-
 ### `ProcessIdentity`
 
 A process id with its start identity. The kernel reuses ids, so a pid proves nothing once its process is gone: the process runs only while some process has that pid and that identity. On Linux the identity is the boot id and the start time, elsewhere ps lstart.
@@ -56,22 +72,6 @@ A process id with its start identity. The kernel reuses ids, so a pid proves not
 |---|---|---|---|
 | `pid` | `integer` | yes |  |
 | `identity` | `string` | yes |  |
-
-### `JobHandle`
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `jobId` | `JobId` | yes |  |
-| `kind` | `JobKind` | yes |  |
-| `status` | `JobStatus = queued\|running\|succeeded\|failed\|cancelled` | yes |  |
-| `progress` | `JobProgress` | yes |  |
-| `resultPath` | `string or null` | yes | The job's result file. Set only once the job succeeded and wrote it; null otherwise. |
-| `logPath` | `string` | yes |  |
-| `exitCode` | `ExitCode` | yes |  |
-| `error` | `string or null` | yes |  |
-| `createdAt` | `Timestamp` | yes |  |
-| `startedAt` | `OptionalTimestamp` | yes |  |
-| `finishedAt` | `OptionalTimestamp` | yes |  |
 
 ## Enums
 

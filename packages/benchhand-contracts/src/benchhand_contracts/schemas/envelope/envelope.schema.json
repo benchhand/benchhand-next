@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/envelope/envelope.schema.json",
+  "title": "benchhand MCP tool result envelope, provisional",
+  "description": "Provisional: the result of every benchhand MCP tool call, carried as structuredContent. status is the call outcome: ok (the call did what was asked), refused (a guided refusal, such as an out-of-order transition, with a reason and at least one next action), pending (the work runs as a job, and job is its handle) or error (the tool failed, with at least one finding). verdict is the outcome of a check and is set only on an ok result of a check-type tool. Each tool's own result is the payload. The flow engine fills next_actions, so the agent rarely needs flow.guide again",
+  "x-status": "provisional",
+  "x-version": "0.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "findings",
+    "next_actions"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ok",
+        "refused",
+        "pending",
+        "error"
+      ]
+    },
+    "verdict": {
+      "description": "A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result",
+      "enum": [
+        "pass",
+        "fail",
+        "unknown"
+      ]
+    },
+    "reason": {
+      "description": "Why the call was refused, for a refused result",
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "description": "The tool's own result. Each tool's output schema narrows it"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "$ref": "../common/finding.schema.json"
+      }
+    },
+    "next_actions": {
+      "description": "What to do next, most useful first",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EnvelopeNextAction"
+      }
+    },
+    "artifacts": {
+      "description": "Files the call wrote or names, each by its absolute path",
+      "type": "array",
+      "items": {
+        "$ref": "../provider/protocol.schema.json#/$defs/Artifact"
+      }
+    },
+    "guidance": {
+      "description": "Text for the agent: what the result means and how to go on",
+      "type": "string",
+      "minLength": 1
+    },
+    "job": {
+      "description": "The job that carries a long call's work, for a pending result",
+      "$ref": "../jobs/job.schema.json#/$defs/JobHandle"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "refused"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "next_actions": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "pending"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "job"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "job"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "error"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "findings": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "verdict"
+          ]
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "status": "ok",
+      "verdict": "pass",
+      "payload": {
+        "pairs": 30,
+        "interferences": 0
+      },
+      "findings": [],
+      "next_actions": [
+        {
+          "tool": "flow.record_provisional",
+          "arguments": {
+            "gate": "layout_freeze",
+            "version": "v3"
+          },
+          "reason": "v3 passed every fast check",
+          "needs_user": false
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "/home/user/lamp/hw/checks/v3/static/result.json",
+          "mediaType": "application/json",
+          "role": "check-result",
+          "bytes": 2048,
+          "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      ]
+    },
+    {
+      "status": "refused",
+      "reason": "the layout_freeze human gate opens only after the full check of v3 passed",
+      "findings": [],
+      "next_actions": [
+        {
+          "tool": "jobs.status",
+          "arguments": {
+            "jobId": "3f9c1a7b02de"
+          },
+          "reason": "the full check of v3 is still running",
+          "needs_user": false
+        }
+      ],
+      "guidance": "Wait for the full check, then present the gate packet and ask the user."
+    },
+    {
+      "status": "pending",
+      "findings": [],
+      "next_actions": [
+        {
+          "tool": "jobs.result",
+          "arguments": {
+            "jobId": "3f9c1a7b02de"
+          },
+          "reason": "the sweep runs longer than one tool call",
+          "needs_user": false
+        }
+      ],
+      "job": {
+        "jobId": "3f9c1a7b02de",
+        "kind": "collision/sweep",
+        "status": "running",
+        "progress": {
+          "fraction": 0.4,
+          "message": "pair 12 of 30"
+        },
+        "resultPath": null,
+        "logPath": "/home/user/lamp/.benchhand/runs/3f9c1a7b02de.log",
+        "exitCode": null,
+        "error": null,
+        "createdAt": "2026-11-25T05:08:13Z",
+        "startedAt": "2026-11-25T05:08:14Z",
+        "finishedAt": null
+      }
+    },
+    {
+      "status": "error",
+      "findings": [
+        {
+          "code": "record.version_unsupported",
+          "severity": "error",
+          "path": "hw/product.yaml",
+          "pointer": "/record_version",
+          "message": "record_version 2 is not supported; this release reads record_version 3",
+          "action": "Migrate the record; nothing was changed."
+        }
+      ],
+      "next_actions": [
+        {
+          "tool": "record.migrate",
+          "reason": "the record is at version 2",
+          "needs_user": true
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "EnvelopeNextAction": {
+      "description": "A tool call the agent can make next. arguments holds the arguments the server already knows; the agent supplies the rest. needs_user is true when the call must wait for the user, such as recording a human-gate decision",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "reason",
+        "needs_user"
+      ],
+      "properties": {
+        "tool": {
+          "description": "The MCP tool name, such as flow.guide",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$"
+        },
+        "arguments": {
+          "type": "object"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "needs_user": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

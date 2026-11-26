@@ -63,7 +63,7 @@ class Assumption(ContractModel):
     """
 
 
-class Status11(Enum):
+class Status12(Enum):
     open = "open"
     resolved = "resolved"
 
@@ -111,7 +111,7 @@ class OpenQuestion(ContractModel):
     owner: Annotated[str, Field(min_length=1)]
     material_to_choice: bool
     safety_relevant: bool
-    status: Status11
+    status: Status12
     resolution: Resolution | Resolution1 | None = None
 
 
