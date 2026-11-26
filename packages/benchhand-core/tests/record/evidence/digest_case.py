@@ -50,10 +50,10 @@ def _seal(directory: Path, **fields: Any) -> str:
     return _write(directory / "manifest.json", manifest)
 
 
-def _packet(version_sha: str) -> dict[str, Any]:
+def _packet(record_version: int) -> dict[str, Any]:
     return {
         "schema_version": 1,
-        "record_version": 3,
+        "record_version": record_version,
         "producer": "TST producer 1.0",
         "scope": [{"PN": "LMP-0001"}],
         "expected": [READBACK],
@@ -67,10 +67,31 @@ def _packet(version_sha: str) -> dict[str, Any]:
     }
 
 
-def write_case(hw: Path) -> None:
+BUILT_LEDGER_SHA = "e" * 64  # the manifest a ledger entry cites when the case builds a version in some form
+
+
+def _build_version(hw: Path, record_version: int) -> None:
+    """Seal hw/versions/v1 with a snapshot of the record at `hw` and its parts' model sources, as a build
+    does, and bind a packet at `record_version` to it."""
+    from .conftest import snapshot  # not at import: this module also runs outside pytest
+
+    snapshot(hw, "v1")
+    models = sorted((hw / "parts").glob("*/model.py"))
+    parts = {path.parent.name: {"source_sha256": _sha(path)} for path in models}
+    version_sha = _seal(hw / "versions/v1", version="v1", parts=parts)
+    _write(hw / "checks/v1/cad/result.json", json.dumps(_packet(record_version), indent=1, sort_keys=True))
+    _seal(hw / "checks/v1/cad", version_manifest_sha256=version_sha)
+
+
+def write_case(hw: Path, *, built_as: int | None = None) -> None:
     """Add the case's files to the record at `hw`. A v3 tree also gets a fixed verification.csv, so the
-    inventory does not depend on the converter's output."""
-    if (hw / "verification.csv").read_text(encoding="utf-8").startswith("requirement,"):
+    inventory does not depend on the converter's output.
+
+    `built_as` None keeps the golden case: a version with one note file and a packet at record_version 3.
+    2 or 3 builds v1 as a build at that record version does: a snapshot of the record documents at `hw`
+    (v2 documents in a prototype tree) and a packet at that record_version, both sealed. The ledger then
+    cites a fixed manifest digest, so the inventory of the two forms differs by the packet's manifest only."""
+    if (hw / "verification.csv").read_text(encoding="utf-8").startswith("requirement,") and built_as is None:
         _write(hw / "verification.csv", VERIFICATION)
     datasheet = _write(hw / DATASHEET, "PETG datasheet\n")
     _write(hw / "manufacturing/sources/curves/creep.csv", "hours,strain\n0,0\n")
@@ -78,10 +99,14 @@ def write_case(hw: Path) -> None:
     report = _write(hw / "docs/readback.txt", "readback ok\n")
     _write(hw / "captures/v1/bench/photo.txt", "bench photo\n")
     bench = _seal(hw / "captures/v1/bench")
-    _write(hw / "versions/v1/note.txt", "v1\n")
-    version_sha = _seal(hw / "versions/v1", version="v1")
-    _write(hw / "checks/v1/cad/result.json", json.dumps(_packet(version_sha), indent=1, sort_keys=True))
-    _seal(hw / "checks/v1/cad", version_manifest_sha256=version_sha)
+    if built_as is None:
+        _write(hw / "versions/v1/note.txt", "v1\n")
+        version_sha = _seal(hw / "versions/v1", version="v1")
+        _write(hw / "checks/v1/cad/result.json", json.dumps(_packet(3), indent=1, sort_keys=True))
+        _seal(hw / "checks/v1/cad", version_manifest_sha256=version_sha)
+    else:
+        _build_version(hw, built_as)
+        version_sha = BUILT_LEDGER_SHA
     entry = {
         "id": "EV-001",
         "requirement": "REQ-001",
