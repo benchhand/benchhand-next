@@ -64,7 +64,17 @@ REQUIRED_DOMAINS: Mapping[str, Mapping[str, frozenset[str]]] = {
 # The version-bound roots below hw/ (layout.json bundle.* entries, and versions/).
 BUNDLE_ROOTS = ("versions", "checks", "drawings", "renders", "captures", "motion", "analysis")
 _OWNER = re.compile(rf"^hw/(?:{'|'.join(BUNDLE_ROOTS)})/(v[1-9][0-9]*)(?:/|$)")
-LOCATION_KEYS = ("product", "PN", "component", "operation", "feature", "interface", "assembly_operation")
+LOCATION_KEYS = (
+    "product",
+    "PN",
+    "occurrence",
+    "component",
+    "operation",
+    "feature",
+    "region",
+    "interface",
+    "assembly_operation",
+)
 # The required fields of manufacturing-evidence `physical` (contracts/record/manufacturing-evidence.tsp).
 PHYSICAL_FIELDS = (
     "specimen",
@@ -260,8 +270,8 @@ def judge_entry(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement
 
 
 def location(subject: Mapping[str, object]) -> dict[str, object]:
-    """Where a subject is: the product, a part (with component, operation and feature), an interface or an
-    assembly operation. Its requirements, occurrence and region do not move it."""
+    """Where a subject is: the product, a part (with its occurrence, component, operation, feature and
+    region), an interface or an assembly operation. Only its requirements do not move it."""
     return {key: subject[key] for key in LOCATION_KEYS if subject.get(key)}
 
 

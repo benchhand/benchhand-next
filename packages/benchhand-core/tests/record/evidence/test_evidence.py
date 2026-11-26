@@ -626,6 +626,39 @@ def requirement_entry(root: Path, manifest_sha: str, subject: dict[str, Any]) ->
     return entry
 
 
+@pytest.mark.parametrize(
+    ("asked", "shown"),
+    [
+        ({"PN": "LMP-0011", "occurrence": "@ring-base"}, {"PN": "LMP-0011", "occurrence": "@ring-elbow"}),
+        (
+            {"PN": "LMP-0001", "feature": "seat", "region": "upper"},
+            {"PN": "LMP-0001", "feature": "seat", "region": "lower"},
+        ),
+    ],
+)
+def test_evidence_of_another_occurrence_or_region_credits_nothing(
+    built: tuple[Path, str], asked: dict[str, Any], shown: dict[str, Any]
+) -> None:
+    """An occurrence or a region is part of where a subject is: evidence of one ring placement, or of one
+    region of a feature, never passes the policy obligation of another of the same part."""
+    root, _ = built
+    product = yaml.safe_load((root / "hw/product.yaml").read_text(encoding="utf-8"))
+    product["use_case"]["evidence_policy"] = {
+        "obligations": [{"subject": asked, "level": "cad_valid"}],
+        "decision": APPROVED,
+    }
+    write_yaml(root / "hw/product.yaml", product)
+    version_sha = build(root)
+    [target] = [i for i in expected(root) if i.startswith("policy.cad_valid@")]
+    for subject, result in ((asked, "pass"), (shown, "unknown")):
+        entry = ledger_entry(root, version_sha, obligation=target, subject=subject)
+        entry["fingerprints"] = current_fingerprints(root, subject)
+        write_ledger(root, entry)
+        found = run(root)
+        assert statuses(found)[target]["result"] == result, subject
+    assert "evidence.subject" in codes(found)
+
+
 def test_an_entry_at_another_level_credits_nothing(built: tuple[Path, str]) -> None:
     """Levels are independent facets: a cad_valid entry never passes a physically_validated obligation (a
     prototype gap, evidence.py:932-951)."""
