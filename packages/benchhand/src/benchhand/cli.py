@@ -27,14 +27,19 @@ def version() -> None:
 def record_migrate(
     hw: Annotated[Path, typer.Argument(help="The project's hw/ directory.")],
     apply: Annotated[bool, typer.Option("--apply", help="Write the changes; else print them.")] = False,
+    backup: Annotated[
+        bool, typer.Option("--backup", help="With --apply: copy hw/ to .benchhand/backups/ first.")
+    ] = False,
 ) -> None:
-    """Migrate a prototype record (record_version 2) to record version 3. A dry run unless --apply."""
+    """Migrate a prototype record (record_version 2) to record version 3. A dry run unless --apply, which
+    needs hw/ clean in git or --backup. Stop every other process that writes under hw/ first."""
     from benchhand_core.record.migrate import MigrationStatus, migrate
 
+    hw = hw.absolute()
     if hw.name != "hw":
         typer.echo(f"{hw}: expected the project's hw/ directory", err=True)
         raise typer.Exit(2)
-    result = migrate(hw.parent, apply=apply)
+    result = migrate(hw.parent, apply=apply, backup=backup)
     for change in result.changes:
         typer.echo(f"# {change.path}: {', '.join(change.rules)}")
         if not apply:
@@ -44,6 +49,9 @@ def record_migrate(
         typer.echo(f"{finding.severity.value} {finding.code} {where}: {finding.message}")
         if finding.action:
             typer.echo(f"  fix: {finding.action}")
-    typer.echo(f"{result.status.value}: {len(result.changes)} files")
-    if result.status == MigrationStatus.refused:
+    if result.recovery is not None:
+        typer.echo(f"to undo: {result.recovery}")
+    shown = f"{len(result.written)} of {len(result.changes)}" if apply else str(len(result.changes))
+    typer.echo(f"{result.status.value}: {shown} files")
+    if result.status in (MigrationStatus.refused, MigrationStatus.failed):
         raise typer.Exit(1)
