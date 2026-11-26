@@ -65,18 +65,31 @@ LAYOUT freeze, PARTS, DETAIL and ANALYSIS each approve a built version vN in thr
 stateDiagram-v2
   direction TB
   state "Build vN, fast checks 1 to 4" as building
-  state "Full check on the same vN<br/>fail-fast step 5, at L2 with the light review" as fullCheck
-  state "Human gate open" as humanGate
   state "PROVISIONAL<br/>gate decision, status provisional<br/>flow.stage moves to the next stage" as provisional
+  state checksFork <<fork>>
+  state "Full check on the same vN<br/>fail-fast step 5" as fullCheck
+  state "Light mechanical review<br/>cad-mech-reviewer, at L2 only" as mechReview
+  state "Light DFM review<br/>cad-dfm-reviewer, at L2 only" as dfmReview
+  state checksJoin <<join>>
+  state "Human gate open<br/>gate mode ask or chat" as humanGate
   state "APPROVED<br/>gate decision, status approved<br/>cites the provisional decision" as approved
   state "VOID<br/>gate decision, status void<br/>flow.stage back to this stage" as void
 
   [*] --> building
   building --> building: a fast check fails, fix and build a new version
   building --> provisional: every fast check passes
-  provisional --> fullCheck
-  fullCheck --> void: fails, or a MAJOR light-review finding
-  fullCheck --> humanGate: passes, and the previous stage's human gate passed
+  provisional --> checksFork
+  checksFork --> fullCheck
+  checksFork --> mechReview
+  checksFork --> dfmReview
+  fullCheck --> checksJoin: passes
+  mechReview --> checksJoin: returns
+  dfmReview --> checksJoin: returns
+  fullCheck --> void: fails
+  mechReview --> void: a MAJOR finding
+  dfmReview --> void: a MAJOR finding
+  checksJoin --> humanGate: all returned, the previous stage's human gate passed, mode ask or chat
+  checksJoin --> approved: mode auto, the previous stage's human gate passed, no question asked
   humanGate --> humanGate: empty, declined, cancelled or unanswered, no consent
   humanGate --> fullCheck: the user asks for a finer sweep on the same vN
   humanGate --> void: the user names a change
@@ -88,12 +101,18 @@ stateDiagram-v2
     CEL requires, plan section 5:
     version.fast_checks.all(c, c.status == "pass")
   end note
+  note right of checksJoin
+    At L2, PARTS, the full check counts as done
+    only after both light reviews have returned.
+    At the other stages only the full check runs.
+  end note
   note right of approved
     CEL requires, plan section 5:
     full_check.status == "pass"
     && prev_human_gate.approved
     && (policy.mode == "auto" || answer.present)
-    Gate modes ask, chat, auto: hw/policy.yaml
+    Gate modes ask, chat, auto: hw/policy.yaml.
+    Under auto the approval channel may be auto.
   end note
 
   classDef provisionalState fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#1b1b1b
@@ -149,7 +168,7 @@ stateDiagram-v2
   direction LR
   state "DESIGN freeze APPROVED<br/>flow.frozen: version, manifest_sha256,<br/>decision, evidence_sha256" as frozen
   state "Engineering change open<br/>flow.change: decision, baseline_version,<br/>affected_parts" as change
-  state "detail, affected parts only<br/>two gates, as L3" as ecoDetail
+  state "detail, affected parts and their dependents<br/>unaffected parts keep their evidence<br/>two gates, as L3" as ecoDetail
   state "analysis, affected cases only<br/>two gates, as L4" as ecoAnalysis
   state "New version, frozen again<br/>new flow.frozen anchor" as refreeze
   state "RELEASE gate" as releaseGate
@@ -179,7 +198,8 @@ stateDiagram-v2
 
 - White states are stages, named by the record contract's `stage` enum. Purple states are gates.
 - Blue is PROVISIONAL, teal is APPROVED and dark grey is VOID. These are the three statuses of a gate decision, `kind: gate`, in `hw/decisions/`.
-- **Open** (red, dotted): engineering change. The record contract has `flow.change`, and the prototype reopens affected parts as L3 and then affected cases as L4. Neither the plan nor an ADR says how `flow.yaml` represents it; the migrate service refuses frozen records until "the Phase 2 flow engine can record an engineering change". The plan's [Open questions](../design-plan.md#open-questions) don't list it.
+- **Gate mode auto.** The two-gate diagram shows the path for the modes ask and chat. Under auto, plan section 5's APPROVED guard holds without an answer, so no question is asked; `validate` accepts an approval through channel `auto` only under that mode (`record/rules/decisions.py`).
+- **Open** (red, dotted): engineering change. The record contract has `flow.change`, and the prototype reopens affected parts and their dependents as L3 and then affected cases as L4, keeping the evidence of unaffected parts. Neither the plan nor an ADR says how `flow.yaml` represents it; the migrate service refuses frozen records until "the Phase 2 flow engine can record an engineering change". The plan's [Open questions](../design-plan.md#open-questions) don't list it.
 - The VOID cascade example uses v4 and v5 for illustration.
 - In the prototype the statuses were MADR `proposed`, `accepted` and `rejected`. The record contract renames them `provisional`, `approved` and `void`.
 
@@ -187,8 +207,9 @@ stateDiagram-v2
 
 - Prototype `benchhand/benchhand` at `release.toml` `reference_commit` `412b5d9`:
   - [`skills/cad-flow/references/flow.md` "Stages, gates, and durable outputs"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#stages-gates-and-durable-outputs): the stage order, the stage enum and the gate per stage.
-  - [`skills/cad-flow/references/flow.md` "Gate control"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#gate-control): the single human gates, the three steps of a two-gate stage, the VOID causes and the cascade, and "no consent" on a cancelled or unanswered question.
-  - [`skills/cad-flow/references/flow.md` "Stage loop and recheck boundary"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#stage-loop-and-recheck-boundary): after the freeze, reopen only affected parts, then build a new version and freeze it again.
+  - [`skills/cad-flow/references/flow.md` "Gate control"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#gate-control): the single human gates, the three steps of a two-gate stage, the L2 light review whose full check "counts as done only after both reviews have returned", the VOID causes and the cascade, and "no consent" on a cancelled or unanswered question.
+  - [`skills/cad-flow/references/flow.md` "Delegation"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#delegation): the parts light review, `cad-mech-reviewer` and `cad-dfm-reviewer` in parallel.
+  - [`skills/cad-flow/references/flow.md` "Stage loop and recheck boundary"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#stage-loop-and-recheck-boundary): after the freeze, reopen only affected parts and dependents, keep unaffected parts and their evidence, then build a new version and freeze it again.
   - [`skills/cad-flow/SKILL.md` "Workflow" and "Delegation"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/SKILL.md): the stage list in step 3, and the ECO row ("As L3, then as L4").
 - `docs/design-plan.md`:
   - [Context](../design-plan.md#context): `flow.md` "Gate control" defines PROVISIONAL, APPROVED and VOID.
@@ -201,5 +222,5 @@ stateDiagram-v2
   - [Verification](../design-plan.md#verification), "Flow tests".
 - `docs/adr/`: [0003](../adr/0003-gates-guide.md) (gates guide; modes ask, chat, auto) and [0014](../adr/0014-flow-rules-cel.md) (the flow is data, the rules are CEL), each under "Decision".
 - `docs/contract/record-migration.md`: [Decision record format](../contract/record-migration.md#decision-record-format): `kind: gate` with `approved`, `provisional` or `void`, and the prototype's MADR statuses.
-- Contracts on `main`: `contracts/record/common.tsp` (`stage`), `contracts/record/product.tsp` (`flow.frozen`, `flow.change`), `contracts/record/decision.tsp` (gate statuses).
+- Contracts on `main`: `contracts/record/common.tsp` (`stage`), `contracts/record/product.tsp` (`flow.frozen`, `flow.change`), `contracts/record/decision.tsp` (gate statuses). Code on `main`: `packages/benchhand-core/src/benchhand_core/record/rules/decisions.py` (`_gate_approvals`: channel `auto` only under the auto mode).
 - `docs/contract/record-migration.md`: [Dry run and apply](../contract/record-migration.md#dry-run-and-apply), its "Frozen records" paragraph.

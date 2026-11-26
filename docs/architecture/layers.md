@@ -9,14 +9,15 @@ The last section lists where the plan and the code differ.
 flowchart TB
   harness["Harness: Claude Code, Claude Desktop, Codex CLI and app, OpenCode, Kiro, Pi, any MCP client<br/>bootstrap skill and server instructions: call flow.guide"]:::ext
 
-  subgraph server["benchhand MCP server: one process per harness session, started from the MCP config"]
+  subgraph server["benchhand MCP server<br/>stdio: the host starts one process per session; --http: one shared server"]
     surface["MCP surface: tools, resources, prompts, skills-over-MCP, Apps, tasks and jobs<br/>Phase 3, Apps and tasks Phase 5, skills-over-MCP Phase 6"]:::planned
     interaction["Interaction layer: picks App, chat, image or URL per client capability<br/>Phase 3 and Phase 5"]:::planned
-    preview["Preview host, loopback HTTP<br/>viewer, concept, gate page, flow view, prototype pages<br/>Phase 5"]:::planned
+    preview["Preview host, a separate loopback HTTP listener<br/>viewer, concept, gate page, flow view, prototype pages<br/>Phase 5"]:::planned
     subgraph core["core"]
-      flowEngine["Flow engine<br/>flow.yaml graph and state machine, CEL guards, decision records, policy<br/>Phase 2"]:::planned
+      flowEngine["Flow engine<br/>flow.yaml graph and state machine, CEL guards on transitions, decision records, policy<br/>Phase 2"]:::planned
       guide["Guide service<br/>per-stage and per-role instructions served by flow.guide<br/>Phase 2 and Phase 3"]:::planned
-      record["Record service<br/>schemas, typed record ops, validate, migrate, evidence, release<br/>validate, migrate and evidence on main, the rest later"]:::impl
+      record["Record service on main<br/>published schemas, typed record reads and writes,<br/>validate, migrate, evidence"]:::impl
+      recordLater["Record service, later<br/>record.* MCP tools Phase 3, versions Phase 2, release Phase 4"]:::planned
       jobs["Job service<br/>long jobs, process groups, progress, cancellation<br/>on main"]:::impl
       middleware["Middleware chain<br/>validation, policy, audit, provenance, cache, telemetry<br/>open: no phase"]:::open
       providerHost["Provider host<br/>JSON-RPC 2.0 plugin protocol, lifecycle, timeouts<br/>open: no phase"]:::open
@@ -25,10 +26,12 @@ flowchart TB
 
   providers["Providers<br/>kernel-cadquery, kernel-build123d, freecad, solver-calculix, collision-fcl,<br/>render-chromium, checks-process, store-fs: Phase 4<br/>viewer-ocp, policy-default: open, no phase"]:::planned
 
-  harness -.->|"stdio by default, streamable HTTP on loopback with --http"| surface
+  harness -.->|"stdio, the default: the host starts and stops the process"| surface
+  harness -.->|"--http: a loopback MCP listener on a shared server"| surface
   surface -.-> interaction
   surface -.-> preview
   surface -.-> core
+  recordLater -.-> record
   providerHost -.->|"JSON-RPC over stdio, one subprocess per provider, each in its own uv env"| providers
 
   style server fill:#fafafa,stroke:#9e9e9e,color:#1b1b1b
@@ -110,7 +113,9 @@ flowchart TB
     direction TB
     probe["tools/probe/<br/>dev-only capability probe"]:::impl
     toolsGen["tools/gen/, tools/equiv/<br/>contracts generator, TypeSpec equivalence evidence"]:::impl
-    docsDir["docs/<br/>adr/, contract/, phases/, architecture/, client-support.md"]:::impl
+    docsDir["docs/<br/>adr/, contract/, phases/, client-support.md"]:::impl
+    %% in-review: diagrams
+    archDir["docs/architecture/<br/>these pages, in review on this branch"]:::review
     reference["reference/<br/>prototype tests, examples, agents, harness"]:::impl
     examples["examples/lamp-arm/<br/>golden fixture, on main only under reference/"]:::planned
   end
@@ -132,7 +137,8 @@ flowchart TB
 ## Legend
 
 - Styles as in the [legend](README.md#legend). Solid arrows exist on `main`, and dashed arrows are planned.
-- The record service is solid because `store`, `validate`, `migrate` and `evidence` are on `main`. Versions and release come in Phases 2 and 4 ([containers.md](containers.md#components-of-benchhand-core)).
+- The record service on `main` holds the published schemas, typed reads and writes (`store.py`), `validate`, `migrate` and `evidence`. The `record.*` MCP tools that expose those reads and writes come in Phase 3, versions in Phase 2 and release in Phase 4 ([containers.md](containers.md#components-of-benchhand-core)).
+- `docs/architecture/` is in review: it first appears on this branch, `pi-subagents/task-2-191ee0d-d83e-s0-t0`.
 - Plan section 1 also lists elicitation on the MCP surface, and forms in the interaction layer. ADR-0018 drops form elicitation from v1, so neither is drawn.
 - **Open: no phase.** The middleware chain, the provider host, `viewer-ocp` and `policy-default` have no phase in the plan's Steps. **Open: the SDK's environment.** The plan says `model.py` imports `benchhand-sdk`, but the kernel manifest example doesn't list it among its dependencies. The plan's [Open questions](../design-plan.md#open-questions) list neither item.
 
@@ -145,8 +151,10 @@ flowchart TB
 | Core to provider runtime | Section 2 lists the packages and states no edges between them | `benchhand-core` declares `benchhand-provider`, and doesn't import it |
 | Declared, unused | Not stated | `benchhand-provider` declares `benchhand-contracts`, and doesn't import it yet |
 | Phase 1 contracts | Phase 1: record, envelope, provider protocol, flow, policy | No envelope or flow contract on `main`; `docs/phases/phase-0-1.md` doesn't list them as not built |
-| Phase 1 services | Phase 1: migrate and evidence | Both are on `main`. `docs/phases/phase-0-1.md` still lists both under "Not built": migrate as "built on a branch, not yet reviewed", and evidence as "Nothing writes evidence or checks what it cites" |
-| TypeSpec timing | Phase 2: the record additions are "made with the move to TypeSpec" | ADR-0017: the move to TypeSpec happened in Phase 1 |
+| Envelope phase | Phase 1 writes the envelope contract; Phase 2 lists "the result envelope and `next_actions`" | Two phases name the envelope; neither is on `main` |
+| Annotation-set phase | Phase 2 lists the annotation set as a record contract addition; Phase 4 lists "the annotation-set contract" | Two phases name it; neither is on `main` |
+| Phase 1 services | Phase 1: migrate and evidence | Both are on `main`. `docs/phases/phase-0-1.md` still lists both under "Not built": migrate as "built on a branch, not yet reviewed", and evidence as "Nothing writes evidence or checks what it cites". The evidence service now checks what evidence cites, and still writes nothing: `evidence/reader.py` only reads |
+| TypeSpec timing | Phase 2: the record additions are "made with the move to TypeSpec" | ADR-0017: the move to TypeSpec happened in Phase 1. `docs/phases/phase-0-1.md` still says "The TypeSpec migration (ADR-0017) is in progress on a branch" |
 | Forms | Section 1 lists elicitation and forms | ADR-0018: no form elicitation in v1; section 11 was updated, section 1 wasn't |
 | Long calls | Section 11 and provider-protocol section 8: about 50 s | ADR-0018: about 30 s |
 | CLI | D1 and section 7: `mcp`, `serve`, `install`, `doctor`, `setup`, `policy`, `debug call` | `main` has `version` and `record migrate`, and D1 lists neither |
@@ -164,4 +172,5 @@ flowchart TB
 - `docs/adr/`: [0006](../adr/0006-providers-everywhere.md), [0010](../adr/0010-stdio-transport.md), [0013](../adr/0013-provider-protocol.md), [0015](../adr/0015-temporary-repo.md), [0016](../adr/0016-dev-only-probe.md), [0017](../adr/0017-contracts.md) and [0018](../adr/0018-baseline-and-no-forms.md), each under "Decision".
 - `docs/contract/provider-protocol.md`: [7. Provider manifest](../contract/provider-protocol.md#7-provider-manifest): the example's `dependencies`.
 - `docs/phases/phase-0-1.md`: [What was built](../phases/phase-0-1.md#what-was-built) and [Not built, which the plan puts in Phase 1](../phases/phase-0-1.md#not-built-which-the-plan-puts-in-phase-1).
-- Code on `main`: `packages/*/pyproject.toml` (`dependencies`, `requires-python`, `[tool.uv.sources]`), the root `pyproject.toml` (`[tool.uv.workspace] members`), the imports under `packages/*/src/`, `release.toml`, and the top-level directories.
+- Code on `main`: `packages/*/pyproject.toml` (`dependencies`, `requires-python`, `[tool.uv.sources]`), the root `pyproject.toml` (`[tool.uv.workspace] members`), the imports under `packages/*/src/`, `packages/benchhand-core/src/benchhand_core/record/store.py` (typed reads and writes), `record/evidence/reader.py` (read-only), `release.toml`, and the top-level directories.
+- `docs/design-plan.md` [3. Transport](../design-plan.md#3-transport-stdio-vs-localhost-http-d10): the lifecycle of each transport.

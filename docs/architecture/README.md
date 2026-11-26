@@ -24,7 +24,7 @@ Every hand-written page uses these styles. The status is relative to `main` at `
 ```mermaid
 flowchart LR
   impl["Implemented on main"]:::impl
-  review["In review, Phase 1<br/>built on an unmerged branch"]:::review
+  review["In review<br/>built on an unmerged branch"]:::review
   planned["Planned, Phase N<br/>in the plan's Steps, not built"]:::planned
   open["Open<br/>undecided or without a phase"]:::open
   ext["Outside benchhand"]:::ext
@@ -41,10 +41,10 @@ flowchart LR
 ```
 
 - **Implemented** (solid green): the code exists on `main`.
-- **In review, Phase 1** (orange, dashed): built on an unmerged branch, which the page names. The Mermaid source marks each such element with a `%% in-review: <lane>` comment. At `71c1a54` no element is in review.
+- **In review** (orange, dashed): built on an unmerged branch, which the page names. The Mermaid source marks each such element with a `%% in-review: <lane>` comment. At `71c1a54` only `docs/architecture/` itself is in review, in [layers.md](layers.md#repository-layout).
 - **Planned, Phase N** (grey, dashed): the plan places it in phase N of its Steps, and it isn't built.
 - **Open** (red, dotted): the plan or an ADR names it, but its phase, its shape or a host result is undecided. The label says what is open. Where the plan's [Open questions](../design-plan.md#open-questions) list the item, the page links it.
-- Sequence diagrams can't dash a participant. They put the status in the participant's name, and shade in-review steps orange.
+- Sequence diagrams can't dash a participant. They put the status in the participant's name, shade in-review steps orange, and shade green a run of steps on `main` inside a sequence that `main` doesn't run yet.
 
 ## Sources
 

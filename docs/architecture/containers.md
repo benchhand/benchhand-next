@@ -10,10 +10,10 @@ flowchart LR
   host["Agent host"]:::ext
   person["Designer, in a web browser"]:::person
 
-  subgraph process["benchhand mcp: one process per harness session, the runner"]
-    surface["MCP surface<br/>tools, resources, prompts<br/>stdio by default, --http on loopback as an option<br/>Phase 3"]:::planned
+  subgraph process["benchhand mcp: the runner, one process<br/>stdio: the host starts one per session; --http: one shared server"]
+    surface["MCP surface<br/>tools, resources, prompts<br/>MCP over stdio by default, or a loopback MCP HTTP listener with --http<br/>Phase 3"]:::planned
     interaction["Interaction layer<br/>chat fallbacks Phase 3<br/>App shells, image results, tasks adapter behind a flag Phase 5"]:::planned
-    preview["Preview host<br/>loopback HTTP: viewer, concept, gallery, gate card, flow view, prototype pages<br/>Phase 5"]:::planned
+    preview["Preview host<br/>a separate loopback HTTP listener: viewer, concept, gallery, gate card, flow view, prototype pages<br/>Phase 5"]:::planned
     core["benchhand-core<br/>record and job services on main<br/>see Components"]:::impl
     contractsPkg["benchhand-contracts<br/>generated pydantic models and validators"]:::impl
   end
@@ -71,13 +71,13 @@ flowchart TB
   surface["MCP surface, Phase 3"]:::planned
 
   subgraph core["benchhand-core, no CAD dependencies"]
-    flowEngine["Flow engine<br/>flow.yaml graph and state machine, CEL guards,<br/>decision records, VOID cascade, policy<br/>Phase 2"]:::planned
+    flowEngine["Flow engine<br/>flow.yaml graph and state machine; CEL guards on the edges<br/>and CEL requires on the gates, at transitions only;<br/>decision records, VOID cascade, policy<br/>Phase 2"]:::planned
     guide["Guide service<br/>flow/guides per stage and role: Phase 2<br/>flow.guide tool: Phase 3"]:::planned
     middleware["Middleware chain<br/>validation, policy, audit, provenance, cache, telemetry<br/>open: no phase in Steps"]:::open
     providerHost["Provider host<br/>lifecycle, timeouts, cancel, artifact checks<br/>open: no phase in Steps; Phase 4 builds the runtime it speaks to"]:::open
 
     subgraph record["Record service: benchhand_core.record"]
-      store["store: read_record, load_record,<br/>save_document, save_decision, save_record"]:::impl
+      store["store: read_record, load_record, read_document,<br/>save_document, save_decision, save_record<br/>typed YAML, CSV and decision documents"]:::impl
       validate["validate(root)<br/>rules: bom, interfaces, assembly, drawing, decisions, verification"]:::impl
       migrate["migrate: migrate(root, apply, resume), undo(backup), RULES"]:::impl
       evidence["evidence: read_built_version, assess, acceptance_digest"]:::impl
@@ -96,9 +96,10 @@ flowchart TB
   end
 
   contracts["benchhand-contracts<br/>validate, violations, models"]:::impl
+  hwArtifacts["Artifact placement in hw/<br/>open: the host verifies and moves artifacts; no source names the writer"]:::open
 
   surface -.-> middleware
-  middleware -.->|"guard"| flowEngine
+  middleware -.-> flowEngine
   middleware -.-> providerHost
   surface -.-> guide
   guide -.->|"current stage"| flowEngine
@@ -107,15 +108,16 @@ flowchart TB
   validate -->|"reads the record"| store
   store -->|"checks every document against its contract"| contracts
   migrate -->|"validates a migrated copy"| validate
-  evidence -->|"reads the record"| store
-  versions -.-> evidence
+  evidence -->|"read_document: the built version's snapshot documents<br/>the caller supplies the current record"| store
+  versions -.-|"open: how versions and evidence connect"| evidence
   release -.->|"acceptance digest against the freeze"| evidence
   providerHost -.->|"$/progress to report_progress"| jobService
-  providerHost -.->|"accepted artifacts"| store
+  providerHost -.-|"open: where accepted artifacts land in hw/"| hwArtifacts
   providerHost -.->|"validates every message"| contracts
   jobService --> supervisor
   jobService --> runStore
-  runStore -->|"JobRecord, JobHandle"| contracts
+  jobService -->|"builds JobHandle from a JobRecord"| contracts
+  runStore -->|"JobRecord; validates JobId"| contracts
 
   style core fill:#fafafa,stroke:#9e9e9e,color:#1b1b1b
   style record fill:#f5f5f5,stroke:#9e9e9e,color:#1b1b1b
@@ -133,7 +135,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  tsp["contracts/*.tsp<br/>TypeSpec, the only source of shapes<br/>record 17, jobs, provider protocol and manifest, common finding"]:::impl
+  tsp["contracts/*.tsp<br/>TypeSpec, the only source of shapes<br/>record: 18 documents and 2 libraries; jobs, provider protocol and manifest, common finding"]:::impl
   missing["Result envelope and flow contracts<br/>listed for Phase 1, not on main; Phase 2 uses them"]:::planned
   later["MCP tool inputs and outputs, benchhand.toml, rule lists,<br/>preview-host HTTP API, App postMessage<br/>with their users, Phases 2 to 5"]:::planned
   bundle["tsp compile --warn-as-error<br/>one JSON Schema bundle, unpublished"]:::impl
@@ -176,6 +178,8 @@ flowchart LR
 - Styles as in the [legend](README.md#legend). Solid arrows exist on `main`, and dashed arrows are planned.
 - **Open: no phase in Steps.** The plan names the middleware chain, the provider host, `viewer-ocp`, `policy-default`, and the `recheck` and `work` modules, but no phase of its Steps delivers them. The plan's [Open questions](../design-plan.md#open-questions) don't list them.
 - **Open: OpenAPI and Zod.** ADR-0017 adds them with the first HTTP or Zod consumer, which no phase names yet.
+- **Open: the integration points.** Plan section 5 puts CEL on transitions only: guards on the edges, `requires` on the gates. No source says a guard runs on every tool call. The provider host verifies artifacts and moves them into `hw/`, but no source routes them through the typed record store, which reads and writes YAML, CSV and decision documents only. No source names a call between record versions and the evidence service.
+- The record counts come from the generated [domain model](../contract/generated/domain-model.md#overview-the-record-documents): its `<<document>>` and `<<library>>` classes.
 - The `benchhand` CLI node is solid because the CLI exists; on `main` it has `version` and `record migrate`. The provider and SDK packages exist on `main` as empty stubs, so their nodes stay dashed until Phase 4.
 
 ## Sources
@@ -184,7 +188,8 @@ flowchart LR
   - [Decisions](../design-plan.md#decisions), D1 (CLI), D4 (runner), D6 (providers), D10 (transport), D13 (provider protocol), D17 (contracts).
   - [1. Layered architecture](../design-plan.md#1-layered-architecture): the MCP surface, interaction layer, preview host, the core services and the provider list.
   - [2. Repository and package layout](../design-plan.md#2-repository-and-package-layout-temporary-repo-benchhandbenchhand-next): the packages, `ui/` and `providers/`.
-  - [5. Flow engine and rules (D14)](../design-plan.md#5-flow-engine-and-rules-d14): the interpreter writes `flow.stage` and `hw/decisions/`.
+  - [3. Transport: stdio vs localhost HTTP (D10)](../design-plan.md#3-transport-stdio-vs-localhost-http-d10): the lifecycle of each transport, and the preview host as a separate loopback listener.
+  - [5. Flow engine and rules (D14)](../design-plan.md#5-flow-engine-and-rules-d14): the edges with CEL guards and the gates with CEL `requires`; the interpreter writes `flow.stage` and `hw/decisions/`.
   - [6. Provider protocol (D13)](../design-plan.md#6-provider-protocol-d13): the hook families.
   - [6a. Contracts: generated and enforced (D17)](../design-plan.md#6a-contracts-generated-and-enforced-d17): the contract list, the generated outputs and runtime validation.
   - [7. CLI (D1)](../design-plan.md#7-cli-d1), [11. Adaptive interaction layer (D8)](../design-plan.md#11-adaptive-interaction-layer-d8) and [12. Build API (D7)](../design-plan.md#12-build-api-d7): typed record ops.
@@ -194,5 +199,5 @@ flowchart LR
 - `docs/contract/provider-protocol.md`: [1. Transport](../contract/provider-protocol.md#1-transport), [4. Hooks](../contract/provider-protocol.md#4-hooks), [5. Notifications from the provider](../contract/provider-protocol.md#5-notifications-from-the-provider) and [6. Artifacts and paths](../contract/provider-protocol.md#6-artifacts-and-paths).
 - `docs/contract/versioning.md`: [Generated outputs](../contract/versioning.md#generated-outputs) and [Drift check](../contract/versioning.md#drift-check).
 - `docs/phases/phase-0-1.md`: [What was built](../phases/phase-0-1.md#what-was-built) and [Not built, which the plan puts in Phase 1](../phases/phase-0-1.md#not-built-which-the-plan-puts-in-phase-1).
-- Code on `main`: `packages/benchhand-core/src/benchhand_core/record/` (`store.py`, `validate.py`, `rules/`, `migrate/`, `evidence/`), `packages/benchhand-core/src/benchhand_core/jobs/` (`service.py`, `supervisor.py`, `process.py`, `store.py`), `packages/benchhand/src/benchhand/cli.py`, `contracts/`, `tools/gen/contracts_gen/`, `ui/shared/contracts/`.
+- Code on `main`: `packages/benchhand-core/src/benchhand_core/record/` (`store.py`, `validate.py`, `rules/`, `migrate/`, `evidence/`; `evidence/reader.py` reads snapshot documents with `read_document`), `packages/benchhand-core/src/benchhand_core/jobs/` (`service.py` `handle_of`, `supervisor.py`, `process.py`, `store.py` `RecordStore`), `packages/benchhand/src/benchhand/cli.py`, `contracts/`, `tools/gen/contracts_gen/`, `ui/shared/contracts/`.
 - `docs/contract/record-migration.md`: [Dry run and apply](../contract/record-migration.md#dry-run-and-apply).
