@@ -205,7 +205,16 @@ def test_every_document_root_and_every_union_of_objects_is_a_class() -> None:
     contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
     by_stem = {contract.stem: contract for contract in contracts}
     owned = _owned_classes(render_domain_model(contracts))
-    roots = [c.stem for c in contracts if "properties" in c.schema]
+    roots = [
+        c.stem
+        for c in contracts
+        if "properties" in c.schema
+        or (
+            len(branches := _union_branches(c.schema)) > 1
+            and all(_is_object(by_stem, c.stem, b) for b in branches)
+        )
+    ]
+    assert {"jobs/job", "provider/protocol"} <= set(roots)
     unions = [
         class_id(contract.stem, name)
         for contract in contracts
