@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from benchhand_contracts.models.record.common_schema import Obligation
 
-from benchhand_core.record.evidence.built import ChangedSinceBuild, NotComputed, Packet
+from benchhand_core.record.evidence.built import BuiltVersion, ChangedSinceBuild, NotComputed, Packet
 from benchhand_core.record.evidence.fingerprints import RECORD_FAMILIES
 from benchhand_core.record.evidence.results import PHYSICAL
 from benchhand_core.record.evidence.view import JsonMap, items, mapping
@@ -75,6 +75,11 @@ def packet_problems(data: JsonMap, expected: Mapping[str, Obligation]) -> list[s
     return problems
 
 
+GUIDELINE_CATALOG_MISSING = (
+    "guideline.catalog_missing: the build resolved shipped guideline sets, but no shipped catalog is read now"
+)
+
+
 @dataclass
 class OutcomeReading:
     """What a packet's outcomes added: candidates per obligation id, and findings."""
@@ -84,7 +89,7 @@ class OutcomeReading:
 
 
 def _staleness(
-    ident: str, result: str, staleness: ChangedSinceBuild | NotComputed, stale: Mapping
+    ident: str, result: str, staleness: ChangedSinceBuild | NotComputed, stale: Mapping, catalog_missing: bool
 ) -> Candidate | None:
     """A pass, fail or not_applicable whose inputs changed since the build is stale; one whose staleness was
     not computed counts as unknown (evidence.py:782-785, and the supervisor's not_computed rule)."""
@@ -93,7 +98,10 @@ def _staleness(
     if isinstance(staleness, NotComputed):
         return ("unknown", "", f"not_computed: build staleness is not computed ({staleness.reason})")
     if ident in stale:
-        return ("stale", "", "its inputs changed since the version was built: " + ", ".join(stale[ident]))
+        reason = "its inputs changed since the version was built: " + ", ".join(stale[ident])
+        if catalog_missing and "source" in stale[ident]:
+            reason = f"{GUIDELINE_CATALOG_MISSING}; {reason}"
+        return ("stale", "", reason)
     return None
 
 
@@ -131,7 +139,7 @@ def _outcome(
 def read_outcomes(
     packet: Packet,
     expected: Mapping[str, Obligation],
-    staleness: ChangedSinceBuild | NotComputed,
+    built: BuiltVersion,
     stale: Mapping[str, tuple[str, ...]],
     reading: OutcomeReading,
 ) -> None:
@@ -142,7 +150,7 @@ def read_outcomes(
         result = _outcome(outcome, expected.get(ident), packet, reading)
         if result is None:
             continue
-        found = _staleness(ident, result, staleness, stale)
+        found = _staleness(ident, result, built.staleness, stale, built.guideline_catalog_missing)
         if found is not None:
             reading.candidates[ident].append((found[0], packet.bundle, found[2]))
         elif result == "not_assessed":

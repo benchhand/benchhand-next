@@ -14,6 +14,7 @@ import json
 import os
 import posixpath
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,9 @@ from benchhand_core.record.evidence.digest import (
     cited_bundles,
     cited_paths,
 )
+from benchhand_core.record.evidence.guideline_files import Layer, holds_shipped_copies
+from benchhand_core.record.evidence.guideline_files import discover as discover_guidelines
+from benchhand_core.record.evidence.guidelines import GuidelineCatalog, with_guideline_digests
 from benchhand_core.record.evidence.path_judge import judge_all
 from benchhand_core.record.evidence.paths import PathQuery, disposition_queries, entry_queries
 from benchhand_core.record.evidence.view import RecordView, view
@@ -251,18 +255,31 @@ def version_geometry(manifest: dict[str, Any]) -> dict[str, str | None]:
     return {pn: entry.get("source_sha256") for pn, entry in (manifest.get("parts") or {}).items()}
 
 
-def _staleness(
-    snapshot: Path, current: Record, built_geometry: dict[str, str | None], geometry: dict[str, str | None]
-) -> ChangedSinceBuild | NotComputed:
-    """What changed between the built record and the current one (evidence.py:1695-1698)."""
+@dataclass(frozen=True)
+class _Sides:
+    """The built and the current record's geometry and guideline catalogs, which staleness compares."""
+
+    built_geometry: dict[str, str | None]
+    geometry: dict[str, str | None]
+    built_guidelines: GuidelineCatalog
+    guidelines: GuidelineCatalog
+
+
+def _staleness(snapshot: Path, current: Record, sides: _Sides) -> ChangedSinceBuild | NotComputed:
+    """What changed between the built record and the current one (evidence.py:1695-1698), guideline sets
+    included (manufacturing_intent.py:1235 reads a snapshot's own copies only)."""
     if not snapshot.is_dir():
         return NotComputed(f"the version has no record snapshot at {snapshot}")
     try:
         built = read_snapshot(snapshot, current)
     except RecordError as error:
         return NotComputed(f"the record snapshot does not read: {error.path}: {error.message}")
-    before = fp.subject_fingerprints(view(built), inventory(built.assembly, built.parts)[0], built_geometry)
-    after = fp.subject_fingerprints(view(current), inventory(current.assembly, current.parts)[0], geometry)
+    built_view = with_guideline_digests(view(built), sides.built_guidelines)
+    current_view = with_guideline_digests(view(current), sides.guidelines)
+    placed_before = inventory(built.assembly, built.parts)[0]
+    placed_now = inventory(current.assembly, current.parts)[0]
+    before = fp.subject_fingerprints(built_view, placed_before, sides.built_geometry)
+    after = fp.subject_fingerprints(current_view, placed_now, sides.geometry)
     return ChangedSinceBuild(fp.changed_domains(before, after))
 
 
@@ -307,9 +324,17 @@ def ledger_queries(record: RecordView) -> set[PathQuery]:
     return found
 
 
-def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion:
+def read_built_version(
+    root: Path, record: Record, version: str, *, shipped_guidelines: Path | None
+) -> BuiltVersion:
     """What the evidence of `record` (the current record of the project at `root`) reads about built
-    `version`. BuiltVersionError when it is not built or its directory fails its seal."""
+    `version`. BuiltVersionError when it is not built or its directory fails its seal.
+
+    `shipped_guidelines` is the directory of the shipped guideline sets the project's own sets override;
+    None reads the project's sets only, so a build that resolved shipped sets reads as changed (stale, with
+    guideline.catalog_missing), never as unchanged. TODO: the shipped sets become a benchhand package asset
+    when the guideline catalog is ported (docs/design-plan.md, open items); until then the caller names
+    the directory."""
     hw = root / documents.HW
     folder = hw / "versions" / version
     link = linked_on_the_way(root, folder) if folder.exists() or folder.is_symlink() else None
@@ -337,14 +362,26 @@ def read_built_version(root: Path, record: Record, version: str) -> BuiltVersion
     }
     bundles = {path: bundle_problems(root, path) for path in cited_bundles(view(record))}
     verdicts = judge_all(root, ledger_queries(view(record)))
+    layers = [Layer(root / documents.GUIDELINES_DIR)]
+    layers += [Layer(shipped_guidelines, shipped=True)] if shipped_guidelines is not None else []
+    guidelines = discover_guidelines(layers)
+    snapshot_guidelines = folder / "record" / documents.GUIDELINES_DIR.removeprefix(f"{documents.HW}/")
+    sides = _Sides(
+        version_geometry(manifest),
+        geometry,
+        discover_guidelines([Layer(snapshot_guidelines, copies=True)]),
+        guidelines,
+    )
     return BuiltVersion(
         label=version,
         manifest_sha256=manifest_sha,
-        staleness=_staleness(folder / "record", record, version_geometry(manifest), geometry),
+        staleness=_staleness(folder / "record", record, sides),
         packets=packets,
         packet_findings=packet_findings,
         current_geometry=geometry,
         files=files,
         bundle_seals=bundles,
         path_verdicts=verdicts,
+        guidelines=guidelines,
+        guideline_catalog_missing=holds_shipped_copies(snapshot_guidelines) and not guidelines.has_shipped,
     )

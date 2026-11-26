@@ -8,6 +8,7 @@ prototype test (reference/skills/cad-record/tests/test_evidence.py) it is ported
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
@@ -37,9 +38,9 @@ APPROVED = "DR-005"
 EVIDENCE = Path("hw/manufacturing/evidence.yaml")
 
 
-def run(root: Path, today: date = TODAY) -> dict[str, Any]:
+def run(root: Path, today: date = TODAY, shipped: Path | None = None) -> dict[str, Any]:
     record = load_record(root)
-    built = read_built_version(root, record, "v1")
+    built = read_built_version(root, record, "v1", shipped_guidelines=shipped)
     return assess(record, built, today).model_dump(mode="json", by_alias=True, exclude_none=True)
 
 
@@ -87,7 +88,7 @@ def packet(
 
 def current_fingerprints(root: Path, subject: dict[str, Any]) -> dict[str, str]:
     record = load_record(root)
-    built = read_built_version(root, record, "v1")
+    built = read_built_version(root, record, "v1", shipped_guidelines=None)
     placed, _ = inventory(record.assembly, record.parts)
     return fp.fingerprints(view(record), placed, subject, built.current_geometry)
 
@@ -274,7 +275,7 @@ def test_an_unsealed_version_is_refused(built: tuple[Path, str]) -> None:
     root, _ = built
     (root / "hw/versions/v1/record/product.yaml").write_text("changed\n", encoding="utf-8")
     with pytest.raises(BuiltVersionError, match="changed after it was sealed"):
-        read_built_version(root, load_record(root), "v1")
+        read_built_version(root, load_record(root), "v1", shipped_guidelines=None)
 
 
 def test_an_outcome_whose_inputs_changed_since_the_build_is_stale(
@@ -299,7 +300,9 @@ def test_uncomputed_build_staleness_never_counts_as_pass(
     root, version_sha = built
     write_packet(root, "cad", packet(root, {READBACK: "pass"}), version_sha)
     record = load_record(root)
-    built_version = replace(read_built_version(root, record, "v1"), staleness=NotComputed("TST"))
+    built_version = replace(
+        read_built_version(root, record, "v1", shipped_guidelines=None), staleness=NotComputed("TST")
+    )
     result = assess(record, built_version, TODAY).model_dump(mode="json", exclude_none=True)
     assert result["build_staleness"] == "not_computed"
     assert statuses(result)[READBACK]["result"] == "unknown"
@@ -312,7 +315,7 @@ def test_a_snapshot_that_does_not_read_leaves_staleness_not_computed(built: tupl
     root, _ = built
     (root / "hw/versions/v1/record/product.yaml").write_text("record_version: 2\n", encoding="utf-8")
     seal(root / "hw/versions/v1", version="v1")
-    built_version = read_built_version(root, load_record(root), "v1")
+    built_version = read_built_version(root, load_record(root), "v1", shipped_guidelines=None)
     assert isinstance(built_version.staleness, NotComputed)
 
 
@@ -344,7 +347,7 @@ def test_a_linked_version_root_is_refused(built: tuple[Path, str], tmp_path: Pat
     versions.rename(elsewhere)
     versions.symlink_to(elsewhere, target_is_directory=True)
     with pytest.raises(BuiltVersionError, match="hw/versions is a symbolic link"):
-        read_built_version(root, load_record(root), "v1")
+        read_built_version(root, load_record(root), "v1", shipped_guidelines=None)
 
 
 def test_a_bundle_without_its_result_is_packet_invalid(
@@ -387,6 +390,62 @@ def test_a_cited_bundle_is_verified_in_full(built: tuple[Path, str]) -> None:
         result = run(root)
         assert statuses(result)[READBACK]["result"] == "stale", change
         assert "evidence.bundle_seal" in codes(result), change
+
+
+# Fingerprints: guideline sets and the model frame
+
+SHIPPED = Path(__file__).parents[5] / "reference/skills/cad-record/assets/manufacturing/guidelines"
+MOUNTING = "purchase.mounting@LMP-0011/buy"
+
+
+def shipped_copy(tmp_path: Path) -> Path:
+    shipped = tmp_path / "shipped"
+    shutil.copytree(SHIPPED, shipped)
+    return shipped
+
+
+def test_a_changed_guideline_set_makes_the_evidence_stale(
+    lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """impact.py:343-351: the `source` fingerprint holds every guideline set a part's capability profile
+    resolves through. With the build otherwise unchanged, a changed set makes the route outcome stale."""
+    shipped = shipped_copy(tmp_path)
+    version_sha = build(lamp_arm, shipped=shipped)
+    write_packet(lamp_arm, "process", packet(lamp_arm, {ROUTE: "pass"}), version_sha)
+    assert statuses(run(lamp_arm, shipped=shipped))[ROUTE]["result"] == "pass"
+    generic = shipped / "fdm.generic.yaml"
+    generic.write_text(generic.read_text(encoding="utf-8") + "\n# revised\n", encoding="utf-8")
+    found = statuses(run(lamp_arm, shipped=shipped))[ROUTE]
+    assert found["result"] == "stale"
+    assert "source" in found["reasons"][0]
+
+
+def test_a_build_whose_shipped_sets_are_not_read_now_is_stale(
+    lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """A build that copied shipped sets, read without a shipped catalog, is stale with
+    guideline.catalog_missing, never unchanged."""
+    version_sha = build(lamp_arm, shipped=shipped_copy(tmp_path))
+    write_packet(lamp_arm, "process", packet(lamp_arm, {ROUTE: "pass"}), version_sha)
+    found = statuses(run(lamp_arm, shipped=None))[ROUTE]
+    assert found["result"] == "stale"
+    assert found["reasons"][0].startswith("guideline.catalog_missing:")
+
+
+def test_a_changed_model_frame_of_a_bought_part_makes_the_evidence_stale(
+    built: tuple[Path, str], write_packet: WritePacket
+) -> None:
+    """impact.py:240-267, 357-369: a bought part's `occurrences` domain holds its model_frame, which
+    purchase.* reads. With the build otherwise unchanged, a changed frame makes the outcome stale."""
+    root, version_sha = built
+    write_packet(root, "purchase", packet(root, {MOUNTING: "pass"}), version_sha)
+    assert statuses(run(root))[MOUNTING]["result"] == "pass"
+    part = root / "hw/parts/LMP-0011/part.yaml"
+    text = part.read_text(encoding="utf-8")
+    part.write_text(text.replace("model_frame: part_local", "model_frame: assembly_zero"), encoding="utf-8")
+    found = statuses(run(root))[MOUNTING]
+    assert found["result"] == "stale"
+    assert found["reasons"][0] == "its inputs changed since the version was built: occurrences"
 
 
 # The ledger
@@ -589,7 +648,13 @@ def test_physical_evidence_without_its_test_credits_nothing(built: tuple[Path, s
     record = load_record(root)
     expected_by_id = {o.id: o for o in required_checks(view(record))}
     placed, _ = inventory(record.assembly, record.parts)
-    ctx = EntryContext(view(record), placed, expected_by_id, read_built_version(root, record, "v1"), TODAY)
+    ctx = EntryContext(
+        view(record),
+        placed,
+        expected_by_id,
+        read_built_version(root, record, "v1", shipped_guidelines=None),
+        TODAY,
+    )
     entry = {"id": "EV-001", "obligation": TRIAL, "subject": {"PN": "LMP-0001", "operation": "print"}}
     entry |= {"level": "physically_validated", "result": "pass", "physical": {"specimen": "coupon 1"}}
     given = credit(entry, 0, EntryJudgement("pass", ("EV-001 pass",)), expected_by_id[TRIAL], ctx)

@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from benchhand_core.record.evidence.guidelines import GuidelineCatalog
 from benchhand_core.record.evidence.paths import PathQuery, Verdict
 from benchhand_core.record.finding import Finding
 
@@ -65,3 +66,7 @@ class BuiltVersion:
     files: Mapping[str, FileState] = field(default_factory=dict)
     bundle_seals: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     path_verdicts: Mapping[PathQuery, Verdict] = field(default_factory=dict)
+    # the current guideline catalog (the project's sets over the shipped ones) the `source` fingerprints
+    # resolve through; `guideline_catalog_missing` when the build copied shipped sets but none are read now
+    guidelines: GuidelineCatalog = field(default_factory=GuidelineCatalog)
+    guideline_catalog_missing: bool = False

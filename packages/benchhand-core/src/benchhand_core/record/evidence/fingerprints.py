@@ -17,6 +17,7 @@ from typing import Any
 
 from benchhand_contracts.models.record.common_schema import Obligation
 
+from benchhand_core.record.evidence.guidelines import digests_for
 from benchhand_core.record.evidence.view import JsonMap, RecordView, items, mapping
 from benchhand_core.record.rules.assembly import Inventory
 
@@ -103,6 +104,8 @@ FAMILY_DOMAINS: tuple[tuple[str, frozenset[str]], ...] = (
 )
 # Obligations the record itself decides, recomputed on every read and never stale (impact.py:135).
 RECORD_FAMILIES = ("intent.", "assembly.joint")
+# A part that records no model_frame is modelled in assembly zero (assembly_data.py:33).
+DEFAULT_FRAME = "assembly_zero"
 
 
 def family_domains(family: str) -> frozenset[str]:
@@ -217,10 +220,31 @@ class _Values:
             [values["material"], values["capability"], part.get("procurement"), values["criterion"]]
         )
         values["source"] = {path: self.artifacts.get(path, sha) for path, sha in sorted(sources.items())}
+        values["source"].update(self._guideline_sources(pn))
         mounting = self.mounting_inputs(pn)
         if mounting is not None:
             values["occurrences"] = mounting
         return values
+
+    def _guideline_sources(self, pn: str) -> dict[str, str]:
+        """`guideline:<id@revision>` -> sha256 of every guideline set a capability profile of the part's
+        route resolves through for its own materials, or for every material when one is undecided
+        (impact.py:343-351)."""
+        intent = self.intent(pn)
+        components = [mapping(c) for c in items(intent.get("components"))]
+        declared = [intent.get("material_profile")]
+        declared += [c.get("material_profile") for c in components if c.get("material_profile") is not None]
+        undecided = any(
+            not isinstance(m, str) and mapping(m).get("status") != "not_applicable" for m in declared
+        )
+        names = [] if undecided else self.profiles(pn)
+        found: dict[str, str] = {}
+        for op in self.route(pn):
+            profile = op.get("capability")
+            if isinstance(profile, str):
+                chosen = digests_for(self.record.guideline_digests.get(profile), names)
+                found.update({f"guideline:{ref}": sha for ref, sha in chosen.items()})
+        return found
 
     def _making_values(self, pn: str, part: JsonMap) -> dict[str, Any]:
         intent, route = self.intent(pn), self.route(pn)
@@ -311,11 +335,13 @@ class _Values:
         }
 
     def mounting_inputs(self, pn: str) -> Any:
-        """The occurrences domain of a part (impact.py:357): a bought part's explicit occurrences and the
-        operations naming them; a made part, all of assembly.yaml with its model frame."""
+        """The occurrences domain of a part (impact.py:357): a bought part's explicit occurrences, the
+        operations naming them and its model_frame (impact.py:240-267); a made part, all of assembly.yaml with
+        its model frame."""
+        frame = (self.record.parts.get(pn) or {}).get("model_frame") or DEFAULT_FRAME
         if any(op.get("kind") == "purchased" for op in self.route(pn)):
             if self.inventory is None:
-                return {"inventory": "unresolved"}
+                return {"inventory": "unresolved", "model_frame": frame}
             mine = sorted(self.inventory.of(pn), key=lambda occurrence: occurrence.id)
             if not any(occurrence.explicit for occurrence in mine):
                 return None
@@ -324,7 +350,7 @@ class _Values:
                 for o in items(self.record.assembly.get("occurrences"))
                 if isinstance(o, Mapping)
             }
-            return [
+            occurrences = [
                 {
                     "id": occurrence.id,
                     "ref": occurrence.ref,
@@ -337,6 +363,7 @@ class _Values:
                 }
                 for occurrence in mine
             ]
+            return {"model_frame": frame, "occurrences": occurrences}
         if not self.record.made(pn):
             return None
         return {

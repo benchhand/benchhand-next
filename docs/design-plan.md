@@ -617,3 +617,4 @@ Every phase ends at a review gate. When a phase's work is done:
 ## Open questions
 
 - None blocking. The "?" cells in the capability table are settled by the manual probe in Phase 0.
+- The shipped guideline sets become a benchhand package asset when the guideline catalog is ported. Until then the evidence reader's caller names their directory (`read_built_version(shipped_guidelines=...)`). `reference/` stays a test oracle only.

@@ -40,8 +40,10 @@ def seal(directory: Path, **fields: Any) -> str:
     return sha256(manifest)
 
 
-def snapshot(hw: Path, version: str) -> Path:
-    """Copy the record documents to hw/versions/<V>/record/, as a build does."""
+def snapshot(hw: Path, version: str, shipped: Path | None = None) -> Path:
+    """Copy the record documents to hw/versions/<V>/record/, as a build does: the project's guideline sets
+    as they are, and each shipped set in `shipped` the project does not override as shipped--<file name>
+    (guidelines.py:343 snapshot_files)."""
     record = hw / "versions" / version / "record"
     for rel in SNAPSHOT_DOCUMENTS:
         if (hw / rel).is_file():
@@ -51,13 +53,23 @@ def snapshot(hw: Path, version: str) -> Path:
         target = record / "parts" / part.parent.name / "part.yaml"
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(part, target)
+    guidelines = record / "manufacturing" / "guidelines"
+    own = sorted((hw / "manufacturing" / "guidelines").glob("*.yaml"))
+    ids = {yaml.safe_load(path.read_text(encoding="utf-8")).get("id") for path in own}
+    copies = [(path, path.name) for path in own]
+    for path in sorted(shipped.glob("*.yaml")) if shipped is not None else []:
+        if yaml.safe_load(path.read_text(encoding="utf-8")).get("id") not in ids:
+            copies.append((path, f"shipped--{path.name}"))
+    for path, name in copies:
+        guidelines.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, guidelines / name)
     return record
 
 
-def build(root: Path, version: str = "v1") -> str:
+def build(root: Path, version: str = "v1", shipped: Path | None = None) -> str:
     """Snapshot and seal `version` of the project at `root`; returns the version manifest's sha256."""
     hw = root / "hw"
-    snapshot(hw, version)
+    snapshot(hw, version, shipped)
     models = sorted((hw / "parts").glob("*/model.py"))
     parts = {path.parent.name: {"source_sha256": sha256(path)} for path in models}
     return seal(hw / "versions" / version, version=version, parts=parts)

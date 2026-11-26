@@ -22,6 +22,7 @@ from benchhand_contracts.models.record.evidence_assessment_schema import (
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion, ChangedSinceBuild, NotComputed, Packet
 from benchhand_core.record.evidence.digest import acceptance_digest, acceptance_inventory, expected_digest
+from benchhand_core.record.evidence.guidelines import with_guideline_digests
 from benchhand_core.record.evidence.joints import joint_results
 from benchhand_core.record.evidence.ledger import (
     EntryContext,
@@ -135,7 +136,7 @@ def _packet_sources(state: _State) -> None:
         state.accepted.append(packet)
         if packet.data.get("complete") is not True:
             state.complete = False
-        read_outcomes(packet, state.by_id, state.built.staleness, stale, reading)
+        read_outcomes(packet, state.by_id, state.built, stale, reading)
 
 
 def _reliant(state: _State, judged: dict[str, EntryJudgement]) -> None:
@@ -336,7 +337,7 @@ def _acceptance(state: _State) -> dict[str, Any]:
 
 def assess(record: Record, built: BuiltVersion, today: date) -> EvidenceAssessment:
     """The evidence assessment of `record` for the built version `built`; `today` judges valid_until."""
-    record_view = view(record)
+    record_view = with_guideline_digests(view(record), built.guidelines)
     placed, _ = inventory(record.assembly, record.parts)
     expected = required_checks(record_view)
     state = _State(

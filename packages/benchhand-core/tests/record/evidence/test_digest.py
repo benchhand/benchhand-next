@@ -69,7 +69,7 @@ def test_lamp_arm_acceptance_inventory_matches_the_prototype(tmp_path: Path) -> 
     convert_tree(LAMP_ARM_HW, root / "hw")
     write_case(root / "hw")
     record = load_record(root)
-    result = assess(record, read_built_version(root, record, "v1"), date(2026, 6, 1))
+    result = assess(record, read_built_version(root, record, "v1", shipped_guidelines=None), date(2026, 6, 1))
     dumped = result.model_dump(mode="json", exclude_none=True)
     acceptance = dumped["acceptance"]
     assert any(f["code"] == "packet.invalid" for f in dumped["findings"])

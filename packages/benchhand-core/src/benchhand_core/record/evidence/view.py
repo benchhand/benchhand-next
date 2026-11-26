@@ -51,6 +51,9 @@ class RecordView:
     verification: tuple[JsonMap, ...]
     approved: frozenset[str]
     selection: JsonMap = field(default_factory=dict)
+    # capability profile id -> material profile name -> id@revision -> sha256 of every guideline set it
+    # resolves through (guidelines.record_digests); empty until `with_guideline_digests`
+    guideline_digests: Mapping[str, Mapping[str, Mapping[str, str]]] = field(default_factory=dict)
 
     @property
     def use_case(self) -> JsonMap:

@@ -19,6 +19,7 @@ from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion
 from benchhand_core.record.evidence.digest import MANIFEST
 from benchhand_core.record.evidence.obligations import obligation_anchor, subject_of
+from benchhand_core.record.evidence.packets import GUIDELINE_CATALOG_MISSING
 from benchhand_core.record.evidence.paths import entry_problems as path_problems
 from benchhand_core.record.evidence.results import LEVELS, PHYSICAL
 from benchhand_core.record.evidence.view import JsonMap, RecordView, items, mapping
@@ -187,7 +188,10 @@ def _fingerprinted(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgem
         return EntryJudgement("unknown", (f"{ident} is unqualified",), (finding,))
     changed = fp.evidence_staleness(entry, current)
     if changed:
-        return EntryJudgement("stale", (f"{ident} relied on {', '.join(changed)} that changed",))
+        reason = f"{ident} relied on {', '.join(changed)} that changed"
+        if ctx.built.guideline_catalog_missing and "source" in changed:
+            reason = f"{GUIDELINE_CATALOG_MISSING}; {reason}"
+        return EntryJudgement("stale", (reason,))
     return None
 
 
