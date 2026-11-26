@@ -13,7 +13,7 @@ from benchhand_core.record.evidence.digest import acceptance_digest, expected_di
 from benchhand_core.record.evidence.reader import read_built_version
 from benchhand_core.record.store import load_record
 
-from ..prototype_v2 import LAMP_ARM_HW, convert_tree
+from ..conftest import LAMP_ARM_HW, migrated
 from .digest_case import write_case
 
 # Files the v3 inventory holds beyond the prototype's, each with its reason.
@@ -66,7 +66,7 @@ def test_lamp_arm_acceptance_inventory_matches_the_prototype(tmp_path: Path) -> 
     """
     golden = json.loads((Path(__file__).parent / "lamp_arm_acceptance.412b5d9.json").read_text())
     root = tmp_path / "case"
-    convert_tree(LAMP_ARM_HW, root / "hw")
+    migrated(LAMP_ARM_HW, root)
     write_case(root / "hw")
     record = load_record(root)
     result = assess(record, read_built_version(root, record, "v1", shipped_guidelines=None), date(2026, 6, 1))

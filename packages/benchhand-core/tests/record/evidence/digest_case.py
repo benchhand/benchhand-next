@@ -109,11 +109,11 @@ def write_case(hw: Path) -> None:
 def main(target: Path) -> None:
     """Lay out <target>/v2/hw (the prototype's lamp-arm) and <target>/v3/hw (converted), each with the
     case."""
-    from record.prototype_v2 import LAMP_ARM_HW, convert_tree
+    from record.conftest import LAMP_ARM_HW, migrated
 
     shutil.copytree(LAMP_ARM_HW, target / "v2" / "hw")
     write_case(target / "v2" / "hw")
-    convert_tree(LAMP_ARM_HW, target / "v3" / "hw")
+    migrated(LAMP_ARM_HW, target / "v3")
     write_case(target / "v3" / "hw")
 
 
