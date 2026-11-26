@@ -662,6 +662,29 @@ def test_physical_evidence_without_its_test_credits_nothing(built: tuple[Path, s
     assert [f.code for f in given.findings] == ["evidence.physical_fields"]
 
 
+# Route coverage
+
+
+def test_an_unrecognised_route_kind_stays_unknown(lamp_arm: Path, write_packet: WritePacket) -> None:
+    """contracts/record/common.tsp route_kind: a kind with no check contract reports its coverage as
+    unknown, whatever a sealed packet or the ledger shows (the prototype accepts either pass)."""
+    part = lamp_arm / "hw/parts/LMP-0001/part.yaml"
+    text = part.read_text(encoding="utf-8")
+    part.write_text(text.replace("kind: drilling", "kind: boring"), encoding="utf-8")
+    version_sha = build(lamp_arm)
+    coverage = "process.boring.coverage@LMP-0001/finish_holes"
+    write_packet(lamp_arm, "process", packet(lamp_arm, {coverage: "pass"}), version_sha)
+    entry = ledger_entry(lamp_arm, version_sha, obligation=coverage, level="process_planned")
+    entry["subject"] = {"PN": "LMP-0001", "operation": "finish_holes"}
+    entry["fingerprints"] = current_fingerprints(lamp_arm, entry["subject"])
+    write_ledger(lamp_arm, entry)
+    result = run(lamp_arm)
+    assert statuses(result)[coverage]["result"] == "unknown"
+    assert "evidence.uncovered_route" in codes(result)
+    unexpected = [f["message"] for f in result["findings"] if f["code"] == "packet.unexpected"]
+    assert any("no check contract" in message for message in unexpected)
+
+
 # Joint temperatures
 
 

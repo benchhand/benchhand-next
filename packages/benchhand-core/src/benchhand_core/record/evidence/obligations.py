@@ -116,6 +116,18 @@ PROCESS_CHECKS: Mapping[str, tuple[tuple[str, str, str], ...]] = {
 }
 # manufacturing_intent.py:78-82: the route kinds with a check contract.
 KNOWN_ROUTE_KINDS = frozenset(PROCESS_CHECKS)
+
+
+def uncovered_route(obligation: Obligation) -> bool:
+    """Whether `obligation` is the coverage of a route kind with no check contract, which stays unknown
+    whatever a source shows (contracts/record/common.tsp `route_kind`). The prototype accepts a sealed or
+    ledger pass for it (evidence.py:760-790 treats process.<kind>.coverage as any other check)."""
+    parts = obligation.family.split(".")
+    if len(parts) != 3 or parts[0] != "process" or parts[2] != "coverage":
+        return False
+    return parts[1] not in KNOWN_ROUTE_KINDS
+
+
 ADDITIVE_KINDS = frozenset({"fdm", "resin"})
 LEVEL_STAGE = {
     "cad_valid": "layout",

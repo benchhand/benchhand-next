@@ -2,8 +2,9 @@
 
 A port of the prototype's evidence.py `_entry` (skills/cad-record/scripts/evidence.py at release.toml
 reference_commit 412b5d9, lines 941-1006), `_entry_targets` (932), `_REQUIRED_DOMAINS` (130-155),
-`_subject_kind` (316) and `_owning_version` (330). Without a path rule (evidence_paths.py, left out),
-every structured path is a contract project_path below hw/.
+`_subject_kind` (316) and `_owning_version` (330). The path rules (evidence_paths.py) are in
+benchhand_core.record.evidence.paths; `credit` checks each target's level, subject, physical test fields and
+route coverage.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from benchhand_contracts.models.record.common_schema import Obligation
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion
 from benchhand_core.record.evidence.digest import MANIFEST
-from benchhand_core.record.evidence.obligations import obligation_anchor, subject_of
+from benchhand_core.record.evidence.obligations import obligation_anchor, subject_of, uncovered_route
 from benchhand_core.record.evidence.packets import GUIDELINE_CATALOG_MISSING
 from benchhand_core.record.evidence.paths import entry_problems as path_problems
 from benchhand_core.record.evidence.results import LEVELS, PHYSICAL
@@ -299,6 +300,11 @@ def credit(
         message = f"{ident} is physical evidence without {', '.join(missing)}: record the test it reports"
         finding = entry_finding("evidence.physical_fields", index, message, obligation.id)
         return EntryJudgement("unknown", (f"{ident} does not record its physical test",), (finding,))
+    if uncovered_route(obligation) and judged.result in ("pass", "fail", "not_applicable"):
+        message = f"{ident}: {obligation.id} covers a route kind with no check contract; it stays unknown"
+        finding = entry_finding("evidence.uncovered_route", index, message, obligation.id)
+        reason = f"{ident} cannot cover a route kind with no check contract"
+        return EntryJudgement("unknown", (reason,), (finding,))
     if judged.result == "waived":
         # the waiver must stand for this target and the requirements that govern it, not the entry's alone
         return _waived(entry, index, obligation, ctx)

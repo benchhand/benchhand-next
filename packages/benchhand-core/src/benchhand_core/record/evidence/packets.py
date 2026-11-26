@@ -15,6 +15,7 @@ from benchhand_contracts.models.record.common_schema import Obligation
 
 from benchhand_core.record.evidence.built import BuiltVersion, ChangedSinceBuild, NotComputed, Packet
 from benchhand_core.record.evidence.fingerprints import RECORD_FAMILIES
+from benchhand_core.record.evidence.obligations import uncovered_route
 from benchhand_core.record.evidence.results import PHYSICAL
 from benchhand_core.record.evidence.view import JsonMap, items, mapping
 from benchhand_core.record.finding import Finding
@@ -116,6 +117,11 @@ def _outcome(
     if obligation is None or record_family:
         message = f"{bundle}: outcome for {ident}, which this record does not expect from a producer"
         reading.findings.append(packet_finding("packet.unexpected", "warning", bundle, message))
+        return None
+    if uncovered_route(obligation):
+        message = f"{bundle}: {ident} covers a route kind with no check contract; its coverage stays unknown"
+        finding = packet_finding("packet.unexpected", "warning", bundle, message, obligation.id)
+        reading.findings.append(finding)
         return None
     if outcome.get("level") not in (None, obligation.level.value):
         level = obligation.level.value
