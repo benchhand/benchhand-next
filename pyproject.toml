@@ -32,6 +32,8 @@ extend-exclude = [
 [tool.ruff.lint]
 # Greenfield: the complexity limits are enforced outright, i.e. a ratchet held at zero.
 select = ["E", "F", "W", "I", "B", "UP", "C901", "PLR0912", "PLR0915", "PLR0913"]
+# ruff format owns line length; E501 would only flag the lines it cannot split.
+ignore = ["E501"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
