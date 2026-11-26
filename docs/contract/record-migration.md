@@ -79,6 +79,11 @@ The prototype read BOM numbers with `int()` and `float()`, which accept surround
 - **Decision files** have their front matter edited in place the same way. The Markdown body is not touched.
 - A file that no rule changes keeps its bytes.
 - **Sealed history** is never rewritten. `hw/versions/**`, `hw/checks/**` and `hw/releases/**` stay byte-identical, even where they hold v2 forms, because a digest or a seal states their bytes.
+- **Sealed history is read through an in-memory upgrade.** The evidence reader (`benchhand_core.record.evidence.reader`) checks the seal on the bytes on disk first. It then upgrades what it reads of a built version that is still at record version 2 (or 1), and writes nothing back:
+  - a snapshot document under `hw/versions/<V>/record/` runs through `RULES` (`migrate/sealed.py`, `rules.rewrite`), as `hw/<document>`, when its `product.yaml` is at a source version;
+  - a packet, `hw/checks/<V>/<S>/result.json`, differs from its v3 form in `record_version` only, so it takes that one change, and then has to meet the v3 `manufacturing-check-result` contract;
+  - a packet that still breaks the contract is the finding `packet.unupgradable`, and it counts as nothing, like a `packet.invalid` one. A snapshot that can't be upgraded leaves the build's staleness not computed;
+  - every digest keeps covering the bytes on disk, the seals, the packet's `manifest.json` and so the `evidence_sha256` of an acceptance inventory, so a digest recorded for a v2 built version stays valid.
 - OS and tool junk is never read, rewritten or backed up. The junk set is `.DS_Store`, `._*`, `Thumbs.db`, `desktop.ini`, `__pycache__`, and editor swap and backup files. This rule is the reader's (`record/ignore.py`). The project ignore file of bead `benchhand-3fc` will replace it.
 - **The scan** of `hw/` stops at the first directory it cannot list (`migrate.scan_failed`), so no subtree is silently left out. The scan lists names and link targets only. It records which files exist, not a snapshot of their contents. These are refused, in the dry run and in apply, before any file is read:
   - `hw/` itself being a symbolic link (`migrate.symlink_hw`), checked before anything is read or locked;

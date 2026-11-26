@@ -42,7 +42,7 @@ def snapshot_is_source_form(product_text: str) -> bool:
 
 
 def upgrade_snapshot_document(relative: str, text: str) -> str:
-    """The text of the snapshot document `relative` to the snapshot (`product.yaml`, `parts/X/part.yaml`),
+    """The text of the snapshot document at `relative` (a path inside the snapshot, such as `product.yaml`),
     upgraded by every migrate rule that names `hw/<relative>`. UpgradeError when a rule cannot read it or
     refuses it."""
     path = f"hw/{relative}"
