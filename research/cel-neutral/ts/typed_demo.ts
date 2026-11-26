@@ -50,7 +50,6 @@ function bufbuildDemo(): void {
     ]),
   );
   const out = join(generated, "checked/ts-bufbuild");
-  mkdirSync(out, { recursive: true });
   // The unexported checker handles only identifiers, selects and constants in 0.6.2: any call or macro
   // throws "Unsupported expression kind". A rule it can't check is evaluated unchecked, and counted.
   const unsupported = (e: unknown) => firstLine(e).startsWith("Unsupported expression kind");
@@ -69,6 +68,8 @@ function bufbuildDemo(): void {
     const how = checked ? "checked" : "checker unsupported, ran unchecked";
     console.log(`${ok ? "ok " : "BAD"} accept (${how}) ${JSON.stringify(rule.expr)} -> ${isCelError(got) ? got.message : got}`);
     if (checked) {
+      // Only a checked rule writes a file, so the other engines never meet an empty directory.
+      mkdirSync(out, { recursive: true });
       const any = create(AnySchema, {
         typeUrl: "type.googleapis.com/cel.expr.CheckedExpr",
         value: toBinary(CheckedExprSchema, checked),
