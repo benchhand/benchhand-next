@@ -437,7 +437,9 @@ def merge_messages(merged: dict[str, ProtoMessage], new: dict[str, ProtoMessage]
         if [(f.name, f.type) for f in old.fields] != [(f.name, f.type) for f in message.fields]:
             have = sorted(f.name for f in old.fields)
             want = sorted(f.name for f in message.fields)
-            conflicts.append(f"conflicting projection of {full} ({message.source}): fields {want}, another scope has {have}")
+            conflicts.append(
+                f"conflicting projection of {full} ({message.source}): fields {want}, another scope has {have}"
+            )
     return conflicts
 
 

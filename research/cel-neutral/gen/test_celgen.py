@@ -31,7 +31,9 @@ def part_scope(omit: list[str]) -> dict:
 
 def test_conflicting_projections_of_one_node_are_refused(tmp_path: Path) -> None:
     both = [f"{PART}#/properties/intent", f"{PART}#/properties/drawing"]
-    code, report = run(tmp_path, {"a": part_scope(both), "b": part_scope([*both, f"{PART}#/properties/supplier"])})
+    code, report = run(
+        tmp_path, {"a": part_scope(both), "b": part_scope([*both, f"{PART}#/properties/supplier"])}
+    )
     assert code == 1
     assert "scope b: conflicting projection of benchhand.contracts.record.part.Part" in report
     assert "supplier" in report
