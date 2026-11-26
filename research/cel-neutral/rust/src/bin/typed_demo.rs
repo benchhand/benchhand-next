@@ -15,7 +15,7 @@ use std::sync::Arc;
 use anyhow::{Context as _, Result};
 use cel_core::{Ast, Env, MapActivation, Value};
 use cel_core_proto::{AstToProto, CheckedExpr, ParsedExpr, ProstMessage, check_result_from_proto, from_parsed_expr};
-use cel_neutral_rs::{Profile, Record, env_from_profile, load_profile, write_results};
+use cel_neutral_rs::{Checker, Profile, Record, env_from_profile, load_bundle, load_profile, write_results};
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage};
 use serde::Deserialize;
@@ -166,8 +166,14 @@ impl Run {
         dirs.sort();
         for dir in dirs.iter().filter(|d| !d.ends_with("rust-cel-core")) {
             let writer = dir.file_name().unwrap().to_string_lossy().to_string();
-            let entries = match profile.read_bundle(dir, &sources) {
-                Ok(entries) => entries,
+            // A checker of record's bundle is the gate case; any other writer's is verified the same way
+            // except for the checker, and evaluated as a portability diagnostic.
+            let verified = load_bundle(dir).and_then(|b| {
+                let kind = if profile.is_checker_of_record(&b.checker) { "shipped" } else { "portability" };
+                Ok((kind, profile.verify_bundle(dir, &b, Some(&sources), false)?))
+            });
+            let (kind, entries) = match verified {
+                Ok(v) => v,
                 Err(e) => {
                     self.record("bundle", &writer, (false, format!("refused: {e}")), None);
                     continue;
@@ -178,27 +184,57 @@ impl Run {
                 let want = Value::Bool(demo.accept[i].expect.unwrap_or(true));
                 let got = unwrap_any(&bytes).and_then(|checked| eval_shipped(&self.env, &self.act, &checked));
                 let ok = matches!(&got, Ok(v) if *v == want);
-                self.record("shipped", &name, (ok, format!("{got:?}")), Some(&writer));
+                self.record(kind, &name, (ok, format!("{got:?}")), Some(&writer));
             }
         }
         Ok(())
     }
 
-    /// A bundle from another profile, and an entry whose source changed, must both be refused.
-    fn tampered(&mut self, profile: &Profile, dir: &Path) -> Result<()> {
-        let own: cel_neutral_rs::Bundle = serde_json::from_slice(&fs::read(dir.join("bundle.json"))?)?;
+    /// The reference checker's bundle, wrong in each way it can be, must be refused: another profile, a
+    /// stale source, a substituted payload, a checker not of record. With no sources it must still verify.
+    fn tampered(&mut self, profile: &Profile, demo: &Demo, reference: &Path) -> Result<()> {
+        let own = load_bundle(reference)?;
+        let sources: BTreeMap<_, _> =
+            demo.accept.iter().enumerate().map(|(i, r)| (format!("accept-{i}.binpb"), r.expr.clone())).collect();
+        let edited: BTreeMap<_, _> = sources.keys().map(|k| (k.clone(), "edited".to_string())).collect();
         let mut other = own.clone();
         other.profile_sha256 = "0".repeat(64);
-        let edited: BTreeMap<_, _> = own.entries.iter().map(|e| (e.file.clone(), "edited".to_string())).collect();
-        for (what, bundle, sources) in [("other profile", &other, BTreeMap::new()), ("stale source", &own, edited)] {
-            let outcome = match profile.verify_bundle(dir, bundle, &sources) {
+        let mut not_record = own.clone();
+        not_record.checker = Checker { engine: "cel-core".into(), version: "0.5.1".into() };
+        let swapped = substituted(reference)?;
+        let cases = [
+            ("other profile", reference, &other, &sources),
+            ("stale source", reference, &own, &edited),
+            ("substituted payload", swapped.as_path(), &own, &sources),
+            ("not a checker of record", reference, &not_record, &sources),
+        ];
+        for (what, dir, bundle, srcs) in cases {
+            let outcome = match profile.verify_bundle(dir, bundle, Some(srcs), true) {
                 Err(e) => (true, format!("refused: {e}")),
                 Ok(_) => (false, "accepted".to_string()),
             };
             self.record("bundle", what, outcome, None);
         }
+        fs::remove_dir_all(&swapped)?;
+        let outcome = match profile.verify_bundle(reference, &own, None, true) {
+            Ok(_) => (true, "verified".to_string()),
+            Err(e) => (false, format!("refused: {e}")),
+        };
+        self.record("bundle", "evaluator without sources", outcome, None);
         Ok(())
     }
+}
+
+/// A copy of a bundle directory with accept-0's payload replaced by accept-1's.
+fn substituted(dir: &Path) -> Result<PathBuf> {
+    let tmp = std::env::temp_dir().join(format!("cel-neutral-swap-rust-{}", std::process::id()));
+    fs::create_dir_all(&tmp)?;
+    for entry in fs::read_dir(dir)? {
+        let path = entry?.path();
+        fs::copy(&path, tmp.join(path.file_name().unwrap()))?;
+    }
+    fs::copy(dir.join("accept-1.binpb"), tmp.join("accept-0.binpb"))?;
+    Ok(tmp)
 }
 
 fn cel_core_demo(demo: &Demo, profile: &Profile, json: &serde_json::Value) -> Result<usize> {
@@ -207,8 +243,8 @@ fn cel_core_demo(demo: &Demo, profile: &Profile, json: &serde_json::Value) -> Re
     let out = root().join("generated/checked/rust-cel-core");
     fs::create_dir_all(&out)?;
     let sources = run.cases(demo, &out)?;
-    profile.write_bundle(&out, &[("engine", ENGINE), ("version", "0.5.1"), ("options", "profile manifest")], &sources)?;
-    run.tampered(profile, &out)?;
+    profile.write_bundle(&out, Checker { engine: ENGINE.into(), version: "0.5.1".into() }, &sources)?;
+    run.tampered(profile, demo, &root().join("generated/checked/cel-go-ref"))?;
     run.shipped(profile, demo)?;
     write_results(&root(), ENGINE, &run.records)?;
     let failures = run.records.iter().filter(|r| !r.ok).count();

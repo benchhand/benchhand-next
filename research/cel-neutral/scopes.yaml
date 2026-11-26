@@ -7,6 +7,14 @@
 # manifest (generated/profile/<scope>.profile.json): the descriptor set
 # digest, the declarations, the extensions with pinned versions, and the
 # options below. Every adapter builds its environment from that manifest.
+#
+# profile_checkers_of_record: whose CheckedExprs an evaluator may run. A
+# bundle names its checker; a verifier refuses any other. The reference
+# checker checks rule lists and anything shipped; the host checks
+# standalone expressions.
+profile_checkers_of_record:
+  - {engine: celcheck, version: cel.dev/cel-go v0.33.4}
+  - {engine: cel-expr-python, version: 0.1.4}
 profile_options:
   # int, uint and double never mix in a comparison at check time.
   cross_type_numeric_comparisons: false

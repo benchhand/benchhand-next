@@ -1,33 +1,38 @@
 {
- "profile_sha256": "48201f8857b093b8ee9bab3f47a6f0e538abe30e3b5d155261d95782649482c4",
+ "profile_sha256": "8b87c5b9ca06b7fe56e9277683a5168c913f44c68a99ed4aae044e428d880895",
  "checker": {
   "engine": "cel-go",
-  "options": "profile manifest",
   "version": "cel.dev/cel-go v0.33.4"
  },
  "entries": [
   {
    "file": "accept-0.binpb",
+   "payload_sha256": "3192b879e66ec0b3dde08ef240f095d2157a24b17abaef803b24defb4c786954",
    "source_sha256": "9486d6ee3db0d3d6e99c885a3580ca5d483664fdb465329919dc3a424372fd9d"
   },
   {
    "file": "accept-1.binpb",
+   "payload_sha256": "2134b185956a5745894918f0ef56d8e5245971a975959db006e659f2526d97e3",
    "source_sha256": "90ebbbc11f6835c8a31e8c702a1ac440933133ce747a137ed38484fe40accce6"
   },
   {
    "file": "accept-2.binpb",
+   "payload_sha256": "af7c88b460327e1f37b9b0a49f1ee5fc1b4bd6bfe3b7292d89acbebba1497f2c",
    "source_sha256": "8865141749facbe696a2f590072c8a3c198b1395b55668f2384bf8a762754f65"
   },
   {
    "file": "accept-3.binpb",
+   "payload_sha256": "abf3be6c29e0ab7889107438be5a05d7abde4165152ae873dfa60d33bc911d79",
    "source_sha256": "58b9567f08c7016ef7eb68146c9cba94040bbf2c2843cf3221d307ee7ab828d1"
   },
   {
    "file": "accept-4.binpb",
+   "payload_sha256": "91264f572ce79a13afee05c188a1bce0403a04c2bd51265aab17e68ad1e59111",
    "source_sha256": "12868bcc10d01b54eab77ae6fb1e1b061c13d6ac09719e318ea4c1f3fc23f4b8"
   },
   {
    "file": "accept-5.binpb",
+   "payload_sha256": "2e8225b863f0b6f0112bd47c34a3e67d29fad473cdd447bc46ab8843e82d0959",
    "source_sha256": "068300df9d1e6d451237c64fc33abd85d0ac832c9385af2e3789aca9ef7a8a85"
   }
  ]

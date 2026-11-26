@@ -106,6 +106,14 @@ pub struct Manifest {
     pub variables: Vec<ManifestVariable>,
     pub extensions: Vec<ManifestExtension>,
     pub options: ProfileOptions,
+    pub checkers_of_record: Vec<Checker>,
+}
+
+/// The checker that wrote a bundle: an engine and its pinned version.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Checker {
+    pub engine: String,
+    pub version: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -196,16 +204,19 @@ pub fn env_from_profile(profile: &Profile) -> Result<Env> {
     env_from_config(&config, &profile.descriptor_set)
 }
 
+/// bundle.json beside a directory of CheckedExprs. Its identity is the profile digest, the checker, and
+/// the SHA-256 of each entry's exact payload bytes.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Bundle {
     pub profile_sha256: String,
-    pub checker: BTreeMap<String, String>,
+    pub checker: Checker,
     pub entries: Vec<BundleEntry>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BundleEntry {
     pub file: String,
+    pub payload_sha256: String,
     pub source_sha256: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
@@ -215,44 +226,72 @@ fn dir_name(dir: &Path) -> String {
     dir.file_name().unwrap_or_default().to_string_lossy().to_string()
 }
 
+pub fn load_bundle(dir: &Path) -> Result<Bundle> {
+    let raw = fs::read(dir.join("bundle.json"))
+        .map_err(|_| anyhow::anyhow!("{}: no bundle.json, so the profile is unknown", dir_name(dir)))?;
+    Ok(serde_json::from_slice(&raw)?)
+}
+
 impl Profile {
-    pub fn write_bundle(&self, dir: &Path, checker: &[(&str, &str)], sources: &BTreeMap<String, String>) -> Result<()> {
-        let bundle = Bundle {
-            profile_sha256: self.digest.clone(),
-            checker: checker.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
-            entries: sources
-                .iter()
-                .map(|(f, s)| BundleEntry { file: f.clone(), source_sha256: sha256_hex(s.as_bytes()), source: None })
-                .collect(),
-        };
+    /// Writes dir/bundle.json for the payload files already in dir and their sources.
+    pub fn write_bundle(&self, dir: &Path, checker: Checker, sources: &BTreeMap<String, String>) -> Result<()> {
+        let mut entries = vec![];
+        for (file, src) in sources {
+            entries.push(BundleEntry {
+                file: file.clone(),
+                payload_sha256: sha256_hex(&fs::read(dir.join(file))?),
+                source_sha256: sha256_hex(src.as_bytes()),
+                source: None,
+            });
+        }
+        let bundle = Bundle { profile_sha256: self.digest.clone(), checker, entries };
         fs::write(dir.join("bundle.json"), serde_json::to_string_pretty(&bundle)? + "\n")?;
         Ok(())
     }
 
-    /// Each entry's bytes, after refusing a bundle from another profile or a stale entry.
-    pub fn read_bundle(&self, dir: &Path, sources: &BTreeMap<String, String>) -> Result<BTreeMap<String, Vec<u8>>> {
-        let raw = fs::read(dir.join("bundle.json"))
-            .map_err(|_| anyhow::anyhow!("{}: no bundle.json, so the profile is unknown", dir_name(dir)))?;
-        self.verify_bundle(dir, &serde_json::from_slice(&raw)?, sources)
+    pub fn is_checker_of_record(&self, checker: &Checker) -> bool {
+        self.manifest.checkers_of_record.contains(checker)
     }
 
+    /// verify_bundle on dir/bundle.json, requiring a checker of record.
+    pub fn read_bundle(
+        &self,
+        dir: &Path,
+        sources: Option<&BTreeMap<String, String>>,
+    ) -> Result<BTreeMap<String, Vec<u8>>> {
+        self.verify_bundle(dir, &load_bundle(dir)?, sources, true)
+    }
+
+    /// Each entry's payload, after checking the profile digest, the checker of record (when required),
+    /// each payload's SHA-256, and each source's SHA-256 when sources is given. An evaluator that has only
+    /// the bundle passes None: the producer verified the sources, and the host does again at load.
     pub fn verify_bundle(
         &self,
         dir: &Path,
         bundle: &Bundle,
-        sources: &BTreeMap<String, String>,
+        sources: Option<&BTreeMap<String, String>>,
+        require_checker_of_record: bool,
     ) -> Result<BTreeMap<String, Vec<u8>>> {
         let name = dir_name(dir);
         if bundle.profile_sha256 != self.digest {
             bail!("{name}: checked in profile {:.12}, not {:.12}", bundle.profile_sha256, self.digest);
         }
+        if require_checker_of_record && !self.is_checker_of_record(&bundle.checker) {
+            bail!("{name}: {} {} isn't a checker of record", bundle.checker.engine, bundle.checker.version);
+        }
         let mut out = BTreeMap::new();
         for entry in &bundle.entries {
-            match sources.get(&entry.file) {
-                Some(src) if sha256_hex(src.as_bytes()) == entry.source_sha256 => {}
-                _ => bail!("{name}/{}: stale, the source changed since it was checked", entry.file),
+            let payload = fs::read(dir.join(&entry.file))?;
+            if sha256_hex(&payload) != entry.payload_sha256 {
+                bail!("{name}/{}: the payload isn't the one the checker shipped", entry.file);
             }
-            out.insert(entry.file.clone(), fs::read(dir.join(&entry.file))?);
+            if let Some(sources) = sources {
+                match sources.get(&entry.file) {
+                    Some(src) if sha256_hex(src.as_bytes()) == entry.source_sha256 => {}
+                    _ => bail!("{name}/{}: stale, the source changed since it was checked", entry.file),
+                }
+            }
+            out.insert(entry.file.clone(), payload);
         }
         Ok(out)
     }

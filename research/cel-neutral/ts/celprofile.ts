@@ -1,5 +1,6 @@
 // The TypeScript side of the environment profile: load a manifest, check it, and build the @bufbuild/cel
-// environment from it, plus the bundle.json that binds CheckedExprs to a profile and their sources.
+// environment from it, plus the bundle.json that binds CheckedExprs to a profile, a checker and their
+// exact payload bytes.
 //
 // The profile digest is the SHA-256 of the manifest's RFC 8785 (JCS) encoding. A manifest holds only
 // ASCII strings, integers, booleans, arrays and objects; for that subset JCS is JSON.stringify with keys
@@ -21,13 +22,16 @@ export type Manifest = {
   variables: { name: string; type: string }[];
   extensions: { name: string; version: number }[];
   options: { cross_type_numeric_comparisons: boolean; homogeneous_aggregate_literals: boolean };
+  checkers_of_record: Checker[];
 };
 
+export type Checker = { engine: string; version: string };
 export type Profile = { manifest: Manifest; digest: string; registry: Registry };
+// Identity: the profile digest, the checker, and the SHA-256 of each entry's exact payload bytes.
 export type Bundle = {
   profile_sha256: string;
-  checker: Record<string, string>;
-  entries: { file: string; source_sha256: string; source?: string }[];
+  checker: Checker;
+  entries: { file: string; payload_sha256: string; source_sha256: string; source?: string }[];
 };
 
 // What @bufbuild/cel 0.6.2 implements: only the strings extension ships. It has no version switch; 4 is
@@ -93,29 +97,56 @@ export function envFromProfile(profile: Profile): CelEnv {
   return celEnv({ registry, variables, funcs });
 }
 
-export function writeBundle(dir: string, profile: Profile, checker: Record<string, string>, sources: Map<string, string>) {
-  const entries = [...sources].sort(([a], [b]) => a.localeCompare(b)).map(([file, src]) => ({ file, source_sha256: sha256(src) }));
+export function writeBundle(dir: string, profile: Profile, checker: Checker, sources: Map<string, string>) {
+  const entries = [...sources]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, src]) => ({ file, payload_sha256: sha256(readFileSync(join(dir, file))), source_sha256: sha256(src) }));
   const bundle: Bundle = { profile_sha256: profile.digest, checker, entries };
   writeFileSync(join(dir, "bundle.json"), JSON.stringify(bundle, null, 1) + "\n");
 }
 
-export function readBundle(dir: string, profile: Profile, sources: Map<string, string>): Map<string, Uint8Array> {
+export function loadBundle(dir: string): Bundle {
   const path = join(dir, "bundle.json");
   if (!existsSync(path)) throw new ProfileError(`${basename(dir)}: no bundle.json, so the profile is unknown`);
-  return verifyBundle(dir, JSON.parse(readFileSync(path, "utf8")) as Bundle, profile, sources);
+  return JSON.parse(readFileSync(path, "utf8")) as Bundle;
 }
 
-export function verifyBundle(dir: string, bundle: Bundle, profile: Profile, sources: Map<string, string>): Map<string, Uint8Array> {
+export const isCheckerOfRecord = (profile: Profile, c: Checker) =>
+  profile.manifest.checkers_of_record.some((r) => r.engine === c.engine && r.version === c.version);
+
+// verifyBundle on dir/bundle.json, requiring a checker of record.
+export function readBundle(dir: string, profile: Profile, sources: Map<string, string> | null): Map<string, Uint8Array> {
+  return verifyBundle(dir, loadBundle(dir), profile, sources);
+}
+
+// Each entry's payload, after checking the profile digest, the checker of record (when required), each
+// payload's SHA-256, and each source's SHA-256 when sources isn't null. An evaluator that has only the
+// bundle passes null: the producer verified the sources, and the host does again at load.
+export function verifyBundle(
+  dir: string,
+  bundle: Bundle,
+  profile: Profile,
+  sources: Map<string, string> | null,
+  requireCheckerOfRecord = true,
+): Map<string, Uint8Array> {
+  const name = basename(dir);
   if (bundle.profile_sha256 !== profile.digest) {
-    throw new ProfileError(`${basename(dir)}: checked in profile ${bundle.profile_sha256.slice(0, 12)}, not ${profile.digest.slice(0, 12)}`);
+    throw new ProfileError(`${name}: checked in profile ${bundle.profile_sha256.slice(0, 12)}, not ${profile.digest.slice(0, 12)}`);
+  }
+  if (requireCheckerOfRecord && !isCheckerOfRecord(profile, bundle.checker)) {
+    throw new ProfileError(`${name}: ${bundle.checker.engine} ${bundle.checker.version} isn't a checker of record`);
   }
   const out = new Map<string, Uint8Array>();
   for (const entry of bundle.entries) {
-    const src = sources.get(entry.file);
-    if (src === undefined || sha256(src) !== entry.source_sha256) {
-      throw new ProfileError(`${basename(dir)}/${entry.file}: stale, the source changed since it was checked`);
+    const payload = readFileSync(join(dir, entry.file));
+    if (sha256(payload) !== entry.payload_sha256) {
+      throw new ProfileError(`${name}/${entry.file}: the payload isn't the one the checker shipped`);
     }
-    out.set(entry.file, readFileSync(join(dir, entry.file)));
+    const src = sources?.get(entry.file);
+    if (sources && (src === undefined || sha256(src) !== entry.source_sha256)) {
+      throw new ProfileError(`${name}/${entry.file}: stale, the source changed since it was checked`);
+    }
+    out.set(entry.file, payload);
   }
   return out;
 }

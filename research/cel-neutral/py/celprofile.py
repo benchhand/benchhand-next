@@ -5,8 +5,10 @@ module verifies the descriptor set against the manifest's SHA-256, refuses an ex
 this engine doesn't implement, and computes the profile digest itself (RFC 8785 JCS over the manifest,
 which for the manifest's ASCII, integer-only subset is sorted keys with no whitespace).
 
-A bundle directory holds CheckedExprs and a bundle.json naming the profile digest, the checker, and the
-SHA-256 of each entry's source. read_bundle refuses a bundle from another profile and a stale entry.
+A bundle directory holds CheckedExprs and a bundle.json. Its identity is the profile digest, the checker
+(engine and version), and the SHA-256 of each entry's exact payload bytes; each entry also carries the
+SHA-256 of its source. verify_bundle refuses another profile, a checker that isn't of record, a payload
+that isn't the one shipped, and, when the caller has the sources, a stale source.
 """
 
 from __future__ import annotations
@@ -75,35 +77,67 @@ def env_yaml(manifest: dict) -> str:
 
 
 def write_bundle(directory: Path, checker: dict, profile: Profile, sources: dict[str, str]) -> None:
-    entries = [{"file": f, "source_sha256": sha256(s.encode())} for f, s in sorted(sources.items())]
+    entries = [
+        {
+            "file": f,
+            "payload_sha256": sha256((directory / f).read_bytes()),
+            "source_sha256": sha256(s.encode()),
+        }
+        for f, s in sorted(sources.items())
+    ]
     bundle = {"profile_sha256": profile.digest, "checker": checker, "entries": entries}
     (directory / "bundle.json").write_text(json.dumps(bundle, indent=1) + "\n")
 
 
-def read_bundle(directory: Path, profile: Profile, sources: dict[str, str]) -> dict[str, bytes]:
-    """The CheckedExpr bytes of each entry, after checking the profile digest and each source digest."""
+def load_bundle(directory: Path) -> dict:
     path = directory / "bundle.json"
     if not path.exists():
         raise ProfileError(f"{directory.name}: no bundle.json, so the profile is unknown")
-    bundle = json.loads(path.read_text())
-    return verify_bundle(directory, bundle, profile, sources)
+    return json.loads(path.read_text())
+
+
+def is_checker_of_record(profile: Profile, checker: dict) -> bool:
+    return checker in profile.manifest["checkers_of_record"]
+
+
+def read_bundle(directory: Path, profile: Profile, sources: dict[str, str] | None) -> dict[str, bytes]:
+    """verify_bundle on directory/bundle.json, requiring a checker of record."""
+    return verify_bundle(directory, load_bundle(directory), profile, sources)
 
 
 def verify_bundle(
-    directory: Path, bundle: dict, profile: Profile, sources: dict[str, str]
+    directory: Path,
+    bundle: dict,
+    profile: Profile,
+    sources: dict[str, str] | None,
+    require_checker_of_record: bool = True,
 ) -> dict[str, bytes]:
+    """Each entry's payload, after checking the profile digest, the checker of record (when required),
+    each payload's SHA-256, and each source's SHA-256 when sources is not None. An evaluator that has only
+    the bundle passes None: the bundle's producer verified the sources, and the host does at load."""
     if bundle["profile_sha256"] != profile.digest:
         raise ProfileError(
             f"{directory.name}: checked in profile {bundle['profile_sha256'][:12]}, not {profile.digest[:12]}"
         )
+    checker = bundle["checker"]
+    if require_checker_of_record and not is_checker_of_record(profile, checker):
+        raise ProfileError(
+            f"{directory.name}: {checker.get('engine')} {checker.get('version')} isn't a checker of record"
+        )
     out = {}
     for entry in bundle["entries"]:
-        source = sources.get(entry["file"])
-        if source is None or sha256(source.encode()) != entry["source_sha256"]:
+        payload = (directory / entry["file"]).read_bytes()
+        if sha256(payload) != entry["payload_sha256"]:
             raise ProfileError(
-                f"{directory.name}/{entry['file']}: stale, the source changed since it was checked"
+                f"{directory.name}/{entry['file']}: the payload isn't the one the checker shipped"
             )
-        out[entry["file"]] = (directory / entry["file"]).read_bytes()
+        if sources is not None:
+            source = sources.get(entry["file"])
+            if source is None or sha256(source.encode()) != entry["source_sha256"]:
+                raise ProfileError(
+                    f"{directory.name}/{entry['file']}: stale, the source changed since it was checked"
+                )
+        out[entry["file"]] = payload
     return out
 
 

@@ -111,7 +111,7 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 Findings from the artefact tests:
 
 - **A CheckedExpr is portable across engines.** cel-core read the ones cel-go and cel-expr-python wrote, and the other way round. @bufbuild/cel read all three. No engine needed the source text or a second check.
-- **The bytes aren't stable, the message is.** In the previous run, re-running cel-go's writer gave different bytes of the same length for all six rules; the two runs' raw bytes weren't retained, so that count is unretained. Decoded, the old and new CheckedExprs are `proto.Equal`, and re-encoding both with Go's `Deterministic` marshal option gives identical bytes (`go/cmpchecked`). Map entries in the reference and type maps change order. So a digest of a CheckedExpr has to come from a deterministic re-encoding, not from the bytes a writer emitted.
+- **A writer's bytes aren't reproducible, so they are hashed as shipped.** In the previous run, re-running cel-go's writer gave different bytes of the same length for all six rules, because map entries in the reference and type maps change order (the two runs' raw bytes weren't retained, so that count is unretained; `go/cmpchecked` shows the decoded messages are `proto.Equal`). So the bundle's identity for an entry is the SHA-256 of the exact payload bytes it ships, taken when the checker writes them. A re-check writes new bytes and a new bundle together; nothing compares two writers' encodings.
 - **A CheckedExpr carries no environment identity.** It names message types and overload ids but not the descriptor set, the extension versions or the checker options. The rules bundle has to carry the profile digest ("The environment profile"), and the evaluator has to compare it with the digest of the profile it built.
 - **The env YAML is not an identity.** Two engines read it as is. The other four need an adapter, and each adapter maps extension names by hand, which is where versions can drift. It also says nothing about checker options. The extension list is also the main source of conformance gaps (see the next sections).
 - **JSON is the neutral encoding of the test files.** textproto needs descriptors at parse time in every language except Go and C++; the protobuf JSON form loads with a plain JSON parser.
@@ -150,9 +150,23 @@ Each adapter also checks the descriptor set against the manifest's SHA-256. No d
 
 An engine without a version switch (cel-cpp, cel-core, @bufbuild/cel) can't prove which version it implements. Its inventory lists the cel-go versions whose functions the shared suite exercised on it, so the version claim rests on the suite result.
 
-### The bundle binds a CheckedExpr to its profile and source
+### The bundle contract
 
-Each writer puts a `bundle.json` beside its CheckedExprs: the profile digest, the checker identity, and the SHA-256 of each entry's source (and, for a policy, the source file). A reader refuses a bundle whose digest differs from its own profile's, and an entry whose source changed since it was checked. Each typed demo also feeds its own bundle back with a zeroed digest and with edited sources, and records both refusals. The bundle is the metadata the adapter's `program` step reads; a bare CheckedExpr can't support that check.
+A bundle's identity is three things, and nothing else:
+
+- the **profile digest** (JCS SHA-256 of the manifest);
+- the **checker**, as engine and pinned version;
+- the **SHA-256 of each entry's exact payload bytes**, the `google.protobuf.Any` file as shipped.
+
+Each entry also carries the SHA-256 of the source it was checked from (and, for a policy, the source path). The manifest lists the **checkers of record** (`checkers_of_record`: `celcheck` on `cel.dev/cel-go` v0.33.4, and cel-expr-python 0.1.4), so every reader takes the trusted list from the same place.
+
+A verifier checks, in order: the profile digest, that the checker is one of record, each payload's SHA-256, and, when it has the sources, each source's SHA-256. The same function does this in all four languages (`go/profile`, `py/celprofile.py`, `rust/src/lib.rs`, `ts/celprofile.ts`).
+
+**Who verifies the source.** An evaluator that receives only the bundle, such as the browser or a provider, can't hash a source it doesn't have. It verifies the digest, the checker and the payloads. The bundle's producer verified the sources when it checked them, and the host verifies them again at load, where it has every rule file. So a source edit is caught at the host before any bundle leaves it.
+
+Each typed demo runs five cases against the reference checker's bundle (`bundle` kind in `results/typed-demo/<engine>.json`). Four must be refused: another profile's digest, an edited source, a **substituted payload** (a copy of the bundle directory with `accept-0`'s CheckedExpr replaced by `accept-1`'s under unchanged metadata), and a checker not of record. The fifth, verifying with no sources, must pass. All four engines gave all five the expected result. `go/profile/profile_test.go` repeats the digest, payload-substitution and source-free checks as a Go test.
+
+A bundle from a writer that isn't a checker of record (the cel-go typed demo's own writer, cel-core) is never run as a gate case. The demos still verify its digest and payloads and evaluate it under the kind `portability`, as evidence that a CheckedExpr reads across engines.
 
 ### The effective-environment test
 
@@ -488,12 +502,13 @@ A successful check produces a **compiled rules bundle**:
 
 - the CheckedExpr of each rule, keyed by its file path. A rule list written as a `.celpolicy` is compiled by cel-go's policy compiler into one CheckedExpr for the whole list;
 - the rule's output type;
-- the digest of the env YAML and of the descriptor set it was checked against;
-- the checker's identity (engine, version, options), as Kubernetes row 11 asks.
+- the profile digest it was checked in;
+- the checker's identity (engine and version), which must be a checker of record (Kubernetes row 11);
+- the SHA-256 of the exact payload bytes, and of the source.
 
 The host writes the bundle at load, as a cache, and on request (`benchhand rules compile`). A provider's publish step can write one too. The bundle shape is a contract like any other, so it is defined in `contracts/` (ADR-0017), not in an engine's code.
 
-An evaluator only needs the bundle. It compares the two digests with its own environment and refuses a mismatch, then runs each CheckedExpr without checking again. That is how the browser runs typed rules with @bufbuild/cel, which has no public checker. A CheckedExpr's digest comes from a deterministic re-encoding, because writers emit map entries in any order.
+An evaluator only needs the bundle. It verifies the profile digest, the checker of record and each payload hash ("The bundle contract"), refuses a mismatch, then runs each CheckedExpr without checking again. The sources are verified by the producer and by the host at load. That is how the browser runs typed rules with @bufbuild/cel, which has no public checker.
 
 So checking is a separate step that ships CheckedExprs, with one condition: the host still checks at load, because users and policy providers can change rules between releases.
 
@@ -610,7 +625,7 @@ Replace the **Interpreter** bullet's type sentence. Current text: "CEL activatio
 Replace the **CEL runtime** bullet. Current text: "`cel-expr-python`, Google's C++-backed binding, which is young (0.1.x). A Rust-backed binding is the fallback behind one small adapter interface. The conformance suite runs the same expressions on both." Proposed:
 
 > - **CEL engines**, each behind the same five-operation adapter (`load`, `check`, `program`, `eval`, `identity`). Each engine has a role: checker of record, evaluator, or source-checking alternative. The Python host checks standalone expressions and evaluates with `cel-expr-python`. CI and `benchhand rules compile` check with the pinned `cel-go` reference checker. Rust components and providers evaluate bundles with `cel-core`, a candidate evaluator whose own checker is diagnostic; promoting it needs an owner for upgrades, fixes or a fork. `cel-cxx` is a source-checking alternative, not a bundle evaluator. The browser evaluates bundles in the restricted profile with `@bufbuild/cel`. A Python fallback is a pyo3 binding over `cel-core`, whose rules the reference checker validates.
-> - **Compiled rules.** The rules bundle holds the CheckedExpr of every rule list, compiled by `benchhand rules compile` or CI, and of every standalone expression, checked by the host at load. Each entry has its output type, the SHA-256 of its source bytes, the profile digest and the checker's identity. An evaluator in any language runs the bundle without checking again and refuses an entry whose profile digest differs from its own. The bundle shape lives in `contracts/`.
+> - **Compiled rules.** The rules bundle holds the CheckedExpr of every rule list, compiled by `benchhand rules compile` or CI, and of every standalone expression, checked by the host at load. The bundle carries the profile digest and the checker's identity; each entry has its output type, the SHA-256 of its exact payload bytes and the SHA-256 of its source. An evaluator in any language runs the bundle without checking again, after refusing another profile's digest, a checker that the profile doesn't list as of record, or a payload whose hash differs. The host verifies the sources at load. The bundle shape lives in `contracts/`.
 > - **Conformance.** One suite runs on every engine in CI: cel-spec's simple tests in protobuf JSON, plus benchhand's typed accept and reject cases. CI also fails when cel-go, cel-expr-python and cel-core disagree on whether a shipped rule checks. The environment may enable only extensions that every executing engine has.
 
 Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `cel-core` (it reads and evaluates CheckedExprs; its checker is diagnostic) and TypeScript from `cel-js` to `@bufbuild/cel` (it evaluates CheckedExprs). If the owner wants a Rust host component, the "no Rust" choice under the table changes too; see the open questions.
@@ -619,7 +634,7 @@ Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `
 
 ADR-0014 is accepted, so this is an amendment to its Consequences, or a new ADR that ADR-0014 links to; the owner picks. Proposed text:
 
-> CEL is compiled and type-checked before it runs, against types generated from the contracts. A standalone expression is checked at load. A rule list is a cel-policy file, compiled by a pinned reference checker ahead of load; the host refuses a rule list whose compiled form is missing or doesn't match its source. The generated artefacts are a FileDescriptorSet and a cel-go environment YAML per rule scope, and only structural scopes are typed. A rule crosses a language boundary as a `cel.expr.CheckedExpr`, together with the digest of the environment it was checked against. Every runtime runs its own CEL engine behind one adapter interface, and every engine passes one shared conformance suite in CI. That suite includes rules that must fail the check. The engine choices and the suite live in plan section 5, not in this ADR, so changing an engine doesn't reopen the decision.
+> CEL is compiled and type-checked before it runs, against types generated from the contracts. A standalone expression is checked at load. A rule list is a cel-policy file, compiled by a pinned reference checker ahead of load; the host refuses a rule list whose compiled form is missing or doesn't match its source. The generated artefacts are a FileDescriptorSet and a cel-go environment YAML per rule scope, and only structural scopes are typed. A rule crosses a language boundary as a `cel.expr.CheckedExpr` in a bundle that names the profile digest, the checker of record and the hash of the exact payload bytes. Every runtime runs its own CEL engine behind one adapter interface, and every engine passes one shared conformance suite in CI. That suite includes rules that must fail the check. The engine choices and the suite live in plan section 5, not in this ADR, so changing an engine doesn't reopen the decision.
 
 ## CEL adoption standard
 

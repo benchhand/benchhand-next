@@ -1,14 +1,17 @@
 """The typed demo on cel-expr-python, built from the gate_guard profile manifest and checked at compile.
 
-It writes each accepted rule's CheckedExpr with a bundle.json (profile digest, checker, source digests),
-evaluates the bundles the other engines wrote after checking their profile and sources, runs the profile
-cases, and writes every outcome to results/typed-demo/cel-expr-python.json.
+It writes each accepted rule's CheckedExpr with a bundle.json (profile digest, checker, payload and source
+digests), evaluates the bundles the other engines wrote after verifying them, runs the profile and
+tampered-bundle cases, and writes every outcome to results/typed-demo/cel-expr-python.json.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import tempfile
+from pathlib import Path
 
 import yaml
 from cel_expr_python import cel
@@ -18,8 +21,9 @@ from celprofile import (
     Profile,
     ProfileError,
     env_yaml,
+    is_checker_of_record,
+    load_bundle,
     load_profile,
-    read_bundle,
     verify_bundle,
     write_bundle,
     write_results,
@@ -27,7 +31,7 @@ from celprofile import (
 from google.protobuf import descriptor_pb2, descriptor_pool, json_format, message_factory
 
 ENGINE = "cel-expr-python"
-CHECKER = {"engine": ENGINE, "version": "0.1.4", "options": "cel-cpp defaults"}
+CHECKER = {"engine": ENGINE, "version": "0.1.4"}
 
 
 def load_pool(descriptor_set: bytes) -> descriptor_pool.DescriptorPool:
@@ -110,32 +114,62 @@ def presence_outcome(env: cel.Env, case: dict) -> tuple[bool, str]:
 
 
 def eval_shipped(env: cel.Env, profile: Profile, data: dict, demo: dict, records: list[dict]) -> None:
-    """Evaluate the bundles the other engines wrote, without parsing or checking them here."""
+    """Evaluate the bundles the other engines wrote, without parsing or checking them here. A bundle from
+    a checker of record is the gate case (kind "shipped"); another writer's bundle is verified the same way
+    except for the checker and evaluated as a portability diagnostic (kind "portability")."""
     sources = {f"accept-{i}.binpb": c["expr"] for i, c in enumerate(demo["accept"])}
     expect = {f"accept-{i}.binpb": c["expect"] for i, c in enumerate(demo["accept"])}
     for engine_dir in sorted(p for p in (GENERATED / "checked").iterdir() if p.name != "python"):
         try:
-            entries = read_bundle(engine_dir, profile, sources)
+            bundle = load_bundle(engine_dir)
+            entries = verify_bundle(engine_dir, bundle, profile, sources, require_checker_of_record=False)
         except ProfileError as exc:
             record(records, "bundle", engine_dir.name, (False, f"refused: {exc}"))
             continue
+        kind = "shipped" if is_checker_of_record(profile, bundle["checker"]) else "portability"
         for name, data_bytes in sorted(entries.items()):
             got = env.deserialize(data_bytes).eval(data=data).value()
-            record(records, "shipped", name, (got == expect[name], repr(got)), engine_dir.name)
+            record(records, kind, name, (got == expect[name], repr(got)), engine_dir.name)
 
 
-def refuses_tampered_bundle(profile: Profile, records: list[dict]) -> None:
-    """A bundle from another profile, and an entry whose source changed, must both be refused."""
-    own = json.loads((GENERATED / "checked/python/bundle.json").read_text())
-    for what, bundle, sources in [
-        ("other profile", {**own, "profile_sha256": "0" * 64}, {e["file"]: "" for e in own["entries"]}),
-        ("stale source", own, {e["file"]: "edited" for e in own["entries"]}),
-    ]:
-        try:
-            verify_bundle(GENERATED / "checked/python", bundle, profile, sources)
-            record(records, "bundle", what, (False, "accepted"))
-        except ProfileError as exc:
-            record(records, "bundle", what, (True, f"refused: {exc}"))
+def substituted(directory: Path, scratch: Path) -> Path:
+    """A copy of a bundle directory with accept-0's payload replaced by accept-1's."""
+    shutil.copytree(directory, scratch / directory.name)
+    swapped = scratch / directory.name
+    (swapped / "accept-0.binpb").write_bytes((directory / "accept-1.binpb").read_bytes())
+    return swapped
+
+
+def refuses_tampered_bundle(profile: Profile, demo: dict, records: list[dict]) -> None:
+    """The reference checker's bundle, wrong in each way it can be, must be refused: another profile, a
+    stale source, a substituted payload, a checker not of record. With no sources it must still verify."""
+    ref = GENERATED / "checked/cel-go-ref"
+    own = load_bundle(ref)
+    sources = {f"accept-{i}.binpb": c["expr"] for i, c in enumerate(demo["accept"])}
+    edited = {name: "edited" for name in sources}
+    with tempfile.TemporaryDirectory() as scratch:
+        swapped = substituted(ref, Path(scratch))
+        for what, directory, bundle, srcs in [
+            ("other profile", ref, {**own, "profile_sha256": "0" * 64}, sources),
+            ("stale source", ref, own, edited),
+            ("substituted payload", swapped, own, sources),
+            (
+                "not a checker of record",
+                ref,
+                {**own, "checker": {"engine": "cel-core", "version": "0.5.1"}},
+                sources,
+            ),
+        ]:
+            try:
+                verify_bundle(directory, bundle, profile, srcs)
+                record(records, "bundle", what, (False, "accepted"))
+            except ProfileError as exc:
+                record(records, "bundle", what, (True, f"refused: {exc}"))
+    try:
+        verify_bundle(ref, own, profile, None)
+        record(records, "bundle", "evaluator without sources", (True, "verified"))
+    except ProfileError as exc:
+        record(records, "bundle", "evaluator without sources", (False, f"refused: {exc}"))
 
 
 def main() -> int:
@@ -148,7 +182,7 @@ def main() -> int:
     records: list[dict] = []
     sources = run_cases(env, data, demo, records)
     write_bundle(GENERATED / "checked/python", CHECKER, profile, sources)
-    refuses_tampered_bundle(profile, records)
+    refuses_tampered_bundle(profile, demo, records)
     eval_shipped(env, profile, data, demo, records)
     write_results(ENGINE, records)
     failures = sum(not r["ok"] for r in records)

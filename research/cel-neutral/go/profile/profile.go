@@ -1,5 +1,6 @@
 // Package profile is the Go side of the environment profile: load a manifest, check it, and build the
-// cel-go environment from it, plus the bundle.json that binds CheckedExprs to a profile and their sources.
+// cel-go environment from it, plus the bundle.json that binds CheckedExprs to a profile, a checker and
+// their exact payload bytes.
 //
 // The manifest (generated/profile/<name>.profile.json, written by gen/profile.py) is the only input. The
 // profile digest is the SHA-256 of the manifest's RFC 8785 (JCS) encoding. A manifest holds only ASCII
@@ -15,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 
@@ -46,6 +48,25 @@ type Manifest struct {
 		CrossTypeNumericComparisons  bool `json:"cross_type_numeric_comparisons"`
 		HomogeneousAggregateLiterals bool `json:"homogeneous_aggregate_literals"`
 	} `json:"options"`
+	CheckersOfRecord []Checker `json:"checkers_of_record"`
+}
+
+// Checker identifies the checker that wrote a bundle: an engine and its pinned version.
+type Checker struct {
+	Engine  string `json:"engine"`
+	Version string `json:"version"`
+}
+
+// CelGoExtensions is the cel-go adapter's supported-version inventory. cel-go's extension factory
+// passes any numeric version through to the extension without checking that it exists, so the adapter
+// refuses every version outside this list itself. Each listed version was exercised here: by the shared
+// suite, the typed demo or the policy compile.
+var CelGoExtensions = map[string][]int{
+	"strings":  {4},
+	"optional": {2},
+	"bindings": {0, 1},
+	"math":     {1},
+	"encoders": {0},
 }
 
 // Profile is a loaded manifest, its digest, and the descriptor set it names.
@@ -95,6 +116,11 @@ func Load(generated, name string) (*Profile, error) {
 	if sum(fdsBytes) != p.Manifest.DescriptorSet.SHA256 {
 		return nil, fmt.Errorf("%s: the descriptor set doesn't match the manifest's SHA-256", name)
 	}
+	for _, e := range p.Manifest.Extensions {
+		if !slices.Contains(CelGoExtensions[e.Name], e.Version) {
+			return nil, fmt.Errorf("%s: the cel-go adapter has no %s version %d", name, e.Name, e.Version)
+		}
+	}
 	p.DescriptorSet = &descriptorpb.FileDescriptorSet{}
 	return p, proto.Unmarshal(fdsBytes, p.DescriptorSet)
 }
@@ -121,25 +147,32 @@ func (p *Profile) EnvOptions() []cel.EnvOption {
 	return opts
 }
 
-// Bundle is the bundle.json beside a directory of CheckedExprs.
+// Bundle is the bundle.json beside a directory of CheckedExprs. Its identity is three things: the
+// profile digest, the checker, and the SHA-256 of each entry's exact payload bytes.
 type Bundle struct {
-	ProfileSHA256 string            `json:"profile_sha256"`
-	Checker       map[string]string `json:"checker"`
-	Entries       []Entry           `json:"entries"`
+	ProfileSHA256 string  `json:"profile_sha256"`
+	Checker       Checker `json:"checker"`
+	Entries       []Entry `json:"entries"`
 }
 
-// Entry binds one CheckedExpr file to the SHA-256 of its source; Source names a source file, if any.
+// Entry is one CheckedExpr file: the SHA-256 of its exact bytes, the SHA-256 of the source it was
+// checked from, and the source file, if any.
 type Entry struct {
-	File         string `json:"file"`
-	SourceSHA256 string `json:"source_sha256"`
-	Source       string `json:"source,omitempty"`
+	File          string `json:"file"`
+	PayloadSHA256 string `json:"payload_sha256"`
+	SourceSHA256  string `json:"source_sha256"`
+	Source        string `json:"source,omitempty"`
 }
 
-// WriteBundle writes dir/bundle.json for the given file -> source text map.
-func (p *Profile) WriteBundle(dir string, checker map[string]string, sources map[string]string, sourceFiles map[string]string) error {
+// WriteBundle writes dir/bundle.json for the payload files already in dir and their sources.
+func (p *Profile) WriteBundle(dir string, checker Checker, sources map[string]string, sourceFiles map[string]string) error {
 	b := Bundle{ProfileSHA256: p.Digest, Checker: checker}
 	for file, src := range sources {
-		b.Entries = append(b.Entries, Entry{File: file, SourceSHA256: sum([]byte(src)), Source: sourceFiles[file]})
+		payload, err := os.ReadFile(filepath.Join(dir, file))
+		if err != nil {
+			return err
+		}
+		b.Entries = append(b.Entries, Entry{File: file, PayloadSHA256: sum(payload), SourceSHA256: sum([]byte(src)), Source: sourceFiles[file]})
 	}
 	sort.Slice(b.Entries, func(i, j int) bool { return b.Entries[i].File < b.Entries[j].File })
 	out, err := json.MarshalIndent(b, "", " ")
@@ -149,33 +182,53 @@ func (p *Profile) WriteBundle(dir string, checker map[string]string, sources map
 	return os.WriteFile(filepath.Join(dir, "bundle.json"), append(out, '\n'), 0o644)
 }
 
-// ReadBundle returns each entry's bytes, after refusing a bundle from another profile or a stale entry.
-func (p *Profile) ReadBundle(dir string, sources map[string]string) (map[string][]byte, error) {
+// LoadBundle parses dir/bundle.json.
+func LoadBundle(dir string) (Bundle, error) {
+	var b Bundle
 	raw, err := os.ReadFile(filepath.Join(dir, "bundle.json"))
 	if err != nil {
-		return nil, fmt.Errorf("%s: no bundle.json, so the profile is unknown", filepath.Base(dir))
+		return b, fmt.Errorf("%s: no bundle.json, so the profile is unknown", filepath.Base(dir))
 	}
-	var b Bundle
-	if err := json.Unmarshal(raw, &b); err != nil {
-		return nil, err
-	}
-	return p.VerifyBundle(dir, b, sources)
+	return b, json.Unmarshal(raw, &b)
 }
 
-// VerifyBundle checks a parsed bundle against the profile and the current sources.
-func (p *Profile) VerifyBundle(dir string, b Bundle, sources map[string]string) (map[string][]byte, error) {
+// ReadBundle is VerifyBundle on dir/bundle.json, requiring a checker of record.
+func (p *Profile) ReadBundle(dir string, sources map[string]string) (map[string][]byte, error) {
+	b, err := LoadBundle(dir)
+	if err != nil {
+		return nil, err
+	}
+	return p.VerifyBundle(dir, b, sources, true)
+}
+
+// IsCheckerOfRecord reports whether the profile names the checker as one of record.
+func (p *Profile) IsCheckerOfRecord(c Checker) bool {
+	return slices.Contains(p.Manifest.CheckersOfRecord, c)
+}
+
+// VerifyBundle returns each entry's payload after checking, in order: the profile digest, the checker
+// of record (when required), each payload's SHA-256, and each source's SHA-256 when sources is not nil.
+// An evaluator that has only the bundle passes nil: the bundle's producer verified the sources when it
+// checked them, and the host verifies them again at load, where it has them.
+func (p *Profile) VerifyBundle(dir string, b Bundle, sources map[string]string, requireCheckerOfRecord bool) (map[string][]byte, error) {
+	name := filepath.Base(dir)
 	if b.ProfileSHA256 != p.Digest {
-		return nil, fmt.Errorf("%s: checked in profile %.12s, not %.12s", filepath.Base(dir), b.ProfileSHA256, p.Digest)
+		return nil, fmt.Errorf("%s: checked in profile %.12s, not %.12s", name, b.ProfileSHA256, p.Digest)
+	}
+	if requireCheckerOfRecord && !p.IsCheckerOfRecord(b.Checker) {
+		return nil, fmt.Errorf("%s: %s %s isn't a checker of record for this profile", name, b.Checker.Engine, b.Checker.Version)
 	}
 	out := map[string][]byte{}
 	for _, e := range b.Entries {
-		src, ok := sources[e.File]
-		if !ok || sum([]byte(src)) != e.SourceSHA256 {
-			return nil, fmt.Errorf("%s/%s: stale, the source changed since it was checked", filepath.Base(dir), e.File)
-		}
 		data, err := os.ReadFile(filepath.Join(dir, e.File))
 		if err != nil {
 			return nil, err
+		}
+		if sum(data) != e.PayloadSHA256 {
+			return nil, fmt.Errorf("%s/%s: the payload isn't the one the checker shipped", name, e.File)
+		}
+		if src, ok := sources[e.File]; sources != nil && (!ok || sum([]byte(src)) != e.SourceSHA256) {
+			return nil, fmt.Errorf("%s/%s: stale, the source changed since it was checked", name, e.File)
 		}
 		out[e.File] = data
 	}

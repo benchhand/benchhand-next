@@ -24,5 +24,15 @@
  "options": {
   "cross_type_numeric_comparisons": false,
   "homogeneous_aggregate_literals": false
- }
+ },
+ "checkers_of_record": [
+  {
+   "engine": "celcheck",
+   "version": "cel.dev/cel-go v0.33.4"
+  },
+  {
+   "engine": "cel-expr-python",
+   "version": "0.1.4"
+  }
+ ]
 }

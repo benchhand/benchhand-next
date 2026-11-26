@@ -5,7 +5,8 @@ A manifest is the identity of the environment a rule is checked and evaluated in
 - `descriptor_set`: the SHA-256 of the exact bytes of `generated/types.binpb`;
 - `variables`: each declaration, as a CEL type name (a primitive or a message);
 - `extensions`: each extension with its pinned version;
-- `options`: the checker and parser options from `scopes.yaml`'s `profile_options`.
+- `options`: the checker and parser options from `scopes.yaml`'s `profile_options`;
+- `checkers_of_record`: the checkers (engine and version) whose CheckedExprs an evaluator may run.
 
 The digest is the SHA-256 of the manifest's canonical JSON (RFC 8785, JCS). A manifest holds only ASCII
 strings, integers, booleans, arrays and objects, and for that subset JCS is sorted keys and no whitespace,
@@ -64,7 +65,7 @@ def digest(manifest: dict) -> str:
     return hashlib.sha256(canonical_json(manifest)).hexdigest()
 
 
-def manifest_for(env: dict, options: dict, descriptor_set: bytes) -> dict:
+def manifest_for(env: dict, options: dict, checkers: list[dict], descriptor_set: bytes) -> dict:
     return {
         "manifest_version": MANIFEST_VERSION,
         "name": env["name"],
@@ -73,6 +74,7 @@ def manifest_for(env: dict, options: dict, descriptor_set: bytes) -> dict:
         "variables": [{"name": v["name"], "type": v["type_name"]} for v in env["variables"]],
         "extensions": [{"name": e["name"], "version": int(e["version"])} for e in env.get("extensions", [])],
         "options": dict(sorted(options.items())),
+        "checkers_of_record": [{"engine": c["engine"], "version": str(c["version"])} for c in checkers],
     }
 
 
@@ -81,13 +83,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("scopes", type=Path)
     parser.add_argument("--generated", type=Path, required=True)
     args = parser.parse_args(argv)
-    options = yaml.safe_load(args.scopes.read_text())["profile_options"]
+    scopes = yaml.safe_load(args.scopes.read_text())
+    options, checkers = scopes["profile_options"], scopes["profile_checkers_of_record"]
     descriptor_set = (args.generated / "types.binpb").read_bytes()
     out = args.generated / "profile"
     out.mkdir(exist_ok=True)
     lines = []
     for env_file in sorted((args.generated / "env").glob("*.env.yaml")):
-        manifest = manifest_for(yaml.safe_load(env_file.read_text()), options, descriptor_set)
+        manifest = manifest_for(yaml.safe_load(env_file.read_text()), options, checkers, descriptor_set)
         path = out / f"{manifest['name']}.profile.json"
         path.write_text(json.dumps(manifest, indent=1) + "\n")
         lines.append(f"{digest(manifest)}  {path.name}")

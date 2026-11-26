@@ -1,8 +1,8 @@
 // The typed demo on cel-go, the reference engine, built from the gate_guard profile manifest.
 //
-// It writes each accepted rule's CheckedExpr with a bundle.json (profile digest, checker, source digests),
-// evaluates the bundles the other engines wrote after checking their profile and sources, runs the profile
-// cases, and writes every outcome to results/typed-demo/cel-go.json.
+// It writes each accepted rule's CheckedExpr with a bundle.json (profile digest, checker, payload and
+// source digests), evaluates the bundles the other engines wrote after verifying them, runs the profile
+// and tampered-bundle cases, and writes every outcome to results/typed-demo/cel-go.json.
 package main
 
 import (
@@ -158,7 +158,9 @@ func (r *run) presence(cases []rule) {
 	}
 }
 
-// shipped evaluates the bundles another engine wrote, without parsing or checking them here.
+// shipped evaluates the bundles another engine wrote, without parsing or checking them here. A bundle
+// from a checker of record is the gate case (kind "shipped"); any other writer's bundle is verified the
+// same way except for the checker and evaluated as a portability diagnostic (kind "portability").
 func (r *run) shipped(p *profile.Profile, d demo, dir string) {
 	sources, expect := map[string]string{}, map[string]any{}
 	for i, c := range d.Accept {
@@ -166,10 +168,18 @@ func (r *run) shipped(p *profile.Profile, d demo, dir string) {
 		expect[fmt.Sprintf("accept-%d.binpb", i)] = c.Expect
 	}
 	writer := filepath.Base(dir)
-	entries, err := p.ReadBundle(dir, sources)
+	b, err := profile.LoadBundle(dir)
+	var entries map[string][]byte
+	if err == nil {
+		entries, err = p.VerifyBundle(dir, b, sources, false)
+	}
 	if err != nil {
 		r.record("bundle", writer, false, "refused: "+err.Error(), "")
 		return
+	}
+	kind := "portability"
+	if p.IsCheckerOfRecord(b.Checker) {
+		kind = "shipped"
 	}
 	for name, data := range entries {
 		wrapped := &anypb.Any{}
@@ -177,31 +187,61 @@ func (r *run) shipped(p *profile.Profile, d demo, dir string) {
 		checked := &exprpb.CheckedExpr{}
 		must(0, proto.Unmarshal(wrapped.GetValue(), checked))
 		got, err := r.eval(cel.CheckedExprToAst(checked))
-		r.record("shipped", name, err == nil && got == expect[name], fmt.Sprint(got, err), writer)
+		r.record(kind, name, err == nil && got == expect[name], fmt.Sprint(got, err), writer)
 	}
 }
 
-// tampered checks that a bundle from another profile, and a stale entry, are both refused.
-func (r *run) tampered(p *profile.Profile, dir string) {
-	var own profile.Bundle
-	must(0, json.Unmarshal(must(os.ReadFile(filepath.Join(dir, "bundle.json"))), &own))
+// tampered checks the reference checker's bundle against every way it can be wrong: another profile,
+// a stale source, a substituted payload, and a checker that isn't of record. With no sources at all
+// (an evaluator that has only the bundle) it must still verify.
+func (r *run) tampered(p *profile.Profile, d demo, ref string) {
+	own, err := profile.LoadBundle(ref)
+	if err != nil {
+		r.record("bundle", "reference bundle", false, err.Error(), "")
+		return
+	}
+	sources, edited := map[string]string{}, map[string]string{}
+	for i, c := range d.Accept {
+		sources[fmt.Sprintf("accept-%d.binpb", i)] = c.Expr
+		edited[fmt.Sprintf("accept-%d.binpb", i)] = "edited"
+	}
 	other := own
 	other.ProfileSHA256 = strings.Repeat("0", 64)
-	edited := map[string]string{}
-	for _, e := range own.Entries {
-		edited[e.File] = "edited"
+	notRecord := own
+	notRecord.Checker = profile.Checker{Engine: "cel-core", Version: "0.5.1"}
+	swapped := substituted(ref)
+	defer os.RemoveAll(swapped)
+	refuse := []struct {
+		what    string
+		dir     string
+		bundle  profile.Bundle
+		sources map[string]string
+	}{
+		{"other profile", ref, other, sources},
+		{"stale source", ref, own, edited},
+		{"substituted payload", swapped, own, sources},
+		{"not a checker of record", ref, notRecord, sources},
 	}
-	for what, b := range map[string]profile.Bundle{"other profile": other, "stale source": own} {
-		srcs := edited
-		if what == "other profile" {
-			srcs = map[string]string{}
-		}
-		if _, err := p.VerifyBundle(dir, b, srcs); err != nil {
-			r.record("bundle", what, true, "refused: "+err.Error(), "")
+	for _, c := range refuse {
+		if _, err := p.VerifyBundle(c.dir, c.bundle, c.sources, true); err != nil {
+			r.record("bundle", c.what, true, "refused: "+err.Error(), "")
 		} else {
-			r.record("bundle", what, false, "accepted", "")
+			r.record("bundle", c.what, false, "accepted", "")
 		}
 	}
+	_, err = p.VerifyBundle(ref, own, nil, true)
+	r.record("bundle", "evaluator without sources", err == nil, fmt.Sprint("verified: ", err), "")
+}
+
+// substituted copies a bundle directory with accept-0's payload replaced by accept-1's: a stale or
+// foreign CheckedExpr under current metadata.
+func substituted(dir string) string {
+	tmp := must(os.MkdirTemp("", "cel-neutral-swap-"))
+	for _, e := range must(os.ReadDir(dir)) {
+		must(0, os.WriteFile(filepath.Join(tmp, e.Name()), must(os.ReadFile(filepath.Join(dir, e.Name()))), 0o644))
+	}
+	must(0, os.WriteFile(filepath.Join(tmp, "accept-0.binpb"), must(os.ReadFile(filepath.Join(dir, "accept-1.binpb"))), 0o644))
+	return tmp
 }
 
 func main() {
@@ -216,9 +256,9 @@ func main() {
 	outDir := filepath.Join(gen, "checked", "go")
 	must(0, os.MkdirAll(outDir, 0o755))
 	sources := r.cases(d, outDir)
-	checker := map[string]string{"engine": engine, "version": "cel.dev/cel-go v0.33.4", "options": "profile manifest"}
+	checker := profile.Checker{Engine: engine, Version: "cel.dev/cel-go v0.33.4"}
 	must(0, p.WriteBundle(outDir, checker, sources, nil))
-	r.tampered(p, outDir)
+	r.tampered(p, d, filepath.Join(gen, "checked", "cel-go-ref"))
 	for _, dir := range must(filepath.Glob(filepath.Join(gen, "checked", "*"))) {
 		if filepath.Base(dir) != "go" {
 			r.shipped(p, d, dir)

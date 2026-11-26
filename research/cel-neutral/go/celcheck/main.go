@@ -52,8 +52,8 @@ func must[T any](v T, err error) T {
 
 func firstLine(err error) string { return strings.SplitN(err.Error(), "\n", 2)[0] }
 
-func checker() map[string]string {
-	return map[string]string{"engine": "celcheck", "version": Version, "options": "profile manifest only"}
+func checker() profile.Checker {
+	return profile.Checker{Engine: "celcheck", Version: Version}
 }
 
 func writeChecked(path string, ast *cel.Ast) {

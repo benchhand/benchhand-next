@@ -228,14 +228,35 @@
     "kind": "bundle",
     "case": "other profile",
     "ok": true,
-    "detail": "refused: rust-cel-core: checked in profile 000000000000, not 48201f8857b0"
+    "detail": "refused: cel-go-ref: checked in profile 000000000000, not 8b87c5b9ca06"
   },
   {
     "engine": "cel-core",
     "kind": "bundle",
     "case": "stale source",
     "ok": true,
-    "detail": "refused: rust-cel-core/accept-0.binpb: stale, the source changed since it was checked"
+    "detail": "refused: cel-go-ref/accept-0.binpb: stale, the source changed since it was checked"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "substituted payload",
+    "ok": true,
+    "detail": "refused: cel-neutral-swap-rust-86723/accept-0.binpb: the payload isn't the one the checker shipped"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "not a checker of record",
+    "ok": true,
+    "detail": "refused: cel-go-ref: cel-core 0.5.1 isn't a checker of record"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "evaluator without sources",
+    "ok": true,
+    "detail": "verified"
   },
   {
     "engine": "cel-core",
@@ -287,7 +308,7 @@
   },
   {
     "engine": "cel-core",
-    "kind": "shipped",
+    "kind": "portability",
     "case": "accept-0.binpb",
     "writer": "go",
     "ok": true,
@@ -295,7 +316,7 @@
   },
   {
     "engine": "cel-core",
-    "kind": "shipped",
+    "kind": "portability",
     "case": "accept-1.binpb",
     "writer": "go",
     "ok": true,
@@ -303,7 +324,7 @@
   },
   {
     "engine": "cel-core",
-    "kind": "shipped",
+    "kind": "portability",
     "case": "accept-2.binpb",
     "writer": "go",
     "ok": true,
@@ -311,7 +332,7 @@
   },
   {
     "engine": "cel-core",
-    "kind": "shipped",
+    "kind": "portability",
     "case": "accept-3.binpb",
     "writer": "go",
     "ok": true,
@@ -319,7 +340,7 @@
   },
   {
     "engine": "cel-core",
-    "kind": "shipped",
+    "kind": "portability",
     "case": "accept-4.binpb",
     "writer": "go",
     "ok": true,
@@ -327,7 +348,7 @@
   },
   {
     "engine": "cel-core",
-    "kind": "shipped",
+    "kind": "portability",
     "case": "accept-5.binpb",
     "writer": "go",
     "ok": true,

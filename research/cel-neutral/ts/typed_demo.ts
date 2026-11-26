@@ -5,7 +5,8 @@
 // by file path. plan() takes a CheckedExpr, so it also evaluates what the other engines checked.
 // @marcbachmann/cel-js 8.0.0: a public checker over native type declarations, which this derives from the
 // same FileDescriptorSet. It has no proto AST, so it can't take a shipped CheckedExpr.
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, mkdtempSync, cpSync, copyFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
@@ -13,7 +14,7 @@ import { fromBinary, fromJson, toBinary, create } from "@bufbuild/protobuf";
 import type { DescMessage, DescField } from "@bufbuild/protobuf";
 import { AnySchema } from "@bufbuild/protobuf/wkt";
 import { parse, plan, isCelError } from "@bufbuild/cel";
-import { envFromProfile, loadProfile, messageDesc, readBundle, verifyBundle, writeBundle, writeResults, ProfileError } from "./celprofile.ts";
+import { envFromProfile, isCheckerOfRecord, loadBundle, loadProfile, messageDesc, verifyBundle, writeBundle, writeResults, ProfileError } from "./celprofile.ts";
 import type { Bundle, Result } from "./celprofile.ts";
 import { CheckedExprSchema, type CheckedExpr } from "@bufbuild/cel-spec/cel/expr/checked_pb.js";
 import { Environment } from "@marcbachmann/cel-js";
@@ -98,24 +99,7 @@ function bufbuildDemo(): void {
   console.log(`@bufbuild/cel checker: ${uncheckable} of ${demo.accept.length + demo.reject.length} rules uncheckable`);
   const acceptSources = new Map(demo.accept.map((r, i) => [`accept-${i}.binpb`, r.expr] as [string, string]));
   for (const engine of readdirSync(join(generated, "checked")).sort()) {
-    if (engine === "ts-bufbuild") continue;
-    let entries: Map<string, Uint8Array>;
-    try {
-      entries = readBundle(join(generated, "checked", engine), profile, acceptSources);
-    } catch (e) {
-      if (!(e instanceof ProfileError)) throw e;
-      record("bundle", engine, false, `refused: ${e.message}`);
-      continue;
-    }
-    for (const [name, data] of entries) {
-      const i = Number(name.replace(/\D/g, ""));
-      try {
-        const got = plan(env, fromBinary(CheckedExprSchema, fromBinary(AnySchema, data).value))(bindings);
-        record("shipped", name, got === (demo.accept[i].expect ?? true), show(got), engine);
-      } catch (e) {
-        record("shipped", name, false, firstLine(e), engine);
-      }
-    }
+    if (engine !== "ts-bufbuild") evalShipped(env, bindings, engine, acceptSources);
   }
   tampered();
   failures += records.filter((r) => !r.ok).length;
@@ -147,23 +131,62 @@ function uncheckedCases(env: ReturnType<typeof envFromProfile>, bindings: Bindin
   }
 }
 
-// A bundle from another profile, and an entry whose source changed, must both be refused.
-function tampered(): void {
-  const dir = join(generated, "checked/go");
-  if (!existsSync(join(dir, "bundle.json"))) return;
-  const own = JSON.parse(readFileSync(join(dir, "bundle.json"), "utf8")) as Bundle;
-  const edited = new Map(own.entries.map((e) => [e.file, "edited"] as [string, string]));
-  const cases: [string, Bundle, Map<string, string>][] = [
-    ["other profile", { ...own, profile_sha256: "0".repeat(64) }, new Map()],
-    ["stale source", own, edited],
-  ];
-  for (const [what, bundle, sources] of cases) {
+// One writer's bundle. A checker of record's bundle is the gate case; any other writer's is verified the
+// same way except for the checker, and evaluated as a portability diagnostic.
+function evalShipped(env: ReturnType<typeof envFromProfile>, bindings: Bindings, engine: string, sources: Map<string, string>): void {
+  let entries: Map<string, Uint8Array>;
+  let kind = "portability";
+  try {
+    const dir = join(generated, "checked", engine);
+    const bundle = loadBundle(dir);
+    if (isCheckerOfRecord(profile, bundle.checker)) kind = "shipped";
+    entries = verifyBundle(dir, bundle, profile, sources, false);
+  } catch (e) {
+    if (!(e instanceof ProfileError)) throw e;
+    record("bundle", engine, false, `refused: ${e.message}`);
+    return;
+  }
+  for (const [name, data] of entries) {
+    const i = Number(name.replace(/\D/g, ""));
     try {
-      verifyBundle(dir, bundle, profile, sources);
+      const got = plan(env, fromBinary(CheckedExprSchema, fromBinary(AnySchema, data).value))(bindings);
+      record(kind, name, got === (demo.accept[i].expect ?? true), show(got), engine);
+    } catch (e) {
+      record(kind, name, false, firstLine(e), engine);
+    }
+  }
+}
+
+// The reference checker's bundle, wrong in each way it can be, must be refused: another profile, a stale
+// source, a substituted payload, a checker not of record. With no sources it must still verify.
+function tampered(): void {
+  const ref = join(generated, "checked/cel-go-ref");
+  const own = loadBundle(ref);
+  const sources = new Map(demo.accept.map((r, i) => [`accept-${i}.binpb`, r.expr] as [string, string]));
+  const edited = new Map([...sources.keys()].map((k) => [k, "edited"] as [string, string]));
+  const swapped = mkdtempSync(join(tmpdir(), "cel-neutral-swap-ts-"));
+  cpSync(ref, swapped, { recursive: true });
+  copyFileSync(join(ref, "accept-1.binpb"), join(swapped, "accept-0.binpb"));
+  const cases: [string, string, Bundle, Map<string, string>][] = [
+    ["other profile", ref, { ...own, profile_sha256: "0".repeat(64) }, sources],
+    ["stale source", ref, own, edited],
+    ["substituted payload", swapped, own, sources],
+    ["not a checker of record", ref, { ...own, checker: { engine: "cel-core", version: "0.5.1" } }, sources],
+  ];
+  for (const [what, dir, bundle, srcs] of cases) {
+    try {
+      verifyBundle(dir, bundle, profile, srcs);
       record("bundle", what, false, "accepted");
     } catch (e) {
       record("bundle", what, e instanceof ProfileError, `refused: ${firstLine(e)}`);
     }
+  }
+  rmSync(swapped, { recursive: true });
+  try {
+    verifyBundle(ref, own, profile, null);
+    record("bundle", "evaluator without sources", true, "verified");
+  } catch (e) {
+    record("bundle", "evaluator without sources", false, `refused: ${firstLine(e)}`);
   }
 }
 

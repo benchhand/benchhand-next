@@ -50,7 +50,7 @@ fn run_bundle(dir: &Path, tests: &[serde_json::Value], records: &mut Vec<Record>
         sources.insert(e.file.clone(), fs::read_to_string(root().join(src))?);
     }
     let loaded = load_profile(&root().join("generated"), &name)
-        .and_then(|profile| Ok((profile.read_bundle(dir, &sources)?, profile)));
+        .and_then(|profile| Ok((profile.read_bundle(dir, Some(&sources))?, profile)));
     let (entries, profile) = match loaded {
         Ok(v) => v,
         Err(e) => {

@@ -228,54 +228,35 @@
   "kind": "bundle",
   "case": "other profile",
   "ok": true,
-  "detail": "refused: go: checked in profile 000000000000, not 48201f8857b0"
+  "detail": "refused: cel-go-ref: checked in profile 000000000000, not 8b87c5b9ca06"
  },
  {
   "engine": "cel-go",
   "kind": "bundle",
   "case": "stale source",
   "ok": true,
-  "detail": "refused: go/accept-0.binpb: stale, the source changed since it was checked"
+  "detail": "refused: cel-go-ref/accept-0.binpb: stale, the source changed since it was checked"
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-0.binpb",
-  "writer": "cel-go-ref",
+  "kind": "bundle",
+  "case": "substituted payload",
   "ok": true,
-  "detail": "true \u003cnil\u003e"
+  "detail": "refused: cel-neutral-swap-2333143169/accept-0.binpb: the payload isn't the one the checker shipped"
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-1.binpb",
-  "writer": "cel-go-ref",
+  "kind": "bundle",
+  "case": "not a checker of record",
   "ok": true,
-  "detail": "true \u003cnil\u003e"
+  "detail": "refused: cel-go-ref: cel-core 0.5.1 isn't a checker of record for this profile"
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-2.binpb",
-  "writer": "cel-go-ref",
+  "kind": "bundle",
+  "case": "evaluator without sources",
   "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-3.binpb",
-  "writer": "cel-go-ref",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-4.binpb",
-  "writer": "cel-go-ref",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
+  "detail": "verified: \u003cnil\u003e"
  },
  {
   "engine": "cel-go",
@@ -288,6 +269,46 @@
  {
   "engine": "cel-go",
   "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
   "case": "accept-4.binpb",
   "writer": "python",
   "ok": true,
@@ -335,7 +356,7 @@
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
+  "kind": "portability",
   "case": "accept-0.binpb",
   "writer": "rust-cel-core",
   "ok": true,
@@ -343,7 +364,7 @@
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
+  "kind": "portability",
   "case": "accept-1.binpb",
   "writer": "rust-cel-core",
   "ok": true,
@@ -351,7 +372,7 @@
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
+  "kind": "portability",
   "case": "accept-2.binpb",
   "writer": "rust-cel-core",
   "ok": true,
@@ -359,7 +380,7 @@
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
+  "kind": "portability",
   "case": "accept-3.binpb",
   "writer": "rust-cel-core",
   "ok": true,
@@ -367,7 +388,7 @@
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
+  "kind": "portability",
   "case": "accept-4.binpb",
   "writer": "rust-cel-core",
   "ok": true,
@@ -375,7 +396,7 @@
  },
  {
   "engine": "cel-go",
-  "kind": "shipped",
+  "kind": "portability",
   "case": "accept-5.binpb",
   "writer": "rust-cel-core",
   "ok": true,

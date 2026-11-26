@@ -2,8 +2,8 @@
 
 Run with the wheel from ../rust-py (`maturin build --release`): `uv run --with <wheel> python rust_binding_demo.py`.
 The binding's environment comes from the gate_guard profile manifest. It checks every accept and reject
-rule, evaluates its own CheckedExprs, and evaluates the cel-go and cel-expr-python bundles after checking
-their profile digest and sources.
+rule, evaluates its own CheckedExprs, and evaluates the bundles of the two checkers of record (the
+reference checker and cel-expr-python) after verifying their profile, checker, payloads and sources.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def main() -> int:
         print(f"BAD reject {case['expr']!r} type-checked; expected: {case['why']}")
     sources = {f"accept-{i}.binpb": c["expr"] for i, c in enumerate(demo["accept"])}
     expect = {f"accept-{i}.binpb": c["expect"] for i, c in enumerate(demo["accept"])}
-    for engine in ("go", "python"):
+    for engine in ("cel-go-ref", "python"):
         try:
             entries = read_bundle(GENERATED / f"checked/{engine}", profile, sources)
         except ProfileError as exc:
