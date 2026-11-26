@@ -7,4 +7,4 @@ flow:
     human_approval: 'key' # asked at INTENT
     fea: {enabled: true, mode: "accurate"}
     critique: "full"
-    asked: {fea: "asked-accepted-default", human_approval: user,}
+    asked: {fea: "asked-accepted-default", human_approval: user}

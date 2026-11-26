@@ -14,24 +14,38 @@ LAMP_ARM_HW = REFERENCE_ROOT / "examples" / "lamp-arm" / "hw"
 TEMPLATE_HW = REFERENCE_ROOT / "skills" / "cad-record" / "assets" / "project-template" / "hw"
 
 
-def migrated(source_hw: Path, root: Path) -> Path:
-    """`root` with a copy of `source_hw` as its hw/, migrated; returns `root`."""
-    shutil.copytree(source_hw, root / "hw")
-    result = migrate(root, apply=True)
+def migrated(source_hw: Path, work: Path) -> Path:
+    """The hw/ of a copy of `source_hw` under `work`, migrated with --backup (the backup stays in `work`)."""
+    shutil.copytree(source_hw, work / "hw")
+    result = migrate(work, apply=True, backup=True)
     assert result.status == MigrationStatus.applied, result.refusals
+    return work / "hw"
+
+
+@pytest.fixture(scope="session")
+def migrated_trees(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    """Each reference record migrated once per session; tests take a copy."""
+    base = tmp_path_factory.mktemp("migrated")
+    return {
+        "lamp-arm": migrated(LAMP_ARM_HW, base / "lamp-arm"),
+        "template": migrated(TEMPLATE_HW, base / "template"),
+    }
+
+
+@pytest.fixture
+def lamp_arm(tmp_path: Path, migrated_trees: dict[str, Path]) -> Path:
+    """A project root whose hw/ is the reference lamp-arm record, migrated."""
+    root = tmp_path / "lamp-arm"
+    shutil.copytree(migrated_trees["lamp-arm"], root / "hw")
     return root
 
 
 @pytest.fixture
-def lamp_arm(tmp_path: Path) -> Path:
-    """A project root whose hw/ is the reference lamp-arm record, migrated."""
-    return migrated(LAMP_ARM_HW, tmp_path / "lamp-arm")
-
-
-@pytest.fixture
-def template(tmp_path: Path) -> Path:
+def template(tmp_path: Path, migrated_trees: dict[str, Path]) -> Path:
     """A project root whose hw/ is the empty project template, migrated."""
-    return migrated(TEMPLATE_HW, tmp_path / "template")
+    root = tmp_path / "template"
+    shutil.copytree(migrated_trees["template"], root / "hw")
+    return root
 
 
 @pytest.fixture
