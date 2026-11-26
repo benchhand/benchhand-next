@@ -18,7 +18,7 @@ from benchhand_contracts.models.record.common_schema import Obligation
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion
 from benchhand_core.record.evidence.digest import MANIFEST
-from benchhand_core.record.evidence.obligations import obligation_anchor
+from benchhand_core.record.evidence.obligations import obligation_anchor, subject_of
 from benchhand_core.record.evidence.results import LEVELS, PHYSICAL
 from benchhand_core.record.evidence.view import JsonMap, RecordView, items, mapping
 from benchhand_core.record.evidence.waivers import WaiverScope, waiver_problem
@@ -61,6 +61,20 @@ REQUIRED_DOMAINS: Mapping[str, Mapping[str, frozenset[str]]] = {
 # The version-bound roots below hw/ (layout.json bundle.* entries, and versions/).
 BUNDLE_ROOTS = ("versions", "checks", "drawings", "renders", "captures", "motion", "analysis")
 _OWNER = re.compile(rf"^hw/(?:{'|'.join(BUNDLE_ROOTS)})/(v[1-9][0-9]*)(?:/|$)")
+LOCATION_KEYS = ("product", "PN", "component", "operation", "feature", "interface", "assembly_operation")
+# The required fields of manufacturing-evidence `physical` (contracts/record/manufacturing-evidence.tsp).
+PHYSICAL_FIELDS = (
+    "specimen",
+    "configuration",
+    "material",
+    "process",
+    "protocol",
+    "instrument",
+    "results",
+    "date",
+    "approver",
+    "scope",
+)
 
 
 @dataclass(frozen=True)
@@ -201,18 +215,11 @@ def _bytes(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement | No
 
 
 def judge_entry(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement:
-    """The status one ledger entry shows (evidence.py:941)."""
+    """The status one ledger entry shows, before it is credited to any target (evidence.py:941). Whether it
+    speaks to a target's level and subject is `credit`'s question."""
     ident, result = entry.get("id"), entry.get("result")
     named = entry.get("obligation")
     obligation = ctx.expected.get(named) if isinstance(named, str) else None
-    anchor = obligation_anchor(mapping(entry.get("subject")))
-    if obligation is not None and anchor != obligation.id.split("@", 1)[1]:
-        message = (
-            f"{ident} is about {anchor}, but {obligation.id} is about {obligation.id.split('@', 1)[1]}: "
-            "evidence covers its own subject only"
-        )
-        finding = entry_finding("evidence.subject", index, message, obligation.id)
-        return EntryJudgement("unknown", (f"{ident} is about another subject",), (finding,))
     if result in ("planned", "unknown"):
         return EntryJudgement(str(result), (f"{ident} is {result}",))
     if result == "waived":
@@ -221,3 +228,45 @@ def judge_entry(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgement
         if rule is not None:
             return rule
     return EntryJudgement(str(result), (f"{ident} {entry.get('level')} {result}",))
+
+
+def location(subject: Mapping[str, object]) -> dict[str, object]:
+    """Where a subject is: the product, a part (with component, operation and feature), an interface or an
+    assembly operation. Its requirements, occurrence and region do not move it."""
+    return {key: subject[key] for key in LOCATION_KEYS if subject.get(key)}
+
+
+def _physical_gap(entry: JsonMap) -> list[str]:
+    physical = mapping(entry.get("physical"))
+    return [name for name in PHYSICAL_FIELDS if not physical.get(name)]
+
+
+def credit(entry: JsonMap, index: int, judged: EntryJudgement, obligation: Obligation) -> EntryJudgement:
+    """What the judged entry credits one target: its judgement when the entry is evidence at the target's own
+    level, about the target's exact location, and (for a physically_validated pass or fail) carries every
+    physical test field the manufacturing-evidence contract requires; otherwise unknown, with a finding.
+
+    The prototype has a gap here: evidence.py:932-939 (`_entry_targets`) credits an inferred requirement or
+    policy target by requirement and level alone, and evidence.py:947-951 checks a named target's anchor but
+    never compares the entry's level with the obligation's. A cad_valid entry could pass a
+    physically_validated obligation, and one part's evidence a policy obligation of another."""
+    ident, level = entry.get("id"), obligation.level.value
+    where = obligation.id.split("@", 1)[1]
+    subject = mapping(entry.get("subject"))
+    if entry.get("level") != level:
+        message = f"{ident} is {entry.get('level')} evidence; {obligation.id} asks {level}"
+        finding = entry_finding("evidence.level", index, message, obligation.id)
+        return EntryJudgement("unknown", (f"{ident} is evidence at another level",), (finding,))
+    if location(subject) != location(subject_of(obligation)):
+        message = (
+            f"{ident} is about {obligation_anchor(subject)}, but {obligation.id} is about {where}: evidence "
+            "covers its own subject only"
+        )
+        finding = entry_finding("evidence.subject", index, message, obligation.id)
+        return EntryJudgement("unknown", (f"{ident} is about another subject",), (finding,))
+    missing = _physical_gap(entry) if level == PHYSICAL and judged.result in ("pass", "fail") else []
+    if missing:
+        message = f"{ident} is physical evidence without {', '.join(missing)}: record the test it reports"
+        finding = entry_finding("evidence.physical_fields", index, message, obligation.id)
+        return EntryJudgement("unknown", (f"{ident} does not record its physical test",), (finding,))
+    return judged

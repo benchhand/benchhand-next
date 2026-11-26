@@ -23,7 +23,7 @@ from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import BuiltVersion, ChangedSinceBuild, NotComputed, Packet
 from benchhand_core.record.evidence.digest import acceptance_digest, acceptance_inventory, expected_digest
 from benchhand_core.record.evidence.joints import joint_results
-from benchhand_core.record.evidence.ledger import EntryContext, entry_targets, judge_entry
+from benchhand_core.record.evidence.ledger import EntryContext, credit, entry_targets, judge_entry
 from benchhand_core.record.evidence.obligations import required_checks, subject_of
 from benchhand_core.record.evidence.packets import Candidate, OutcomeReading, packet_problems, read_outcomes
 from benchhand_core.record.evidence.results import LEVELS, NOT_REQUIRED, best, facets, worst
@@ -137,12 +137,17 @@ def _ledger_sources(state: _State) -> None:
         ident = str(entry.get("id"))
         judged = judge_entry(entry, index, context)
         state.findings.extend(judged.findings)
-        state.entry_results[ident] = judged.result
         targets = entry_targets(entry, state.expected)
-        for target in targets:
-            if judged.result == "waived":
+        credited = [credit(entry, index, judged, state.by_id[target]) for target in targets]
+        # an entry is as good as its weakest credit: a replacement that credits nothing settles nothing
+        shown = {c.result for c in credited}
+        state.entry_results[ident] = judged.result if shown <= {judged.result} else "unknown"
+        for target, given in zip(targets, credited, strict=True):
+            if given is not judged:
+                state.findings.extend(given.findings)
+            if given.result == "waived":
                 state.waivers.setdefault(target, mapping(entry.get("waiver")))
-            state.candidates[target].append((judged.result, ident, "; ".join(judged.reasons)))
+            state.candidates[target].append((given.result, ident, "; ".join(given.reasons)))
         if not targets and entry.get("requirement"):
             key = (str(entry["requirement"]), str(entry.get("level")))
             state.untargeted.setdefault(key, []).append(judged.result)

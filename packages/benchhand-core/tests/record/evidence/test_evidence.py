@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.assess import assess
 from benchhand_core.record.evidence.built import NotComputed
@@ -24,7 +25,7 @@ from benchhand_core.record.model import as_json
 from benchhand_core.record.rules.assembly import inventory
 from benchhand_core.record.store import load_record
 
-from .conftest import WritePacket, seal, sha256, write_yaml
+from .conftest import WritePacket, build, seal, sha256, write_yaml
 
 TODAY = date(2026, 6, 1)
 READBACK = "cad.readback@LMP-0001"
@@ -389,6 +390,72 @@ def test_physical_evidence_covers_its_own_subject_only(built: tuple[Path, str]) 
     result = run(root)
     assert statuses(result)[READBACK]["result"] == "unknown"
     assert "evidence.subject" in codes(result)
+
+
+# Ledger credit: level and subject per target
+
+
+def require_cad_valid(root: Path) -> str:
+    """Give REQ-001 a cad_valid evidence requirement and an approved policy asking cad_valid evidence of it
+    for LMP-0001, then rebuild v1; returns the new version manifest sha256."""
+    requirements = yaml.safe_load((root / "hw/requirements.yaml").read_text(encoding="utf-8"))
+    requirements["requirements"][0]["evidence_required"] = ["cad_valid"]
+    write_yaml(root / "hw/requirements.yaml", requirements)
+    product = yaml.safe_load((root / "hw/product.yaml").read_text(encoding="utf-8"))
+    product["use_case"]["evidence_policy"] = {
+        "obligations": [{"requirement": "REQ-001", "subject": {"PN": "LMP-0001"}, "level": "cad_valid"}],
+        "decision": APPROVED,
+    }
+    write_yaml(root / "hw/product.yaml", product)
+    return build(root)
+
+
+def requirement_entry(root: Path, manifest_sha: str, subject: dict[str, Any]) -> dict[str, Any]:
+    entry = ledger_entry(root, manifest_sha, subject=subject, requirement="REQ-001")
+    entry.pop("obligation")
+    entry["fingerprints"] = current_fingerprints(root, subject)
+    return entry
+
+
+def test_an_entry_at_another_level_credits_nothing(built: tuple[Path, str]) -> None:
+    """Levels are independent facets: a cad_valid entry never passes a physically_validated obligation (a
+    prototype gap, evidence.py:932-951)."""
+    root, version_sha = built
+    subject = {"PN": "LMP-0001", "operation": "print"}
+    entry = ledger_entry(root, version_sha, obligation=TRIAL, subject=subject)
+    entry["fingerprints"] = current_fingerprints(root, subject)
+    write_ledger(root, entry)
+    result = run(root)
+    assert statuses(result)[TRIAL]["result"] == "unknown"
+    assert "evidence.level" in codes(result)
+
+
+def test_an_inferred_target_is_credited_only_at_its_own_location(built: tuple[Path, str]) -> None:
+    """An entry for a requirement credits the requirement and policy obligations at its level only where its
+    subject is the target's subject (a prototype gap, evidence.py:932-939)."""
+    root, _ = built
+    version_sha = require_cad_valid(root)
+    write_ledger(root, requirement_entry(root, version_sha, {"PN": "LMP-0001"}))
+    found = statuses(run(root))
+    assert found["policy.cad_valid@LMP-0001"]["result"] == "pass"
+    assert found["requirement.cad_valid@REQ-001"]["result"] == "unknown"
+    write_ledger(root, requirement_entry(root, version_sha, {"PN": "LMP-0004"}))
+    assert statuses(run(root))["policy.cad_valid@LMP-0001"]["result"] == "unknown"
+    write_ledger(root, requirement_entry(root, version_sha, {"product": True}))
+    assert statuses(run(root))["requirement.cad_valid@REQ-001"]["result"] == "pass"
+
+
+def test_physical_evidence_without_its_test_credits_nothing(lamp_arm: Path) -> None:
+    """A physically_validated pass needs the physical test fields the contract requires
+    (manufacturing-evidence.tsp `physical`); an entry read leniently without them credits nothing."""
+    from benchhand_core.record.evidence.ledger import EntryJudgement, credit
+
+    trial = next(o for o in required_checks(view(load_record(lamp_arm))) if o.id == TRIAL)
+    entry = {"id": "EV-001", "obligation": TRIAL, "subject": {"PN": "LMP-0001", "operation": "print"}}
+    entry |= {"level": "physically_validated", "result": "pass", "physical": {"specimen": "coupon 1"}}
+    given = credit(entry, 0, EntryJudgement("pass", ("EV-001 pass",)), trial)
+    assert given.result == "unknown"
+    assert [f.code for f in given.findings] == ["evidence.physical_fields"]
 
 
 # Waivers
