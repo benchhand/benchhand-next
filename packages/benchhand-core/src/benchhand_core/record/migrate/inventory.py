@@ -2,7 +2,9 @@
 junk, sealed history, or the service's own lock and temporary files.
 
 A symbolic link whose target resolves outside the project refuses the record (`migrate.symlink_outside`):
-validating the migrated copy would read through it.
+validating the migrated copy would read through it. A symbolic link to a directory is refused outright
+(`migrate.unsupported_layout`), so no link nested under one goes unchecked. The service reads no file once
+the scan reports either.
 """
 
 from __future__ import annotations
@@ -69,6 +71,13 @@ class Inventory:
 def _outside(root: Path, link: Path, relative: str) -> Finding | None:
     target = link.resolve()
     if target == root or root in target.parents:
+        if target.is_dir():
+            return error(
+                "migrate.unsupported_layout",
+                relative,
+                f"this symbolic link points to a directory, {target}; the migration does not walk one",
+                action="Replace the link with a copy of the directory, then migrate again; nothing changed.",
+            )
         return None
     return error(
         "migrate.symlink_outside",

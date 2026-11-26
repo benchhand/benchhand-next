@@ -1,17 +1,24 @@
-"""How an apply can be undone, and what keeps it from racing another migration.
+"""How an apply is undone, and what keeps it from racing another migration.
 
-Apply writes in place, so before it writes anything it needs a recovery point: either hw/ is inside a git
-work tree with nothing to commit (`git restore hw` undoes the migration), or a complete copy of hw/ written
-to .benchhand/backups/<UTC time>/hw first. An exclusive lock file, hw/.benchhand-migrate.lock, keeps a second
-migration out. It does not stop other writers: stop every other process that writes under hw/ first.
+Before apply writes anything, it copies the exact bytes of every file it will change (its preimages; not a
+snapshot of hw/) to .benchhand/migrate-backups/<UTC time>/hw/<path>. Beside them, manifest.json lists each
+path (relative to hw/), the sha256 of its preimage and of its migrated bytes. Each file, the manifest and
+their directories are synced; each file is read back against the manifest; a COMPLETE marker is written and
+synced last. Only then does apply write. `benchhand record migrate --undo <backup>` puts those files back, so
+the record is as it was, whatever else is under hw/ and whatever git's state.
+
+The lock, hw/.benchhand-migrate.lock, is created with O_EXCL and names the backup it belongs to. It keeps a
+second migration out. It does not stop other writers: stop every other process that writes under hw/ first.
+An apply that stops after its backup is COMPLETE leaves the lock, so the next run must either --resume with
+that backup or --undo it; a second backup of a partly migrated tree is never made.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shlex
-import subprocess
 import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,74 +26,25 @@ from pathlib import Path, PurePosixPath
 
 from benchhand_core.record import documents
 from benchhand_core.record.finding import Finding, Severity, error
-from benchhand_core.record.ignore import is_junk
-from benchhand_core.record.migrate.inventory import LOCK_NAME, TEMP_SUFFIX, Inventory, is_own
+from benchhand_core.record.migrate.inventory import LOCK_NAME, TEMP_SUFFIX
 
-BACKUPS = ".benchhand/backups"
+BACKUPS = ".benchhand/migrate-backups"
 LOCK_PATH = f"{documents.HW}/{LOCK_NAME}"
-
-
-@dataclass(frozen=True)
-class RecoveryPoint:
-    command: str  # the exact command that puts hw/ back as it was before the migration
-    backup: Path | None = None
+MANIFEST = "manifest.json"
+COMPLETE = "COMPLETE"
+MANIFEST_FORMAT = 1
 
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-# --- git ------------------------------------------------------------------------------------------------
+def undo_command(backup: Path) -> str:
+    return f"benchhand record migrate --undo {shlex.quote(str(backup))}"
 
 
-def _git(root: Path, *args: str) -> subprocess.CompletedProcess[bytes] | None:
-    try:
-        return subprocess.run(["git", "-C", str(root), *args], capture_output=True, check=False, timeout=120)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
-
-
-def _paths(output: bytes) -> list[str]:
-    return [item.decode("utf-8", "replace") for item in output.split(b"\0") if item]
-
-
-def _counted(path: str) -> bool:
-    """Whether a git status entry counts as a pending change: junk and the service's own files do not."""
-    return not is_junk(PurePosixPath(path)) and not is_own(PurePosixPath(path).name)
-
-
-def git_recovery(root: Path) -> RecoveryPoint | str:
-    """`git restore hw` as the recovery point, or why git cannot be one."""
-    inside = _git(root, "rev-parse", "--is-inside-work-tree")
-    if inside is None or inside.returncode != 0 or inside.stdout.strip() != b"true":
-        return "hw/ is not inside a git work tree"
-    status = _git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", documents.HW)
-    if status is None or status.returncode != 0:
-        return "git status failed"
-    pending = [entry[3:] for entry in _paths(status.stdout) if len(entry) > 3 and _counted(entry[3:])]
-    if pending:
-        return f"hw/ has {len(pending)} uncommitted changes or untracked files (first: {pending[0]})"
-    return RecoveryPoint(f"git -C {shlex.quote(str(root))} restore -- {documents.HW}")
-
-
-def untracked(root: Path, paths: list[str]) -> list[str]:
-    """The `paths` git does not track (an ignored file, say), which git restore cannot bring back."""
-    listed = _git(root, "ls-files", "-z", "--", *paths)
-    tracked = set(_paths(listed.stdout)) if listed is not None and listed.returncode == 0 else set()
-    return [path for path in paths if path not in tracked]
-
-
-def no_recovery_point(reason: str) -> Finding:
-    return error(
-        "migrate.no_recovery_point",
-        documents.HW,
-        f"apply writes in place and needs a way back: {reason}",
-        action="Commit hw/ to git (git add hw && git commit) so that git restore hw undoes the migration, "
-        "or pass --backup to write a complete copy to .benchhand/backups/ first; nothing was changed.",
-    )
-
-
-# --- backup ---------------------------------------------------------------------------------------------
+def resume_command(root: Path) -> str:
+    return f"benchhand record migrate --apply --resume {shlex.quote(str(root / documents.HW))}"
 
 
 def fsync_directory(path: Path) -> None:
@@ -97,57 +55,154 @@ def fsync_directory(path: Path) -> None:
         os.close(handle)
 
 
-def _copy_file(source: Path, target: Path) -> None:
-    data = source.read_bytes()
+def _write_new(target: Path, data: bytes) -> None:
     with open(target, "xb") as stream:
         stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
-    os.chmod(target, source.stat().st_mode & 0o7777)
-    if sha256(target.read_bytes()) != sha256(data):
-        raise OSError(f"{target}: the copy does not read back as written")
 
 
-def write_backup(root: Path, inventory: Inventory) -> RecoveryPoint:
-    """Copy every file of `inventory` (symbolic links as links) to .benchhand/backups/<UTC time>/hw, sync it
-    to disk and read each file back; raises OSError when any step fails."""
-    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
-    backup = root / BACKUPS / stamp / documents.HW
+# --- the backup -----------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Preimage:
+    """One file apply will change: its hw/-relative path, its bytes now, and the sha256 of its migrated
+    bytes."""
+
+    path: str
+    data: bytes
+    migrated_sha256: str
+
+
+@dataclass(frozen=True)
+class Entry:
+    path: str  # relative to hw/
+    sha256: str  # of the preimage
+    migrated_sha256: str
+
+
+def new_backup(root: Path) -> Path:
+    """The path of a new backup for `root`; nothing is created."""
+    return root / BACKUPS / datetime.now(UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+
+
+def project_of(backup: Path) -> Path | None:
+    """The project root a backup path belongs to, or None when it is not under .benchhand/migrate-backups/."""
+    backup = backup.absolute()
+    if backup.parent.name != PurePosixPath(BACKUPS).name or backup.parent.parent.name != ".benchhand":
+        return None
+    return backup.parent.parent.parent
+
+
+def _inside(root: Path, path: Path) -> None:
+    resolved = path.resolve()
+    if resolved != root and root not in resolved.parents:
+        raise OSError(f"{path} resolves to {resolved}, outside the project")
+
+
+def write_backup(root: Path, backup: Path, preimages: list[Preimage]) -> None:
+    """Write the preimages, the manifest and then COMPLETE to `backup`, syncing each and reading each file
+    back; raises OSError when any step fails, before COMPLETE exists."""
     backup.mkdir(parents=True, exist_ok=False)
-    directories = {backup}
-    for relative in sorted({*inventory.files, *inventory.links}):
-        source = root / relative
-        target = backup / PurePosixPath(relative).relative_to(documents.HW)
+    _inside(root, backup)
+    files = backup / documents.HW
+    directories = {backup, files, backup.parent, backup.parent.parent, root}
+    files.mkdir()
+    for preimage in preimages:
+        target = files / preimage.path
         target.parent.mkdir(parents=True, exist_ok=True)
-        directories.update([target.parent, *target.parent.parents])
-        if relative in inventory.links:
-            os.symlink(os.readlink(source), target)
-        else:
-            _copy_file(source, target)
-    for directory in sorted(path for path in directories if path == root or root in path.parents):
+        directories.update(parent for parent in target.parents if files in parent.parents or parent == files)
+        _write_new(target, preimage.data)
+    entries = [
+        {"path": item.path, "sha256": sha256(item.data), "migrated_sha256": item.migrated_sha256}
+        for item in preimages
+    ]
+    manifest_text = json.dumps({"format": MANIFEST_FORMAT, "files": entries}, indent=2)
+    _write_new(backup / MANIFEST, manifest_text.encode())
+    for directory in sorted(directories, key=lambda path: len(path.parts), reverse=True):
         fsync_directory(directory)
-    command = f"cp -Rp {shlex.quote(str(backup))}/. {shlex.quote(str(root / documents.HW))}/"
-    return RecoveryPoint(command, backup)
+    manifest = read_manifest(backup)
+    if isinstance(manifest, str):
+        raise OSError(manifest)
+    _write_new(backup / COMPLETE, b"complete\n")
+    fsync_directory(backup)
+
+
+def read_manifest(backup: Path) -> list[Entry] | str:
+    """The manifest's entries, each preimage read back and hashed, or why the backup cannot be used."""
+    try:
+        data = json.loads((backup / MANIFEST).read_bytes())
+        entries = [Entry(item["path"], item["sha256"], item["migrated_sha256"]) for item in data["files"]]
+        if data.get("format") != MANIFEST_FORMAT:
+            return f"{MANIFEST} has format {data.get('format')!r}, not {MANIFEST_FORMAT}"
+    except (OSError, ValueError, KeyError, TypeError) as failure:
+        return f"cannot read {MANIFEST}: {failure}"
+    for entry in entries:
+        parts = PurePosixPath(entry.path).parts
+        if not parts or ".." in parts or PurePosixPath(entry.path).is_absolute():
+            return f"{MANIFEST} lists {entry.path!r}, which is not a path under hw/"
+        try:
+            found = sha256((backup / documents.HW / entry.path).read_bytes())
+        except OSError as failure:
+            return f"cannot read the preimage of {entry.path}: {failure.strerror or failure}"
+        if found != entry.sha256:
+            return f"the preimage of {entry.path} does not match its sha256 in {MANIFEST}"
+    return entries
+
+
+def is_complete(backup: Path) -> bool:
+    return (backup / COMPLETE).is_file()
 
 
 # --- the lock -------------------------------------------------------------------------------------------
 
 
-def acquire_lock(root: Path) -> Path | Finding:
+def acquire_lock(root: Path, backup: Path) -> Path | Finding:
+    """Create the lock, naming `backup`, and sync it; a refusal when the lock exists."""
     lock = root / LOCK_PATH
     try:
         handle = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
     except FileExistsError:
-        return error(
-            "migrate.locked",
-            LOCK_PATH,
-            "another migration holds the lock on this record",
-            action=f"Wait for it to finish. If no migration is running (a crash left the lock), delete "
-            f"{LOCK_PATH} and migrate again; nothing was changed.",
-        )
+        return locked(root, read_lock(root))
+    record = {"pid": os.getpid(), "started": datetime.now(UTC).isoformat(), "backup": str(backup)}
     with os.fdopen(handle, "w", encoding="utf-8") as stream:
-        stream.write(f"pid {os.getpid()} at {datetime.now(UTC).isoformat()}\n")
+        stream.write(json.dumps(record) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    fsync_directory(lock.parent)
     return lock
+
+
+def read_lock(root: Path) -> Path | str | None:
+    """The backup a lock names; None when there is no lock; why it cannot be read otherwise."""
+    try:
+        return Path(json.loads((root / LOCK_PATH).read_text(encoding="utf-8"))["backup"])
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError, KeyError, TypeError) as failure:
+        return f"cannot read the lock: {failure}"
+
+
+def locked(root: Path, held: Path | str | None) -> Finding:
+    """The refusal for a record whose lock is held: the commands that finish or undo the migration."""
+    if isinstance(held, Path) and is_complete(held):
+        action = (
+            f"If a migration is running, wait for it. If one stopped (a crash), finish it with: "
+            f"{resume_command(root)}; or put the files it changed back with: {undo_command(held)}"
+        )
+    else:
+        action = (
+            f"If a migration is running, wait for it. If one stopped before its backup was COMPLETE, it "
+            f"wrote nothing: run {resume_command(root)} to start again, or delete {LOCK_PATH}"
+        )
+    return error(
+        "migrate.locked",
+        LOCK_PATH,
+        "a migration holds this record's lock"
+        + (f" ({held})" if isinstance(held, str) else f", with backup {held}" if held else ""),
+        action=action + ".",
+    )
 
 
 def release_lock(lock: Path) -> Finding | None:
@@ -171,9 +226,22 @@ def cleanup_failed(path: str, failure: OSError, fix: str) -> Finding:
 # --- writing --------------------------------------------------------------------------------------------
 
 
-def write_durably(target: Path, data: bytes) -> None:
-    """Write `data` to a temp file beside `target` with its mode, sync it, rename it over `target` and sync
-    the directory, so a crash leaves either the old or the new file."""
+class ChangedMeanwhile(Exception):
+    """The target no longer holds the bytes the write expected to replace."""
+
+
+class NotDurable(Exception):
+    """The target was replaced, but syncing its directory failed: the rename may not survive a power loss."""
+
+    def __init__(self, failure: OSError) -> None:
+        super().__init__(str(failure))
+        self.failure = failure
+
+
+def write_durably(target: Path, data: bytes, expected_sha256: str) -> None:
+    """Write `data` to a temp file beside `target` with its mode and sync it; then, if `target` still holds
+    the bytes of `expected_sha256`, rename the temp file over it and sync the directory. A crash leaves the
+    old or the new file. Raises ChangedMeanwhile (nothing replaced), OSError, or NotDurable (replaced)."""
     handle, temporary = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=TEMP_SUFFIX)
     try:
         with os.fdopen(handle, "wb") as stream:
@@ -181,8 +249,13 @@ def write_durably(target: Path, data: bytes) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.chmod(temporary, target.stat().st_mode & 0o7777)
+        if sha256(target.read_bytes()) != expected_sha256:
+            raise ChangedMeanwhile(str(target))
         os.replace(temporary, target)
     except BaseException:
         Path(temporary).unlink(missing_ok=True)
         raise
-    fsync_directory(target.parent)
+    try:
+        fsync_directory(target.parent)
+    except OSError as failure:
+        raise NotDurable(failure) from failure

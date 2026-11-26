@@ -1,21 +1,22 @@
-"""migrate(): the dry run, apply in place with a recovery point and a lock, refusals, and interrupted applies,
-on copies of the reference records."""
+"""migrate() and undo(): the dry run, apply in place behind a preimage backup and a lock, refusals, stopped
+applies and their --resume or --undo, on copies of the reference records."""
 
 from __future__ import annotations
 
+import json
 import os
-import shlex
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
-from benchhand_core.record.migrate import MigrationStatus, migrate, recovery, service
+from benchhand_core.record.migrate import MigrationStatus, migrate, recovery, service, undo
 from benchhand_core.record.migrate.inventory import LOCK_NAME, TEMP_SUFFIX
 from benchhand_core.record.store import load_record
 from benchhand_core.record.validate import validate
 
 from .conftest import LAMP_ARM_HW, TEMPLATE_HW
+
+LAMP_ARM_CHANGES = 10  # the files a lamp-arm migration changes
 
 
 def _tree(hw: Path) -> dict[str, bytes]:
@@ -31,37 +32,25 @@ def _copy(source: Path, root: Path) -> Path:
     return root
 
 
-def _git(root: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", *args],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
-
-
-def _committed(source: Path, root: Path) -> Path:
-    _copy(source, root)
-    _git(root, "init", "-q")
-    _git(root, "add", "hw")
-    _git(root, "commit", "-q", "-m", "prototype record")
-    return root
-
-
 def _codes(findings: tuple) -> list[str]:  # type: ignore[type-arg]
     return [finding.code for finding in findings]
 
 
+def _backups(root: Path) -> list[Path]:
+    return sorted((root / recovery.BACKUPS).iterdir()) if (root / recovery.BACKUPS).exists() else []
+
+
 @pytest.mark.parametrize("source", [LAMP_ARM_HW, TEMPLATE_HW], ids=["lamp-arm", "template"])
 def test_a_reference_record_migrates_and_validates_with_no_findings(source: Path, tmp_path: Path) -> None:
-    root = _committed(source, tmp_path)
+    root = _copy(source, tmp_path)
     plan = migrate(root)
     assert plan.status == MigrationStatus.ready
     assert (plan.findings, plan.remaining) == ((), ())
     result = migrate(root, apply=True)
     assert result.status == MigrationStatus.applied, result.refusals
     assert result.written[-1] == "hw/product.yaml"
-    assert result.recovery == f"git -C {root.resolve()} restore -- hw"
+    assert result.backup is not None and result.recovery == f"benchhand record migrate --undo {result.backup}"
+    assert _codes(result.findings) == ["migrate.backup_written"]
     assert validate(root) == []
     load_record(root)
     assert not (root / "hw" / LOCK_NAME).exists()
@@ -82,7 +71,7 @@ def test_the_dry_run_writes_nothing_and_states_each_change_as_a_diff(tmp_path: P
 def test_apply_writes_exactly_the_planned_text_and_leaves_every_other_file_byte_identical(
     tmp_path: Path,
 ) -> None:
-    root = _committed(LAMP_ARM_HW, tmp_path)
+    root = _copy(LAMP_ARM_HW, tmp_path)
     before = _tree(root / "hw")
     plan = migrate(root)
     migrate(root, apply=True)
@@ -93,64 +82,84 @@ def test_apply_writes_exactly_the_planned_text_and_leaves_every_other_file_byte_
         assert content == changed.get(path, before[path]), path
 
 
-def test_the_recovery_command_puts_hw_back(tmp_path: Path) -> None:
-    for backup in (False, True):
-        root = _committed(LAMP_ARM_HW, tmp_path / f"backup-{backup}")
-        before = _tree(root / "hw")
-        result = migrate(root, apply=True, backup=backup)
-        assert result.status == MigrationStatus.applied
-        assert result.recovery is not None
-        subprocess.run(shlex.split(result.recovery), check=True, capture_output=True)
-        assert _tree(root / "hw") == before
-
-
-def test_backup_is_a_complete_copy_reported_in_the_result(tmp_path: Path) -> None:
+def test_the_backup_holds_the_preimages_of_the_changed_files_with_a_manifest(tmp_path: Path) -> None:
     root = _copy(LAMP_ARM_HW, tmp_path)
     before = _tree(root / "hw")
-    result = migrate(root, apply=True, backup=True)
-    assert result.status == MigrationStatus.applied
-    assert (
-        result.backup is not None
-        and result.backup.parent.parent == (root / ".benchhand" / "backups").resolve()
-    )
-    assert _tree(result.backup) == before
-    assert "migrate.backup_written" in _codes(result.findings)
+    plan = migrate(root)
+    result = migrate(root, apply=True)
+    assert result.backup is not None and result.backup.parent == root / recovery.BACKUPS
+    assert (result.backup / recovery.COMPLETE).is_file()
+    preimages = _tree(result.backup / "hw")
+    changed = {change.path.removeprefix("hw/") for change in plan.changes}
+    assert {path for path, data in preimages.items() if data != b"<dir>"} == changed
+    assert all(preimages[path] == before[path] for path in changed)
+    manifest = json.loads((result.backup / recovery.MANIFEST).read_text())
+    assert {entry["path"]: entry["sha256"] for entry in manifest["files"]} == {
+        path: recovery.sha256(before[path]) for path in changed
+    }
 
 
-def test_apply_without_a_recovery_point_is_refused_naming_both_fixes(tmp_path: Path) -> None:
-    plain = _copy(LAMP_ARM_HW, tmp_path / "plain")
-    dirty = _committed(LAMP_ARM_HW, tmp_path / "dirty")
-    (dirty / "hw" / "notes.md").write_text("not committed\n")
-    for root in (plain, dirty):
-        before = _tree(root / "hw")
-        result = migrate(root, apply=True)
-        assert result.status == MigrationStatus.refused
-        [refusal] = result.refusals
-        assert refusal.code == "migrate.no_recovery_point"
-        assert "git restore hw" in (refusal.action or "") and "--backup" in (refusal.action or "")
-        assert _tree(root / "hw") == before
-
-
-def test_untracked_junk_does_not_count_against_a_clean_work_tree(tmp_path: Path) -> None:
-    root = _committed(LAMP_ARM_HW, tmp_path)
+def test_undo_puts_back_exactly_the_record_as_it_was_junk_and_all(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
     (root / "hw" / ".DS_Store").write_bytes(b"\x00junk")
-    assert migrate(root, apply=True).status == MigrationStatus.applied
+    (root / "hw" / "notes.md").write_text("never committed anywhere\n")
+    before = _tree(root / "hw")
+    result = migrate(root, apply=True)
+    assert result.status == MigrationStatus.applied and result.backup is not None
+    undone = undo(result.backup)
+    assert undone.status == MigrationStatus.undone, undone.refusals
+    assert undone.written[0] == "hw/product.yaml" and len(undone.written) == LAMP_ARM_CHANGES
+    assert _tree(root / "hw") == before
+    assert undo(result.backup).written == ()  # a second undo has nothing left to put back
 
 
-def test_migrating_a_record_version_3_record_is_a_no_op(lamp_arm: Path) -> None:
+def test_undo_leaves_a_file_something_else_changed_and_reports_it(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    before = _tree(root / "hw")
+    result = migrate(root, apply=True)
+    assert result.backup is not None
+    (root / "hw" / "bom.csv").write_text("edited after the migration\n")
+    undone = undo(result.backup)
+    assert undone.status == MigrationStatus.undone
+    [skipped] = undone.findings
+    assert (skipped.code, skipped.path) == ("migrate.undo_skipped", "hw/bom.csv")
+    assert str(result.backup / "hw" / "bom.csv") in (skipped.action or "")
+    assert (root / "hw" / "bom.csv").read_text() == "edited after the migration\n"
+    assert {path: data for path, data in _tree(root / "hw").items() if path != "bom.csv"} == {
+        path: data for path, data in before.items() if path != "bom.csv"
+    }
+
+
+def test_undo_refuses_a_backup_that_is_incomplete_or_does_not_match_its_manifest(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    result = migrate(root, apply=True)
+    assert result.backup is not None
+    after = _tree(root / "hw")
+    (result.backup / "hw" / "bom.csv").write_text("damaged\n")
+    assert _codes(undo(result.backup).refusals) == ["migrate.backup_unusable"]
+    (result.backup / recovery.COMPLETE).unlink()
+    assert _codes(undo(result.backup).refusals) == ["migrate.backup_incomplete"]
+    assert _codes(undo(tmp_path / "elsewhere").refusals) == ["migrate.backup_unusable"]
+    assert _tree(root / "hw") == after
+
+
+def test_migrating_a_record_version_3_record_is_a_no_op_that_still_validates(lamp_arm: Path) -> None:
     before = _tree(lamp_arm)
     for apply in (False, True):
         result = migrate(lamp_arm, apply=apply)
         assert result.status == MigrationStatus.current
         assert _codes(result.findings) == ["migrate.current"]
+        assert result.remaining == ()
     assert _tree(lamp_arm) == before
+    (lamp_arm / "hw" / "bom.csv").write_text("level,PN\n")
+    assert migrate(lamp_arm).refusals  # a broken record_version 3 record is reported, not called fine
 
 
 def test_prototype_pr_319_record_version_1_migrates_as_version_2(tmp_path: Path) -> None:
     root = _copy(LAMP_ARM_HW, tmp_path)
     product = root / "hw" / "product.yaml"
     product.write_text(product.read_text().replace("record_version: 2", "record_version: 1", 1))
-    assert migrate(root, apply=True, backup=True).status == MigrationStatus.applied
+    assert migrate(root, apply=True).status == MigrationStatus.applied
     assert validate(root) == []
 
 
@@ -161,7 +170,7 @@ def test_an_unknown_record_version_is_refused_and_nothing_changes(tmp_path: Path
     replacement = "" if value is None else f"record_version: {value}\n"
     product.write_text(product.read_text().replace("record_version: 2\n", replacement, 1))
     before = _tree(tmp_path)
-    result = migrate(root, apply=True, backup=True)
+    result = migrate(root, apply=True)
     assert result.status == MigrationStatus.refused
     [refusal] = result.refusals
     assert (refusal.code, refusal.path, refusal.pointer) == (
@@ -179,7 +188,7 @@ def test_a_deprecated_decision_is_refused_in_the_dry_run_and_apply_writes_nothin
     decision.write_text(decision.read_text().replace("status: accepted", "status: deprecated", 1))
     before = _tree(tmp_path)
     for apply in (False, True):
-        result = migrate(root, apply=apply, backup=True)
+        result = migrate(root, apply=apply)
         assert result.status == MigrationStatus.refused
         [refusal] = result.refusals
         assert (refusal.code, refusal.path, refusal.pointer) == (
@@ -197,7 +206,7 @@ def test_human_approval_key_is_reported_because_those_gates_now_ask(tmp_path: Pa
     text = product.read_text()
     assert 'human_approval: "all"' in text
     product.write_text(text.replace('human_approval: "all"', 'human_approval: "key"', 1))
-    result = migrate(root, apply=True, backup=True)
+    result = migrate(root, apply=True)
     assert result.status == MigrationStatus.applied
     [note] = [finding for finding in result.findings if finding.code == "migrate.gates_now_ask"]
     assert (note.severity.value, note.pointer) == ("info", "/flow/profile/human_approval")
@@ -225,10 +234,9 @@ def test_os_and_tool_junk_is_never_read_or_rewritten(tmp_path: Path) -> None:
     try:
         plan = migrate(root)
         assert plan.status == MigrationStatus.ready, plan.refusals
-        assert len(plan.changes) == len(migrate(_copy(LAMP_ARM_HW, tmp_path / "clean")).changes)
-        result = migrate(root, apply=True, backup=True)
+        assert len(plan.changes) == LAMP_ARM_CHANGES
+        result = migrate(root, apply=True)
         assert result.status == MigrationStatus.applied, result.refusals
-        assert result.backup is not None and not (result.backup / ".DS_Store").exists()
     finally:
         os.chmod(root / "hw" / "__pycache__", 0o755)
         for path in junk:
@@ -244,12 +252,13 @@ def test_a_directory_that_cannot_be_listed_refuses_the_record(tmp_path: Path) ->
     os.chmod(hidden, 0)
     try:
         for apply in (False, True):
-            result = migrate(root, apply=apply, backup=True)
+            result = migrate(root, apply=apply)
             assert result.status == MigrationStatus.refused
             assert _codes(result.refusals) == ["migrate.scan_failed"]
             assert result.refusals[0].path == "hw/renders"
     finally:
         os.chmod(hidden, 0o755)
+    assert _backups(root) == [] and not (root / "hw" / LOCK_NAME).exists()
 
 
 def test_sealed_history_stays_byte_identical(tmp_path: Path) -> None:
@@ -261,48 +270,76 @@ def test_sealed_history_stays_byte_identical(tmp_path: Path) -> None:
         (hw / path).parent.mkdir(parents=True)
         shutil.copy(hw / source, hw / path)
     shutil.copytree(hw / "decisions", hw / "versions" / "v1" / "hw" / "decisions")
-    before = {
-        path: data
-        for path, data in _tree(hw).items()
-        if path.split("/")[0] in ("versions", "checks", "releases")
-    }
-    result = migrate(root, apply=True, backup=True)
+    history = ("versions", "checks", "releases")
+    before = {path: data for path, data in _tree(hw).items() if path.split("/")[0] in history}
+    result = migrate(root, apply=True)
     assert result.status == MigrationStatus.applied, result.refusals
-    assert not [
-        change for change in result.changes if change.path.split("/")[1] in ("versions", "checks", "releases")
-    ]
+    assert not [change for change in result.changes if change.path.split("/")[1] in history]
     assert {path: data for path, data in _tree(hw).items() if path in before} == before
 
 
-def test_a_frozen_record_whose_digest_inputs_would_change_is_refused(tmp_path: Path) -> None:
+@pytest.mark.parametrize("ledger_converted", [False, True], ids=["ledger-changes", "no-ledger-change"])
+def test_a_frozen_prototype_record_is_always_refused(tmp_path: Path, ledger_converted: bool) -> None:
     root = _copy(LAMP_ARM_HW, tmp_path)
+    if ledger_converted:  # the verification ledger already in its version 3 form: no rule changes a ledger
+        planned = next(change for change in migrate(root).changes if change.path == "hw/verification.csv")
+        (root / planned.path).write_text(planned.after)
+        assert "hw/verification.csv" not in [change.path for change in migrate(root).changes]
     product = root / "hw" / "product.yaml"
     text = product.read_text()
     product.write_text(text.replace("flow:\n", "flow:\n  frozen: {version: v1, evidence_sha256: abc}\n", 1))
     before = _tree(tmp_path)
     for apply in (False, True):
-        result = migrate(root, apply=apply, backup=True)
+        result = migrate(root, apply=apply)
         assert result.status == MigrationStatus.refused
         [refusal] = result.refusals
         assert (refusal.code, refusal.pointer) == ("migrate.frozen_anchor", "/flow/frozen")
-        assert "hw/verification.csv" in refusal.message and "Phase 2" in (refusal.action or "")
+        assert "Phase 2" in (refusal.action or "")
     assert _tree(tmp_path) == before
 
 
-def test_a_symlink_leaving_the_project_is_refused_and_one_inside_is_read(tmp_path: Path) -> None:
+def test_a_symlink_leaving_the_project_refuses_before_any_file_is_read(tmp_path: Path) -> None:
     root = _copy(LAMP_ARM_HW, tmp_path / "project")
     (tmp_path / "outside.md").write_text("outside\n")
     (root / "README.md").write_text("inside\n")
     (root / "hw" / "inside.md").symlink_to("../README.md")
     assert migrate(root).status == MigrationStatus.ready
     (root / "hw" / "outside.md").symlink_to(tmp_path / "outside.md")
-    before = _tree(root / "hw")
+    os.chmod(root / "hw" / "bom.csv", 0)  # a rule target that would fail the run if it were read
+    try:
+        for apply in (False, True):
+            result = migrate(root, apply=apply)
+            assert result.status == MigrationStatus.refused
+            [refusal] = result.refusals
+            assert (refusal.code, refusal.path) == ("migrate.symlink_outside", "hw/outside.md")
+    finally:
+        os.chmod(root / "hw" / "bom.csv", 0o644)
+    assert _backups(root) == []
+
+
+def test_a_symbolic_link_to_a_directory_is_refused(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path / "project")
+    (root / "docs").mkdir()
+    (root / "docs" / "escape.md").symlink_to(tmp_path)  # a nested link a walk through it would meet
+    (root / "hw" / "linked-docs").symlink_to("../docs")
     for apply in (False, True):
-        result = migrate(root, apply=apply, backup=True)
-        assert result.status == MigrationStatus.refused
-        [refusal] = result.refusals
-        assert (refusal.code, refusal.path) == ("migrate.symlink_outside", "hw/outside.md")
-    assert _tree(root / "hw") == before
+        result = migrate(root, apply=apply)
+        assert [(finding.code, finding.path) for finding in result.refusals] == [
+            ("migrate.unsupported_layout", "hw/linked-docs")
+        ]
+
+
+def test_a_symlinked_hw_is_refused_before_anything_is_read_or_locked(tmp_path: Path) -> None:
+    other = _copy(LAMP_ARM_HW, tmp_path / "other")
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "hw").symlink_to(other / "hw")
+    before = _tree(other / "hw")
+    for apply in (False, True):
+        result = migrate(root, apply=apply)
+        assert _codes(result.refusals) == ["migrate.symlink_hw"]
+    assert _tree(other / "hw") == before
+    assert not (root / ".benchhand").exists()
 
 
 def test_a_crlf_csv_keeps_its_line_endings_and_data_rows(tmp_path: Path) -> None:
@@ -310,7 +347,7 @@ def test_a_crlf_csv_keeps_its_line_endings_and_data_rows(tmp_path: Path) -> None
     bom = root / "hw" / "bom.csv"
     crlf = bom.read_bytes().replace(b"\n", b"\r\n")
     bom.write_bytes(crlf)
-    migrate(root, apply=True, backup=True)
+    migrate(root, apply=True)
     header, rest = crlf.split(b"\r\n", 1)
     migrated_header, migrated_rest = bom.read_bytes().split(b"\r\n", 1)
     assert migrated_rest == rest
@@ -326,9 +363,10 @@ def test_a_held_lock_refuses_and_a_lock_that_cannot_be_removed_is_reported(
     lock = root / "hw" / LOCK_NAME
     lock.write_text("pid 1\n")
     before = _tree(root / "hw")
-    result = migrate(root, apply=True, backup=True)
-    assert _codes(result.refusals) == ["migrate.locked"]
-    assert f"delete hw/{LOCK_NAME}" in (result.refusals[0].action or "")
+    for apply in (False, True):
+        result = migrate(root, apply=apply)
+        assert _codes(result.refusals) == ["migrate.locked"]
+        assert f"delete hw/{LOCK_NAME}" in (result.refusals[0].action or "")
     assert _tree(root / "hw") == before
     lock.unlink()
 
@@ -336,15 +374,21 @@ def test_a_held_lock_refuses_and_a_lock_that_cannot_be_removed_is_reported(
         raise PermissionError(13, "Permission denied")
 
     monkeypatch.setattr(Path, "unlink", stuck)
-    result = migrate(root, apply=True, backup=True)
+    result = migrate(root, apply=True)
     assert result.status == MigrationStatus.applied
     assert "migrate.cleanup_failed" in _codes(result.findings)
+
+
+def test_resume_without_a_stopped_migration_is_refused(tmp_path: Path) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    assert _codes(migrate(root, apply=True, resume=True).refusals) == ["migrate.not_interrupted"]
 
 
 def test_a_file_changed_after_the_plan_is_not_overwritten(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = _copy(LAMP_ARM_HW, tmp_path)
+    before = _tree(root / "hw")
     real_checked = service._checked
 
     def plan_then_edit(*args: object) -> object:
@@ -353,13 +397,39 @@ def test_a_file_changed_after_the_plan_is_not_overwritten(
         return planned
 
     monkeypatch.setattr(service, "_checked", plan_then_edit)
-    result = migrate(root, apply=True, backup=True)
-    assert result.status == MigrationStatus.refused
+    result = migrate(root, apply=True)
+    assert result.status == MigrationStatus.failed
     [refusal] = result.refusals
     assert (refusal.code, refusal.path) == ("migrate.changed_meanwhile", "hw/bom.csv")
     assert result.recovery is not None and result.recovery in (refusal.action or "")
+    assert "--resume" in (refusal.action or "")
     assert (root / "hw" / "bom.csv").read_text() == "edited meanwhile\n"
     assert result.written == ()
+    monkeypatch.undo()
+    assert result.backup is not None
+    undone = undo(result.backup)
+    assert _codes(undone.findings) == ["migrate.undo_skipped"]
+    assert _tree(root / "hw") == {**before, "bom.csv": b"edited meanwhile\n"}
+
+
+def test_a_target_changed_after_its_temp_file_is_synced_is_not_replaced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The re-hash sits after the temp file's sync, just before the rename."""
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    real_chmod = os.chmod
+
+    def edit_on_temp_chmod(path: str | Path, mode: int, **kwargs: object) -> None:
+        real_chmod(path, mode, **kwargs)  # type: ignore[arg-type]
+        if str(path).endswith(TEMP_SUFFIX) and ".bom.csv." in str(path):
+            (root / "hw" / "bom.csv").write_text("edited during the write\n")
+
+    monkeypatch.setattr(recovery.os, "chmod", edit_on_temp_chmod)
+    result = migrate(root, apply=True)
+    monkeypatch.undo()
+    assert _codes(result.refusals) == ["migrate.changed_meanwhile"]
+    assert (root / "hw" / "bom.csv").read_text() == "edited during the write\n"
+    assert not list((root / "hw").rglob(f"*{TEMP_SUFFIX}"))
 
 
 def test_a_file_added_after_the_plan_refuses_before_any_write(
@@ -375,14 +445,18 @@ def test_a_file_added_after_the_plan_refuses_before_any_write(
 
     monkeypatch.setattr(service, "_checked", plan_then_add)
     before = _tree(root / "hw")
-    result = migrate(root, apply=True, backup=True)
+    result = migrate(root, apply=True)
     assert _codes(result.refusals) == ["migrate.changed_meanwhile"]
-    assert _tree(root / "hw") == {**before, "added.md": b"new\n"}
+    assert result.written == ()
+    assert {path: data for path, data in _tree(root / "hw").items() if path != LOCK_NAME} == {
+        **before,
+        "added.md": b"new\n",
+    }
 
 
 def _clean_run(tmp_path: Path) -> dict[str, bytes]:
     root = _copy(LAMP_ARM_HW, tmp_path / "clean")
-    assert migrate(root, apply=True, backup=True).status == MigrationStatus.applied
+    assert migrate(root, apply=True).status == MigrationStatus.applied
     return _tree(root / "hw")
 
 
@@ -390,37 +464,113 @@ class _Crash(BaseException):
     """The process dying mid-apply: nothing in the service catches it."""
 
 
+def _crash_after(root: Path, monkeypatch: pytest.MonkeyPatch, stop_after: int) -> None:
+    """Run an apply that dies after writing `stop_after` files, leaving its lock."""
+    real_write = recovery.write_durably
+    written: list[Path] = []
+
+    def crash_after(target: Path, data: bytes, expected: str) -> None:
+        if len(written) == stop_after:
+            raise _Crash
+        real_write(target, data, expected)
+        written.append(target)
+
+    monkeypatch.setattr(recovery, "write_durably", crash_after)
+    with pytest.raises(_Crash):
+        migrate(root, apply=True)
+    monkeypatch.undo()
+    assert len(written) == stop_after
+
+
 @pytest.mark.parametrize("stop_after", [0, 1, 4, 9])
-def test_a_rerun_after_an_interrupted_apply_finishes_it_byte_identically(
+def test_resume_after_a_stopped_apply_finishes_it_byte_identically(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop_after: int
 ) -> None:
     expected = _clean_run(tmp_path)
     root = _copy(LAMP_ARM_HW, tmp_path / "crashed")
-    real_write = recovery.write_durably
-    written: list[Path] = []
-
-    def crash_after(target: Path, data: bytes) -> None:
-        if len(written) == stop_after:
-            raise _Crash
-        real_write(target, data)
-        written.append(target)
-
-    monkeypatch.setattr(recovery, "write_durably", crash_after)
-    monkeypatch.setattr(recovery, "release_lock", lambda lock: None)  # a killed process leaves its lock
-    with pytest.raises(_Crash):
-        migrate(root, apply=True, backup=True)
-    monkeypatch.undo()
-    assert len(written) == stop_after
-    assert _codes(migrate(root, apply=True, backup=True).refusals) == ["migrate.locked"]
-    (root / "hw" / LOCK_NAME).unlink()
-    rerun = migrate(root, apply=True, backup=True)
+    _crash_after(root, monkeypatch, stop_after)
+    [refusal] = migrate(root, apply=True).refusals
+    assert refusal.code == "migrate.locked"
+    assert "--resume" in (refusal.action or "") and "--undo" in (refusal.action or "")
+    rerun = migrate(root, apply=True, resume=True)
     assert rerun.status == MigrationStatus.applied, rerun.refusals
-    assert len(rerun.written) == 10 - stop_after
+    assert len(rerun.written) == LAMP_ARM_CHANGES - stop_after
     assert _tree(root / "hw") == expected
+    assert len(_backups(root)) == 1  # no second backup of a partly migrated tree
     assert not list((root / "hw").rglob(f"*{TEMP_SUFFIX}"))
 
 
-def test_a_write_failure_stops_apply_and_names_the_recovery(
+@pytest.mark.parametrize("stop_after", [0, 1, 4, 9])
+def test_undo_after_a_stopped_apply_puts_the_record_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stop_after: int
+) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    before = _tree(root / "hw")
+    _crash_after(root, monkeypatch, stop_after)
+    [backup] = _backups(root)
+    undone = undo(backup)
+    assert undone.status == MigrationStatus.undone, undone.refusals
+    assert len(undone.written) == stop_after
+    assert _tree(root / "hw") == before  # the lock is gone too
+
+
+def test_a_stop_after_the_last_write_is_resumed_or_undone_from_record_version_3(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = _clean_run(tmp_path)
+    before = _tree(_copy(LAMP_ARM_HW, tmp_path / "original") / "hw")
+    real_validate = service.validate
+    for finish in ("resume", "undo"):
+        root = _copy(LAMP_ARM_HW, tmp_path / finish)
+
+        def crash_on_final_validation(where: Path, root: Path = root) -> object:
+            if where == root:
+                raise _Crash
+            return real_validate(where)
+
+        monkeypatch.setattr(service, "validate", crash_on_final_validation)
+        with pytest.raises(_Crash):
+            migrate(root, apply=True)
+        monkeypatch.undo()
+        assert _codes(migrate(root).refusals) == ["migrate.locked"]  # not `current` while a lock is held
+        if finish == "resume":
+            result = migrate(root, apply=True, resume=True)
+            assert (result.status, result.written) == (MigrationStatus.applied, ())
+            assert _tree(root / "hw") == expected
+        else:
+            [backup] = _backups(root)
+            assert undo(backup).status == MigrationStatus.undone
+            assert _tree(root / "hw") == before
+
+
+def test_a_stop_before_the_backup_is_complete_wrote_nothing_and_resume_starts_again(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = _clean_run(tmp_path)
+    root = _copy(LAMP_ARM_HW, tmp_path / "crashed")
+    before = _tree(root / "hw")
+    real_new = recovery._write_new
+
+    def crash_on_complete(target: Path, data: bytes) -> None:
+        if target.name == recovery.COMPLETE:
+            raise _Crash
+        real_new(target, data)
+
+    monkeypatch.setattr(recovery, "_write_new", crash_on_complete)
+    monkeypatch.setattr(recovery, "release_lock", lambda lock: None)  # a killed process leaves its lock
+    with pytest.raises(_Crash):
+        migrate(root, apply=True)
+    monkeypatch.undo()
+    assert {path: data for path, data in _tree(root / "hw").items() if path != LOCK_NAME} == before
+    [backup] = _backups(root)
+    assert _codes(undo(backup).refusals) == ["migrate.backup_incomplete"]
+    assert "wrote nothing" in (migrate(root, apply=True).refusals[0].action or "")
+    assert migrate(root, apply=True, resume=True).status == MigrationStatus.applied
+    assert _tree(root / "hw") == expected
+    assert len(_backups(root)) == 1
+
+
+def test_a_write_failure_stops_apply_and_resume_finishes_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     expected = _clean_run(tmp_path)
@@ -428,19 +578,42 @@ def test_a_write_failure_stops_apply_and_names_the_recovery(
     real_write = recovery.write_durably
     calls: list[Path] = []
 
-    def fail_second(target: Path, data: bytes) -> None:
+    def fail_second(target: Path, data: bytes, expected_sha256: str) -> None:
         calls.append(target)
         if len(calls) == 2:
             raise OSError(28, "No space left on device")
-        real_write(target, data)
+        real_write(target, data, expected_sha256)
 
     monkeypatch.setattr(recovery, "write_durably", fail_second)
-    result = migrate(root, apply=True, backup=True)
+    result = migrate(root, apply=True)
     assert result.status == MigrationStatus.failed
     assert len(result.written) == 1
     [refusal] = result.refusals
     assert refusal.code == "migrate.write_failed"
     assert result.recovery is not None and result.recovery in (refusal.action or "")
     monkeypatch.undo()
-    assert migrate(root, apply=True, backup=True).status == MigrationStatus.applied
+    assert (root / "hw" / LOCK_NAME).exists()
+    assert migrate(root, apply=True, resume=True).status == MigrationStatus.applied
     assert _tree(root / "hw") == expected
+
+
+def test_a_failed_directory_sync_after_a_rename_counts_the_file_as_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    bom = root / "hw" / "bom.csv"
+    original = bom.read_bytes()
+    real_sync = recovery.fsync_directory
+
+    def failing_once_bom_is_replaced(path: Path) -> None:
+        if path == bom.parent and bom.read_bytes() != original:
+            raise OSError(5, "Input/output error")
+        real_sync(path)
+
+    monkeypatch.setattr(recovery, "fsync_directory", failing_once_bom_is_replaced)
+    result = migrate(root, apply=True)
+    monkeypatch.undo()
+    assert (result.status, result.written) == (MigrationStatus.failed, ("hw/bom.csv",))
+    [refusal] = result.refusals
+    assert refusal.code == "migrate.not_durable" and "power loss" in refusal.message
+    assert result.recovery is not None and result.recovery in (refusal.action or "")

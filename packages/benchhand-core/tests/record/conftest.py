@@ -15,9 +15,9 @@ TEMPLATE_HW = REFERENCE_ROOT / "skills" / "cad-record" / "assets" / "project-tem
 
 
 def migrated(source_hw: Path, work: Path) -> Path:
-    """The hw/ of a copy of `source_hw` under `work`, migrated with --backup (the backup stays in `work`)."""
+    """The hw/ of a copy of `source_hw` under `work`, migrated (its backup stays in `work`/.benchhand)."""
     shutil.copytree(source_hw, work / "hw")
-    result = migrate(work, apply=True, backup=True)
+    result = migrate(work, apply=True)
     assert result.status == MigrationStatus.applied, result.refusals
     return work / "hw"
 
