@@ -24,9 +24,9 @@ _VERSION = re.compile(r"v[1-9][0-9]*")
 class GitView:
     """What git says about the project root. `tracked` lists the files a work tree tracks (empty for a work
     tree with no tracked files, which then refuses every unmanaged citation, as the prototype does);
-    `not_worktree` is set when git confirmed the root is no work tree, so only the layout and scratch rules
-    apply; `unavailable` says why git could not be read (no git, an unreadable index), which refuses every
-    unmanaged citation rather than letting it through."""
+    `not_worktree` is set when git confirmed the root is no work tree and no .git exists at it or above it,
+    so only the layout and scratch rules apply; `unavailable` says why git could not be read (no git, an
+    unreadable index, a broken .git), which refuses every unmanaged citation instead of letting it through."""
 
     tracked: frozenset[str] = frozenset()
     not_worktree: bool = False
@@ -38,16 +38,37 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(["git", "-C", str(root), *args], capture_output=True, check=False, env=env)
 
 
+def _git_marker(root: Path) -> str | None:
+    """The first .git at `root` or an ancestor up to the filesystem root, the directories git's discovery
+    walks; or why one could not be looked for. None when there is no .git anywhere."""
+    start = root.resolve()
+    for directory in (start, *start.parents):
+        marker = directory / ".git"
+        try:
+            marker.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as error:
+            return f"{marker} cannot be read: {error}"
+        return f"{marker} exists"
+    return None
+
+
 def git_view(root: Path) -> GitView:
     """Observe git at `root` (evidence_paths.py:119-128). The prototype reads any `git ls-files` failure as
-    "no work tree"; here only a rev-parse that says so is, and any other failure leaves git unavailable."""
+    "no work tree"; here only a rev-parse that says so, with no .git at the root or above it, is. git says the
+    same of a .git that does not resolve (a gitfile naming a missing directory: setup.c
+    READ_GITFILE_ERR_NOT_A_REPO), which leaves git unavailable, as does any other failure."""
     try:
         inside = _git(root, "rev-parse", "--is-inside-work-tree")
     except OSError as error:
         return GitView(unavailable=f"git cannot run: {error}")
     stderr = inside.stderr.decode("utf-8", "replace").strip()
     if inside.returncode != 0 and "not a git repository" in stderr:
-        return GitView(not_worktree=True)
+        marker = _git_marker(root)
+        if marker is None:
+            return GitView(not_worktree=True)
+        return GitView(unavailable=f"git rev-parse failed: {stderr}, but {marker}")
     if inside.returncode != 0 or inside.stdout.strip() != b"true":
         return GitView(unavailable=f"git rev-parse failed: {stderr or inside.stdout.decode().strip()}")
     listed = _git(root, "ls-files", "-z")

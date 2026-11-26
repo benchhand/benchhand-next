@@ -725,6 +725,35 @@ def test_git_that_cannot_be_read_refuses_unmanaged_citations(
     assert any("cannot be checked against git" in f["message"] for f in result["findings"])
 
 
+@pytest.mark.parametrize("where", ["root", "ancestor"])
+@pytest.mark.parametrize("marker_kind", ["empty .git directory", "gitfile naming no repository"])
+def test_a_broken_git_marker_is_not_proof_of_no_work_tree(
+    built: tuple[Path, str], where: str, marker_kind: str
+) -> None:
+    """git says "not a git repository" of a root under a .git that does not resolve, as of a root outside
+    git: an empty .git directory, which discovery walks past, or (git 2.51 setup.c
+    READ_GITFILE_ERR_NOT_A_REPO) a .git file naming a directory that is no repository. Such a .git at the
+    root or above it leaves git unavailable, so a correctly hashed, untracked citation is refused instead of
+    passing as outside git."""
+    from benchhand_core.record.evidence.path_judge import git_view
+
+    root, version_sha = built
+    write_ledger(root, ledger_entry(root, version_sha))
+    marker = root / ".git" if where == "root" else root.parent / ".git"
+    if marker_kind == "empty .git directory":
+        marker.mkdir()
+    else:
+        gone = root.parent / "removed-worktree"
+        gone.mkdir()
+        marker.write_text(f"gitdir: {gone}\n", encoding="utf-8")
+    seen = git_view(root)
+    assert seen.not_worktree is False
+    assert seen.unavailable is not None
+    result = run(root)
+    assert statuses(result)[READBACK]["result"] == "unknown"
+    assert any("cannot be checked against git" in f["message"] for f in result["findings"])
+
+
 # Ledger credit: level and subject per target
 
 
