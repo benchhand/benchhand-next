@@ -114,3 +114,67 @@ Findings from the artefact tests:
 - **A CheckedExpr carries no environment identity.** It names message types and overload ids but not the descriptor set or extension versions. An evaluator given a CheckedExpr from a different environment fails late or not at all (untested). The bundle has to carry the digest of the env YAML and descriptor set, and the evaluator has to compare it.
 - **The env YAML is the weakest artefact.** Two engines read it as is. The other four need an adapter, and each adapter maps extension names by hand, which is where versions can drift. The extension list is also the main source of conformance gaps (see the next sections).
 - **JSON is the neutral encoding of the test files.** textproto needs descriptors at parse time in every language except Go and C++; the protobuf JSON form loads with a plain JSON parser.
+
+## The type pipeline
+
+```text
+contracts/*.tsp ──TypeSpec──▶ published JSON Schema (packages/benchhand-contracts/.../schemas)
+                                   │
+            scopes.yaml ──────────▶ gen/celgen.py ──▶ generated/scopes.txt (structural or refused, with reasons)
+  (variable → schema pointer,       │
+   omitted fields, extensions)      ├──▶ generated/proto/benchhand/contracts/**.proto ──buf build──▶ generated/types.binpb
+                                    └──▶ generated/env/<scope>.env.yaml
+records (JSON) ──each language's protobuf JSON parser, unknown fields ignored──▶ activation messages
+```
+
+What each step does:
+
+1. **Scopes.** `scopes.yaml` names the variables a rule list sees. Each variable points at one node of a published schema, for example `decision: record/decision.schema.json#/$defs/gate_decision`. A scope can omit a field, and an omitted field isn't declared. So a rule that reads it fails the check, which is the right result for a field that has no single type.
+2. **Structural check.** `celgen.py` walks every node a rule can reach and refuses a scope if a node has more than one shape. It refuses:
+    - a `oneOf` or `anyOf` whose branches carry shapes (a union);
+    - an `allOf` that merges shapes;
+    - an untyped node (`true` or `{}`), which would be `dyn`;
+    - an object with properties that isn't sealed;
+    - a map of lists;
+    - a field named with a CEL reserved word (`function` in `common.schema.json`).
+
+    Validation-only keywords are ignored, as Kubernetes does: `pattern`, bounds, `if`/`then`/`else`, `not`, and a `oneOf` of `required` clauses. `generated/scopes.txt` shows the gate-guard scope typed as 12 messages with two fields omitted. Three unscoped roots are refused with the path and reason of each union. This is item 1 of the Kubernetes adopt table, at generation time.
+3. **Type mapping.**
+
+    | JSON Schema | proto3 | CEL |
+    |---|---|---|
+    | required `string`, `integer`, `number`, `boolean` | `string`, `int64`, `double`, `bool` | the same |
+    | optional scalar | `optional` scalar (field presence) | the scalar; `has()` tells absent from the zero value |
+    | nullable scalar (`[T, null]` or `oneOf` with `null`) | `google.protobuf.*Value` wrapper | `wrapper(T)`: null when absent |
+    | sealed object | message | message |
+    | `additionalProperties: {schema}` | `map<string, V>` | `map(string, V)` |
+    | array | `repeated` | `list(T)` |
+    | `enum` of strings | `string`, values in a comment | `string`: the values aren't checked |
+4. **Descriptor set.** `buf build --exclude-source-info` compiles the generated `.proto` files to a 4.8 KB FileDescriptorSet. Re-running the generator into an empty directory reproduced `proto/`, `env/` and `scopes.txt` exactly, and the descriptor set byte for byte.
+5. **Activation.** A record is JSON. Each language turns it into the declared message with its own protobuf JSON parser, set to ignore unknown fields, so omitted fields drop out:
+    - Python: `json_format.ParseDict`;
+    - Go: `protojson`;
+    - Rust: `prost-reflect` `DynamicMessage::deserialize`;
+    - TypeScript: protobuf-es `fromJson`.
+
+    No generated Rust or TypeScript structs are needed to evaluate rules. The host's own Rust and TypeScript types still come from the same JSON Schemas through the D17 generators (`typify`, `json-schema-to-typescript`).
+
+### The bad rules, per engine
+
+The seven bad rules in `typedemo/gate_guard.yaml`, and where each engine stops them. "check" means the type check rejected it; "eval" means it got as far as evaluation.
+
+| Bad rule | cel-go | cel-expr-python | cel-cxx | cel-core and the pyo3 binding | @bufbuild/cel | cel-js | cel 0.16 |
+|---|---|---|---|---|---|---|---|
+| `decision.approvel.channel` (wrong field) | check | check | check | check | eval: field not found | check | eval: no such key |
+| `job.exitcode` (the field is `exitCode`) | check | check | check | check | eval: field not found | check | eval: no such key |
+| `job.progress.fraction + "x"` (double + string) | check | check | check | check | eval: no overload | **passes the check** (the wrapper is `dyn`) | eval: unsupported operator |
+| `part.mass_target > "1"` (double > string) | check | check | check | check | eval: no overload | **passes the check** (the wrapper is `dyn`) | eval: no overload |
+| `decision.status == 1` (string == int) | check | check | check | **passes the check**, evaluates to `false` | eval: `false` | check | eval: `false` |
+| `part.intent.route.size() > 0` (omitted union field) | check | check | check | check | eval: field not found | check | **evaluates to `true`**: the untyped record still has the field |
+| `undeclared.x == 1` | check | check | check | check | eval: unresolved | check | eval: undeclared |
+| **Rejected at check** | **7 of 7** | **7 of 7** | **7 of 7** | **6 of 7** | **0 of 7** | **5 of 7** | **0 of 7** |
+
+Two gaps apply to every engine:
+
+- **Enum values aren't checked.** The schema's `enum` becomes a CEL `string`, so `decision.status == "aproved"` passes the check and is always false. cel-expr-python type-checked it as `BOOL`. Kubernetes has the same gap. A load-time lint can compare string literals against the enum the field's schema lists.
+- **Heterogeneous equality depends on the checker.** cel-core and the runtime semantics of every engine treat `string == int` as `false`, not as an error. Only a checker that follows cel-go stops it.
