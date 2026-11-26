@@ -14,7 +14,7 @@ cel-go, cel-expr-python and the Rust crate cel-core each check a rule against th
 
 Checking can be a step of its own. A runtime that has only an evaluator can run CheckedExprs that a checker wrote, and that is how the browser gets typed rules without a TypeScript checker.
 
-Rust can have the same standing as Python now, with one engine choice to make:
+Rust can have the same standing as Python as an evaluator, with one engine choice to make and one owner to find:
 
 - **cel-core 0.5.1** is the only pure-Rust engine with a checker and CheckedExpr input and output. It passed 1639 of the 1640 tests in the shared suite. It has one maintainer and no commit in nine months. Its checker also accepts `decision.status == 1` (string against int), which cel-go and cel-cpp reject.
 - **cel-cxx 0.2.5** wraps cel-cpp, the checker that cel-expr-python uses. It caught all seven bad rules. Its build runs Bazel inside `cargo build`, and its Rust API has no CheckedExpr input or output.
@@ -25,7 +25,7 @@ A pyo3 binding of our own over cel-core took 87 lines of Rust and builds a 2 MB 
 Recommendation, which is for the owner to decide:
 
 - Keep cel-expr-python as the Python engine and checker at load.
-- Make cel-core the Rust engine, behind the same small adapter, pinned and held to the shared suite.
+- Make cel-core the Rust **candidate evaluator**, not a checker of record, behind the same small adapter and held to the supported-profile gate. Rust authoring and the pyo3 fallback validate rules with the reference checker. Promotion needs an owner for cel-core's upgrades, fixes or a fork. cel-cxx is a source-checking alternative, not a bundle evaluator.
 - Use `@bufbuild/cel` in the browser, to evaluate CheckedExprs only.
 - Use cel-go in CI as the reference checker and the conformance oracle, through `go/celcheck`: a small tool that builds the environment from the profile manifest with explicit options and writes CheckedExprs. One pinned cel-go version serves both. `tools/compiler` isn't the reference, because it appends the latest optional and bindings extensions. The `cel-expr` CLI writes no CheckedExpr, so it serves for authoring and `rules test` only.
 - Generate the descriptor set and environment YAML with the contracts (ADR-0017).
@@ -290,7 +290,7 @@ Each engine has one runner (`go/conformance`, `py/conformance.py`, `rust/src/bin
 
 What this means for the design:
 
-- **The checkers agree on the core language.** cel-go, cel-expr-python and cel-core differ on 30 tests at most, and almost all of them are `cel.block`, which is an optimiser artefact rather than a rule-author feature. So a rule that one of these three checks will mean the same thing on the others.
+- **The engines agree on evaluating the core language.** cel-go, cel-expr-python and cel-core differ on 30 tests at most, and almost all of them are `cel.block`, which is an optimiser artefact rather than a rule-author feature. The suite tests good expressions, so this says the engines evaluate a checked rule alike. It doesn't say their checkers reject the same rules: cel-core accepts `decision.status == 1` and `cel.bind` outside the profile.
 - **Extensions are the main divergence.** The environment for benchhand rules may enable only extensions every executing engine has. With @bufbuild/cel in the browser, that is strings alone, unless the browser only evaluates CheckedExprs that don't use the others. The adapter's load step should refuse an env YAML that names an extension the engine lacks; in this spike each adapter maps names by hand.
 - **The shared suite misses the checker gap.** cel-core scores 99.9% and still accepts `decision.status == 1`. cel-spec's simple tests check that good expressions pass, not that bad ones fail. benchhand's own suite needs reject cases, like the seven in the typed demo, run on every checker.
 - **cel-js is out.** At 63% with no CheckedExpr input, it can't run the rules the host checked.
@@ -432,7 +432,7 @@ Vendoring means a copy with a recorded upstream commit, as `reference/` does for
 The checker runs in two places, and an evaluator anywhere.
 
 1. **At load, in the host.** The Python host checks every standalone expression (gate `requires`, edge guards, `void_scope`) with cel-expr-python against the profile, as ADR-0014 already requires: a typo fails at load. Errors carry the rule's file path, for example `flow.yaml#/gates/PROVISIONAL/requires/0`, and the line, column and caret (Kubernetes rows 4 and 5). Each slot's output type is checked too: `requires` and `when` must be `bool`. Rule lists aren't compiled at load: the host loads their CheckedExprs from the bundle and refuses a list whose entry is missing or stale ("Should benchhand adopt the format?").
-2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. The cel-go side is `go/celcheck`, which builds its environment from the profile manifest with explicit options and writes CheckedExprs. The `cel-expr` CLI runs the typed `rules test` cases (`eval -tests`, with coverage). cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
+2. **In CI, with cel-go as the reference.** `go/celcheck` checks every rule list and every rule that ships across a boundary, and its result decides. cel-expr-python checks the same rules as the host's checker of record for standalone expressions, and CI fails when the two disagree on whether a rule checks or on its output type. cel-core's check runs too, as a diagnostic that finds gaps like its `string == int`. The cel-go side is `go/celcheck`, which builds its environment from the profile manifest with explicit options and writes CheckedExprs. The `cel-expr` CLI runs the typed `rules test` cases (`eval -tests`, with coverage). cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
 
 A successful check produces a **compiled rules bundle**:
 
@@ -449,26 +449,41 @@ So checking is a separate step that ships CheckedExprs, with one condition: the 
 
 Agents that write rules work against the same generated artefacts. The `rules` plugin's skills and the `cel-expr mcp` server in fixed-environment mode read the generated environment and descriptor set, and never author an environment.
 
+### The engine roles
+
+An engine's role decides what its results can prove:
+
+- **Checker of record.** Its check decides whether a rule ships. cel-go (`go/celcheck`) checks rule lists and anything shipped across a boundary. cel-expr-python checks standalone expressions at load in the host. Both rejected 7 of 7 bad rules and refused all 6 excluded features.
+- **Evaluator.** It runs only CheckedExprs that a checker of record wrote in the same profile, after the bundle check. Its own checker, if it has one, is diagnostic. cel-core and @bufbuild/cel have this role.
+- **Source-checking alternative.** It checks and evaluates source, but can't read or write a CheckedExpr. cel-cxx has this role: its Rust API has no CheckedExpr input or output, so it can't run the bundle (standard rules 5 and 7).
+
+**cel-core is a candidate evaluator, not a checker of record.** Its suite score (1639 of 1640) measures evaluation of good expressions. Its checker accepts `decision.status == 1`, and its parser expands `cel.bind` outside the profile ("Known mismatches"). So:
+
+- A Rust tool that authors or checks rules, and the pyo3 fallback in the Python host, validate each rule with the reference checker before it ships or counts. The other way is an independent reject suite on cel-core that covers every check the profile relies on. The typed reject cases and the profile cases are the start of that suite. cel-core fails 2 of the 16 (`results/typed-demo/cel-core.json`).
+- The CI differential check protects only shipped rules. A rule edited locally and checked only by cel-core is unchecked for this purpose.
+- Promoting cel-core to a required engine needs an owner for its upgrades, for upstream fixes and, if upstream stalls, for a fork. A pinned version and an MIT OR Apache-2.0 licence allow a fork but don't supply anyone to maintain it. cel-core has one maintainer and no push since 2026-02-16.
+
 ### The engine in each runtime
 
-| Runtime | Engine | Checks | Evaluates | Reads |
-|---|---|---|---|---|
-| Python host | cel-expr-python | Yes, at load | Yes | env YAML, descriptor set, CheckedExpr |
-| Rust component or provider | cel-core, through the adapter crate; cel-cxx as the fallback if cel-core stalls | Yes | Yes | env YAML (adapter), descriptor set, CheckedExpr |
-| Browser (preview host, gate card) | @bufbuild/cel | No | CheckedExprs from the bundle | descriptor set, CheckedExpr |
-| CI | cel-go | Yes, the reference, plus cost | The conformance oracle | env YAML, descriptor set, CheckedExpr |
-| Python fallback | the pyo3 binding over cel-core | Yes | Yes | the same as cel-core |
+| Runtime | Engine | Role | Checks | Evaluates | Reads |
+|---|---|---|---|---|---|
+| Python host | cel-expr-python | Checker of record for standalone expressions; evaluator | Yes, at load | Yes | profile manifest, descriptor set, bundle |
+| CI, `benchhand rules compile` | cel-go (`go/celcheck`) | Reference checker, cost estimate, conformance oracle | Yes | The oracle | profile manifest, descriptor set; writes the bundle |
+| Rust component or provider | cel-core, through the adapter crate | Candidate evaluator | Diagnostic only | Bundles in its profile | profile manifest, descriptor set, bundle |
+| Rust, source checking | cel-cxx | Source-checking alternative | Yes | Source only | profile (adapter), descriptor set |
+| Browser (preview host, gate card) | @bufbuild/cel | Evaluator, restricted profile only | No | Bundles in its profile | profile manifest, descriptor set, bundle |
+| Python fallback | the pyo3 binding over cel-core | Evaluator; its checks need the reference checker | Diagnostic only | Yes | the same as cel-core |
 
-A provider in any other language either takes CheckedExprs from the host or uses its language's engine, and passes the same suite.
+A provider in any other language either takes the bundle from the host or uses its language's engine in one of these roles, and passes the same gate.
 
 ### The adapter interface
 
 Every runtime wraps its engine in the same five operations. Each operation names a cross-language artefact, not a type from one engine:
 
 ```text
-load(env_yaml, descriptor_set)  -> Environment | [Issue]   refuse an unknown extension or version
+load(manifest, descriptor_set) -> Environment | [Issue]   refuse an extension version or option it doesn't implement
 check(env, path, expr, slot)    -> CheckedExpr | [Issue]   absent where the engine has no checker
-program(env, checked_expr)      -> Program | [Issue]       refuse a CheckedExpr from another environment
+program(env, bundle_entry)      -> Program | [Issue]       refuse another profile's digest or a stale source
 eval(program, activation)       -> Value | EvalError       activation: variable -> record (JSON) or message
 identity()                      -> {engine, version, options}
 ```
@@ -477,17 +492,17 @@ identity()                      -> {engine, version, options}
 - A `Value` leaves the adapter as `cel.expr.Value` protobuf JSON, the encoding the conformance runners already use. So results compare across languages with one comparator.
 - `eval` returns an error for a rule that fails to compile or evaluate, and the caller records it as a finding with coverage UNKNOWN, not PASS (Kubernetes row 6). The adapter tests assert this.
 
-The spike has most of this per language already: `rust/src/lib.rs` (load), `rust-py/src/lib.rs` (check, program and eval for Python over Rust), and the runners' value encoders. cel-expr-python's adapter is the thinnest, because the binding reads both artefacts itself.
+The spike has most of this per language already: the profile loaders (`go/profile`, `py/celprofile.py`, `rust/src/lib.rs`, `ts/celprofile.ts`) for `load` and the bundle check, `rust-py/src/lib.rs` (check, program and eval for Python over Rust), and the runners' value encoders.
 
 ### What gives Rust equal standing
 
 Three things, all of which this design needs anyway:
 
-1. **A required Rust job in CI.** It runs the shared suite, the typed accept and reject cases, and the differential check on cel-core.
-2. **A Rust adapter crate** (`benchhand-cel`) with the five operations over cel-core. It reads the same generated artefacts and the bundle.
+1. **A required Rust job in CI.** It runs the supported-profile gate on cel-core as an evaluator, and records its own checker's results on the typed reject and profile cases as diagnostics.
+2. **A Rust adapter crate** (`benchhand-cel`) with the five operations over cel-core. It reads the profile manifest and the bundle. Its `check` is labelled diagnostic until cel-core passes the reject suite.
 3. **Contract types for Rust providers.** `typify` structs for host code (D17), plus the descriptor set for rule activations, so a Rust provider needs no second schema.
 
-These three make Rust providers first-rate. A Rust host component is a different decision. The pyo3 measurement says crossing from the Python host into a Rust component is cheap: 87 lines for the CEL part, and one abi3 wheel per platform. Plan section 4 (D12) still says "Python host and core; no Rust". Moving the flow interpreter or another host component to Rust means changing D12, which is the owner's call.
+These three make Rust providers first-rate as evaluators, on the condition above: someone owns cel-core's upgrades, fixes or fork. A Rust host component is a different decision. The pyo3 measurement says crossing from the Python host into a Rust component is cheap: 87 lines for the CEL part, and one abi3 wheel per platform. Plan section 4 (D12) still says "Python host and core; no Rust". Moving the flow interpreter or another host component to Rust means changing D12, which is the owner's call.
 
 ### Alignment with the Kubernetes adopt table
 
@@ -525,11 +540,11 @@ Replace the **Interpreter** bullet's type sentence. Current text: "CEL activatio
 
 Replace the **CEL runtime** bullet. Current text: "`cel-expr-python`, Google's C++-backed binding, which is young (0.1.x). A Rust-backed binding is the fallback behind one small adapter interface. The conformance suite runs the same expressions on both." Proposed:
 
-> - **CEL engines**, each behind the same five-operation adapter (`load`, `check`, `program`, `eval`, `identity`). The Python host checks and evaluates with `cel-expr-python`. Rust components and providers use `cel-core`, with `cel-cxx` as the fallback. The browser evaluates checked rules with `@bufbuild/cel` and doesn't check. CI checks with `cel-go` as the reference. A Python fallback is a pyo3 binding over `cel-core`.
+> - **CEL engines**, each behind the same five-operation adapter (`load`, `check`, `program`, `eval`, `identity`). Each engine has a role: checker of record, evaluator, or source-checking alternative. The Python host checks standalone expressions and evaluates with `cel-expr-python`. CI and `benchhand rules compile` check with the pinned `cel-go` reference checker. Rust components and providers evaluate bundles with `cel-core`, a candidate evaluator whose own checker is diagnostic; promoting it needs an owner for upgrades, fixes or a fork. `cel-cxx` is a source-checking alternative, not a bundle evaluator. The browser evaluates bundles in the restricted profile with `@bufbuild/cel`. A Python fallback is a pyo3 binding over `cel-core`, whose rules the reference checker validates.
 > - **Compiled rules.** The rules bundle holds the CheckedExpr of every rule list, compiled by `benchhand rules compile` or CI, and of every standalone expression, checked by the host at load. Each entry has its output type, the SHA-256 of its source bytes, the profile digest and the checker's identity. An evaluator in any language runs the bundle without checking again and refuses an entry whose profile digest differs from its own. The bundle shape lives in `contracts/`.
 > - **Conformance.** One suite runs on every engine in CI: cel-spec's simple tests in protobuf JSON, plus benchhand's typed accept and reject cases. CI also fails when cel-go, cel-expr-python and cel-core disagree on whether a shipped rule checks. The environment may enable only extensions that every executing engine has.
 
-Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `cel-core` (it has the checker and reads CheckedExprs) and TypeScript from `cel-js` to `@bufbuild/cel` (it evaluates CheckedExprs). If the owner wants a Rust host component, the "no Rust" choice under the table changes too; see the open questions.
+Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `cel-core` (it reads and evaluates CheckedExprs; its checker is diagnostic) and TypeScript from `cel-js` to `@bufbuild/cel` (it evaluates CheckedExprs). If the owner wants a Rust host component, the "no Rust" choice under the table changes too; see the open questions.
 
 ### ADR-0014, "The flow is data, the rules are CEL"
 
@@ -550,7 +565,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
 7. **Choose engines by evidence.** The criteria are: a checker, CheckedExpr input and output, environment YAML input, the project's suite result, maintenance and licence. As of 2026-11, the choices are:
     - Go: cel-go.
     - Python: cel-expr-python.
-    - Rust: cel-core, or cel-cxx where a C++ toolchain and Bazel are acceptable.
+    - Rust: cel-core as an evaluator of reference-checked CheckedExprs, with a named owner. cel-cxx checks source where a C++ toolchain and Bazel are acceptable, but can't run a bundle.
     - TypeScript: @bufbuild/cel, evaluating CheckedExprs only.
 
     An engine without a checker may only run rules a checker has already checked.
@@ -592,7 +607,7 @@ Builds in this worktree:
 - **Two cel-cxx causes are assumptions.** The backtick and timestamp-range failures are read as defaults in cel-cxx's build. They weren't traced into its cel-cpp version.
 - **cel-core in a browser was out of scope.** It compiles to WebAssembly in principle; that would give one Rust engine in every runtime, but this run built no new engine.
 - **The `cel.expr.conformance.Environment` proto and the `celtest` suite format weren't exercised.**
-- **cel-core's maintenance is the main risk** of the Rust choice: one maintainer, and no push since 2026-02-16. The mitigations are a pinned version, the differential check in CI, and the licence (MIT OR Apache-2.0), which allows a fork.
+- **cel-core's maintenance is the main risk** of the Rust choice: one maintainer, and no push since 2026-02-16. A pinned version and the gate limit the damage, and the licence (MIT OR Apache-2.0) allows a fork. None of those supplies a maintainer, so promotion waits for an owner.
 - **@bufbuild/cel is beta, and its checker isn't public.** The browser plan depends only on its evaluator reading CheckedExprs. That worked in 0.6.2 for all 18 shipped rules here; whether its own test suite covers checked input is unverified.
 - **The suite covers 1640 of cel-spec's 2344 simple tests.** The rest need declarations, bindings or the conformance message types, and adding them means a typed-value encoder in every runner.
 - **The `cel-expr` signature and provenance weren't verified,** and the policy tests used an unsigned build of main. Only the checksum of the v0.4.0 release was checked.
@@ -602,7 +617,7 @@ Builds in this worktree:
 ## Open questions for the owner
 
 1. **What does Rust's equal standing cover?** Rust providers only, which this design gives without a plan change? Or a Rust host component, such as the flow interpreter behind pyo3, which changes D12's "no Rust"?
-2. **cel-core or cel-cxx for Rust?** cel-core is pure Rust and passed 1639 of 1640, but it has one maintainer and a known checker gap. cel-cxx shares cel-cpp's checker with the Python host, but it needs Bazel and a C++ toolchain in every Rust build, and it has no CheckedExpr API.
+2. **Who owns cel-core, if it is promoted?** It is the only Rust candidate evaluator that reads CheckedExprs and passed 1639 of 1640, but it has one maintainer and two checker mismatches, so it evaluates and doesn't check of record. cel-cxx shares cel-cpp's checker with the Python host, but needs Bazel and a C++ toolchain in every Rust build and can't run a bundle.
 3. **Is the rules bundle user-facing?** It could be a `benchhand rules compile` command whose output lives in the project, or an internal cache the host writes at load and hands to the browser and providers.
 4. **Does the browser evaluate rules, or only show results the host computed?** If it only shows results, @bufbuild/cel isn't needed and the extension set isn't limited to strings.
 5. **Amend ADR-0014 or write a new ADR** for the artefacts, the bundle and the engine set?
