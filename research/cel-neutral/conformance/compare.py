@@ -3,6 +3,10 @@
 Matching follows cel-spec's simple.proto: a value must equal the expected value (maps ignore order, any NaN
 matches NaN), an eval_error matches any evaluation error, and an unset result means `true`. Writes
 results/summary.md (pass counts per file and engine) and results/failures-<engine>.txt.
+
+The scores are diagnostic. What fails (exit 1) is a change: an engine in ENGINES with no results, or a set
+of failing tests that differs from the committed baseline, expected/suite-failures.json. A new failure and
+a new pass both fail, so every change is reviewed. `--update-baseline` rewrites the baseline.
 """
 
 from __future__ import annotations
@@ -15,7 +19,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 RESULTS = ROOT / "results"
+BASELINE = ROOT / "expected" / "suite-failures.json"
 TRUE = {"boolValue": True}
+# Every engine run.sh runs. A missing results file fails the comparison.
+ENGINES = ("bufbuild-cel", "cel-core", "cel-cxx", "cel-expr-python", "cel-go", "cel-js", "cel-rust")
 
 
 def number(x: object) -> float:
@@ -68,13 +75,15 @@ def verdict(test: dict, row: dict) -> str | None:
     return f"want {json.dumps(want)}, got {outcome}: {json.dumps(got)[:160]}"
 
 
-def score(engine: str, tests: dict) -> tuple[dict[str, int], list[str], int]:
-    """Passes per file, the failure lines, and how many failures are disableCheck tests the engine checked."""
+def score(engine: str, tests: dict) -> tuple[dict[str, int], list[str], int, list[str]]:
+    """Passes per file, the failure lines, how many failures are disableCheck tests the engine checked,
+    and the failing test keys."""
     rows = {
         (r["file"], r["section"], r["name"]): r for r in map(json.loads, (RESULTS / f"{engine}.jsonl").open())
     }
     passed: dict[str, int] = {}
     lines = []
+    failing = []
     checked_anyway = 0
     for key, test in tests.items():
         row = rows.get(key, {"outcome": "missing"})
@@ -83,15 +92,31 @@ def score(engine: str, tests: dict) -> tuple[dict[str, int], list[str], int]:
             passed[key[0]] = passed.get(key[0], 0) + 1
             continue
         lines.append(f"{'/'.join(key)}: {why}")
+        failing.append("/".join(key))
         checked_anyway += bool(test.get("disableCheck")) and row["outcome"] == "check_error"
-    return passed, lines, checked_anyway
+    return passed, lines, checked_anyway, failing
+
+
+def baseline_changes(failing: dict[str, list[str]]) -> list[str]:
+    """One line per engine whose failing tests differ from the baseline."""
+    baseline = json.loads(BASELINE.read_text())
+    changes = []
+    for engine, keys in failing.items():
+        want = set(baseline.get(engine, []))
+        new, fixed = sorted(set(keys) - want), sorted(want - set(keys))
+        if new or fixed:
+            changes.append(
+                f"{engine}: {len(new)} new failures {new[:3]}, {len(fixed)} new passes {fixed[:3]}"
+            )
+    return changes
 
 
 def main() -> int:
     suite = json.loads((ROOT / "suite.json").read_text())
     tests = {(f["name"], s["name"], t["name"]): t for f in suite for s in f["sections"] for t in s["tests"]}
     files = [f["name"] for f in suite]
-    engines = sorted(p.stem for p in RESULTS.glob("*.jsonl"))
+    missing = [e for e in ENGINES if not (RESULTS / f"{e}.jsonl").exists()]
+    engines = [e for e in ENGINES if e not in missing]
     totals = {f["name"]: sum(len(s["tests"]) for s in f["sections"]) for f in suite}
     scores = {}
     for engine in engines:
@@ -117,7 +142,14 @@ def main() -> int:
     )
     (RESULTS / "summary.md").write_text("\n".join(out) + "\n")
     print("\n".join(out))
-    return 0
+    failing = {e: scores[e][3] for e in engines}
+    if "--update-baseline" in sys.argv:
+        BASELINE.parent.mkdir(exist_ok=True)
+        BASELINE.write_text(json.dumps(failing, indent=1, sort_keys=True) + "\n")
+    problems = [f"{e}: no results" for e in missing] + baseline_changes(failing)
+    for line in problems:
+        print(f"FAIL {line}", file=sys.stderr)
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":

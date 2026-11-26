@@ -312,6 +312,17 @@ What this means for the design:
 - **The shared suite misses the checker gap.** cel-core scores 99.9% and still accepts `decision.status == 1`. cel-spec's simple tests check that good expressions pass, not that bad ones fail. benchhand's own suite needs reject cases, like the seven in the typed demo, run on every checker.
 - **cel-js is out.** At 63% with no CheckedExpr input, it can't run the rules the host checked.
 
+### The gate: the supported-profile suite, not upstream scores
+
+The upstream scores above are diagnostic. A score says how much of cel-spec an engine covers, and most of what it misses is outside any benchhand profile. The required CI gate is different:
+
+- **Every selected engine runs the supported-profile suite**: the accept, reject, profile and presence cases of each profile, the tampered-bundle cases, and the shipped CheckedExprs from every other writer. Values must match the expected ones, and each reject or profile case must fail where expected. An engine runs each case in its role: an evaluator runs the bundle cases, and only a checker of record runs the reject cases as a gate.
+- **A missing engine fails.** `conformance/run.sh` no longer skips cel-cxx when its runner isn't built: it exits 1, and it deletes old results first, so a stale file can't stand in for an engine that didn't run. `conformance/compare.py` exits 1 for any engine in its list with no results.
+- **An unexpected change fails.** `compare.py` compares each engine's failing tests with `conformance/expected/suite-failures.json`. A new failure and a new pass both fail the run, so an engine upgrade that changes behaviour is reviewed and the baseline is updated on purpose (`--update-baseline`). Removing `results/cel-js.jsonl` made it exit 1 with `FAIL cel-js: no results`.
+- **The browser is supported for the restricted profile only.** @bufbuild/cel 0.6.2 ignores a CheckedExpr's type and reference maps when it plans one: it re-resolves names itself. So it relies on the reference checker having checked the rule in the same profile, and the gate runs it only on bundles whose profile has no optional or bindings extension.
+
+The typed demos are not yet wired into `run.sh`. Each one exits non-zero on a mismatch and writes `results/typed-demo/<engine>.json`, but the gate as specified needs one runner that reads those files against expected outcomes per engine role. That runner is unmeasured.
+
 ## The cel-expr CLI and cel-go's compiler package
 
 `cel-expr` (github.com/cel-expr/skills, `cmd/cel-expr`, Apache-2.0) is a cel-go CLI with the subcommands `env`, `compile`, `eval`, `conformance`, `prompt` and `mcp`. The repository has 4 stars and was last pushed on 2026-11-25.
