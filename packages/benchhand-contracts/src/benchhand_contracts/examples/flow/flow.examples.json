@@ -215,6 +215,15 @@
           "gate": "intent",
           "status": "approved",
           "channel": "auto"
+        },
+        {
+          "gate": "layout_freeze",
+          "status": "void",
+          "version": "v3",
+          "channel": "chat",
+          "by": "the user",
+          "quote": "The arm needs 20 mm more reach; don't freeze this.",
+          "provisional": "DR-012"
         }
       ],
       "invalid": [
@@ -288,6 +297,48 @@
             "gate": 12345,
             "status": "approved",
             "channel": "auto"
+          }
+        },
+        {
+          "example": 2,
+          "mutation": "remove-property",
+          "pointer": "/gate",
+          "instance": {
+            "status": "void",
+            "version": "v3",
+            "channel": "chat",
+            "by": "the user",
+            "quote": "The arm needs 20 mm more reach; don't freeze this.",
+            "provisional": "DR-012"
+          }
+        },
+        {
+          "example": 2,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "gate": "layout_freeze",
+            "status": "void",
+            "version": "v3",
+            "channel": "chat",
+            "by": "the user",
+            "quote": "The arm needs 20 mm more reach; don't freeze this.",
+            "provisional": "DR-012",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 2,
+          "mutation": "wrong-type",
+          "pointer": "/gate",
+          "instance": {
+            "gate": 12345,
+            "status": "void",
+            "version": "v3",
+            "channel": "chat",
+            "by": "the user",
+            "quote": "The arm needs 20 mm more reach; don't freeze this.",
+            "provisional": "DR-012"
           }
         }
       ]

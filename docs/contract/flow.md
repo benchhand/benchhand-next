@@ -31,9 +31,9 @@ A check in `checks_by_iteration` is either a check id or `{check, when}`. The se
 
 `GateDecisionRequest` is what the flow engine takes to record a human-gate decision. The engine writes the decision record itself, in the [decision](generated/record/decision.md) shape.
 
-- `status` is `approved`, or `void` for a change the user names at the gate.
+- `status` is `approved`, or `void` for a change the user names at the human gate. A `void` needs a human channel, `app` or `chat`, and cites the provisional decision it withdraws. The interpreter records the other VOIDs itself, after a failing full check or a MAJOR light-review finding, without this request.
 - `channel` uses the decision record's channel values. A request refuses `form`, because v1 doesn't use form elicitation (ADR-0018). The record contract still accepts `form`.
-- Every channel except `auto` names who decided (`by`) and quotes their words (`quote`). An `auto` decision quotes nobody.
+- Every channel except `auto` names who decided (`by`) and quotes their words (`quote`). A quote has at least one character that isn't whitespace, because an empty answer is no answer (plan section 11). An `auto` decision quotes nobody.
 - `provisional` cites the provisional decision of a `provisional+full+human` gate.
 
 ## Approval scope

@@ -182,9 +182,6 @@ export interface FlowEdge {
    */
   guard?: string;
 }
-/**
- * What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate, and void withdraws its provisional approval because of a change the user named. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words. form is refused: form elicitation is not used (ADR-0018)
- */
 export interface GateDecisionRequest {
   /**
    * A flow gate id; flow.yaml names the gates
@@ -198,7 +195,7 @@ export interface GateDecisionRequest {
   channel: "app" | "form" | "chat" | "auto";
   by?: string;
   /**
-   * The user's words, quoted
+   * The user's words, quoted. At least one character isn't whitespace
    */
   quote?: string;
   /**

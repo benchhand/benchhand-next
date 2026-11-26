@@ -94,10 +94,24 @@ model FlowEdge {
   guard?: CelExpression;
 }
 
-/** What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate, and void withdraws its provisional approval because of a change the user named. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words. form is refused: form elicitation is not used (ADR-0018) */
-@extension("if", #{ properties: #{ channel: #{ `const`: "auto" } } })
-@extension("then", #{ not: #{ required: #["quote"] } })
-@extension("else", #{ required: #["by", "quote"] })
+/** What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and a quote has at least one character that isn't whitespace: an empty answer is no answer. form is refused: form elicitation is not used (ADR-0018) */
+@extension(
+  "allOf",
+  #[
+    #{
+      `if`: #{ properties: #{ channel: #{ `const`: "auto" } } },
+      then: #{ not: #{ required: #["quote"] } },
+      `else`: #{ required: #["by", "quote"] },
+    },
+    #{
+      `if`: #{ properties: #{ status: #{ `const`: "void" } } },
+      then: #{
+        required: #["provisional"],
+        properties: #{ channel: #{ `enum`: #["app", "chat"] } },
+      },
+    }
+  ]
+)
 model GateDecisionRequest {
   gate: Records.Common.gate_id;
   status: "approved" | "void";
@@ -110,7 +124,8 @@ model GateDecisionRequest {
 
   by?: Records.Common.text;
 
-  /** The user's words, quoted */
+  /** The user's words, quoted. At least one character isn't whitespace */
+  @pattern("[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]")
   quote?: Records.Common.text;
 
   provisional?: Records.Common.decision;
@@ -217,6 +232,18 @@ model ApprovedItemState {
 @@example(
   GateDecisionRequest,
   #{ gate: "intent", status: "approved", channel: "auto" }
+);
+@@example(
+  GateDecisionRequest,
+  #{
+    gate: "layout_freeze",
+    status: "void",
+    version: "v3",
+    channel: "chat",
+    by: "the user",
+    quote: "The arm needs 20 mm more reach; don't freeze this.",
+    provisional: "DR-012",
+  }
 );
 @@example(
   ApprovalScope,

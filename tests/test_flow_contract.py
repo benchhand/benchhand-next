@@ -144,3 +144,23 @@ def test_a_human_channel_names_who_decided_and_quotes_them(missing: str) -> None
 
 def test_an_auto_decision_quotes_nobody() -> None:
     assert violations(REQUEST_ID, {**_request(), "channel": "auto"})
+
+
+def test_a_void_names_the_user_and_the_provisional_decision_it_withdraws() -> None:
+    void = {**_request(), "status": "void", "quote": "Don't freeze this."}
+    assert violations(REQUEST_ID, void) == []
+    del void["provisional"]
+    assert violations(REQUEST_ID, void)
+
+
+def test_a_void_through_channel_auto_is_refused() -> None:
+    # The interpreter records an automatic VOID itself; this request is the user's.
+    void = {"gate": "layout_freeze", "status": "void", "channel": "auto", "provisional": "DR-012"}
+    assert violations(REQUEST_ID, void)
+
+
+@pytest.mark.parametrize("quote", [" ", "\t\n", "\u00a0\u3000"])
+def test_a_quote_of_only_whitespace_is_no_answer(quote: str) -> None:
+    assert [violation.pointer for violation in violations(REQUEST_ID, {**_request(), "quote": quote})] == [
+        "/quote"
+    ]
