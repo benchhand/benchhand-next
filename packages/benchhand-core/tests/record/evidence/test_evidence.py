@@ -601,6 +601,48 @@ def test_an_untracked_file_of_a_git_project_earns_no_credit(built: tuple[Path, s
     assert statuses(run(root))[READBACK]["result"] == "pass"
 
 
+def test_a_work_tree_with_no_tracked_files_refuses_unmanaged_citations(built: tuple[Path, str]) -> None:
+    """evidence_paths.py:119-159: an empty index is still a work tree, so an existing cited file outside
+    the managed locations is refused, and the inventory with it."""
+    import subprocess
+
+    root, version_sha = built
+    write_ledger(root, ledger_entry(root, version_sha))
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    result = run(root)
+    assert statuses(result)[READBACK]["result"] == "unknown"
+    assert any("is not tracked by git" in f["message"] for f in result["findings"])
+    assert result["acceptance"]["status"] == "refused"
+
+
+def test_a_project_outside_git_applies_only_the_layout_rules(tmp_path: Path) -> None:
+    """A root git confirms is no work tree checks no tracking (evidence_paths.py:117)."""
+    from benchhand_core.record.evidence.path_judge import git_view
+
+    assert git_view(tmp_path).not_worktree is True
+
+
+@pytest.mark.parametrize("failure", ["unreadable index", "no git"])
+def test_git_that_cannot_be_read_refuses_unmanaged_citations(
+    built: tuple[Path, str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path, failure: str
+) -> None:
+    """A git read failure is not proof of "no work tree" (the prototype reads it so, evidence_paths.py:
+    123-127): an unmanaged citation is refused with its own reason, never let through."""
+    import subprocess
+
+    root, version_sha = built
+    write_ledger(root, ledger_entry(root, version_sha))
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "hw"], check=True)
+    if failure == "unreadable index":
+        (root / ".git/index").write_bytes(b"not an index")
+    else:
+        monkeypatch.setenv("PATH", str(tmp_path / "no-bin"))
+    result = run(root)
+    assert statuses(result)[READBACK]["result"] == "unknown"
+    assert any("cannot be checked against git" in f["message"] for f in result["findings"])
+
+
 # Ledger credit: level and subject per target
 
 
