@@ -60,7 +60,13 @@ class GuidelineCatalog:
 
 
 def _finite(value: object) -> bool:
-    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
+    """A number a float holds: math.isfinite raises OverflowError on an int beyond the float range."""
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
 
 
 def quantity_problem(where: str, data: Any) -> str | None:

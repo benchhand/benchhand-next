@@ -499,6 +499,27 @@ def test_a_guideline_with_an_unreadable_quantity_is_refused(
     assert "reversed" in finding["message"]
 
 
+def test_a_guideline_with_a_factor_too_large_for_a_float_is_refused(
+    lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """A 401-digit relative factor passes the schema, but no float holds it: the set is refused at discovery
+    with the not-finite finding, and assessment goes on."""
+    shipped = shipped_copy(tmp_path)
+    version_sha = build(lamp_arm, shipped=shipped)
+    write_packet(lamp_arm, "process", packet(lamp_arm, {ROUTE: "pass"}), version_sha)
+    bad = yaml.safe_load((shipped / "fdm.nozzle.d0_6.yaml").read_text(encoding="utf-8"))
+    bad["id"] = "fdm.nozzle.huge"
+    [relative] = [limit["relative"] for limit in bad["limits"] if "relative" in limit]
+    relative["factor"] = int("9" * 401)
+    write_yaml(shipped / "fdm.nozzle.huge.yaml", bad)
+    record = load_record(lamp_arm)
+    built_version = read_built_version(lamp_arm, record, "v1", shipped_guidelines=shipped)
+    assert "fdm.nozzle.huge" in built_version.guidelines.blocked
+    result = assess(record, built_version, TODAY).model_dump(mode="json", exclude_none=True)
+    [finding] = [f for f in result["findings"] if f["code"] == "intent.guideline"]
+    assert "relative/factor" in finding["message"] and "is not finite" in finding["message"]
+
+
 def test_a_changed_model_frame_of_a_bought_part_makes_the_evidence_stale(
     built: tuple[Path, str], write_packet: WritePacket
 ) -> None:
