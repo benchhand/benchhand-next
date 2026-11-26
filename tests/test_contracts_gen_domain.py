@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from contracts_gen.docs import write_docs
-from contracts_gen.domain import MAX_ENUM_VALUES, build_model, class_id
+from contracts_gen.domain import MAX_ENUM_VALUES, build_model, class_id, ref_counts
 from contracts_gen.domain_render import DOMAIN_MODEL_FILE, MAX_DIAGRAM_CLASSES, render_domain_model
 from contracts_gen.sources import DOCS_OUT, REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
 from mermaid_render import MERMAID_READY, MERMAID_SKIP_REASON, mermaid_blocks, render_markdown
@@ -66,7 +66,7 @@ classDiagram
         size?: enum
         notes?: object
         tags?: string[]
-        lines: line[]
+        lines: line[1..*]
         owner?: person
         step: step
     }
@@ -169,14 +169,141 @@ def test_a_group_over_the_class_limit_is_split_by_document_without_dropping_a_cl
 
 def test_every_object_definition_of_the_published_contracts_is_a_class() -> None:
     contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
-    text = render_domain_model(contracts)
+    owned = _owned_classes(render_domain_model(contracts))
     missing = [
         f"{contract.stem}#{name}"
         for contract in contracts
         for name, schema in contract.schema.get("$defs", {}).items()
-        if "properties" in schema and f"class {class_id(contract.stem, name)}[" not in text
+        if "properties" in schema and class_id(contract.stem, name) not in owned
     ]
     assert missing == []
+
+
+def _owned_classes(text: str) -> set[str]:
+    """The classes a diagram defines, not the external stubs it shows for a relation."""
+    found = re.finditer(r'^    class (\S+)\["[^"]*"\]( \{\n        <<(\w+)>>)?', text, flags=re.MULTILINE)
+    return {match.group(1) for match in found if match.group(3) != "external"}
+
+
+def _union_branches(schema: Any) -> list[Any]:
+    branches = [b for keyword in ("oneOf", "anyOf") for b in schema.get(keyword, []) if isinstance(b, dict)]
+    return [b for b in branches if b != {"type": "null"}]
+
+
+def _is_object(contracts: dict[str, Contract], stem: str, branch: Any) -> bool:
+    """A branch with properties, or a ``$ref`` to a ``$defs`` entry with properties."""
+    if "properties" in branch:
+        return True
+    ref = branch.get("$ref", "")
+    target, _, fragment = ref.partition("#/$defs/")
+    if not fragment:
+        return False
+    folder = stem.rsplit("/", 1)[0]
+    other = f"{folder}/{target.removesuffix('.schema.json')}" if target else stem
+    return "properties" in contracts[other].schema.get("$defs", {}).get(fragment, {})
+
+
+def test_every_document_root_and_every_union_of_objects_is_a_class() -> None:
+    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
+    by_stem = {contract.stem: contract for contract in contracts}
+    owned = _owned_classes(render_domain_model(contracts))
+    roots = [c.stem for c in contracts if "properties" in c.schema]
+    unions = [
+        class_id(contract.stem, name)
+        for contract in contracts
+        for name, schema in contract.schema.get("$defs", {}).items()
+        if len(branches := _union_branches(schema)) > 1
+        and all(_is_object(by_stem, contract.stem, b) for b in branches)
+    ]
+    assert unions
+    assert [stem for stem in roots if class_id(stem, None) not in owned] == []
+    assert [union for union in unions if union not in owned] == []
+
+
+@pytest.fixture(scope="module")
+def published() -> tuple[Any, str]:
+    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
+    return build_model(contracts), render_domain_model(contracts)
+
+
+def _relation(model: Any, source: str, label: str) -> tuple[str, str, str]:
+    (found,) = [rel for rel in model.relations if rel.source == source and rel.label == label]
+    return found.target, found.kind, found.cardinality
+
+
+def _members(model: Any, class_: str) -> list[str]:
+    return model.classes[class_].members
+
+
+def test_a_nullable_job_process_is_zero_or_one_process_identity(published: tuple[Any, str]) -> None:
+    model, _ = published
+    assert _relation(model, "jobs_job__JobRecord", "process") == (
+        "jobs_job__ProcessIdentity",
+        "composition",
+        "0..1",
+    )
+    assert "jobs_job__JobRecord__process" not in model.classes
+    assert "process: ProcessIdentity or null" in _members(model, "jobs_job__JobRecord")
+
+
+def test_map_values_are_typed_and_related(published: tuple[Any, str]) -> None:
+    model, _ = published
+    assert "facets: facets by key" in _members(model, "record_evidence_assessment")
+    assert _relation(model, "record_evidence_assessment", "facets") == (
+        "record_evidence_assessment__facets",
+        "composition",
+        "0..*",
+    )
+    assert "parts?: version_part by key" in _members(model, "record_bundle_manifest")
+    assert _relation(model, "record_bundle_manifest", "parts") == (
+        "record_bundle_manifest__version_part",
+        "composition",
+        "0..*",
+    )
+
+
+def test_tuples_and_nested_arrays_keep_their_shape_and_bounds(published: tuple[Any, str]) -> None:
+    model, _ = published
+    assert "samples: [number, number][2..*]" in _members(model, "record_assembly__profile")
+    holder = "record_interfaces__functional__print_in_place"
+    assert "gap_features: face[2][1..*]" in _members(model, holder)
+    assert _relation(model, holder, "gap_features") == ("record_interfaces__face", "composition", "2..*")
+
+
+def test_literals_are_json(published: tuple[Any, str]) -> None:
+    model, text = published
+    assert "make_buy: enum make|buy|null" in _members(model, "record_bom_row")
+    assert "None" not in text
+
+
+def test_the_overview_counts_every_ref_to_another_record_contract(published: tuple[Any, str]) -> None:
+    _, text = published
+    overview = _blocks(text)[0]
+    assert re.search(r"^    record_bom_row --> record_common : \d+ refs$", overview, flags=re.MULTILINE)
+
+
+def test_ref_counts_count_refs_anywhere_but_not_inside_the_same_contract() -> None:
+    counts = ref_counts([PERSON, WIDGET])
+    assert counts == {("record/widget", "common/person"): 1}
+
+
+def test_a_tuple_of_classes_holds_one_per_position() -> None:
+    schema = {
+        "type": "object",
+        "required": ["pair"],
+        "properties": {
+            "pair": {
+                "type": "array",
+                "prefixItems": [{"$ref": "#/$defs/row"}, {"$ref": "#/$defs/row"}],
+                "minItems": 2,
+                "maxItems": 2,
+            }
+        },
+        "$defs": {"row": {"type": "object", "properties": {"n": {"type": "integer"}}}},
+    }
+    model = build_model([_contract("record/pair", schema)])
+    assert model.classes["record_pair"].members == ["pair: [row, row]"]
+    assert {rel.cardinality for rel in model.relations if rel.label == "pair"} == {"1"}
 
 
 def test_the_docs_include_the_domain_model_and_link_it_from_the_index(tmp_path: Path) -> None:

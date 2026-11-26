@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from .domain import MAX_ENUM_VALUES, ClassNode, DomainModel, Relation, build_model, class_id
+from .domain import MAX_ENUM_VALUES, ClassNode, DomainModel, Relation, build_model, class_id, ref_counts
 from .sources import GENERATED_NOTICE, Contract
 
 DOMAIN_MODEL_FILE = "domain-model.md"
@@ -24,7 +24,7 @@ def render_domain_model(contracts: list[Contract]) -> str:
     model = build_model(contracts)
     lines = ["# Domain model", "", f"{GENERATED_NOTICE} Source: the published schemas of `contracts/`.", ""]
     lines += _legend()
-    lines += _overview(model)
+    lines += _overview(model, ref_counts(contracts))
     for group, stems in _groups(model).items():
         lines += _group_section(model, group, stems)
     return "\n".join(lines).rstrip("\n") + "\n"
@@ -47,8 +47,12 @@ def _legend() -> list[str]:
         "- `A <|-- B`: B is a branch of the union A, or extends A with `allOf`. A union whose branches each "
         "fix one property with a `const` is `<<abstract>>`, with one subclass per value; any other union is "
         "`<<union>>`.",
-        "- The number at B is how many B an A holds: `1..*` is an array with at least one, `0..*` an "
-        "array that may be empty or absent, `0..1` an optional, nullable or alternative one.",
+        "- The number at B is how many B an A holds: `1..*` is at least one, `0..*` any number, `2` exactly "
+        "two, `0..1` an optional, nullable or alternative one. Bounds of nested arrays and maps multiply.",
+        "- In a member's type, `T[]` is an array of any length, `T[1..*]` at least one, `T[2]` exactly two; "
+        "`face[2][1..*]` is one or more arrays of two faces. `[A, B]` is a tuple. `T by key` is an object "
+        "whose every value is a T (`additionalProperties`), and a `[key]` member holds the other keys of an "
+        "object with named properties. Literals are JSON: `null`, `true`, and a string bare.",
         "- `<<external>>` is a class of another document, shown so that a relation has both ends.",
         "",
     ]
@@ -145,27 +149,21 @@ def _relation_line(relation: Relation) -> str:
 # --- the overview
 
 
-def _overview(model: DomainModel) -> list[str]:
+def _overview(model: DomainModel, refs: Counter[tuple[str, str]]) -> list[str]:
     documents = [stem for stem in model.document_stems if stem.startswith(f"{DOCUMENT_GROUP}/")]
     roots = {stem: _root_id(stem) for stem in documents}
-    uses = Counter(
-        (model.classes[rel.source].stem, model.classes[rel.target].stem)
-        for rel in model.relations
-        if rel.kind != "inheritance"
-    )
-    libraries = sorted(
-        {
-            target
-            for (source, target) in uses
-            if source in roots and target.startswith(f"{DOCUMENT_GROUP}/") and target not in roots
-        }
-    )
+    uses = {
+        (source, target): count
+        for (source, target), count in refs.items()
+        if source in roots and target.startswith(f"{DOCUMENT_GROUP}/")
+    }
+    libraries = sorted({target for (_, target) in uses if target not in roots})
     lines = [
         "## Overview: the record documents",
         "",
-        f"{len(documents)} documents of the record, with their top-level properties. An arrow is a `$ref` "
-        "from anywhere in the document, counted; the libraries are contracts that hold shared definitions "
-        "and no document of their own.",
+        f"{len(documents)} documents of the record, with their top-level properties, and {len(libraries)} "
+        "libraries: record contracts that hold shared definitions and no document of their own. An arrow "
+        "counts the `$ref`s, anywhere in a document's schema, to another record contract.",
         "",
         "```mermaid",
         "classDiagram",
@@ -176,8 +174,7 @@ def _overview(model: DomainModel) -> list[str]:
     for stem in libraries:
         lines += [f'    class {_root_id(stem)}["{stem.split("/")[-1]}"] {{', "        <<library>>", "    }"]
     for (source, target), count in sorted(uses.items()):
-        if source in roots and (target in roots or target in libraries) and source != target:
-            lines.append(f"    {roots[source]} --> {_root_id(target)} : {count} refs")
+        lines.append(f"    {roots[source]} --> {_root_id(target)} : {count} refs")
     lines += ["```", ""]
     return lines
 

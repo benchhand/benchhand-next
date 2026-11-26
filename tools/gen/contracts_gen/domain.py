@@ -13,13 +13,17 @@ Relations, from the property that holds the reference:
   branches all carry a ``const`` under one property name is a discriminated union: an abstract parent with
   one subclass per branch.
 
-Cardinality at the referenced end comes from the property: an array gives ``*`` for ``items``, ``minItems``
-of 1 or more or a required property gives a lower bound of 1, and a nullable or alternative one gives 0.
+Cardinality at the referenced end comes from the property. Array bounds (``minItems``, ``maxItems``) and map
+bounds (``minProperties``, ``maxProperties`` of an ``additionalProperties`` value) multiply through nested
+arrays and maps; a required single property gives 1, and an optional, nullable or alternative one a lower
+bound of 0.
 """
 
 from __future__ import annotations
 
+import json
 import posixpath
+from collections import Counter
 from dataclasses import dataclass, field, replace
 from typing import Any
 
@@ -32,7 +36,20 @@ _Ref = tuple[str, str | None]
 """A contract stem and a definition name, or ``None`` for the contract's root."""
 
 _NULL = {"type": "null"}
-_TYPE_KEYWORDS = ("$ref", "type", "const", "enum", "properties", "allOf", "oneOf", "anyOf", "items")
+_TYPE_KEYWORDS = (
+    "$ref",
+    "type",
+    "const",
+    "enum",
+    "properties",
+    "allOf",
+    "oneOf",
+    "anyOf",
+    "items",
+    "prefixItems",
+    "additionalProperties",
+)
+_JSON_WORDS = ("null", "true", "false")
 _DISCRIMINATOR_NAMES = ("kind", "type", "status")
 _MEMBER_TRANSLATION = str.maketrans(
     {"(": "[", ")": "]", "<": "[", ">": "]", "{": "[", "}": "]", '"': "'", "~": "-", "`": "'"}
@@ -84,13 +101,24 @@ class _Cursor:
 
 @dataclass(frozen=True)
 class _Hold:
-    """How a property holds what it refers to."""
+    """How many of what it refers to a property holds: bounds multiplied through arrays and maps."""
 
-    many: bool = False
-    """Inside an array."""
-    min_items: int = 0
+    lower: int = 1
+    upper: int | None = 1
+    """None: no upper bound."""
     alternative: bool = False
     """One of several branches, or nullable: the reference may be absent whatever the property requires."""
+
+    def times(self, low: int, high: int | None) -> _Hold:
+        """Inside an array or map of ``low`` to ``high`` elements."""
+        upper = None if self.upper is None or high is None else self.upper * high
+        return replace(self, lower=self.lower * low, upper=upper)
+
+    def cardinality(self, required: bool) -> str:
+        lower = self.lower if required and not self.alternative else 0
+        if self.upper is None:
+            return f"{lower}..*"
+        return str(lower) if lower == self.upper else f"{lower}..{self.upper}"
 
 
 @dataclass(frozen=True)
@@ -124,6 +152,48 @@ def _branches(schema: dict[str, Any]) -> list[Any]:
     ]
 
 
+def _nullable(schema: Any) -> bool:
+    """A ``null`` branch, or ``null`` in a list of types."""
+    if not isinstance(schema, dict):
+        return False
+    types = schema.get("type")
+    return _NULL in _branches(schema) or (isinstance(types, list) and "null" in types)
+
+
+def _map_values(schema: Any) -> Any:
+    """The schema of every value of a map: a schema-valued ``additionalProperties``, else None."""
+    if not isinstance(schema, dict):
+        return None
+    values = schema.get("additionalProperties")
+    return values if isinstance(values, dict) and _carries_type(values) else None
+
+
+def _array_bounds(schema: dict[str, Any]) -> tuple[int, int | None]:
+    prefix = schema.get("prefixItems", [])
+    closed = "items" not in schema and bool(prefix)
+    low = schema.get("minItems", 0)
+    high = schema.get("maxItems", len(prefix) if closed else None)
+    return low, high
+
+
+def _bounds_suffix(low: int, high: int | None) -> str:
+    """``[]`` for any number, ``[2]`` for exactly two, ``[1..*]`` or ``[2..4]`` for a range."""
+    if high is None:
+        return "[]" if low == 0 else f"[{low}..*]"
+    return f"[{low}]" if low == high else f"[{low}..{high}]"
+
+
+def literal(value: Any) -> str:
+    """A JSON value as written in a type label: a string bare, unless it reads as another JSON value."""
+    if isinstance(value, str):
+        try:
+            json.loads(value)
+        except ValueError:
+            return value
+        return json.dumps(value)
+    return json.dumps(value)
+
+
 def _is_alias(schema: Any) -> bool:
     keywords = ("properties", "allOf", "oneOf", "anyOf", "type", "enum", "const")
     return isinstance(schema, dict) and "$ref" in schema and not any(key in schema for key in keywords)
@@ -144,7 +214,9 @@ def _safe(text: str) -> str:
 
 
 def _enum_label(values: list[Any]) -> str:
-    return "enum " + "|".join(str(value) for value in values) if len(values) <= MAX_ENUM_VALUES else "enum"
+    if len(values) > MAX_ENUM_VALUES:
+        return "enum"
+    return "enum " + "|".join(literal(value) for value in values)
 
 
 class _Registry:
@@ -205,7 +277,7 @@ class _Registry:
         if "properties" in schema or any(self.kind(stem, m, seen) == "object" for m in members):
             return "object"
         branches = [branch for branch in _branches(schema) if branch != _NULL]
-        if branches and all(self.kind(stem, branch, seen) for branch in branches):
+        if len(branches) > 1 and all(self.kind(stem, branch, seen) for branch in branches):
             return "union"
         return None
 
@@ -241,7 +313,7 @@ class _Registry:
         if "$ref" in schema:
             return self._ref_label(stem, schema["$ref"])
         if "const" in schema:
-            return f"const {schema['const']}"
+            return f"const {literal(schema['const'])}"
         if "enum" in schema:
             return _enum_label(schema["enum"])
         for keyword, joiner in (("oneOf", " or "), ("anyOf", " or "), ("allOf", " and ")):
@@ -254,10 +326,24 @@ class _Registry:
 
     def _plain_label(self, stem: str, schema: dict[str, Any]) -> str:
         types = schema["type"] if isinstance(schema.get("type"), list) else [schema.get("type", "any")]
+        if _map_values(schema) is not None and "properties" not in schema:
+            values = f"{self.type_label(stem, _map_values(schema))} by key"
+            return " or ".join(values if name == "object" else str(name) for name in types)
         return " or ".join(
-            f"{self.type_label(stem, schema.get('items', True))}[]" if name == "array" else str(name)
-            for name in types
+            self._array_label(stem, schema) if name == "array" else str(name) for name in types
         )
+
+    def _array_label(self, stem: str, schema: dict[str, Any]) -> str:
+        """``T[]`` with its bounds, or a tuple ``[A, B]``; a nested array keeps its own level."""
+        prefix = schema.get("prefixItems")
+        if prefix:
+            element = "[" + ", ".join(self.type_label(stem, item) for item in prefix) + "]"
+            closed = "items" not in schema or schema["items"] is False
+            low, high = _array_bounds(schema)
+            if closed and low == high == len(prefix):
+                return element
+            return f"{element}{_bounds_suffix(low, high)}"
+        return f"{self.type_label(stem, schema.get('items', True))}{_bounds_suffix(*_array_bounds(schema))}"
 
     def ref_name(self, target: _Ref) -> str:
         """A definition's name, the last key of any other pointer, or a contract's file name for its root."""
@@ -270,7 +356,7 @@ class _Registry:
         schema = self.schema_of(target)
         name = self.ref_name(target)
         if isinstance(schema, dict) and "enum" in schema and len(schema["enum"]) <= MAX_ENUM_VALUES:
-            return f"{name} = {'|'.join(str(value) for value in schema['enum'])}"
+            return f"{name} = {'|'.join(literal(value) for value in schema['enum'])}"
         return name
 
 
@@ -324,6 +410,12 @@ class _Builder:
             required |= set(part.get("required", []))
         for name, prop in properties.items():
             self._member(cursor, node, name, prop, name in required)
+        values = _map_values(schema)
+        if values is not None:  # the other keys of an object with named properties too
+            node.members.append(_safe(f"[key]: {self.registry.type_label(cursor.stem, values)}"))
+            for target in self._targets(cursor.child("key"), values, _Hold().times(0, None)):
+                cardinality = target.hold.cardinality(required=False)
+                self.relations.append(Relation(cursor.id, target.id, target.kind, "[key]", cardinality))
         self._define_variants(cursor, schema, node)
 
     def _define_union(self, cursor: _Cursor, schema: dict[str, Any], node: ClassNode) -> None:
@@ -363,24 +455,26 @@ class _Builder:
         label = self.registry.type_label(cursor.stem, prop)
         node.members.append(_safe(f"{name}{'' if required else '?'}: {label}"))
         for target in self._targets(cursor.child(name), prop, _Hold()):
-            hold = target.hold
-            lower = int(required and not hold.alternative and (not hold.many or hold.min_items > 0))
-            bounds = f"{lower}..{'*' if hold.many else 1}"
-            cardinality = "1" if bounds == "1..1" else bounds
+            cardinality = target.hold.cardinality(required)
             self.relations.append(Relation(cursor.id, target.id, target.kind, name, cardinality))
 
     def _targets(self, cursor: _Cursor, schema: Any, hold: _Hold) -> list[_Target]:
         """The classes a property's schema refers to, with how each is held."""
         if not isinstance(schema, dict):
             return []
+        if _nullable(schema):
+            hold = replace(hold, alternative=True)
         if "$ref" in schema:
             return self._ref_targets(cursor, schema["$ref"], hold)
         if self.registry.kind(cursor.stem, schema):
             return [_Target(self._define(cursor, schema), "composition", hold)]
-        if "items" in schema:
-            many = replace(hold, many=True, min_items=schema.get("minItems", 0))
-            return self._targets(cursor, schema["items"], many)
-        branches = _branches(schema)
+        if "items" in schema or "prefixItems" in schema:
+            return self._array_targets(cursor, schema, hold)
+        values = _map_values(schema)
+        if values is not None:
+            within = hold.times(schema.get("minProperties", 0), schema.get("maxProperties"))
+            return self._targets(cursor, values, within)
+        branches = [branch for branch in _branches(schema) if branch != _NULL]
         if len(branches) > 1:
             hold = replace(hold, alternative=True)
         found: list[_Target] = []
@@ -389,6 +483,17 @@ class _Builder:
             found += self._targets(site, branch, hold)
         for member in schema.get("allOf", []):
             found += self._targets(cursor, member, hold)
+        return found
+
+    def _array_targets(self, cursor: _Cursor, schema: dict[str, Any], hold: _Hold) -> list[_Target]:
+        """An array's element classes: a tuple position holds one per array, ``items`` holds the bounds."""
+        within = hold.times(*_array_bounds(schema))
+        low = _array_bounds(schema)[0]
+        found: list[_Target] = []
+        for index, item in enumerate(schema.get("prefixItems", [])):  # present when the array is that long
+            found += self._targets(cursor.child(str(index + 1)), item, hold.times(int(low > index), 1))
+        if isinstance(schema.get("items"), dict):
+            found += self._targets(cursor, schema["items"], within)
         return found
 
     def _ref_targets(self, cursor: _Cursor, ref: str, hold: _Hold) -> list[_Target]:
@@ -409,3 +514,24 @@ class _Builder:
 def build_model(contracts: list[Contract]) -> DomainModel:
     """Every class and relation of the published ``contracts``."""
     return _Builder(contracts).build()
+
+
+def ref_counts(contracts: list[Contract]) -> Counter[tuple[str, str]]:
+    """How many ``$ref``s each contract's schema holds, anywhere in it, to each other contract."""
+    registry = _Registry(contracts)
+    counts: Counter[tuple[str, str]] = Counter()
+    for stem, contract in registry.contracts.items():
+        for ref in _refs(contract.schema):
+            target = registry.resolve(stem, ref)[0]
+            if target != stem:
+                counts[stem, target] += 1
+    return counts
+
+
+def _refs(node: Any) -> list[str]:
+    if isinstance(node, dict):
+        own = [node["$ref"]] if isinstance(node.get("$ref"), str) else []
+        return own + [ref for key, value in node.items() if key != "$ref" for ref in _refs(value)]
+    if isinstance(node, list):
+        return [ref for value in node for ref in _refs(value)]
+    return []

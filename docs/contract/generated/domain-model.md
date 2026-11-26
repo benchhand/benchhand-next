@@ -7,22 +7,23 @@ Each class is a contract root, a named `$defs` object or union, or an object wri
 - `A "1" *-- "0..*" B`: composition, B is nested in A (inline, or a `$ref` in the same contract).
 - `A --> "0..1" B`: association, a `$ref` from A to a definition of another contract.
 - `A <|-- B`: B is a branch of the union A, or extends A with `allOf`. A union whose branches each fix one property with a `const` is `<<abstract>>`, with one subclass per value; any other union is `<<union>>`.
-- The number at B is how many B an A holds: `1..*` is an array with at least one, `0..*` an array that may be empty or absent, `0..1` an optional, nullable or alternative one.
+- The number at B is how many B an A holds: `1..*` is at least one, `0..*` any number, `2` exactly two, `0..1` an optional, nullable or alternative one. Bounds of nested arrays and maps multiply.
+- In a member's type, `T[]` is an array of any length, `T[1..*]` at least one, `T[2]` exactly two; `face[2][1..*]` is one or more arrays of two faces. `[A, B]` is a tuple. `T by key` is an object whose every value is a T (`additionalProperties`), and a `[key]` member holds the other keys of an object with named properties. Literals are JSON: `null`, `true`, and a string bare.
 - `<<external>>` is a class of another document, shown so that a relation has both ends.
 
 ## Overview: the record documents
 
-18 documents of the record, with their top-level properties. An arrow is a `$ref` from anywhere in the document, counted; the libraries are contracts that hold shared definitions and no document of their own.
+18 documents of the record, with their top-level properties, and 2 libraries: record contracts that hold shared definitions and no document of their own. An arrow counts the `$ref`s, anywhere in a document's schema, to another record contract.
 
 ```mermaid
 classDiagram
     class record_assembly["assembly"] {
         <<document>>
         operations?: assembly_operation[] or fact_unknown
-        occurrences?: object[]
-        profiles?: object
-        mechanisms?: mechanism[]
-        subassemblies: object[]
+        occurrences?: object[1..*]
+        profiles?: profile by key
+        mechanisms?: mechanism[1..*]
+        subassemblies: object[1..*]
         joints: object[]
         drawing?: assembly_drawing
     }
@@ -35,7 +36,7 @@ classDiagram
         title: string or null
         material: string or null
         process: primary_process or null
-        make_buy: enum make|buy|None
+        make_buy: enum make|buy|null
         supplier: string or null
         mass: number or null
         unit?: enum pcs
@@ -48,9 +49,9 @@ classDiagram
     }
     class record_bundle_manifest["bundle-manifest"] {
         <<document>>
-        files: object
+        files: sha256 by key
         version_manifest_sha256?: sha256
-        parts?: object
+        parts?: version_part by key
     }
     class record_decision["decision"] {
         <<document>>
@@ -64,7 +65,7 @@ classDiagram
         build_staleness: enum computed|not_computed
         expected_sha256: sha256
         statuses: obligation_status[]
-        facets: object
+        facets: facets by key
         findings: finding[]
         critical: critical_finding[]
         complete: boolean
@@ -83,11 +84,11 @@ classDiagram
         schema_version: const 1
         record_version: record_version
         producer: text
-        scope: subject[]
+        scope: subject[1..*]
         expected: obligation[]
         outcomes: obligation_outcome[]
         findings: finding[]
-        dependencies: object
+        dependencies: sha256 by key
         complete: boolean
         result: outcome = pass|fail|unknown|not_applicable|not_assessed
     }
@@ -105,7 +106,7 @@ classDiagram
         id: guideline_id
         revision: integer
         title: text
-        extends?: guideline_id[]
+        extends?: guideline_id[1..*]
         abstract?: boolean
         scope: scope
         limits: limit[]
@@ -146,7 +147,7 @@ classDiagram
         policy_version: const 1
         default?: mode = ask|chat|auto
         decision?: decision
-        gates?: object
+        gates?: gate by key
     }
     class record_product["product"] {
         <<document>>
@@ -169,7 +170,7 @@ classDiagram
         preferences?: object[]
         assumptions?: object[]
         open_questions?: object[]
-        requirements: object[]
+        requirements: object[1..*]
     }
     class record_verification_row["verification-row"] {
         <<document>>
@@ -185,23 +186,31 @@ classDiagram
     class record_drawing["drawing"] {
         <<library>>
     }
-    record_assembly --> record_common : 8 refs
-    record_evidence_assessment --> record_common : 2 refs
-    record_interfaces --> record_common : 20 refs
-    record_interfaces --> record_drawing : 4 refs
-    record_manufacturing_capabilities --> record_common : 30 refs
-    record_manufacturing_check_result --> record_common : 4 refs
-    record_manufacturing_evidence --> record_common : 5 refs
-    record_manufacturing_findings --> record_common : 1 refs
-    record_manufacturing_guideline --> record_common : 3 refs
-    record_manufacturing_materials --> record_common : 11 refs
-    record_manufacturing_selection --> record_common : 10 refs
-    record_manufacturing_selection --> record_part : 1 refs
-    record_part --> record_common : 40 refs
+    record_assembly --> record_common : 31 refs
+    record_bom_row --> record_common : 2 refs
+    record_bundle_manifest --> record_common : 3 refs
+    record_decision --> record_common : 12 refs
+    record_evidence_assessment --> record_common : 13 refs
+    record_interfaces --> record_assembly : 1 refs
+    record_interfaces --> record_common : 44 refs
+    record_interfaces --> record_drawing : 5 refs
+    record_manufacturing_capabilities --> record_common : 56 refs
+    record_manufacturing_check_result --> record_common : 9 refs
+    record_manufacturing_evidence --> record_common : 34 refs
+    record_manufacturing_findings --> record_common : 8 refs
+    record_manufacturing_guideline --> record_common : 13 refs
+    record_manufacturing_guideline --> record_manufacturing_capabilities : 18 refs
+    record_manufacturing_materials --> record_common : 26 refs
+    record_manufacturing_selection --> record_common : 56 refs
+    record_manufacturing_selection --> record_part : 2 refs
+    record_part --> record_common : 117 refs
     record_part --> record_drawing : 2 refs
-    record_product --> record_common : 38 refs
+    record_policy --> record_common : 3 refs
+    record_product --> record_common : 63 refs
     record_product --> record_drawing : 1 refs
-    record_requirements --> record_common : 8 refs
+    record_requirements --> record_assembly : 2 refs
+    record_requirements --> record_common : 29 refs
+    record_verification_row --> record_common : 1 refs
 ```
 
 ## `common`
@@ -223,7 +232,7 @@ classDiagram
 
 ## `jobs`
 
-6 classes, from `jobs/job`.
+5 classes, from `jobs/job`.
 
 ```mermaid
 classDiagram
@@ -235,7 +244,7 @@ classDiagram
         kind: JobKind
         status: JobStatus = queued|running|succeeded|failed|cancelled
         progress: JobProgress
-        argv: string[]
+        argv: string[1..*]
         cwd: string
         host: string
         owner: ProcessIdentity
@@ -256,9 +265,6 @@ classDiagram
         pid: integer
         identity: string
     }
-    class jobs_job__JobRecord__process["JobRecord.process"] {
-        <<union>>
-    }
     class jobs_job__JobHandle["JobHandle"] {
         jobId: JobId
         kind: JobKind
@@ -274,8 +280,7 @@ classDiagram
     }
     jobs_job__JobRecord "1" *-- "1" jobs_job__JobProgress : progress
     jobs_job__JobRecord "1" *-- "1" jobs_job__ProcessIdentity : owner
-    jobs_job__JobRecord__process <|-- jobs_job__ProcessIdentity
-    jobs_job__JobRecord "1" *-- "1" jobs_job__JobRecord__process : process
+    jobs_job__JobRecord "1" *-- "0..1" jobs_job__ProcessIdentity : process
     jobs_job <|-- jobs_job__JobRecord
     jobs_job__JobHandle "1" *-- "1" jobs_job__JobProgress : progress
     jobs_job <|-- jobs_job__JobHandle
@@ -292,11 +297,11 @@ classDiagram
         version: string
         summary?: string
         protocol: object
-        kinds: HookKind[]
-        hooks: HookDecl[]
+        kinds: HookKind[1..*]
+        hooks: HookDecl[1..*]
         resident?: boolean
-        command: string[]
-        timeouts?: object
+        command: string[1..*]
+        timeouts?: integer by key
         environment: object
         needs: Needs
         cli?: object[]
@@ -337,23 +342,23 @@ classDiagram
         <<union>>
     }
     class provider_protocol__Request["Request"] {
-        jsonrpc: const 2.0
+        jsonrpc: const '2.0'
         id: RequestId
         method: Method
         params?: any
     }
     class provider_protocol__Notification["Notification"] {
-        jsonrpc: const 2.0
+        jsonrpc: const '2.0'
         method: Method
         params?: any
     }
     class provider_protocol__SuccessResponse["SuccessResponse"] {
-        jsonrpc: const 2.0
+        jsonrpc: const '2.0'
         id: RequestId
         result: any
     }
     class provider_protocol__ErrorResponse["ErrorResponse"] {
-        jsonrpc: const 2.0
+        jsonrpc: const '2.0'
         id: RequestId or null
         error: ErrorObject
     }
@@ -395,7 +400,7 @@ classDiagram
     class provider_protocol__InitializeResult["InitializeResult"] {
         protocolVersion: ProtocolVersion
         provider: object
-        hooks: HookDecl[]
+        hooks: HookDecl[1..*]
         features: object
         limits: Limits
         needs: Needs
@@ -487,7 +492,7 @@ classDiagram
 
 ## `record`
 
-253 classes, more than 40, so there is one diagram per document.
+254 classes, more than 40, so there is one diagram per document.
 
 ### `record/assembly`
 
@@ -497,10 +502,10 @@ classDiagram
 classDiagram
     class record_assembly["assembly"] {
         operations?: assembly_operation[] or fact_unknown
-        occurrences?: object[]
-        profiles?: object
-        mechanisms?: mechanism[]
-        subassemblies: object[]
+        occurrences?: object[1..*]
+        profiles?: profile by key
+        mechanisms?: mechanism[1..*]
+        subassemblies: object[1..*]
         joints: object[]
         drawing?: assembly_drawing
     }
@@ -515,9 +520,9 @@ classDiagram
         tools?: string[]
         consumables?: string[]
         verify_joint?: string
-        predecessors?: string[]
-        closes?: part_ref[]
-        tool_access?: object[]
+        predecessors?: string[1..*]
+        closes?: part_ref[1..*]
+        tool_access?: object[1..*]
         engagement?: quantity_fact
         torque?: quantity_fact
         retention?: text_fact
@@ -528,7 +533,7 @@ classDiagram
     }
     class record_assembly__assembly_operation__acceptance["assembly_operation.acceptance"] {
         kind: enum
-        features: string[]
+        features: string[1..2]
     }
     class record_assembly__assembly_operation__tool_access["assembly_operation.tool_access"] {
         tool: string
@@ -548,7 +553,7 @@ classDiagram
     }
     class record_assembly__assembly_operation__path["assembly_operation.path"] {
         start: vector
-        via?: vector[]
+        via?: vector[1..*]
     }
     class record_assembly__occurrences["assembly.occurrences"] {
         id: occurrence_id
@@ -562,6 +567,13 @@ classDiagram
     class record_assembly__placement__rotation["placement.rotation"] {
         axis: vector
         angle_deg: number
+    }
+    class record_assembly__profile["profile"] {
+        input_unit: const deg
+        output_unit: enum mm|deg
+        period_deg: number
+        interpolation: const linear
+        samples: [number, number][2..*]
     }
     class record_assembly__mechanism["mechanism"] {
         id: string
@@ -577,8 +589,8 @@ classDiagram
     class record_assembly__subassemblies["assembly.subassemblies"] {
         id: string
         title: string
-        parts?: pn[]
-        occurrences?: occurrence_ref[]
+        parts?: pn[1..*]
+        occurrences?: occurrence_ref[1..*]
     }
     class record_assembly__joints["assembly.joints"] {
         id: joint_id
@@ -617,7 +629,7 @@ classDiagram
     }
     class record_assembly__torque_path["torque_path"] {
         type: enum
-        parts?: part_ref[]
+        parts?: part_ref[1..*]
         decision?: decision
     }
     class record_assembly__assembly_drawing["assembly_drawing"] {
@@ -626,9 +638,9 @@ classDiagram
         title: string
         scope?: enum modeled_mechanical_assembly|complete_assembly
         excludes?: string[]
-        views: object[]
+        views: object[1..*]
         explode?: object[]
-        items: drawing_item[]
+        items: drawing_item[1..*]
         subassembly_sheets?: string[]
     }
     class record_assembly__assembly_drawing__views["assembly_drawing.views"] {
@@ -643,14 +655,7 @@ classDiagram
     class record_assembly__drawing_item["drawing_item"] {
         item: integer
         PN: pn
-        occurrences?: occurrence_ref[]
-    }
-    class record_assembly__profile["profile"] {
-        input_unit: const deg
-        output_unit: enum mm|deg
-        period_deg: number
-        interpolation: const linear
-        samples: any[][]
+        occurrences?: occurrence_ref[1..*]
     }
     class record_common__criterion["record/common.criterion"] {
         <<external>>
@@ -682,6 +687,7 @@ classDiagram
     record_assembly__placement "1" *-- "0..1" record_assembly__placement__rotation : rotation
     record_assembly__occurrences "1" *-- "0..1" record_assembly__placement : placement
     record_assembly "1" *-- "0..*" record_assembly__occurrences : occurrences
+    record_assembly "1" *-- "0..*" record_assembly__profile : profiles
     record_assembly "1" *-- "0..*" record_assembly__mechanism : mechanisms
     record_assembly "1" *-- "1..*" record_assembly__subassemblies : subassemblies
     record_assembly__coupling <|-- record_assembly__coupling__linear
@@ -710,7 +716,7 @@ classDiagram
         title: string or null
         material: string or null
         process: primary_process or null
-        make_buy: enum make|buy|None
+        make_buy: enum make|buy|null
         supplier: string or null
         mass: number or null
         unit?: enum pcs
@@ -730,13 +736,14 @@ classDiagram
 ```mermaid
 classDiagram
     class record_bundle_manifest["bundle-manifest"] {
-        files: object
+        files: sha256 by key
         version_manifest_sha256?: sha256
-        parts?: object
+        parts?: version_part by key
     }
     class record_bundle_manifest__version_part["version_part"] {
         source_sha256?: sha256
     }
+    record_bundle_manifest "1" *-- "0..*" record_bundle_manifest__version_part : parts
 ```
 
 ### `record/common`
@@ -862,7 +869,7 @@ classDiagram
         <<union>>
     }
     class record_common__subject["subject"] {
-        product?: const True
+        product?: const true
         PN?: pn
         occurrence?: occurrence_ref
         component?: semantic_id
@@ -882,7 +889,7 @@ classDiagram
         id: semantic_id
         kind: enum static|sustained|cyclic|impact|vibration
         magnitude: quantity_fact
-        direction: number[]
+        direction: number[3]
         application?: subject
         duration?: quantity_fact
         frequency?: quantity_fact
@@ -921,9 +928,9 @@ classDiagram
         coverage?: text
         consequence: text
         remedy?: text
-        alternatives?: object[]
+        alternatives?: object[1..*]
         recheck: object
-        decisions?: decision[]
+        decisions?: decision[1..*]
     }
     class record_common__finding__measured["finding.measured"] {
         <<union>>
@@ -934,15 +941,15 @@ classDiagram
     class record_common__finding__method["finding.method"] {
         name: text
         tool?: text
-        evidence?: file_hash[]
+        evidence?: file_hash[1..*]
     }
     class record_common__finding__alternatives["finding.alternatives"] {
         text: text
         tradeoffs: text
     }
     class record_common__finding__recheck["finding.recheck"] {
-        families: check_family[]
-        scope?: subject[]
+        families: check_family[1..*]
+        scope?: subject[1..*]
         inputs?: texts
         earliest_stage: stage
     }
@@ -1090,7 +1097,7 @@ classDiagram
         gate: gate_id
         stage: stage
         version?: version
-        evidence?: project_path[]
+        evidence?: project_path[1..*]
         supersedes?: decisions
         approval?: approval
     }
@@ -1117,12 +1124,12 @@ classDiagram
 
 ### `record/drawing`
 
-35 classes.
+36 classes.
 
 ```mermaid
 classDiagram
     class record_drawing__sheet["sheet"] {
-        sizes?: sheet_size[]
+        sizes?: sheet_size[1..*]
         orientation?: enum landscape|portrait
         scale?: scale
         multi_sheet?: boolean
@@ -1140,7 +1147,7 @@ classDiagram
         policy: policy_name
     }
     class record_drawing__tolerance__2["tolerance.2"] {
-        deviation_mm: number[]
+        deviation_mm: number[2]
     }
     class record_drawing__tolerance_policy["tolerance_policy"] {
         <<abstract>>
@@ -1150,21 +1157,21 @@ classDiagram
         kind: const standard
         standard: const ISO 2768-1:1989
         class: enum f|m|c|v
-        applies_to: primary_process[]
+        applies_to: primary_process[1..*]
     }
     class record_drawing__tolerance_policy__limits["tolerance_policy.limits"] {
         kind: const limits
         linear_mm: number
         angular_deg?: number
-        applies_to: primary_process[]
+        applies_to: primary_process[1..*]
         reference: string
     }
     class record_drawing__product_drawing["product_drawing"] {
         definition: const model_and_drawing
         projection: enum first_angle|third_angle
-        standards: object
+        standards: string by key
         default_sheet: sheet
-        tolerance_policies: object
+        tolerance_policies: tolerance_policy by key
         general_tolerance_policy: policy_name
     }
     class record_drawing__product_drawing__default_sheet["product_drawing.default_sheet"]
@@ -1213,18 +1220,18 @@ classDiagram
     class record_drawing__geometric_tolerance["geometric_tolerance"] {
         id: semantic_id
         characteristic: enum
-        features: semantic_id[]
+        features: semantic_id[1..*]
         zone_mm: number
         diameter_zone?: boolean
-        datum_frame?: datum_label[]
+        datum_frame?: datum_label[1..3]
     }
     class record_drawing__dimension_request["dimension_request"] {
         id: semantic_id
         operation: enum
-        features: semantic_id[]
+        features: semantic_id[1..*]
         at?: semantic_id
         instance?: integer
-        datum_frame?: datum_label[]
+        datum_frame?: datum_label[1..3]
         tolerance?: tolerance
         presentation?: enum auto|visible|section|detail
         reference?: boolean
@@ -1232,17 +1239,21 @@ classDiagram
     class record_drawing__part_drawing["part_drawing"] {
         type: enum detail|vendor_specification|source_control
         tolerance_policy?: policy_name
-        datum_features?: object
+        datum_features?: object by key
         coordinate_frame?: object
-        views?: view[]
-        features?: object
-        dimensions?: dimension_request[]
-        geometric_tolerances?: geometric_tolerance[]
+        views?: view[1..*]
+        features?: feature_intent by key
+        dimensions?: dimension_request[1..*]
+        geometric_tolerances?: geometric_tolerance[1..*]
         edges?: edges
         surface_texture?: texture_requirement or object
-        notes?: object[]
+        notes?: object[1..*]
         manufacturing?: object
         sheet?: sheet
+    }
+    class record_drawing__part_drawing__datum_features["part_drawing.datum_features"] {
+        feature: semantic_id
+        role: enum plane|axis|point|center_plane|clocking_feature
     }
     class record_drawing__part_drawing__coordinate_frame["part_drawing.coordinate_frame"] {
         origin: object
@@ -1254,7 +1265,7 @@ classDiagram
         <<union>>
     }
     class record_drawing__part_drawing__coordinate_frame__origin__1["part_drawing.coordinate_frame.origin.1"] {
-        intersection: reference[]
+        intersection: reference[2..3]
     }
     class record_drawing__part_drawing__coordinate_frame__origin__2["part_drawing.coordinate_frame.origin.2"] {
         at: reference
@@ -1275,7 +1286,7 @@ classDiagram
         build_direction?: direction
         interface_condition?: enum as_printed|post_processed|finish_machined
         dimensions_apply?: enum before_finish|after_finish
-        post_processing?: string[]
+        post_processing?: string[1..*]
         inspection_stage?: string
     }
     class record_drawing__procurement["procurement"] {
@@ -1287,9 +1298,9 @@ classDiagram
         standard?: string
         specification?: object
         open?: object
-        approved_sources?: object[]
+        approved_sources?: object[1..*]
         qualification_evidence?: string
-        certificates?: string[]
+        certificates?: string[1..*]
     }
     class record_drawing__procurement__specification["procurement.specification"] {
         reference: string
@@ -1315,7 +1326,7 @@ classDiagram
     }
     class record_drawing__fit["fit"] {
         fit: string
-        pair?: part_ref[]
+        pair?: part_ref[2]
         hole?: fit_endpoint
         shaft?: fit_endpoint
         engagement_length_mm?: number
@@ -1324,13 +1335,13 @@ classDiagram
     }
     class record_drawing__axial_retainer["axial_retainer"] {
         type: enum
-        parts?: part_ref[]
+        parts?: part_ref[1..*]
         decision?: decision
     }
     class record_drawing__heat_set["heat_set"] {
-        pair: part_ref[]
+        pair: part_ref[2]
         hole_diameter_mm: number
-        hole_deviation_mm?: number[]
+        hole_deviation_mm?: number[2]
         min_depth_mm?: number
         engagement_length_mm?: number
         insert: string
@@ -1344,10 +1355,12 @@ classDiagram
     record_drawing__tolerance_policy <|-- record_drawing__tolerance_policy__limits
     record_drawing__sheet <|-- record_drawing__product_drawing__default_sheet
     record_drawing__product_drawing "1" *-- "1" record_drawing__product_drawing__default_sheet : default_sheet
+    record_drawing__product_drawing "1" *-- "1..*" record_drawing__tolerance_policy : tolerance_policies
     record_drawing__feature_intent "1" *-- "0..1" record_drawing__thread : thread
     record_drawing__feature_intent "1" *-- "0..1" record_drawing__texture_requirement : surface_texture
     record_drawing__feature_intent "1" *-- "0..1" record_drawing__edges : edges
     record_drawing__dimension_request "1" *-- "0..1" record_drawing__tolerance : tolerance
+    record_drawing__part_drawing "1" *-- "0..*" record_drawing__part_drawing__datum_features : datum_features
     record_drawing__part_drawing__coordinate_frame__origin <|-- record_drawing__part_drawing__coordinate_frame__origin__1
     record_drawing__part_drawing__coordinate_frame__origin <|-- record_drawing__part_drawing__coordinate_frame__origin__2
     record_drawing__part_drawing__coordinate_frame "1" *-- "1" record_drawing__part_drawing__coordinate_frame__origin : origin
@@ -1356,6 +1369,7 @@ classDiagram
     record_drawing__part_drawing__coordinate_frame "1" *-- "0..1" record_drawing__direction : z
     record_drawing__part_drawing "1" *-- "0..1" record_drawing__part_drawing__coordinate_frame : coordinate_frame
     record_drawing__part_drawing "1" *-- "0..*" record_drawing__view : views
+    record_drawing__part_drawing "1" *-- "0..*" record_drawing__feature_intent : features
     record_drawing__part_drawing "1" *-- "0..*" record_drawing__dimension_request : dimensions
     record_drawing__part_drawing "1" *-- "0..*" record_drawing__geometric_tolerance : geometric_tolerances
     record_drawing__edges <|-- record_drawing__part_drawing__edges
@@ -1387,7 +1401,7 @@ classDiagram
         build_staleness: enum computed|not_computed
         expected_sha256: sha256
         statuses: obligation_status[]
-        facets: object
+        facets: facets by key
         findings: finding[]
         critical: critical_finding[]
         complete: boolean
@@ -1399,6 +1413,13 @@ classDiagram
         sources: string[]
         reasons: string[]
         waiver?: waiver
+    }
+    class record_evidence_assessment__facets["facets"] {
+        cad_valid: facet_result
+        geometrically_manufacturable: facet_result
+        process_planned: facet_result
+        simulation_supported: facet_result
+        physically_validated: facet_result
     }
     class record_evidence_assessment__critical_finding["critical_finding"] {
         finding: semantic_id
@@ -1414,18 +1435,11 @@ classDiagram
     class record_evidence_assessment__acceptance_formed["acceptance_formed"] {
         status: const formed
         evidence_sha256: sha256
-        inventory: object
+        inventory: sha256 by key
     }
     class record_evidence_assessment__acceptance_refused["acceptance_refused"] {
         status: const refused
         reason: text
-    }
-    class record_evidence_assessment__facets["facets"] {
-        cad_valid: facet_result
-        geometrically_manufacturable: facet_result
-        process_planned: facet_result
-        simulation_supported: facet_result
-        physically_validated: facet_result
     }
     class common_finding["common/finding.finding"] {
         <<external>>
@@ -1439,6 +1453,7 @@ classDiagram
     record_evidence_assessment__obligation_status --> "1" record_common__obligation : obligation
     record_evidence_assessment__obligation_status --> "0..1" record_common__waiver : waiver
     record_evidence_assessment "1" *-- "0..*" record_evidence_assessment__obligation_status : statuses
+    record_evidence_assessment "1" *-- "0..*" record_evidence_assessment__facets : facets
     record_evidence_assessment --> "0..*" common_finding : findings
     record_evidence_assessment "1" *-- "0..*" record_evidence_assessment__critical_finding : critical
     record_evidence_assessment__acceptance <|-- record_evidence_assessment__acceptance_formed
@@ -1461,7 +1476,7 @@ classDiagram
         to: string
         type: enum mounting|motion|electrical|thermal|clearance|other
         description: string
-        pair?: part_ref[]
+        pair?: part_ref[2]
         min_clearance_mm?: number
         margin_mm?: number
         limits?: object
@@ -1471,24 +1486,24 @@ classDiagram
         press_fit?: fit
         running_fit?: fit
         locating_fit?: fit
-        heat_set?: heat_set[]
+        heat_set?: heat_set[1..*]
     }
     class record_interfaces__functional["functional"] {
         critical: boolean_fact
-        functions: function_entry[] or fact_unknown
+        functions: function_entry[1..*] or fact_unknown
         requirements?: requirement_ids
         failure_consequence?: text_fact
         loads?: semantic_ids
         environment?: text
-        surfaces?: object[]
-        acceptance?: object[]
+        surfaces?: object[1..*]
+        acceptance?: object[1..*]
         variation?: object
         contact?: object
         play?: object
-        assembly_operations?: assembly_operation_id[]
-        print_in_place?: object[]
+        assembly_operations?: assembly_operation_id[1..*]
+        print_in_place?: object[1..*]
         inspections?: semantic_ids
-        decisions?: decision[]
+        decisions?: decision[1..*]
     }
     class record_interfaces__functional__surfaces["functional.surfaces"] {
         PN: pn
@@ -1507,24 +1522,24 @@ classDiagram
     }
     class record_interfaces__functional__acceptance__verification["functional.acceptance.verification"] {
         method: enum I|A|D|T
-        evidence_required: evidence_level = cad_valid|geometrically_manufacturable|process_planned|simulation_supported|physically_validated[]
+        evidence_required: evidence_level = cad_valid|geometrically_manufacturable|process_planned|simulation_supported|physically_validated[1..*]
         stage: stage
     }
     class record_interfaces__functional__variation["functional.variation"] {
         stack_case: string
-        contributors: enum[]
+        contributors: enum[1..*]
         method: enum worst_case|justified_rss
         decision?: decision
     }
     class record_interfaces__functional__contact["functional.contact"] {
-        materials: profile_id or fact_open[]
+        materials: profile_id or fact_open[2]
         finish?: text_fact
         lubrication?: text_fact
         load?: quantity_fact
         speed?: quantity_fact
         duty?: text_fact
         life?: quantity_fact
-        evidence?: evidence_id[]
+        evidence?: evidence_id[1..*]
     }
     class record_interfaces__functional__play["functional.play"] {
         axial?: quantity_fact
@@ -1532,7 +1547,7 @@ classDiagram
         angular?: quantity_fact
         backlash?: quantity_fact
         compliance?: object
-        scenario_cases?: string[]
+        scenario_cases?: string[1..*]
     }
     class record_interfaces__functional__play__compliance["functional.play.compliance"] {
         axial?: quantity_fact
@@ -1541,8 +1556,8 @@ classDiagram
     }
     class record_interfaces__functional__print_in_place["functional.print_in_place"] {
         joint: enum hinge|pin|ball|captive|living_hinge
-        print_pose: object
-        gap_features: face[][]
+        print_pose: number by key
+        gap_features: face[2][1..*]
         break_free: object
     }
     class record_interfaces__face["face"] {
@@ -1601,7 +1616,7 @@ classDiagram
     record_interfaces__functional__acceptance "1" *-- "1" record_interfaces__functional__acceptance__verification : verification
     record_interfaces__functional "1" *-- "0..*" record_interfaces__functional__acceptance : acceptance
     record_interfaces__functional "1" *-- "0..1" record_interfaces__functional__variation : variation
-    record_interfaces__functional__contact --> "0..*" record_common__fact_open : materials
+    record_interfaces__functional__contact --> "0..2" record_common__fact_open : materials
     record_interfaces__functional__contact --> "0..1" record_common__text_fact : finish
     record_interfaces__functional__contact --> "0..1" record_common__text_fact : lubrication
     record_interfaces__functional__contact --> "0..1" record_common__quantity_fact : load
@@ -1618,7 +1633,7 @@ classDiagram
     record_interfaces__functional__play__compliance --> "0..1" record_common__quantity_fact : angular
     record_interfaces__functional__play "1" *-- "0..1" record_interfaces__functional__play__compliance : compliance
     record_interfaces__functional "1" *-- "0..1" record_interfaces__functional__play : play
-    record_interfaces__functional__print_in_place "1" *-- "1..*" record_interfaces__face : gap_features
+    record_interfaces__functional__print_in_place "1" *-- "2..*" record_interfaces__face : gap_features
     record_interfaces__functional__print_in_place "1" *-- "1" record_interfaces__functional__print_in_place__break_free : break_free
     record_interfaces__functional "1" *-- "0..*" record_interfaces__functional__print_in_place : print_in_place
     record_interfaces__interfaces "1" *-- "0..1" record_interfaces__functional : functional
@@ -1640,19 +1655,19 @@ classDiagram
         title: text
         process: semantic_id
         provider: enum local|outsourced
-        template?: const True
+        template?: const true
         guidance?: texts
         supplier?: text_fact
         operator?: text_fact
         machine?: object
         envelope?: object
-        materials: material_approval[] or fact_open
+        materials: material_approval[1..*] or fact_open
         parameters: parameters
-        tools?: object[]
+        tools?: object[1..*]
         workholding?: text_fact
         constraints?: texts
         calibrations: calibration[]
-        guidelines?: guideline_ref[]
+        guidelines?: guideline_ref[1..*]
         source?: source
     }
     class record_manufacturing_capabilities__profile__machine["profile.machine"] {
@@ -1670,7 +1685,7 @@ classDiagram
         thickness?: quantity_fact
         coating?: text_fact
         extraction?: text_fact
-        operations?: enum[]
+        operations?: enum[1..*]
         reason?: text
         source: source
     }
@@ -1687,6 +1702,7 @@ classDiagram
         power?: fact and fact_power
         pump_pressure?: fact and fact_pump_pressure
         press_brake_force?: fact and fact_press_brake_force
+        [key]: fact
     }
     class record_manufacturing_capabilities__profile__tools["profile.tools"] {
         id: semantic_id
@@ -1833,6 +1849,7 @@ classDiagram
     record_manufacturing_capabilities__parameters --> "0..1" record_common__fact : power
     record_manufacturing_capabilities__parameters --> "0..1" record_common__fact : pump_pressure
     record_manufacturing_capabilities__parameters --> "0..1" record_common__fact : press_brake_force
+    record_manufacturing_capabilities__parameters --> "0..*" record_common__fact : [key]
     record_manufacturing_capabilities__profile "1" *-- "1" record_manufacturing_capabilities__parameters : parameters
     record_manufacturing_capabilities__profile__tools "1" *-- "1" record_manufacturing_capabilities__parameters : parameters
     record_manufacturing_capabilities__profile "1" *-- "0..*" record_manufacturing_capabilities__profile__tools : tools
@@ -1861,11 +1878,11 @@ classDiagram
         schema_version: const 1
         record_version: record_version
         producer: text
-        scope: subject[]
+        scope: subject[1..*]
         expected: obligation[]
         outcomes: obligation_outcome[]
         findings: finding[]
-        dependencies: object
+        dependencies: sha256 by key
         complete: boolean
         result: outcome = pass|fail|unknown|not_applicable|not_assessed
     }
@@ -1907,8 +1924,8 @@ classDiagram
         criterion?: criterion
         source?: source
         configuration?: object
-        fingerprints?: object
-        artifacts?: file_hash[]
+        fingerprints?: sha256 by key
+        artifacts?: file_hash[1..*]
         bundle?: object
         tool?: text
         producer?: text
@@ -1916,7 +1933,7 @@ classDiagram
         coverage?: text
         physical?: object
         waiver?: waiver
-        decisions?: decision[]
+        decisions?: decision[1..*]
         note?: text
     }
     class record_manufacturing_evidence__entry__configuration["entry.configuration"] {
@@ -1984,7 +2001,7 @@ classDiagram
         status: enum open|resolved|accepted_waiver|declined
         reason: text
         decision?: decision
-        replacement_evidence?: evidence_id[]
+        replacement_evidence?: evidence_id[1..*]
         waiver?: waiver
     }
     class record_manufacturing_findings__disposition__producer["disposition.producer"] {
@@ -2010,7 +2027,7 @@ classDiagram
         id: guideline_id
         revision: integer
         title: text
-        extends?: guideline_id[]
+        extends?: guideline_id[1..*]
         abstract?: boolean
         scope: scope
         limits: limit[]
@@ -2029,8 +2046,8 @@ classDiagram
         operator: enum
         quantity?: quantity
         relative?: relative
-        quantities?: quantity and qty_nozzle_diameter[]
-        value?: string or boolean or string or boolean[]
+        quantities?: quantity and qty_nozzle_diameter[1..*]
+        value?: string or boolean or string or boolean[1..*]
         applies_to?: applies_to
         disputed?: boolean
         relaxes?: relaxes
@@ -2178,8 +2195,8 @@ classDiagram
         id: semantic_id
         title: text
         architecture: text
-        parts: candidate_part[]
-        interfaces?: interface_id[]
+        parts: candidate_part[1..*]
+        interfaces?: interface_id[1..*]
         evaluations: not_assessed_rule[]
         changes?: object
         quantity?: quantity_fact
@@ -2191,12 +2208,12 @@ classDiagram
         pros: texts
         cons: texts
         tradeoffs: texts
-        preference_scores?: object[]
+        preference_scores?: object[1..*]
     }
     class record_manufacturing_selection__candidate_part["candidate_part"] {
         PN: pn
         material_profile: profile_id or fact_open
-        route: step[]
+        route: step[1..*]
         proposed?: proposed_part
         note?: text
     }
@@ -2210,7 +2227,7 @@ classDiagram
         title: text
         sourcing: enum make|made_to_drawing|catalogue
         reason: text
-        functions?: function_entry[]
+        functions?: function_entry[1..*]
         transparency?: transparency = opaque|translucent|transparent
     }
     class record_manufacturing_selection__candidate__evaluations["candidate.evaluations"] {
@@ -2347,14 +2364,14 @@ classDiagram
         angular_deflection_rad?: number
     }
     class record_part__intent["intent"] {
-        functions: function_entry[] or fact_unknown
+        functions: function_entry[1..*] or fact_unknown
         material_profile: profile_id or fact_open
         color?: string
         selection?: semantic_id
         service: object or fact_open
-        components?: component[]
-        critical_surfaces: critical_surface[] or fact_open
-        route: operation[] or fact_unknown
+        components?: component[1..*]
+        critical_surfaces: critical_surface[1..*] or fact_open
+        route: operation[1..*] or fact_unknown
         rationale?: object
     }
     class record_part__intent__service["intent.service"] {
@@ -2373,7 +2390,7 @@ classDiagram
         witness?: vector
         locator?: target
         material_profile?: profile_id or fact_open
-        functions?: function_entry[]
+        functions?: function_entry[1..*]
         multiplicity?: integer
         note?: text
     }
@@ -2383,9 +2400,9 @@ classDiagram
         region?: semantic_id
         component?: semantic_id
         role: enum
-        interfaces?: interface_id[]
+        interfaces?: interface_id[1..*]
         requirements?: requirement_ids
-        criteria?: criterion[]
+        criteria?: criterion[1..*]
         finish?: text
         inspection?: semantic_id
         dimension_state: dimension_state = as_manufactured|after_finish|assembled
@@ -2403,16 +2420,16 @@ classDiagram
         output_state?: semantic_id
         material_state_in?: text
         material_state_out?: text
-        targets?: target[]
+        targets?: target[1..*]
         setup?: setup
         orientation?: orientation or fact_open
         supports?: supports or fact_open
-        allowances?: allowance[]
+        allowances?: allowance[1..*]
         post_processing?: texts
-        inspection?: inspection[]
+        inspection?: inspection[1..*]
         requirements?: requirement_ids
-        criteria?: criterion[]
-        evidence?: evidence_id[]
+        criteria?: criterion[1..*]
+        evidence?: evidence_id[1..*]
         purchase?: purchase
     }
     class record_part__setup["setup"] {
@@ -2433,14 +2450,14 @@ classDiagram
     }
     class record_part__setup__workholding["setup.workholding"] {
         method: text_fact
-        contact_regions?: target[]
+        contact_regions?: target[1..*]
         fixture?: text
         clamping_force?: quantity_fact
         allowable_deformation?: quantity_fact
     }
     class record_part__setup__access["setup.access"] {
         sides?: texts
-        tools?: object[]
+        tools?: object[1..*]
     }
     class record_part__setup__access__tools["setup.access.tools"] {
         description: text
@@ -2463,7 +2480,7 @@ classDiagram
         <<union>>
     }
     class record_part__orientation__rotation__1["orientation.rotation.1"] {
-        quaternion: number[]
+        quaternion: number[4]
     }
     class record_part__orientation__rotation__2["orientation.rotation.2"] {
         axis: vector
@@ -2474,11 +2491,11 @@ classDiagram
     }
     class record_part__supports["supports"] {
         strategy: enum none|reachable_noncritical|finished_critical
-        start_regions?: target[]
-        contact_regions?: target[]
+        start_regions?: target[1..*]
+        contact_regions?: target[1..*]
         material?: text
         removal?: object
-        affected_surfaces?: target[]
+        affected_surfaces?: target[1..*]
         allowance?: quantity
         finish?: text
         inspection?: semantic_ids
@@ -2508,7 +2525,7 @@ classDiagram
         capability?: profile_id
         state: dimension_state = as_manufactured|after_finish|assembled
         coupon?: boolean
-        evidence?: evidence_id[]
+        evidence?: evidence_id[1..*]
     }
     class record_part__intent__rationale["intent.rationale"] {
         decision?: decision
@@ -2631,12 +2648,13 @@ classDiagram
         policy_version: const 1
         default?: mode = ask|chat|auto
         decision?: decision
-        gates?: object
+        gates?: gate by key
     }
     class record_policy__gate["gate"] {
         mode: mode = ask|chat|auto
         decision?: decision
     }
+    record_policy "1" *-- "0..*" record_policy__gate : gates
 ```
 
 ### `record/product`
@@ -2680,7 +2698,7 @@ classDiagram
     class record_product__change["change"] {
         decision: decision
         baseline_version: version
-        affected_parts: pn[]
+        affected_parts: pn[1..*]
     }
     class record_product__profile["profile"] {
         decision?: decision
@@ -2689,7 +2707,7 @@ classDiagram
         critique: enum full|light|off
         motion: enum auto
         storage_results_in_git: boolean
-        asked?: object
+        asked?: enum user|asked-accepted-default by key
         processes: object
     }
     class record_product__fea["fea"] {
@@ -2720,14 +2738,14 @@ classDiagram
         x_mm: number
         y_mm: number
         z_mm: number
-        orientations?: enum xyz|xzy|yxz|yzx|zxy|zyx[]
+        orientations?: enum xyz|xzy|yxz|yzx|zxy|zyx[1..*]
         margin_mm?: number
     }
     class record_product__design["product.design"] {
         clearance_margin_mm?: number
     }
     class record_product__manufacturing["product.manufacturing"] {
-        processes?: primary_process[]
+        processes?: primary_process[1..*]
         min_wall_mm?: object
     }
     class record_product__manufacturing__min_wall_mm["product.manufacturing.min_wall_mm"] {
@@ -2744,7 +2762,7 @@ classDiagram
         purpose: text_fact
         users: text_fact
         environment: object
-        loads: load[] or fact_open
+        loads: load[1..*] or fact_open
         motion: object
         accuracy: object
         consequences: object
@@ -2805,7 +2823,7 @@ classDiagram
         repair: text_fact
     }
     class record_product__use_case__capability["use_case.capability"] {
-        equipment: profile_id[] or fact_open
+        equipment: profile_id[1..*] or fact_open
         operator: text_fact
         outsourcing: text_fact
     }
@@ -2818,7 +2836,7 @@ classDiagram
         <<union>>
     }
     class record_product__use_case__evidence_policy__2["use_case.evidence_policy.2"] {
-        obligations: object[]
+        obligations: object[1..*]
         decision: decision
     }
     class record_product__use_case__evidence_policy__2__obligations["use_case.evidence_policy.2.obligations"] {
@@ -2942,7 +2960,7 @@ classDiagram
         preferences?: object[]
         assumptions?: object[]
         open_questions?: object[]
-        requirements: object[]
+        requirements: object[1..*]
     }
     class record_requirements__preferences["requirements.preferences"] {
         id: preference_id
@@ -2950,7 +2968,7 @@ classDiagram
         source: source
         weight: number
         criterion?: criterion
-        subjects?: subject[]
+        subjects?: subject[1..*]
     }
     class record_requirements__assumptions["requirements.assumptions"] {
         id: assumption_id
@@ -2967,7 +2985,7 @@ classDiagram
     class record_requirements__open_questions["requirements.open_questions"] {
         id: question_id
         question: text
-        subjects?: subject[]
+        subjects?: subject[1..*]
         owner: text
         material_to_choice: boolean
         safety_relevant: boolean
@@ -2986,13 +3004,13 @@ classDiagram
         source: string
         priority: enum must|should|could|MUST|SHOULD|COULD
         verification: object
-        subjects?: subject[]
-        acceptance?: criterion[]
+        subjects?: subject[1..*]
+        acceptance?: criterion[1..*]
         conditions?: text
         risk?: object
-        evidence_required?: evidence_level = cad_valid|geometrically_manufacturable|process_planned|simulation_supported|physically_validated[]
+        evidence_required?: evidence_level = cad_valid|geometrically_manufacturable|process_planned|simulation_supported|physically_validated[1..*]
         waiver_policy?: enum forbidden|approval_required
-        visibility?: object[]
+        visibility?: object[1..*]
     }
     class record_requirements__requirements__verification["requirements.requirements.verification"] {
         method: enum I|A|D|T
@@ -3005,8 +3023,8 @@ classDiagram
     }
     class record_requirements__requirements__visibility["requirements.requirements.visibility"] {
         view: string
-        window: part_ref[]
-        targets: part_ref[]
+        window: part_ref[1..*]
+        targets: part_ref[1..*]
         min_visible_fraction?: number
     }
     class record_common__criterion["record/common.criterion"] {
