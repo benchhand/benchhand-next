@@ -66,45 +66,59 @@ The prototype at `reference_commit` 412b5d9 reads `record_version: 2` only and h
 | `decision-deprecated` | `hw/decisions/DR-*.md` | refuses `status: deprecated` without `superseded-by` | 1a7efb7e (#110) |
 | `decision-front-matter` | `hw/decisions/DR-*.md` | adds `id`, `kind: design`, `title`; renames `decision-makers`, `superseded-by`; status `superseded` | 1a7efb7e (#110) |
 
-The prototype read BOM numbers with `int()` and `float()`, which accept surrounding white space. The record v3 reader stays strict, so `bom-number-spacing` strips that white space from those cells only. It reports one info finding per file, `migrate.csv_number_spacing`.
+The prototype read BOM numbers with `int()` and `float()`, which accept surrounding white space. The record v3 reader stays strict, so `bom-number-spacing` strips the ASCII white space (space, tab, CR, LF, form feed, vertical tab) around a number in those cells, and nothing else. It reports one info finding per file, `migrate.csv_number_spacing`. `int()` and `float()` also read spellings record v3 doesn't, such as non-ASCII digits (`０`), digit grouping (`1_000`), `inf`, and padding with a no-break space. The migration doesn't rewrite these. It refuses the file with `migrate.csv_number_unreadable`, one finding per cell, naming the file, the row, the column and the value.
 
 ## How the service edits
 
 - **YAML** is edited in place at the character positions that PyYAML's composer reports. It is not dumped again, so comments, key order, quoting, flow or block style and line endings stay as written. ruamel.yaml round-trip was not used: it adds a dependency, and it re-flows the long flow mappings the prototype writes.
   - Flow mappings are edited too: flow-style decision front matter, a trailing comma, and several entries removed side by side. A removed entry takes its own separator with it. The comment after a kept entry stays.
-  - An edit that would change an anchored node, a node reached through an alias, or a mapping with a merge key (`<<`) is refused with `migrate.unsupported_layout`. The finding names the file, the pointer and the hand fix: write the node out in full.
-- **CSV** edits rename the header cells, or strip the white space around a number. Every other byte stays, the line endings included.
+  - The editor changes only a node it can locate by its own delimiter tokens: a plain or quoted scalar, or a flow mapping whose marks are its braces. It refuses anything else with `migrate.unsupported_layout`, naming the file, the pointer and the hand fix.
+  - The refused layouts include a tagged flow mapping (`!!map {…}`), a tagged or anchored key, an anchor inside a removed value, and a key the mapping holds only through a merge key (`<<`).
+  - An edit that would change an anchored node, a node reached through an alias, or a mapping with a merge key is refused the same way. Its fix is to write the node out in full. Each case has a fixture in `packages/benchhand-core/tests/record/migrate_layout_fixtures/`.
+- **CSV** edits rename the header cells, or strip the ASCII white space around a number. Every other byte stays, the line endings included.
 - **Decision files** have their front matter edited in place the same way. The Markdown body is not touched.
 - A file that no rule changes keeps its bytes.
 - **Sealed history** is never rewritten. `hw/versions/**`, `hw/checks/**` and `hw/releases/**` stay byte-identical, even where they hold v2 forms, because a digest or a seal states their bytes.
-- OS and tool junk is never read or rewritten, and it doesn't count as an uncommitted change. The junk set is `.DS_Store`, `._*`, `Thumbs.db`, `desktop.ini`, `__pycache__`, and editor swap and backup files. It stays in place, and a backup leaves it out. This rule is the reader's (`record/ignore.py`). The project ignore file of bead `benchhand-3fc` will replace it.
-- **The scan** of `hw/` stops at the first directory it cannot list (`migrate.scan_failed`), so no subtree is silently left out. A symbolic link under `hw/` whose target resolves outside the project refuses the record (`migrate.symlink_outside`), in the dry run and in apply. A link inside the project is read, but a rule never changes a link (`migrate.unsupported_layout`).
+- OS and tool junk is never read, rewritten or backed up. The junk set is `.DS_Store`, `._*`, `Thumbs.db`, `desktop.ini`, `__pycache__`, and editor swap and backup files. This rule is the reader's (`record/ignore.py`). The project ignore file of bead `benchhand-3fc` will replace it.
+- **The scan** of `hw/` stops at the first directory it cannot list (`migrate.scan_failed`), so no subtree is silently left out. The scan lists names and link targets only. It records which files exist, not a snapshot of their contents. These are refused, in the dry run and in apply, before any file is read:
+  - `hw/` itself being a symbolic link (`migrate.symlink_hw`), checked before anything is read or locked;
+  - a symbolic link under `hw/` whose target resolves outside the project (`migrate.symlink_outside`);
+  - a symbolic link to a directory (`migrate.unsupported_layout`), so that no link nested under one goes unchecked.
+
+  A link to a file inside the project is read, but a rule never changes a link (`migrate.unsupported_layout`).
 
 ## Dry run and apply
 
 **Dry run** is the default. It writes nothing under the project. It returns each file change (the rules applied, and a unified diff), the rules' findings, and the validation findings of the migrated record. It validates a real copy of the migrated record, made in a new temporary directory without sealed history, and checks that the copy holds every file it read (`migrate.scan_incomplete`).
 
-**Apply** writes in place:
+**Apply** writes in place. Git plays no part: the state of a work tree, its index or its ignore rules don't matter.
 
-1. **A recovery point comes first.** One of these must hold:
-   - `hw/` is inside a git work tree, with no tracked changes and no untracked files (`git status --porcelain -- hw`), and git tracks every file the migration changes. The recovery command is then `git -C <project> restore -- hw`.
-   - The user passes `--backup`. The service first writes a complete copy of `hw/` to `<project>/.benchhand/backups/<UTC time>/hw`, syncs it to disk, reads each file back and reports the path (`migrate.backup_written`). The recovery command is then `cp -Rp <backup>/. <project>/hw/`.
+1. **An exclusive lock**, `hw/.benchhand-migrate.lock`, is created with `O_CREAT|O_EXCL` and synced. It records the process, the time and the path of the backup it belongs to. If the lock exists, apply is refused with `migrate.locked`, whose action names `--resume` and `--undo <backup>`.
+2. Under the lock, the service plans again and validates the migrated copy.
+3. **A preimage backup.** Before writing anything, apply copies the exact current bytes of every file it will change to `<project>/.benchhand/migrate-backups/<UTC time>/hw/<path>`. It backs up those target files only, not the whole of `hw/`. Beside them, `manifest.json` lists each `hw/`-relative path with the sha256 of its preimage and of its migrated bytes. Each file, the manifest and their directories are synced. Each file is read back and compared with the manifest. Then a `COMPLETE` marker is written and synced, last. A backup that cannot be written is refused with `migrate.backup_failed`, and nothing in `hw/` changes. The result reports the path (`migrate.backup_written`).
+4. The service checks that no file under `hw/` was added or removed since the plan (`migrate.changed_meanwhile`).
+5. **It writes only the changed files**, with `hw/product.yaml` last. Each file goes to a temp file in the same directory, which is synced. Then the target is hashed again, and the write is refused if its bytes differ from the ones the plan read (`migrate.changed_meanwhile`). Only then is the temp file renamed over the target and the directory synced. If the directory sync fails after the rename, the file is listed in `written`, and `migrate.not_durable` says the change may not survive a power loss. Any other write error stops apply (`migrate.write_failed`).
+6. It validates the record again (`migrate.invalid_result` if that fails), and removes the lock.
 
-   With neither, apply is refused with `migrate.no_recovery_point`, which names both fixes.
-2. **An exclusive lock**, `hw/.benchhand-migrate.lock`, is created with `O_CREAT|O_EXCL` and removed when apply ends. If the lock exists, apply is refused with `migrate.locked`, which says to delete a lock that a crash left behind. A lock that cannot be removed is reported (`migrate.cleanup_failed`).
-3. Under the lock, the service plans again and validates the migrated copy. It also checks that no file under `hw/` was added or removed since the plan (`migrate.changed_meanwhile`).
-4. **It writes only the changed files**, with `hw/product.yaml` last. Before writing each file, it hashes it again and refuses if the bytes differ from the ones the plan read (`migrate.changed_meanwhile`). Each file goes to a temp file in the same directory, which is synced and renamed over the original, and then the directory is synced. A write error stops apply (`migrate.write_failed`).
-5. It reads and validates the record again (`migrate.invalid_result` if that fails).
+**Undo** is `benchhand record migrate --undo <backup>`, and every failure finding after step 3 names it.
+- It refuses a backup without `COMPLETE` (`migrate.backup_incomplete`: that apply wrote nothing). It also refuses a backup whose files don't match the manifest (`migrate.backup_unusable`).
+- It puts each preimage back with the same synced temp file and rename, `hw/product.yaml` first. It restores only the files the manifest lists, and only when a file still holds the bytes the migration wrote.
+- A file that holds neither those bytes nor its original ones was changed by something else. Undo leaves it as it is and reports it with `migrate.undo_skipped`, naming its preimage in the backup.
+- Because apply changes only the files it backs up, undo gives back the record as it was, junk included. A second undo has nothing left to restore.
 
-Every failure finding names the recovery command. Until `hw/product.yaml` says `record_version: 3`, a rerun migrates the files that are left. Every rule changes nothing on its own output, so a rerun after a crash finishes a partly migrated tree with the bytes a clean run writes. A test covers this by stopping after several numbers of files. A partly migrated tree has tracked changes, so the rerun needs `--backup`, or `git restore hw` first.
+**A stopped apply.** If apply stops after its backup is `COMPLETE`, through a write error, a changed file or a crash, the lock stays. The next run is refused with `migrate.locked` until it chooses one of two ways:
+- `--apply --resume` reuses that backup. Its preimages are the originals, so no second backup of a partly migrated tree is made. Each file still to migrate must hold its preimage, and each file already written must hold its migrated bytes; otherwise the resume is refused (`migrate.changed_meanwhile`). Every rule changes nothing on its own output, so the resumed apply writes the bytes a clean run writes.
+- `--undo <backup>` puts the files back.
 
-The lock keeps out a second migration only. **Stop every other process that writes under `hw/` before applying.** The checks in steps 3 and 4 catch a change made before a file is written, not one made during the rename.
+If apply stops before its backup is `COMPLETE`, it wrote nothing. A lock left by a killed process then says so, and `--resume` deletes the unfinished backup and starts again. Tests stop an apply after several numbers of files, before the backup is `COMPLETE`, and after the last write. After each stop they check that `--resume` gives the bytes of a clean run and that `--undo` gives back the original.
 
-**Frozen records.** In the prototype, `flow.frozen.evidence_sha256` is a digest of the bytes of `hw/verification.csv`, the evidence ledger and the finding dispositions (prototype `evidence.py` `LEDGER_FILES`). If `flow.frozen` is present and a rule would change one of those files, the migration is refused with `migrate.frozen_anchor`. The digest is never recomputed. The freeze can't be re-anchored until the Phase 2 flow engine can record an engineering change for it. No real project was frozen on 2026-11-25.
+A `record_version: 3` record is a no-op (`migrate.current`), but only once no migration lock is held and the record validates. A lock that a stopped apply left after writing `hw/product.yaml` refuses the record with `migrate.locked`, so `current` is never reported for a run that didn't finish. Any version other than 1, 2 or 3 is refused with `record.version_unsupported`, and nothing changes. The service and the CLI make the project root absolute.
 
-A `record_version: 3` record is a no-op (`migrate.current`). Any version other than 1, 2 or 3 is refused with `record.version_unsupported`, and nothing changes. The service and the CLI make the project root absolute.
+The lock keeps out a second migration only. **Stop every other process that writes under `hw/` before applying or undoing.** The re-hash in step 5 covers the time up to the hash; a write between the hash and the rename is still possible.
 
-The CLI is `benchhand record migrate [--apply [--backup]] HW`. It exits 1 when the result is refused or failed.
+**Frozen records.** Any prototype record with `flow.frozen` is refused with `migrate.frozen_anchor`, whatever the rules would change. Its acceptance digest, `flow.frozen.evidence_sha256`, covers the bytes of the ledgers and of the artifacts they cite (prototype `evidence.py`). The digest is never recomputed. The freeze can't be re-anchored until the Phase 2 flow engine can record an engineering change for it. No real project was frozen on 2026-11-25.
+
+The CLI is `benchhand record migrate [--apply [--resume]] HW`, and `benchhand record migrate --undo BACKUP`. It exits 1 on a refusal or a failure, and 2 on bad arguments.
 
 ## Decided defaults
 
