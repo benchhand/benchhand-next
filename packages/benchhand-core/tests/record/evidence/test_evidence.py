@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 import yaml
+from benchhand_core.record.errors import RecordSchemaError
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.assess import assess
 from benchhand_core.record.evidence.built import NotComputed
@@ -890,6 +891,15 @@ def test_a_subject_name_holding_an_anchor_delimiter_is_refused(key: str) -> None
     ident = f"policy.cad_valid@{obligation_anchor(subject)}"
     with pytest.raises(ValidationError):
         Obligation.model_validate(data | {"id": ident, "basis": "TST"})
+
+
+def test_a_policy_row_with_a_region_but_no_feature_is_refused(built: tuple[Path, str]) -> None:
+    """The anchor writes a region only after its feature, so a region without one would vanish from the id.
+    The record refuses such a subject (common.tsp subject dependentRequired) before any id is made."""
+    root, _ = built
+    write_policy(root, {"PN": "LMP-0001", "region": "upper"})
+    with pytest.raises(RecordSchemaError, match="'feature' is a dependency of 'region'"):
+        load_record(root)
 
 
 def test_an_entry_at_another_level_credits_nothing(built: tuple[Path, str]) -> None:
