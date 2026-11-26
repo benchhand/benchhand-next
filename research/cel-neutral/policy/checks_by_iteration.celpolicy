@@ -1,0 +1,16 @@
+name: checks_by_iteration
+description: >-
+  Plan section 5's "checks by iteration" rule list: the first matching
+  condition names the checks to run.
+rule:
+  variables:
+    - name: committing
+      expression: iteration == "commit"
+  match:
+    - condition: stage in ["parts", "detail"] && variables.committing
+      output: '["form_check", "check_changed_only"]'
+    - condition: part.make_buy == "buy" && part.procurement.mode == "catalog"
+      output: '["catalog_check"]'
+    - condition: has(part.mass_target) && part.mass_target < 1.0
+      output: '["mass_check"]'
+    - output: '["form_check"]'

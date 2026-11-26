@@ -80,6 +80,8 @@ pub fn env_from_config(config: &EnvConfig, descriptor_set: &[u8]) -> Result<Env>
             "optional" => env.with_extension(cel_core::ext::optionals_extension()),
             "math" => env.with_extension(cel_core::ext::math_extension()),
             "encoders" => env.with_extension(cel_core::ext::encoders_extension()),
+            // cel.bind and cel.block are standard macros in cel-core's parser, so there is nothing to add.
+            "bindings" => env,
             other => bail!("cel-core has no extension {other}"),
         };
     }

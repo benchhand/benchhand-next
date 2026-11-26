@@ -277,6 +277,57 @@ cel-go is moving to the module path `cel.dev/cel-go`. From 2026-09-08, `github.c
 
 The CI reference checker is therefore a small Go tool over `tools/compiler`. That's the same amount of code as `go/cmpchecked`, not a CLI we download. Use the CLI beside it for `rules test` and for authors.
 
+## cel-policy
+
+cel-policy (github.com/cel-expr/cel-policy, Apache-2.0, created 2026-05-07, 9 stars, last push 2026-08-18) defines a YAML policy format and holds its conformance suite. The suite has 28 policy cases, plus 16 compile-error cases that a conforming compiler must reject.
+
+A policy has:
+
+- a `name`;
+- `imports`, which are type aliases;
+- a `rule` with ordered, lazily evaluated and memoised `variables`;
+- a `match` block (first-match) or an `aggregate` block, which collects every matching output into a list;
+- choices with a `condition`, an optional `explanation`, and an `output` or a nested `rule`.
+
+The compiler requires every output path to have the same type. A `match` with no unconditional last choice returns an optional, and an empty `aggregate` returns `[]`.
+
+### benchhand's rule lists are a subset
+
+A `*.rules.yaml` in the plan is an ordered, first-match list of `{when, then}`. That is a cel-policy `match` block: `when` is `condition` and `then` is `output`. `policy/checks_by_iteration.rules.yaml` and `policy/checks_by_iteration.celpolicy` hold plan section 5's "checks by iteration" list in both forms. Over our format, cel-policy adds:
+
+- `variables`, the same idea as the Kubernetes report's row 20;
+- `explanation`, a CEL string per choice, which is close to row 14 (`message_expr`);
+- `aggregate`, for "run every check whose condition holds";
+- the output-type agreement check, which is row 5 for rule lists;
+- reachability errors, for example a choice after an unconditional one.
+
+### Tested
+
+| Step | Tool | Result |
+|---|---|---|
+| Compile the policy against the generated descriptor set | `cel-expr compile -format policy` (main, unsigned) | Exit 0. Output type `list(string)` |
+| Compile a policy with a wrong field and a `string` output among `list(string)` outputs | the same | Exit 1, both errors, each at its file, line and column in the `.celpolicy`, with a caret |
+| Evaluate four cases on real proto types | `cel-expr eval -format policy -tests policy/tests.json` | 4 of 4 pass; node coverage 80%, branch coverage 80% |
+| Compile to one CheckedExpr | `go-policy` (60 lines over `cel.dev/cel-go/policy` v0.33.3) | `policy.Compile` returns one checked AST. With `variables` it is `cel.@block([iteration == "commit"], … @index0 …)`. Without them it is nested `?:` |
+| Evaluate that CheckedExpr, with `variables` | cel-expr-python, cel-core, @bufbuild/cel | cel-expr-python 4 of 4. cel-core and @bufbuild/cel fail: neither has a runtime `cel.@block` |
+| Evaluate that CheckedExpr, without `variables` | the same three | 4 of 4 on each |
+
+### Which engines implement policies
+
+- **The policy format** is implemented by cel-go (`cel.dev/cel-go/policy`), cel-cpp (`policy/cel_policy.cc`) and cel-java. Those three run the conformance suite.
+- **cel-expr-python, cel-core and @bufbuild/cel have no policy parser.** They don't need one: a compiled policy is a single CheckedExpr. cel-expr-python also runs the `cel.@block` form, because cel-cpp's runtime has the block extension.
+- **The `cel.@block` form is the portability limit.** In the shared suite, only cel-core passed `block_ext`, and only through its parser macro. At runtime it doesn't accept the `cel.@block` call that cel-go's composer writes. A policy that has to run on cel-core or in the browser can't use `variables` until those engines evaluate `cel.@block`. It also needs an unconditional last choice in each `match`, or the optional extension in every engine.
+
+### Should benchhand adopt the format?
+
+Yes, as the source format of rule lists, with three conditions:
+
+1. **Compile with cel-go's policy compiler at authoring and in CI,** and ship the CheckedExpr in the rules bundle. The Python host, Rust and the browser then evaluate the bundle, and none of them needs a policy parser. The host check at load needs a policy compiler in Python. As of cel-expr-python 0.1.4, that means cel-go in CI and a CheckedExpr loaded at start, or a Python port of the composer. cel-expr-python 0.1.4 has no policy API, and I didn't ask upstream about one.
+2. **Restrict the profile until the evaluators catch up:** `match` only, an unconditional last choice, and no `variables`. Lift each restriction when cel-core and @bufbuild/cel pass the `block_ext` suite.
+3. **Keep `flow.yaml` as benchhand's own schema.** Gates, edges and `void_scope` are structure, not rule lists. Only `*.rules.yaml` becomes `.celpolicy`.
+
+This changes plan section 5 slightly. The rule lists become cel-policy files, checked by a policy compiler, rather than a benchhand-defined `{when, then}` shape that the host interprets itself.
+
 ## The recommended design
 
 ### Where checking happens
