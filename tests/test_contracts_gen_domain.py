@@ -252,6 +252,26 @@ def test_ref_counts_count_refs_anywhere_but_not_inside_the_same_contract() -> No
     assert counts == {("record/widget", "common/person"): 1}
 
 
+def test_a_ref_into_another_contracts_definition_names_the_helper_it_points_at() -> None:
+    # A ref to an x-inline helper of another contract points at its place inside a definition there.
+    holder = _contract(
+        "record/holder",
+        {"$defs": {"approval": {"type": "object", "properties": {"channel": {"enum": ["app", "chat"]}}}}},
+    )
+    request = _contract(
+        "flow/request",
+        {
+            "type": "object",
+            "required": ["channel"],
+            "properties": {
+                "channel": {"$ref": "../record/holder.schema.json#/$defs/approval/properties/channel"}
+            },
+        },
+    )
+    model = build_model([holder, request])
+    assert model.classes["flow_request"].members == ["channel: channel = app|chat"]
+
+
 def test_a_tuple_of_classes_holds_one_per_position() -> None:
     schema = {
         "type": "object",

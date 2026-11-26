@@ -1,0 +1,45 @@
+...@../../classes
+direction: right
+
+"aggregate__flow_flow__ApprovalScope": {
+  class: aggregate
+  label: "ApprovalScope"
+  "flow_flow__ApprovalScope": {
+    class: owned
+    label: "ApprovalScope"
+    shape: sql_table
+    "items": "ApprovedItem[1..*]" { constraint: "req" }
+  }
+  "flow_flow__ApprovedItem": {
+    class: owned
+    label: "ApprovedItem"
+    shape: sql_table
+    "kind": "ApprovedItemKind = concept|envelope|interface|joint|part" { constraint: "req" }
+    "id": "string" { constraint: "req" }
+    "fingerprint": "sha256" { constraint: "req" }
+  }
+}
+"flow_flow__GateDecisionRequest": {
+  class: owned
+  label: "GateDecisionRequest"
+  shape: sql_table
+  "gate": "gate_id" { constraint: "req" }
+  "status": "enum approved|void" { constraint: "req" }
+  "version": "version"
+  "channel": "channel = app|form|chat|auto" { constraint: "req" }
+  "by": "text"
+  "quote": "text"
+  "provisional": "decision"
+}
+"flow_flow__ApprovedItemState": {
+  class: owned
+  label: "ApprovedItemState"
+  shape: sql_table
+  "kind": "ApprovedItemKind = concept|envelope|interface|joint|part" { constraint: "req" }
+  "id": "string" { constraint: "req" }
+  "decision": "decision" { constraint: "req" }
+  "status": "enum approved|changed_since_approval" { constraint: "req" }
+  "fingerprint": "sha256" { constraint: "req" }
+}
+
+"aggregate__flow_flow__ApprovalScope"."flow_flow__ApprovalScope"."items" -> "aggregate__flow_flow__ApprovalScope"."flow_flow__ApprovedItem": "items [1..*]" { class: composition }

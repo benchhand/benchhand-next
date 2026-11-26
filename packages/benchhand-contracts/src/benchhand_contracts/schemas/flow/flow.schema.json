@@ -1,0 +1,632 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/flow/flow.schema.json",
+  "title": "benchhand flow definition (flow.yaml), provisional",
+  "description": "Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements, the VOID cascade scope and the ordered first-match rule lists. The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check",
+  "x-status": "provisional",
+  "x-version": "0.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "flow_version",
+    "stages",
+    "gates",
+    "edges",
+    "void_scope",
+    "rules"
+  ],
+  "properties": {
+    "flow_version": {
+      "const": 1
+    },
+    "stages": {
+      "description": "Every stage, in flow order",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/FlowStage"
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FlowGate"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FlowEdge"
+      }
+    },
+    "void_scope": {
+      "description": "Selects the stages a VOID reopens besides the voided stage, evaluated for each stage after it",
+      "$ref": "../common/cel.schema.json"
+    },
+    "reapproval_scope": {
+      "description": "Provisional (ADR-0019, owned by Phase 2): selects the approved items a change affects, next to void_scope. An affected item whose fingerprint differs from its approval is changed_since_approval",
+      "x-status": "provisional",
+      "$ref": "../common/cel.schema.json"
+    },
+    "rules": {
+      "$ref": "#/$defs/FlowRules"
+    }
+  },
+  "examples": [
+    {
+      "flow_version": 1,
+      "stages": [
+        {
+          "id": "layout",
+          "guides": {
+            "lead": "guides/layout.md"
+          }
+        },
+        {
+          "id": "parts",
+          "guides": {
+            "lead": "guides/parts.md",
+            "cad-part-designer": "guides/parts.md#part-designer"
+          }
+        }
+      ],
+      "gates": [
+        {
+          "id": "layout_freeze",
+          "stage": "layout",
+          "kind": "provisional+full+human",
+          "requires": {
+            "provisional": [
+              "version.fast_checks.all(c, c.status == \"pass\")"
+            ],
+            "full": [
+              "full_check.status == \"pass\""
+            ],
+            "human": [
+              "full_check.status == \"pass\" && prev_human_gate.approved && (policy.mode == \"auto\" || answer.present)"
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "layout",
+          "to": "parts",
+          "gate": "layout_freeze"
+        }
+      ],
+      "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
+      "rules": {
+        "checks_by_iteration": [
+          {
+            "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
+            "then": [
+              "form_check",
+              "check_changed_only"
+            ]
+          }
+        ],
+        "dispatch": [
+          {
+            "when": "obligation.process == \"fdm\"",
+            "then": [
+              "process.fdm"
+            ]
+          }
+        ],
+        "fidelity": [
+          {
+            "when": "stage == \"parts\"",
+            "then": "F2"
+          }
+        ],
+        "rigor": []
+      }
+    }
+  ],
+  "$defs": {
+    "CelExpressions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "../common/cel.schema.json"
+      }
+    },
+    "FlowCheckId": {
+      "description": "A check id that a check-by-iteration rule selects, such as static.changed_only",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
+    },
+    "FlowHandlerId": {
+      "description": "A process-check handler id that a dispatch rule selects, such as process.fdm",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
+    },
+    "FlowStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "guides"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "../record/common.schema.json#/$defs/stage"
+        },
+        "guides": {
+          "$ref": "#/$defs/FlowGuides"
+        }
+      }
+    },
+    "FlowGuides": {
+      "description": "The guide fragment for each role at this stage, by role: lead is the lead agent, any other key an agent profile such as cad-part-designer. flow.guide returns a role's own fragment, else the lead's",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/FlowGuideFragment"
+      },
+      "required": [
+        "lead"
+      ],
+      "properties": {
+        "lead": {
+          "$ref": "#/$defs/FlowGuideFragment"
+        }
+      }
+    },
+    "FlowGuideFragment": {
+      "description": "A Markdown file under guides/, relative to flow.yaml, with an optional heading anchor",
+      "type": "string",
+      "pattern": "^guides/[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)*\\.md(#[a-z0-9][a-z0-9-]*)?$"
+    },
+    "FlowGate": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FlowSingleHumanGate"
+        },
+        {
+          "$ref": "#/$defs/FlowStagedGate"
+        }
+      ]
+    },
+    "FlowSingleHumanGate": {
+      "description": "A gate the user approves in one step. Each requirement must hold",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "stage",
+        "kind",
+        "requires"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "../record/common.schema.json#/$defs/gate_id"
+        },
+        "stage": {
+          "description": "The stage the gate closes",
+          "$ref": "../record/common.schema.json#/$defs/stage"
+        },
+        "kind": {
+          "const": "single-human"
+        },
+        "requires": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "human"
+          ],
+          "properties": {
+            "human": {
+              "$ref": "#/$defs/CelExpressions"
+            }
+          }
+        }
+      }
+    },
+    "FlowStagedGate": {
+      "description": "A gate that approves a built version in three steps: the provisional gate after the fast checks, the full check on the same version, then the human gate. Each step's requirements must hold",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "stage",
+        "kind",
+        "requires"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "../record/common.schema.json#/$defs/gate_id"
+        },
+        "stage": {
+          "description": "The stage the gate closes",
+          "$ref": "../record/common.schema.json#/$defs/stage"
+        },
+        "kind": {
+          "const": "provisional+full+human"
+        },
+        "requires": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provisional",
+            "full",
+            "human"
+          ],
+          "properties": {
+            "provisional": {
+              "$ref": "#/$defs/CelExpressions"
+            },
+            "full": {
+              "description": "When the full check counts as done",
+              "$ref": "#/$defs/CelExpressions"
+            },
+            "human": {
+              "$ref": "#/$defs/CelExpressions"
+            }
+          }
+        }
+      }
+    },
+    "FlowEdge": {
+      "description": "A transition between two stages. gate names the gate it passes through; guard must also hold",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "../record/common.schema.json#/$defs/stage"
+        },
+        "to": {
+          "$ref": "../record/common.schema.json#/$defs/stage"
+        },
+        "gate": {
+          "$ref": "../record/common.schema.json#/$defs/gate_id"
+        },
+        "guard": {
+          "$ref": "../common/cel.schema.json"
+        }
+      }
+    },
+    "FlowRules": {
+      "description": "The ordered first-match rule lists: the first rule whose when holds gives the value, and no match gives none",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks_by_iteration",
+        "dispatch",
+        "fidelity",
+        "rigor"
+      ],
+      "properties": {
+        "checks_by_iteration": {
+          "description": "Which checks run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlowCheckRule"
+          }
+        },
+        "dispatch": {
+          "description": "Which process-check handlers judge an obligation, from its process, operation and material. No match means UNKNOWN coverage, never a pass",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlowDispatchRule"
+          }
+        },
+        "fidelity": {
+          "description": "The form-check fidelity at a stage",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlowFidelityRule"
+          }
+        },
+        "rigor": {
+          "description": "Requirements added under a rigor policy, such as regulated; each must hold as well as the gate's own",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlowRigorRule"
+          }
+        }
+      }
+    },
+    "FlowCheckRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "when",
+        "then"
+      ],
+      "properties": {
+        "when": {
+          "$ref": "../common/cel.schema.json"
+        },
+        "then": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlowCheckSelection"
+          }
+        }
+      }
+    },
+    "FlowCheckSelection": {
+      "description": "A check that always runs when its rule matches, or one that also needs its own condition, such as being stale",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FlowCheckId"
+        },
+        {
+          "$ref": "#/$defs/FlowConditionalCheck"
+        }
+      ]
+    },
+    "FlowConditionalCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check",
+        "when"
+      ],
+      "properties": {
+        "check": {
+          "$ref": "#/$defs/FlowCheckId"
+        },
+        "when": {
+          "$ref": "../common/cel.schema.json"
+        }
+      }
+    },
+    "FlowDispatchRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "when",
+        "then"
+      ],
+      "properties": {
+        "when": {
+          "$ref": "../common/cel.schema.json"
+        },
+        "then": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/FlowHandlerId"
+          }
+        }
+      }
+    },
+    "FlowFidelityRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "when",
+        "then"
+      ],
+      "properties": {
+        "when": {
+          "$ref": "../common/cel.schema.json"
+        },
+        "then": {
+          "enum": [
+            "F0",
+            "F1",
+            "F2",
+            "F3"
+          ]
+        }
+      }
+    },
+    "FlowRigorRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "when",
+        "then"
+      ],
+      "properties": {
+        "when": {
+          "$ref": "../common/cel.schema.json"
+        },
+        "then": {
+          "$ref": "#/$defs/CelExpressions"
+        }
+      }
+    },
+    "GateDecisionRequest": {
+      "description": "What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate, and void withdraws its provisional approval because of a change the user named. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words. form is refused: form elicitation is not used (ADR-0018)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate",
+        "status",
+        "channel"
+      ],
+      "properties": {
+        "gate": {
+          "$ref": "../record/common.schema.json#/$defs/gate_id"
+        },
+        "status": {
+          "enum": [
+            "approved",
+            "void"
+          ]
+        },
+        "version": {
+          "description": "The built version the decision is on",
+          "$ref": "../record/common.schema.json#/$defs/version"
+        },
+        "channel": {
+          "$ref": "../record/decision.schema.json#/$defs/approval/properties/channel",
+          "not": {
+            "const": "form"
+          }
+        },
+        "by": {
+          "$ref": "../record/common.schema.json#/$defs/text"
+        },
+        "quote": {
+          "description": "The user's words, quoted",
+          "$ref": "../record/common.schema.json#/$defs/text"
+        },
+        "provisional": {
+          "$ref": "../record/common.schema.json#/$defs/decision"
+        }
+      },
+      "if": {
+        "properties": {
+          "channel": {
+            "const": "auto"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "quote"
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "by",
+          "quote"
+        ]
+      },
+      "examples": [
+        {
+          "gate": "layout_freeze",
+          "status": "approved",
+          "version": "v3",
+          "channel": "chat",
+          "by": "the user",
+          "quote": "Yes, freeze the layout.",
+          "provisional": "DR-012"
+        },
+        {
+          "gate": "intent",
+          "status": "approved",
+          "channel": "auto"
+        }
+      ]
+    },
+    "ApprovalScope": {
+      "description": "Provisional (ADR-0019, owned by Phase 2): the items a human-gate approval covers, each with its fingerprint at approval time, computed the way the evidence service fingerprints its inputs. The decision contract refers to it once Phase 2 adds it there",
+      "x-status": "provisional",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/ApprovedItem"
+          }
+        }
+      },
+      "examples": [
+        {
+          "items": [
+            {
+              "kind": "interface",
+              "id": "IF-001",
+              "fingerprint": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+            },
+            {
+              "kind": "part",
+              "id": "LMP-0003",
+              "fingerprint": "60303ae22b998861bce3b28f33eec1be758a213c86c93c076dbe9f558c11c752"
+            }
+          ]
+        }
+      ]
+    },
+    "ApprovedItem": {
+      "description": "Provisional (ADR-0019): one approved item",
+      "x-status": "provisional",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "fingerprint"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ApprovedItemKind"
+        },
+        "id": {
+          "description": "The item's id in the record, such as an interface id or a PN",
+          "type": "string",
+          "minLength": 1
+        },
+        "fingerprint": {
+          "$ref": "../record/common.schema.json#/$defs/sha256"
+        }
+      }
+    },
+    "ApprovedItemKind": {
+      "enum": [
+        "concept",
+        "envelope",
+        "interface",
+        "joint",
+        "part"
+      ]
+    },
+    "ApprovedItemState": {
+      "description": "Provisional (ADR-0019): an approved item now. approved: its fingerprint is the one recorded at approval; changed_since_approval: it differs, and the next human gate shows the item with a diff and confirms it. The stage stays where it is",
+      "x-status": "provisional",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "decision",
+        "status",
+        "fingerprint"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ApprovedItemKind"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "description": "The decision that approved it",
+          "$ref": "../record/common.schema.json#/$defs/decision"
+        },
+        "status": {
+          "enum": [
+            "approved",
+            "changed_since_approval"
+          ]
+        },
+        "fingerprint": {
+          "description": "The item's fingerprint now",
+          "$ref": "../record/common.schema.json#/$defs/sha256"
+        }
+      },
+      "examples": [
+        {
+          "kind": "interface",
+          "id": "IF-001",
+          "decision": "DR-013",
+          "status": "changed_since_approval",
+          "fingerprint": "fd61a03af4f77d870fc21e05e7e80678095c92d808cfb3b5c279ee04c74aca13"
+        }
+      ]
+    }
+  }
+}

@@ -270,7 +270,7 @@ class KernelBuildParams(RootModel[HookParamsBase]):
     root: HookParamsBase
 
 
-class Status10(Enum):
+class Status12(Enum):
     pass_ = "pass"
     fail = "fail"
 
@@ -281,7 +281,7 @@ class KernelBuildPartResult(ContractModel):
         populate_by_name=True,
     )
     pn: Annotated[str, Field(pattern="^[A-Z0-9][A-Z0-9-]{1,31}$")]
-    status: Status10
+    status: Status12
     error: str | None = None
     seconds: Annotated[float | None, Field(ge=0.0)] = None
 

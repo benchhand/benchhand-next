@@ -151,6 +151,29 @@ def test_load_contracts_refuses_an_absolute_ref(schemas_dir: Path) -> None:
         load_contracts(schemas_dir)
 
 
+@pytest.mark.parametrize(
+    "prop",
+    [
+        {"type": "string", "description": "A CEL guard"},
+        {"type": "array", "description": "CEL requirements", "items": {"type": "string"}},
+    ],
+)
+def test_load_contracts_refuses_a_cel_expression_that_is_a_plain_string(schemas_dir: Path, prop: Any) -> None:
+    schema = {**NEW_SCHEMA, "properties": {"guard": prop}}
+    (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    with pytest.raises(ContractSourceError, match="#/properties/guard: a CEL expression is a plain string"):
+        load_contracts(schemas_dir)
+
+
+def test_load_contracts_takes_a_cel_expression_that_refers_to_the_cel_type(schemas_dir: Path) -> None:
+    prop = {"description": "A CEL guard", "$ref": "../common/cel.schema.json"}
+    schema = {**NEW_SCHEMA, "properties": {"guard": prop}}
+    (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    assert f"{SYNTHETIC_DIR}/widget.schema.json" in [
+        contract.rel_path for contract in load_contracts(schemas_dir)
+    ]
+
+
 @needs_node
 def test_a_typespec_contract_is_published_under_its_id_with_file_relative_refs(
     contracts_dir: Path, tmp_path: Path

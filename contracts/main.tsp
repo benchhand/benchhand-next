@@ -31,8 +31,10 @@
 // - Patterns use [0-9], never \d: tests/test_contracts.py holds them to the dialect ECMAScript and
 //   pydantic's Rust regex engine read alike.
 
+import "./common/cel.tsp";
 import "./common/finding.tsp";
 import "./envelope/envelope.tsp";
+import "./flow/flow.tsp";
 import "./jobs/job.tsp";
 import "./provider/manifest.tsp";
 import "./provider/protocol.tsp";

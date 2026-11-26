@@ -250,7 +250,10 @@ class _Registry:
         if not fragment:
             return stem, None
         prefix = "/$defs/"
-        name = fragment.removeprefix(prefix) if fragment.startswith(prefix) else fragment
+        name = fragment.removeprefix(prefix)
+        if not fragment.startswith(prefix) or "/" in name:
+            # A pointer past a definition, such as one to an x-inline helper inside it, is walked as written.
+            name = fragment
         resolved = stem, name
         try:
             self.schema_of(resolved)

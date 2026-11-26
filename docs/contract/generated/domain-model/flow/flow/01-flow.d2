@@ -1,0 +1,95 @@
+...@../../classes
+direction: right
+
+"aggregate__flow_flow": {
+  class: aggregate
+  label: "flow"
+  "flow_flow": {
+    class: document
+    label: "flow"
+    shape: sql_table
+    "flow_version": "const 1" { constraint: "req" }
+    "stages": "FlowStage[1..*]" { constraint: "req" }
+    "gates": "FlowGate[]" { constraint: "req" }
+    "edges": "FlowEdge[]" { constraint: "req" }
+    "void_scope": "cel" { constraint: "req" }
+    "reapproval_scope": "cel"
+    "rules": "FlowRules" { constraint: "req" }
+  }
+  "flow_flow__FlowStage": {
+    class: owned
+    label: "FlowStage"
+    shape: sql_table
+    "id": "stage" { constraint: "req" }
+    "guides": "FlowGuides" { constraint: "req" }
+  }
+  "flow_flow__FlowGuides": {
+    class: owned
+    label: "FlowGuides"
+    shape: sql_table
+    "lead": "FlowGuideFragment" { constraint: "req" }
+    "[key]": "FlowGuideFragment"
+  }
+  "flow_flow__FlowGate": {
+    class: union
+    label: "FlowGate  «abstract»"
+    shape: sql_table
+    "kind": "discriminator" { constraint: "req" }
+  }
+  "flow_flow__FlowSingleHumanGate": {
+    class: owned
+    label: "FlowSingleHumanGate"
+    shape: sql_table
+    "id": "gate_id" { constraint: "req" }
+    "stage": "stage" { constraint: "req" }
+    "kind": "const single-human" { constraint: "req" }
+    "requires": "object" { constraint: "req" }
+  }
+  "flow_flow__FlowSingleHumanGate__requires": {
+    class: owned
+    label: "FlowSingleHumanGate.requires"
+    shape: sql_table
+    "human": "CelExpressions" { constraint: "req" }
+  }
+  "flow_flow__FlowStagedGate": {
+    class: owned
+    label: "FlowStagedGate"
+    shape: sql_table
+    "id": "gate_id" { constraint: "req" }
+    "stage": "stage" { constraint: "req" }
+    "kind": "const provisional+full+human" { constraint: "req" }
+    "requires": "object" { constraint: "req" }
+  }
+  "flow_flow__FlowStagedGate__requires": {
+    class: owned
+    label: "FlowStagedGate.requires"
+    shape: sql_table
+    "provisional": "CelExpressions" { constraint: "req" }
+    "full": "CelExpressions" { constraint: "req" }
+    "human": "CelExpressions" { constraint: "req" }
+  }
+  "flow_flow__FlowEdge": {
+    class: owned
+    label: "FlowEdge"
+    shape: sql_table
+    "from": "stage" { constraint: "req" }
+    "to": "stage" { constraint: "req" }
+    "gate": "gate_id"
+    "guard": "cel"
+  }
+}
+"stub__flow_flow__FlowRules": {
+  class: stub
+  label: "FlowRules"
+  link: "./02-flowrules.svg"
+}
+
+"aggregate__flow_flow"."flow_flow__FlowSingleHumanGate" -> "aggregate__flow_flow"."flow_flow__FlowGate": { class: inheritance }
+"aggregate__flow_flow"."flow_flow__FlowStagedGate" -> "aggregate__flow_flow"."flow_flow__FlowGate": { class: inheritance }
+"aggregate__flow_flow"."flow_flow__FlowStage"."guides" -> "aggregate__flow_flow"."flow_flow__FlowGuides": "guides [1]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."stages" -> "aggregate__flow_flow"."flow_flow__FlowStage": "stages [1..*]" { class: composition }
+"aggregate__flow_flow"."flow_flow__FlowSingleHumanGate"."requires" -> "aggregate__flow_flow"."flow_flow__FlowSingleHumanGate__requires": "requires [1]" { class: composition }
+"aggregate__flow_flow"."flow_flow__FlowStagedGate"."requires" -> "aggregate__flow_flow"."flow_flow__FlowStagedGate__requires": "requires [1]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."gates" -> "aggregate__flow_flow"."flow_flow__FlowGate": "gates [0..*]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."edges" -> "aggregate__flow_flow"."flow_flow__FlowEdge": "edges [0..*]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."rules" -> "stub__flow_flow__FlowRules": "rules [1]" { class: composition }

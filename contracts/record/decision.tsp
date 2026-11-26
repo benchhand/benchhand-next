@@ -36,9 +36,17 @@ model people is title[];
 @extension("then", #{ not: #{ required: #["quote"] } })
 @extension("else", #{ required: #["by", "quote"] })
 model approval {
-  channel: "app" | "form" | "chat" | "auto";
+  channel: approval_channel;
   by?: Common.text;
   quote?: Common.text;
+}
+
+@extension("x-inline", true)
+union approval_channel {
+  "app",
+  "form",
+  "chat",
+  "auto",
 }
 
 /** A flow gate state. provisional: the fast checks passed and the flow may build on it until the full check and the human gate; approved: the gate is passed; void: a provisional or approved gate is withdrawn. An approved gate supersedes its provisional one, and a void supersedes what it withdraws. An approved gate carries its approval unless the policy mode of its gate is auto, which validation checks against hw/policy.yaml */

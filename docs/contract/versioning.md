@@ -99,6 +99,10 @@ Before the first release nothing is published, so a narrowing keeps its version.
 
 `envelope/envelope.schema.json` (version `0.1.0`) is provisional. It is the result of every MCP tool call ([result envelope](envelope.md)). Phase 2 fills its `next_actions` from the flow engine, and Phase 3 gives each tool's `payload` its own schema. Version `1.0.0` comes with the MCP tools.
 
+`flow/flow.schema.json` (version `0.1.0`) is provisional. It is the shape of `flow.yaml` ([flow definition](flow.md)), and Phase 2 writes the file and its interpreter. Its `ApprovalScope`, `ApprovedItemState` and `reapproval_scope` carry `x-status: provisional` as well, because Phase 2's scoped approvals (ADR-0019) own them. `GateDecisionRequest.channel` refers to the decision record's channel, written in place in `record/decision.schema.json`, so the decision schema didn't change.
+
+`common/cel.schema.json` (version `0.1.0`) is provisional. It is the one CEL expression type (ADR-0014). Every CEL field refers to it by `$ref`, which is how the flow interpreter finds the expressions, and the generator refuses a string or a list of strings whose description says CEL. The type has no `format`: `jsonschema lint` refuses a format outside the specification, prefixed or not.
+
 ## The acceptance digest
 
 The v3 acceptance digest (`evidence_sha256` of `record/evidence-assessment`) covers every source artifact the record names. It also covers the files the prototype's digest covers: the ledgers, `verification.csv`, cited artifacts and bundle manifests, the sealed packet manifests, and every file under `hw/manufacturing/sources/`. The prototype's digest covers only the artifacts that its source readers collect, so a bought part's procurement specification falls outside it. A v3 digest is therefore not byte-compatible with a prototype digest. That is safe: migrate refuses a frozen record whose digest inputs change, and a v3 freeze records a new digest.

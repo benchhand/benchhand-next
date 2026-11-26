@@ -1,0 +1,57 @@
+...@../../classes
+direction: right
+
+"aggregate__flow_flow__FlowRules": {
+  class: aggregate
+  label: "FlowRules"
+  "flow_flow__FlowRules": {
+    class: owned
+    label: "FlowRules"
+    shape: sql_table
+    "checks_by_iteration": "FlowCheckRule[]" { constraint: "req" }
+    "dispatch": "FlowDispatchRule[]" { constraint: "req" }
+    "fidelity": "FlowFidelityRule[]" { constraint: "req" }
+    "rigor": "FlowRigorRule[]" { constraint: "req" }
+  }
+  "flow_flow__FlowCheckRule": {
+    class: owned
+    label: "FlowCheckRule"
+    shape: sql_table
+    "when": "cel" { constraint: "req" }
+    "then": "FlowCheckSelection[]" { constraint: "req" }
+  }
+  "flow_flow__FlowConditionalCheck": {
+    class: owned
+    label: "FlowConditionalCheck"
+    shape: sql_table
+    "check": "FlowCheckId" { constraint: "req" }
+    "when": "cel" { constraint: "req" }
+  }
+  "flow_flow__FlowDispatchRule": {
+    class: owned
+    label: "FlowDispatchRule"
+    shape: sql_table
+    "when": "cel" { constraint: "req" }
+    "then": "FlowHandlerId[1..*]" { constraint: "req" }
+  }
+  "flow_flow__FlowFidelityRule": {
+    class: owned
+    label: "FlowFidelityRule"
+    shape: sql_table
+    "when": "cel" { constraint: "req" }
+    "then": "enum F0|F1|F2|F3" { constraint: "req" }
+  }
+  "flow_flow__FlowRigorRule": {
+    class: owned
+    label: "FlowRigorRule"
+    shape: sql_table
+    "when": "cel" { constraint: "req" }
+    "then": "CelExpressions" { constraint: "req" }
+  }
+}
+
+"aggregate__flow_flow__FlowRules"."flow_flow__FlowCheckRule"."then" -> "aggregate__flow_flow__FlowRules"."flow_flow__FlowConditionalCheck": "then [0..*]" { class: composition }
+"aggregate__flow_flow__FlowRules"."flow_flow__FlowRules"."checks_by_iteration" -> "aggregate__flow_flow__FlowRules"."flow_flow__FlowCheckRule": "checks_by_iteration [0..*]" { class: composition }
+"aggregate__flow_flow__FlowRules"."flow_flow__FlowRules"."dispatch" -> "aggregate__flow_flow__FlowRules"."flow_flow__FlowDispatchRule": "dispatch [0..*]" { class: composition }
+"aggregate__flow_flow__FlowRules"."flow_flow__FlowRules"."fidelity" -> "aggregate__flow_flow__FlowRules"."flow_flow__FlowFidelityRule": "fidelity [0..*]" { class: composition }
+"aggregate__flow_flow__FlowRules"."flow_flow__FlowRules"."rigor" -> "aggregate__flow_flow__FlowRules"."flow_flow__FlowRigorRule": "rigor [0..*]" { class: composition }

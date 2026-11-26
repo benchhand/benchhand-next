@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/common/cel.schema.json",
+  "title": "benchhand CEL expression, provisional",
+  "description": "Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string",
+  "x-cel": true,
+  "x-status": "provisional",
+  "x-version": "0.1.0",
+  "type": "string",
+  "minLength": 1,
+  "examples": [
+    "version.fast_checks.all(c, c.status == \"pass\")"
+  ]
+}

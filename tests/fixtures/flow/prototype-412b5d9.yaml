@@ -1,0 +1,357 @@
+# The prototype's flow at 412b5d9, written in the flow/flow.schema.json
+# shape. Sources: skills/cad-flow/references/flow.md, "Stages, gates, and
+# durable outputs", "Gate control", "Checks by iteration" and "Fail-fast
+# check order". It tests that the schema can express that flow. It is not
+# the Phase 2 flow/flow.yaml. The CEL activation names are made up for this
+# test: Phase 2 types them from the contracts, and the schema doesn't check
+# expressions.
+flow_version: 1
+
+stages:
+  - id: ground
+    guides: {lead: guides/ground.md}
+  - id: intent
+    guides: {lead: guides/intent.md}
+  - id: specify
+    guides: {lead: guides/specify.md}
+  - id: concept
+    guides:
+      lead: guides/concept.md
+      cad-concept-designer: guides/concept.md#variant-unit
+  - id: layout
+    guides: {lead: guides/layout.md}
+  - id: parts
+    guides:
+      lead: guides/parts.md
+      cad-part-designer: guides/parts.md#part-unit
+      cad-sourcing-researcher: guides/parts.md#sourcing-unit
+      cad-mech-reviewer: guides/parts.md#light-review
+      cad-dfm-reviewer: guides/parts.md#light-review
+  - id: detail
+    guides:
+      lead: guides/detail.md
+      cad-part-designer: guides/detail.md#detail-unit
+  - id: bom
+    guides:
+      lead: guides/bom.md
+      cad-clerk: guides/bom.md#clerk-chore
+  - id: analysis
+    guides:
+      lead: guides/analysis.md
+      cad-analyst: guides/analysis.md#analysis-case
+  - id: critique
+    guides:
+      lead: guides/critique.md
+      cad-mech-reviewer: guides/critique.md#mechanical-review
+      cad-dfm-reviewer: guides/critique.md#dfm-review
+  - id: reconcile
+    guides: {lead: guides/reconcile.md}
+  - id: design_freeze
+    guides: {lead: guides/design-freeze.md}
+  - id: release
+    guides: {lead: guides/release.md}
+
+gates:
+  # "INTENT, VARIANT, DESIGN freeze and RELEASE are single human gates."
+  # Only explicit approval resolves one; silence is no answer.
+  - id: intent
+    stage: intent
+    kind: single-human
+    requires:
+      human:
+        - record.selection.decision.present
+        - policy.mode == "auto" || answer.present
+  - id: variant
+    stage: concept
+    kind: single-human
+    requires:
+      human:
+        - record.concept.handoff.checked
+        - policy.mode == "auto" || answer.present
+  - id: design_freeze
+    stage: design_freeze
+    kind: single-human
+    requires:
+      human:
+        # "After every stage's human gate"
+        - >-
+          gates.filter(g, g.kind == "provisional+full+human")
+          .all(g, g.approved)
+        - record.made_parts.all(p, p.manufacturing_outputs.complete)
+        - approvals.all(i, i.status != "changed_since_approval")
+        - policy.mode == "auto" || answer.present
+  - id: release
+    stage: release
+    kind: single-human
+    requires:
+      human:
+        - prev_human_gate.approved
+        - record.frozen.present
+        - policy.mode == "auto" || answer.present
+
+  # "LAYOUT freeze, PARTS, DETAIL and ANALYSIS": a provisional gate, the
+  # full check, then the human gate.
+  - id: layout_freeze
+    stage: layout
+    kind: provisional+full+human
+    requires:
+      provisional:
+        - version.fast_checks.all(c, c.status == "pass")
+      full:
+        - full_check.status == "pass"
+      human:
+        - full_check.status == "pass"
+        - prev_human_gate.approved
+        - policy.mode == "auto" || answer.present
+  - id: parts
+    stage: parts
+    kind: provisional+full+human
+    requires:
+      provisional:
+        - version.fast_checks.all(c, c.status == "pass")
+      full:
+        # "the full check counts as done only after both reviews have
+        # returned"
+        - full_check.status == "pass"
+        - light_review.mechanical.returned && light_review.dfm.returned
+        - '!light_review.findings.exists(f, f.severity == "MAJOR")'
+      human:
+        - full_check.status == "pass"
+        - prev_human_gate.approved
+        - policy.mode == "auto" || answer.present
+  - id: detail
+    stage: detail
+    kind: provisional+full+human
+    requires:
+      provisional:
+        - version.fast_checks.all(c, c.status == "pass")
+      full:
+        - full_check.status == "pass"
+        - version.drawings.all(d, d.published)
+      human:
+        - full_check.status == "pass"
+        - prev_human_gate.approved
+        - policy.mode == "auto" || answer.present
+  - id: analysis
+    stage: analysis
+    kind: provisional+full+human
+    requires:
+      provisional:
+        - version.fast_checks.all(c, c.status == "pass")
+      full:
+        # "at L4 the joint sweep case is the full check"
+        - >-
+          full_check.cases.exists(c,
+          c.kind == "joint_sweep" && c.status == "pass")
+        - >-
+          full_check.cases.filter(c, c.kind == "fea")
+          .all(c, c.status == "pass")
+      human:
+        - full_check.status == "pass"
+        - prev_human_gate.approved
+        - >-
+          full_check.unproved_intervals.size() == 0
+          || answer.accepts_unproved_intervals
+        - policy.mode == "auto" || answer.present
+
+edges:
+  - {from: ground, to: intent, guard: record.use_case.present}
+  - {from: intent, to: specify, gate: intent}
+  - from: specify
+    to: concept
+    guard: record.requirements.size() > 0 && record.interfaces.present
+  - {from: concept, to: layout, gate: variant}
+  - {from: layout, to: parts, gate: layout_freeze}
+  - {from: parts, to: detail, gate: parts}
+  - {from: detail, to: bom, gate: detail}
+  - {from: bom, to: analysis, guard: record.bom.reconciled}
+  # Critique "may start on the provisional ANALYSIS gate".
+  - {from: analysis, to: critique, gate: analysis}
+  - from: critique
+    to: reconcile
+    guard: >-
+      critique.mechanical.verdict.present
+      && critique.dfm.verdict.present
+  - from: reconcile
+    to: design_freeze
+    guard: critique.findings.all(f, f.disposition.present)
+  - {from: design_freeze, to: release, gate: design_freeze}
+
+# "reopens the stage and everything built on it"
+void_scope: >-
+  stage.index > voided.stage.index
+  && stage.built_on == voided.version
+
+# ADR-0019, not in the prototype: the approved items a change touches.
+reapproval_scope: >-
+  change.items.exists(c, c.kind == item.kind && c.id == item.id)
+  || change.affects(item)
+
+rules:
+  # "Checks by iteration": the first match per iteration and stage. A check
+  # with its own when runs only if that holds too. The list order is the
+  # fail-fast run order, cheapest first.
+  checks_by_iteration:
+    - when: iteration == "inner" && stage == "layout"
+      then:
+        - validate
+        - scratch.build
+        - form_check.unit
+        - evidence.check_scratch
+        - check: sweep.smoke_changed
+          when: version.moving_pairs_changed
+        - check: render.visibility
+          when: record.requirements.exists(r, r.binds_visibility)
+    - when: >-
+        iteration == "inner"
+        && stage in ["parts", "detail", "reconcile"]
+      then:
+        - validate
+        - scratch.build
+        - form_check.unit
+        - evidence.check_scratch
+        - check: fits.stackup
+          when: stage == "detail"
+        - check: drawings.completeness_unit
+          when: stage == "detail"
+        - check: sweep.smoke_changed
+          when: version.moving_pairs_changed
+        - check: render.visibility
+          when: record.requirements.exists(r, r.binds_visibility)
+    - when: iteration == "inner" && stage == "analysis"
+      then:
+        - validate
+        - fea.smoke_coarse
+    - when: >-
+        iteration == "commit"
+        && stage in ["layout", "parts", "detail", "analysis", "reconcile"]
+      then:
+        - validate
+        - build
+        - static.changed_only
+        - check: bom.reconcile
+          when: stage.index >= stages.layout.index
+        - check: fits.stackup
+          when: stage.index >= stages.detail.index
+        - check: form_check.changed
+          when: stale.exists(s, s.family == "form" && s.changed)
+        - check: sweep.smoke_changed
+          when: version.has_independent_joint
+        - check: drawings.parts
+          when: >-
+            stage.index >= stages.detail.index
+            && stale.exists(s, s.family == "drawing")
+        - check: sourcing.selection
+          when: stale.exists(s, s.family == "sourcing")
+        - render.views
+        - check: motion.default_render
+          when: version.has_independent_joint
+        - recheck.stamp
+    - when: iteration == "provisional"
+      then:
+        - validate.result
+        - render.visibility_result
+        - check: motion.default_render_result
+          when: version.has_independent_joint
+        - bom.result
+        - fits.stackup_result
+        - form_check.result
+        - static.result
+        - sweep.smoke_result
+        - evidence.check_stage
+    - when: iteration == "full"
+      then:
+        - validate
+        - static.all_pairs
+        - form_check.due
+        - motion.default_render
+        - bom.reconcile
+        - fits.stackup
+        - check: sweep.full
+          when: >-
+            stage in ["layout", "analysis"]
+            || !version.full_sweep_carry_forward_proven
+        - check: drawings.all
+          when: stage == "detail"
+        - check: fea.all_cases
+          when: stage == "analysis"
+        - check: fea.stale_cases
+          when: stage == "reconcile" && stale.exists(s, s.family == "fea")
+        - check: sourcing.selection
+          when: stage in ["intent", "parts"]
+        - evidence.check
+        - recheck.stamp
+    - when: iteration == "design_freeze"
+      then:
+        - validate
+        - bom.reconcile
+        - fits.stackup
+        - evidence.check
+        - recheck.stamp
+        - check: sweep.full
+          when: stale.exists(s, s.family == "sweep")
+        - check: drawings.all
+          when: stale.exists(s, s.family == "drawing")
+        - check: fea.stale_cases
+          when: stale.exists(s, s.family == "fea")
+    - when: iteration == "release"
+      then:
+        - validate
+        - bom.reconcile
+        - build_guide
+        - release
+
+  # process_checks/dispatch.py handler_for: a route family, a purchase
+  # family, or a process family of the part's own process kind. No match is
+  # UNKNOWN coverage.
+  dispatch:
+    - when: obligation.level == "physically_validated"
+      then: [physical.ledger]
+    - when: >-
+        obligation.family in
+        ["route.consistency", "route.operation_plan", "optical.route"]
+      then: [route]
+    - when: obligation.family.startsWith("purchase.")
+      then: [process.purchased]
+    - when: >-
+        obligation.family.startsWith("process.fdm.")
+        && part.process == "fdm"
+      then: [process.fdm]
+    - when: >-
+        obligation.family.startsWith("process.resin.")
+        && part.process == "resin"
+      then: [process.resin]
+    - when: >-
+        obligation.family.startsWith("process.cnc.")
+        && part.process == "cnc"
+      then: [process.cnc]
+    - when: >-
+        obligation.family.startsWith("process.laser.")
+        && part.process == "laser"
+      then: [process.laser]
+    - when: >-
+        obligation.family.startsWith("process.casting.")
+        && part.process == "casting"
+      then: [process.casting]
+    - when: >-
+        obligation.family.startsWith("process.drilling.")
+        && part.operations.exists(o, o == "drilling")
+      then: [process.drilling]
+
+  # "the form check on the unit's PNs (F1 at L1, F2 at L2, F3 from L3)"
+  fidelity:
+    - when: stage == "layout"
+      then: F1
+    - when: stage == "parts"
+      then: F2
+    - when: stage.index >= stages.detail.index
+      then: F3
+    - when: "true"
+      then: F0
+
+  # flow_profile_gate.py: regulated rigor refuses a flow profile setting
+  # that turns a check off.
+  rigor:
+    - when: policy.rigor == "regulated"
+      then:
+        - "!record.flow.profile.exists(s, s.turns_check_off)"
