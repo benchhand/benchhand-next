@@ -49,7 +49,7 @@ Each engine ran two tests. The typed demo (`typedemo/gate_guard.yaml`) checks si
 | Typed demo: bad rules rejected at check | 6 of 7 (accepts `decision.status == 1`) | 7 of 7 | 0 of 7 | Not run | Not run |
 | Shared suite | 1639 of 1640 | 1512 of 1640 (87 failures are `disableCheck` tests it can't run unchecked) | 1546 of 1640 | Not run | Not run |
 | Own conformance claim | 100% of cel-spec over parse, check and eval | None stated | Full conformance as a goal; 688 upstream tests listed as ignored | Validated against cel-spec, with a skip list | "Flexible enough to bend the spec" |
-| Build | `cargo build`, about 6 s incremental | `cargo build` runs Bazel 8.3.1 (it downloads it) to compile cel-cpp: about 6 minutes in this worktree, a 785 MB `target/`, and a C++ toolchain | `cargo build` | `cargo build` | `cargo build` |
+| Build | `cargo build`, about 6 s incremental | `cargo build` runs Bazel 8.3.1 (it downloads it) to compile cel-cpp. The time wasn't measured: the previous run's cel-cpp build-script directories span 18:06 to 18:46, retries included. It needs a C++ toolchain and leaves a 785 MB `target/` | `cargo build` | `cargo build` | `cargo build` |
 | Maintenance | 5 stars, last push 2026-02-16, 15 open issues, 17k downloads, one maintainer | 36 stars, last push 2026-10-12, 0 open issues, 5k downloads | 719 stars, last push 2026-11-24, 28 open issues, 6.9M downloads, a governance file | 4 stars, last push 2026-11-25; its README says a code assistant wrote it | Release 1.0.9 on 2026-11-15, 50k downloads |
 | Licence | MIT OR Apache-2.0 | Apache-2.0 | MIT | Apache-2.0 | MIT |
 
@@ -64,7 +64,7 @@ Each engine ran two tests. The typed demo (`typedemo/gate_guard.yaml`) checks si
 Measured:
 
 - 87 lines of Rust plus a 7-line type stub.
-- A 50 s release build after the shared `target/` was warm. maturin builds a 2.0 MB `cp312-abi3` wheel for macOS arm64.
+- A 50 s release build, which compiled pyo3, cel-core and their dependencies (the shared `target/` held only debug builds). maturin builds a 2.0 MB `cp312-abi3` wheel for macOS arm64.
 - The typed demo gives the same result as cel-core: 6 of 6 good rules, 6 of 7 bad rules rejected.
 - It evaluated the CheckedExprs that cel-go and cel-expr-python wrote, 12 of 12.
 
