@@ -495,6 +495,9 @@ From `research/cel-neutral/`, with the builds already in place:
 | Typed demo, per engine | The `typed_demo` program in `go/`, `py/`, `rust/`, `rust-cxx/` (binary `cel_neutral_cxx`) and `ts/` | seconds each |
 | Typed demo through the pyo3 binding | `cd rust-py && maturin build --release`, then `cd py && uv run --with <wheel> python rust_binding_demo.py` | 50 s build |
 | Shared suite on all seven engines | `conformance/run.sh` | 15 s |
+| The `cel-expr` CLI on the typed demo | `cd py && uv run python ../cli/env_json.py ../generated/env/gate_guard.env.yaml ../cli/gate_guard.env.json`, then `cli/compile_demo.sh <cel-expr> cli/gate_guard.env.json` | seconds |
+| cel-go's `tools/compiler` on the typed demo | `cd go-policy && go run ./compilerfile` | seconds |
+| The rule list as a policy | `cel-expr eval -format policy -env policy/env.json -fds generated/types.binpb -expr policy/checks_by_iteration.celpolicy -tests policy/tests.json`; `cd go-policy && go run . ../policy/<name>.celpolicy ../generated/checked-policy/<name>.binpb`; then the `policy_demo` program in `py/`, `rust/` and `ts/` | seconds each |
 
 The typed demo exits non-zero on cel-core (the `string == int` rule), on @bufbuild/cel (no checker) and on cel-js (the two `dyn` wrappers). Each exit code reports an engine finding listed above.
 
@@ -516,6 +519,9 @@ Builds in this worktree:
 - **cel-core's maintenance is the main risk** of the Rust choice: one maintainer, and no push since 2026-02-16. The mitigations are a pinned version, the differential check in CI, and the licence (MIT OR Apache-2.0), which allows a fork.
 - **@bufbuild/cel is beta, and its checker isn't public.** The browser plan depends only on its evaluator reading CheckedExprs. That worked in 0.6.2 for all 18 shipped rules here; whether its own test suite covers checked input is unverified.
 - **The suite covers 1640 of cel-spec's 2344 simple tests.** The rest need declarations, bindings or the conformance message types, and adding them means a typed-value encoder in every runner.
+- **The `cel-expr` signature and provenance weren't verified,** and the policy tests used an unsigned build of main. Only the checksum of the v0.4.0 release was checked.
+- **The cel-policy conformance suite wasn't run** on any engine. Only one benchhand rule list, in two variants, was compiled and evaluated.
+- **The cel-expr/skills skills weren't run with an agent.** Their review comes from reading them.
 
 ## Open questions for the owner
 
