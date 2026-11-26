@@ -543,9 +543,10 @@ def test_a_bound_packet_refused_for_its_contract_stays_in_the_inventory(
     built: tuple[Path, str], write_packet: WritePacket
 ) -> None:
     """evidence.py:1207, 1302-1303: the inventory holds every sealed packet bound to the build, also one the
-    assessment refuses; here its result.json is at record_version 2."""
+    assessment refuses; here its result.json is at record_version 4, which neither the reader nor migrate
+    reads."""
     root, version_sha = built
-    write_packet(root, "cad", packet(root, {READBACK: "pass"}, record_version=2), version_sha)
+    write_packet(root, "cad", packet(root, {READBACK: "pass"}, record_version=4), version_sha)
     result = run(root)
     assert "packet.invalid" in codes(result)
     assert "hw/checks/v1/cad/manifest.json" in result["acceptance"]["inventory"]

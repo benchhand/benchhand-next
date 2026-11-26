@@ -68,7 +68,7 @@ def test_a_layout_the_editor_cannot_locate_is_refused_naming_the_file_and_pointe
     found = []
     for file in sorted(path for path in (fixture / "hw").rglob("*") if path.is_file()):
         path = file.relative_to(fixture).as_posix()
-        _, findings = service._migrate_file(fixture, path, service._rules_of(path))
+        _, findings = service._migrate_file(fixture, path)
         refusals = [finding for finding in findings if finding.severity.value == "error"]
         assert all(finding.action for finding in refusals)
         found.extend(f"error {f.code} {f.path} {f.pointer or ''}".rstrip() for f in refusals)

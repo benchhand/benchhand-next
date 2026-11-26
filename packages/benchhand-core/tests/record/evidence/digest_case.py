@@ -70,7 +70,7 @@ def _packet(record_version: int) -> dict[str, Any]:
 BUILT_LEDGER_SHA = "e" * 64  # the manifest a ledger entry cites when the case builds a version in some form
 
 
-def _build_version(hw: Path, record_version: int) -> None:
+def build_version(hw: Path, record_version: int) -> None:
     """Seal hw/versions/v1 with a snapshot of the record at `hw` and its parts' model sources, as a build
     does, and bind a packet at `record_version` to it."""
     from .conftest import snapshot  # not at import: this module also runs outside pytest
@@ -105,7 +105,7 @@ def write_case(hw: Path, *, built_as: int | None = None) -> None:
         _write(hw / "checks/v1/cad/result.json", json.dumps(_packet(3), indent=1, sort_keys=True))
         _seal(hw / "checks/v1/cad", version_manifest_sha256=version_sha)
     else:
-        _build_version(hw, built_as)
+        build_version(hw, built_as)
         version_sha = BUILT_LEDGER_SHA
     entry = {
         "id": "EV-001",

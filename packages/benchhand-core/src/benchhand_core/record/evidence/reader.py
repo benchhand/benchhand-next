@@ -15,13 +15,14 @@ import os
 import posixpath
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any
 
 from benchhand_contracts.base import ContractModel
 
 from benchhand_core.record import contracts, documents
-from benchhand_core.record.errors import RecordError
+from benchhand_core.record.errors import RECORD_VERSION, RecordError, RecordReadError
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.built import (
     BuiltVersion,
@@ -44,9 +45,15 @@ from benchhand_core.record.evidence.path_judge import judge_all
 from benchhand_core.record.evidence.paths import PathQuery, disposition_queries, entry_queries
 from benchhand_core.record.evidence.view import RecordView, view
 from benchhand_core.record.finding import Finding
+from benchhand_core.record.migrate.sealed import (
+    UpgradeError,
+    snapshot_is_source_form,
+    upgrade_packet,
+    upgrade_snapshot_document,
+)
 from benchhand_core.record.model import MANUFACTURING_MODELS, Record
 from benchhand_core.record.rules.assembly import inventory
-from benchhand_core.record.store import check_version, read_document
+from benchhand_core.record.store import check_version, document_from_text, read_text
 
 SNAPSHOT_MANUFACTURING = ("capabilities", "materials", "selection")
 
@@ -183,20 +190,27 @@ def _collected(directory: Path) -> tuple[Any, str | None]:
     return data, None
 
 
-def _contract_problem(data: Any) -> str | None:
-    """Why a collected packet breaks the v3 manufacturing-check-result contract."""
-    # TODO(migrate): packets and snapshots stay at record_version 3 (orchestrator decision). When the migrate
-    # service merges, verify the seal on the raw bytes first, then upgrade a record_version 2 packet in
-    # memory by migrate's rules; until then a v2 packet breaks this contract and counts as nothing.
-    found = contracts.violations("manufacturing-check-result", data)
-    if found:
-        where = found[0].pointer or "/"
-        return f"result.json breaks manufacturing-check-result at {where}: {found[0].message}"
-    return None
+def _upgraded_packet(bundle: str, data: Any) -> tuple[Any, Finding | None]:
+    """The packet as record version 3, upgraded in memory when it is the prototype's (the seal was verified on
+    the bytes on disk before this; nothing is written back), and why it cannot be counted: it breaks the
+    manufacturing-check-result contract (packet.invalid), or breaks it even upgraded (packet.unupgradable)."""
+    upgraded = upgrade_packet(data)
+    found = contracts.violations("manufacturing-check-result", upgraded)
+    if not found:
+        return upgraded, None
+    problem = (
+        f"result.json breaks manufacturing-check-result at {found[0].pointer or '/'}: {found[0].message}"
+    )
+    if upgraded is data:
+        return data, _packet_invalid(bundle, problem)
+    shown = (
+        f"result.json is record_version {data['record_version']}; upgraded in memory to {RECORD_VERSION}, "
+    )
+    return data, _packet_invalid(bundle, shown + problem.removeprefix("result.json "), "packet.unupgradable")
 
 
-def _packet_invalid(bundle: str, message: str) -> Finding:
-    data = {"code": "packet.invalid", "severity": "error", "path": f"{bundle}/result.json"}
+def _packet_invalid(bundle: str, message: str, code: str = "packet.invalid") -> Finding:
+    data = {"code": code, "severity": "error", "path": f"{bundle}/result.json"}
     return Finding.model_validate({**data, "message": f"{bundle}: {message}"})
 
 
@@ -222,7 +236,10 @@ def collect_packets(
             data, problem = _collected(directory)
         if problem is None:
             bound.append(bundle)
-            problem = _contract_problem(data)
+            data, refusal = _upgraded_packet(bundle, data)
+            if refusal is not None:
+                findings.append(refusal)
+                continue
         if problem is not None:
             findings.append(_packet_invalid(bundle, problem))
             continue
@@ -230,34 +247,46 @@ def collect_packets(
     return tuple(packets), tuple(findings), tuple(bound)
 
 
-def _snapshot_document(snapshot: Path, rel: str, contract: str, model: type[ContractModel]) -> Any:
-    return read_document(snapshot, documents.DocumentSpec(rel, contract, "yaml", model))
+def _snapshot_document(
+    snapshot: Path, rel: str, contract: str, model: type[ContractModel], *, upgrade: bool = False
+) -> Any:
+    """One document of a sealed snapshot, upgraded in memory by migrate's rules when the snapshot was built
+    at the prototype's record version. RecordReadError when the rules cannot upgrade it."""
+    text = read_text(snapshot, rel)
+    if upgrade:
+        try:
+            text = upgrade_snapshot_document(rel, text)
+        except UpgradeError as failure:
+            raise RecordReadError(rel, str(failure)) from failure
+    return document_from_text(documents.DocumentSpec(rel, contract, "yaml", model), text)
 
 
 def read_snapshot(snapshot: Path, current: Record) -> Record:
     """The record a version was built from (hw/versions/<V>/record/), with the current ledgers and
-    decisions, which a snapshot does not hold. RecordError when a document does not read."""
+    decisions, which a snapshot does not hold. A snapshot built at the prototype's record_version is upgraded
+    in memory by migrate's rules, document by document. RecordError when a document does not read or
+    cannot be upgraded."""
     product_spec = documents.PRODUCT
-    product_data = _snapshot_document(snapshot, "product.yaml", product_spec.contract, product_spec.model)
+    upgrade = snapshot_is_source_form(read_text(snapshot, "product.yaml"))
+    document = partial(_snapshot_document, snapshot, upgrade=upgrade)
+    product_data = document("product.yaml", product_spec.contract, product_spec.model)
     check_version(f"{snapshot}/product.yaml", product_data.model_dump(mode="json", by_alias=True))
     parts = {}
     for path in sorted((snapshot / "parts").glob("*/part.yaml")):
         rel = f"parts/{path.parent.name}/part.yaml"
-        parts[path.parent.name] = _snapshot_document(snapshot, rel, "part", documents.part("X").model)
+        parts[path.parent.name] = document(rel, "part", documents.part("X").model)
     ledgers = [name for name in ("evidence", "findings") if name in current.manufacturing]
     manufacturing = {name: current.manufacturing[name] for name in ledgers}
     for name in SNAPSHOT_MANUFACTURING:
         if (snapshot / "manufacturing" / f"{name}.yaml").is_file():
-            manufacturing[name] = _snapshot_document(
-                snapshot, f"manufacturing/{name}.yaml", f"manufacturing-{name}", MANUFACTURING_MODELS[name]
+            manufacturing[name] = document(
+                f"manufacturing/{name}.yaml", f"manufacturing-{name}", MANUFACTURING_MODELS[name]
             )
     return Record(
         product=product_data,
-        requirements=_snapshot_document(
-            snapshot, "requirements.yaml", "requirements", documents.REQUIREMENTS.model
-        ),
-        interfaces=_snapshot_document(snapshot, "interfaces.yaml", "interfaces", documents.INTERFACES.model),
-        assembly=_snapshot_document(snapshot, "assembly.yaml", "assembly", documents.ASSEMBLY.model),
+        requirements=document("requirements.yaml", "requirements", documents.REQUIREMENTS.model),
+        interfaces=document("interfaces.yaml", "interfaces", documents.INTERFACES.model),
+        assembly=document("assembly.yaml", "assembly", documents.ASSEMBLY.model),
         bom=[],
         verification=[],
         parts=parts,

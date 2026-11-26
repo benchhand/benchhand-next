@@ -176,7 +176,7 @@ def _pointer(parts: tuple[str | int, ...]) -> str:
 # --- reading -----------------------------------------------------------------------------------------
 
 
-def _text(root: Path, path: str) -> str:
+def read_text(root: Path, path: str) -> str:
     """The file's text with its line endings as written."""
     try:
         return (root / path).read_bytes().decode("utf-8")
@@ -198,7 +198,12 @@ def _parse(spec: DocumentSpec, text: str) -> Any:
 def read_document(root: Path, spec: DocumentSpec) -> Any:
     """One document as its model (a CSV file as a list of row models), checked against its contract;
     product.yaml also against the record version."""
-    data = _parse(spec, _text(root, spec.path))
+    return document_from_text(spec, read_text(root, spec.path))
+
+
+def document_from_text(spec: DocumentSpec, text: str) -> Any:
+    """The document `text` (read from, or upgraded from, a file) as its model, checked as read_document does."""
+    data = _parse(spec, text)
     check_document(spec, data)
     if spec.format == "csv":
         return [
@@ -213,7 +218,7 @@ def read_decision(root: Path, file_name: str) -> Decision:
     if match is None:
         raise RecordReadError(path, "a decision record is named DR-###-<slug>.md", code="decision.file_name")
     try:
-        front, body = split_front_matter(_text(root, path))
+        front, body = split_front_matter(read_text(root, path))
     except FormatError as error:
         raise RecordReadError(path, str(error)) from error
     decision = Decision(slug=match["slug"], front=_decision_front(path, front), body=body)
@@ -341,7 +346,7 @@ def _as_data(spec: DocumentSpec, document: Document) -> Any:
 def _on_disk(root: Path, spec: DocumentSpec) -> Any:
     """What the file at `spec` states now, or None if it is absent or unreadable."""
     try:
-        return _parse(spec, _text(root, spec.path))
+        return _parse(spec, read_text(root, spec.path))
     except RecordError:
         return None
 
@@ -390,7 +395,7 @@ def _render_decision(root: Path, key: str, decision: Decision) -> tuple[str, str
         raise RecordError(path, message, code="decision.id_mismatch")
     _check_one_file_per_decision(root, key, path)
     try:
-        current_front, current_body = split_front_matter(_text(root, path))
+        current_front, current_body = split_front_matter(read_text(root, path))
     except (RecordError, FormatError):
         current_front, current_body = None, None
     if current_body == decision.body and same(front, current_front):

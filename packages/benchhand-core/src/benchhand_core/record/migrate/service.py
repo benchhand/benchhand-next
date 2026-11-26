@@ -28,18 +28,15 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from benchhand_core.record import documents
-from benchhand_core.record.errors import RECORD_VERSION, RecordMissingError
+from benchhand_core.record.errors import RECORD_VERSION, SOURCE_VERSIONS, RecordMissingError
 from benchhand_core.record.finding import Finding, Severity, error, info
 from benchhand_core.record.formats import FormatError, parse_yaml
 from benchhand_core.record.migrate import inventory as scanning
 from benchhand_core.record.migrate import recovery
 from benchhand_core.record.migrate.inventory import Inventory, ScanError
 from benchhand_core.record.migrate.recovery import Entry, Preimage
-from benchhand_core.record.migrate.rule import Rule
-from benchhand_core.record.migrate.rules import RULES
+from benchhand_core.record.migrate.rules import rewrite, rules_for
 from benchhand_core.record.validate import validate
-
-SOURCE_VERSIONS = (1, 2)  # the prototype's record_version 2, and PR #319's record version 1 (the same format)
 
 
 class MigrationStatus(StrEnum):
@@ -160,28 +157,16 @@ def source_version(root: Path) -> tuple[int | None, Any, tuple[Finding, ...]]:
 # --- planning -------------------------------------------------------------------------------------------
 
 
-def _rules_of(path: str) -> list[Rule]:
-    return [rule for rule in RULES if any(scanning.matches(pattern, path) for pattern in rule.documents)]
-
-
-def _migrate_file(root: Path, path: str, rules: list[Rule]) -> tuple[FileChange | None, list[Finding]]:
+def _migrate_file(root: Path, path: str) -> tuple[FileChange | None, list[Finding]]:
     try:
         before = (root / path).read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as failure:
         return None, [_unreadable(path, f"cannot read: {failure}")]
-    text = before
-    applied: list[str] = []
-    findings: list[Finding] = []
-    for rule in rules:
-        try:
-            rewrite = rule.run(path, text)
-        except FormatError as failure:
-            return None, [*findings, _unreadable(path, f"{rule.id}: {failure}")]
-        findings.extend(rewrite.findings)
-        if rewrite.text != text:
-            text = rewrite.text
-            applied.append(rule.id)
-    change = FileChange(path, tuple(applied), before, text) if text != before else None
+    rewritten = rewrite(path, before)
+    findings = list(rewritten.findings)
+    if rewritten.unreadable is not None:
+        return None, [*findings, _unreadable(path, rewritten.unreadable)]
+    change = FileChange(path, rewritten.applied, before, rewritten.text) if rewritten.text != before else None
     return change, findings
 
 
@@ -234,10 +219,9 @@ def _plan(root: Path, from_version: int, product: Any) -> _Plan:
         return _Plan(_refused(from_version, *findings), inventory)
     changes: list[FileChange] = []
     for path in inventory.readable():
-        rules = _rules_of(path)
-        if not rules:
+        if not rules_for(path):
             continue
-        change, found = _migrate_file(root, path, rules)
+        change, found = _migrate_file(root, path)
         findings.extend(found)
         if change is not None:
             changes.append(change)

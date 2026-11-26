@@ -8,6 +8,7 @@ from benchhand_core.record.contracts import shown_location
 from benchhand_core.record.finding import Finding, Severity, error
 
 RECORD_VERSION = 3
+SOURCE_VERSIONS = (1, 2)  # the prototype's record_version 2, and PR #319's record version 1 (the same format)
 MESSAGE_LIMIT = 300
 
 

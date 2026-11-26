@@ -8,7 +8,12 @@ commit or PR that introduced the form the row rewrites. docs/contract/record-mig
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
+from benchhand_core.record.finding import Finding
+from benchhand_core.record.formats import FormatError
 from benchhand_core.record.migrate import decisions, product
+from benchhand_core.record.migrate.inventory import matches
 from benchhand_core.record.migrate.renames import csv_columns, csv_numbers, yaml_keys
 from benchhand_core.record.migrate.rule import Rule
 from benchhand_core.record.migrate.yaml_edit import ANY
@@ -125,3 +130,36 @@ RULES: tuple[Rule, ...] = (
         transform=decisions.front_matter,
     ),
 )
+
+
+def rules_for(path: str) -> list[Rule]:
+    """The rules whose documents match the project-relative `path`, in table order."""
+    return [rule for rule in RULES if any(matches(pattern, path) for pattern in rule.documents)]
+
+
+@dataclass(frozen=True)
+class Rewritten:
+    """What the matching rules make of one file's text: the text, the ids of the rules that changed it, what
+    they report, and why a rule could not read it (the text and ids are then those before that rule)."""
+
+    text: str
+    applied: tuple[str, ...]
+    findings: tuple[Finding, ...]
+    unreadable: str | None = None
+
+
+def rewrite(path: str, text: str) -> Rewritten:
+    """Run each rule that matches `path` on `text`, in table order. The migrate service plans every file
+    with it, and the evidence reader upgrades a sealed snapshot's documents with it."""
+    applied: list[str] = []
+    findings: list[Finding] = []
+    for rule in rules_for(path):
+        try:
+            rewrite_of_rule = rule.run(path, text)
+        except FormatError as failure:
+            return Rewritten(text, tuple(applied), tuple(findings), f"{rule.id}: {failure}")
+        findings.extend(rewrite_of_rule.findings)
+        if rewrite_of_rule.text != text:
+            text = rewrite_of_rule.text
+            applied.append(rule.id)
+    return Rewritten(text, tuple(applied), tuple(findings))

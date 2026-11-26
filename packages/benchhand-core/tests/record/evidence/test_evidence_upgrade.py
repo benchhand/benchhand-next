@@ -26,7 +26,7 @@ from benchhand_core.record.store import load_record
 
 from ..conftest import LAMP_ARM_HW
 from .conftest import seal, sha256
-from .digest_case import write_case
+from .digest_case import build_version, write_case
 
 TODAY = date(2026, 6, 1)
 PACKET = "hw/checks/v1/cad"
@@ -175,7 +175,7 @@ def rebuilt_in_v3(migrated_v2: Path, tmp_path: Path) -> Path:
     shutil.copytree(migrated_v2 / "hw", twin / "hw")
     shutil.rmtree(twin / "hw/versions")
     shutil.rmtree(twin / "hw/checks")
-    write_case(twin / "hw", built_as=3)
+    build_version(twin / "hw", 3)
     return twin
 
 
