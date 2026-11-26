@@ -1,0 +1,12 @@
+interfaces:
+  - id: IF-001
+    from: LMP-0001
+    to: LMP-0008
+    type: mounting
+    description: "an anchor on the key itself"
+    limits:
+      heat_set:
+        - pair: [LMP-0001, LMP-0008]
+          &key hole_d: 7.77
+          insert: "CMPL 4 X 8"
+          note: *key

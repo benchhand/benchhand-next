@@ -1,0 +1,1 @@
+error migrate.unsupported_layout hw/interfaces.yaml /interfaces/0/limits/heat_set/0/hole_d

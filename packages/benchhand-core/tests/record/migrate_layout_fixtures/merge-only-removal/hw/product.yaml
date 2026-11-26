@@ -1,0 +1,7 @@
+record_version: 2
+profile-defaults: &defaults {human_approval: all, critique: full}
+flow:
+  stage: layout
+  profile:
+    <<: *defaults
+    decision: "DR-002"

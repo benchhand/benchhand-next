@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 import pytest
-from benchhand_core.record.migrate import RULES, Rule
+from benchhand_core.record.migrate import RULES, Rule, service
 
 FIXTURES = Path(__file__).parent / "migrate_fixtures"
 
@@ -55,3 +55,21 @@ def test_a_rule_changes_nothing_on_its_own_output(rule: Rule, tmp_path: Path) ->
     shutil.copytree(fixture / "after", tmp_path, dirs_exist_ok=True)
     _run(rule, tmp_path)
     assert _files(tmp_path) == _files(fixture / "after")
+
+
+LAYOUTS = sorted(path.name for path in (Path(__file__).parent / "migrate_layout_fixtures").iterdir())
+
+
+@pytest.mark.parametrize("case", LAYOUTS)
+def test_a_layout_the_editor_cannot_locate_is_refused_naming_the_file_and_pointer(case: str) -> None:
+    """Each file under migrate_layout_fixtures/<case>/ runs through every rule that names it, as the
+    service runs it; the refusals are those in findings.txt, each with a hand fix."""
+    fixture = Path(__file__).parent / "migrate_layout_fixtures" / case
+    found = []
+    for file in sorted(path for path in (fixture / "hw").rglob("*") if path.is_file()):
+        path = file.relative_to(fixture).as_posix()
+        _, findings = service._migrate_file(fixture, path, service._rules_of(path))
+        refusals = [finding for finding in findings if finding.severity.value == "error"]
+        assert all(finding.action for finding in refusals)
+        found.extend(f"error {f.code} {f.path} {f.pointer or ''}".rstrip() for f in refusals)
+    assert found == (fixture / "findings.txt").read_text(encoding="utf-8").splitlines()

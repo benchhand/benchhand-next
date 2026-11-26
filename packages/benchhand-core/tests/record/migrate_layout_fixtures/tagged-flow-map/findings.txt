@@ -1,0 +1,1 @@
+error migrate.unsupported_layout hw/decisions/DR-001-ship-in-a-padded-box.md

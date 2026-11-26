@@ -44,12 +44,13 @@ def human_approval(path: str, text: str) -> Rewrite:
     document = Document.parse(text)
     findings: list[Finding] = []
     for profile in document.mappings_at(("flow", "profile")):
+        if not document.has(profile, HUMAN_APPROVAL):
+            continue
+        document.remove_entries(profile, (HUMAN_APPROVAL,))
         value = value_of(profile.mapping, HUMAN_APPROVAL)
-        if value is not None:
-            shown = value.value if isinstance(value, ScalarNode) else "a collection"
-            if shown != "all":
-                findings.append(_policy_note(path, profile.steps, shown))
-            document.remove_entries(profile, (HUMAN_APPROVAL,))
+        shown = value.value if isinstance(value, ScalarNode) else "a collection"
+        if shown != "all":
+            findings.append(_policy_note(path, profile.steps, shown))
     for asked in document.mappings_at(("flow", "profile", "asked")):
         document.remove_entries(asked, (HUMAN_APPROVAL,))
     return Rewrite(document.result(), tuple(findings))

@@ -7,7 +7,7 @@ from benchhand_core.record.finding import Finding, error, info, pointer
 from benchhand_core.record.formats import columns
 from benchhand_core.record.migrate import csv_edit
 from benchhand_core.record.migrate.rule import Rewrite, Transform
-from benchhand_core.record.migrate.yaml_edit import Document, entry
+from benchhand_core.record.migrate.yaml_edit import Document
 
 YamlPath = tuple[str, ...]
 
@@ -22,6 +22,17 @@ def _conflict(path: str, at: str | None, old: str, new: str) -> Finding:
     )
 
 
+def _unreadable_number(path: str, cell: csv_edit.Unreadable) -> Finding:
+    return error(
+        "migrate.csv_number_unreadable",
+        path,
+        f"row {cell.row}, column {cell.column}: {cell.value!r} was a number to the prototype, but record "
+        "version 3 reads only ASCII digits, sign, decimal point and exponent",
+        pointer=pointer(cell.row, cell.column),
+        action=f"Write the {cell.column} of row {cell.row} with ASCII digits, then migrate again.",
+    )
+
+
 def yaml_keys(paths: tuple[YamlPath, ...], renames: dict[str, str]) -> Transform:
     """Rename the keys `renames` names in every mapping at each of `paths`."""
 
@@ -31,9 +42,9 @@ def yaml_keys(paths: tuple[YamlPath, ...], renames: dict[str, str]) -> Transform
         for yaml_path in paths:
             for target in document.mappings_at(yaml_path):
                 for old, new in renames.items():
-                    if entry(target.mapping, old) is None:
+                    if not document.has(target, old):
                         continue
-                    if entry(target.mapping, new) is not None:
+                    if document.has(target, new):
                         conflicts.append(_conflict(path, pointer(*target.steps, old), old, new))
                         continue
                     document.rename_key(target, old, new)
@@ -63,12 +74,15 @@ def csv_columns(renames: dict[str, str]) -> Transform:
 
 
 def csv_numbers(contract: str) -> Transform:
-    """Strip the white space around a number in a numeric column, which the prototype's int() and float()
-    accepted and the record version 3 reader does not; every other byte is left as it is."""
+    """Strip the ASCII white space around a number in a numeric column, which the prototype's int() and
+    float() accepted and the record version 3 reader does not; every other byte is left as it is. A cell the
+    prototype read that record version 3 cannot, even stripped (non-ASCII digits, say), refuses the file."""
 
     def transform(path: str, text: str) -> Rewrite:
         numeric = {column.name: column for column in columns(contracts.schema(contract)) if column.numeric}
         stripped = csv_edit.strip_numbers(text, numeric)
+        if stripped.unreadable:
+            return Rewrite(text, tuple(_unreadable_number(path, cell) for cell in stripped.unreadable))
         if stripped.count == 0:
             return Rewrite(text)
         note = info(

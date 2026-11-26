@@ -5,11 +5,14 @@ other byte of the file (comments, key order, quoting, flow or block style, inden
 written. A round-trip dump through a YAML library would re-flow the flow mappings the prototype writes.
 
 An edit that would change an anchored node, a node reached through an alias, or a mapping with a merge key
-raises LayoutError instead: the text of a shared node is not the place of one value.
+raises LayoutError instead: the text of a shared node is not the place of one value. So does an edit of a
+node the editor cannot locate by its delimiter tokens: a tagged or anchored key or value, a flow mapping whose
+marks are not its braces, and a key that a mapping holds only through a merge key.
 """
 
 from __future__ import annotations
 
+import bisect
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -36,8 +39,7 @@ class LayoutError(ValueError):
 
 
 SHARED_FIX = "Write the shared node out in full in place of its anchor (&) and its aliases (*), then migrate."
-
-
+PLAIN_FIX = "Remove the YAML tag (!!) or anchor (&) from it, writing the value in full, then migrate again."
 BLOCK_FIX = "Write the mapping in block style, one entry per line, then migrate again."
 
 
@@ -59,12 +61,18 @@ class Target:
     shared: bool
 
 
-def _compose(text: str) -> tuple[Node | None, frozenset[int]]:
+def _compose(text: str) -> tuple[Node | None, tuple[int, ...]]:
+    """The composed root, and where each anchor (&name) starts. An alias (*name) is not an anchor: removing
+    one removes a use, not the shared node."""
     try:
         root = yaml.compose(text, Loader=yaml.SafeLoader)
         events = yaml.parse(text, Loader=yaml.SafeLoader)
-        anchored = frozenset(
-            event.start_mark.index for event in events if getattr(event, "anchor", None) is not None
+        anchored = tuple(
+            sorted(
+                event.start_mark.index
+                for event in events
+                if getattr(event, "anchor", None) is not None and not isinstance(event, yaml.AliasEvent)
+            )
         )
     except yaml.YAMLError as error:
         raise FormatError(str(error)[:300]) from error
@@ -83,6 +91,18 @@ def entry(mapping: MappingNode, key: str) -> int | None:
 def value_of(mapping: MappingNode, key: str) -> Node | None:
     index = entry(mapping, key)
     return None if index is None else mapping.value[index][1]
+
+
+def _merged(mapping: MappingNode, seen: frozenset[int] = frozenset()) -> set[str]:
+    """The keys `mapping` holds only through its merge key (<<), however deeply merged."""
+    value = value_of(mapping, MERGE_KEY)
+    sources = value.value if isinstance(value, SequenceNode) else [value] if value is not None else []
+    keys: set[str] = set()
+    for source in sources:
+        if isinstance(source, MappingNode) and id(source) not in seen:
+            keys |= {str(key.value) for key, _ in source.value if isinstance(key, ScalarNode)}
+            keys |= _merged(source, seen | {id(mapping)})
+    return keys - {MERGE_KEY}
 
 
 def _children(node: Node, step: str) -> list[tuple[str | int, Node]]:
@@ -138,7 +158,7 @@ class Document:
 
     text: str
     root: Node | None
-    anchored: frozenset[int]
+    anchored: tuple[int, ...]  # sorted
     splices: list[Splice] = field(default_factory=list)
 
     @classmethod
@@ -147,7 +167,11 @@ class Document:
         return cls(text, root, anchored)
 
     def _shared(self, node: Node) -> bool:
-        return node.start_mark.index in self.anchored
+        return self._anchors_in(node.start_mark.index, node.start_mark.index + 1)
+
+    def _anchors_in(self, start: int, end: int) -> bool:
+        index = bisect.bisect_left(self.anchored, start)
+        return index < len(self.anchored) and self.anchored[index] < end
 
     def root_target(self) -> Target | None:
         if not isinstance(self.root, MappingNode):
@@ -175,6 +199,39 @@ class Document:
                 SHARED_FIX,
             )
 
+    def has(self, target: Target, key: str) -> bool:
+        """Whether `target` holds `key`, directly or through a merge key."""
+        return entry(target.mapping, key) is not None or key in _merged(target.mapping)
+
+    def _locate(self, target: Target, key: str) -> int | None:
+        """The index of `key`'s entry, for an edit; LayoutError when the edit cannot be made in place."""
+        index = entry(target.mapping, key)
+        if index is None and key in _merged(target.mapping):
+            message = f"{key} comes into this mapping only through a merge key (<<)"
+            raise LayoutError((*target.steps, key), message, SHARED_FIX)
+        if index is not None:
+            self._refuse_shared(target, key)
+            self._check_plain(target, key, target.mapping.value[index][0])
+        return index
+
+    def _check_plain(self, target: Target, key: str, node: Node) -> None:
+        """Refuse a scalar whose marks span more than its own text: a tag or an anchor before it."""
+        start, end = node.start_mark.index, node.end_mark.index
+        quoted = isinstance(node, ScalarNode) and node.style in ("'", '"')
+        own = self.text[start:end]
+        plain = isinstance(node, ScalarNode) and (
+            (quoted and own[:1] == node.style) or (not quoted and own == node.value)
+        )
+        if not plain or self._shared(node):
+            raise LayoutError((*target.steps, key), f"{key} carries a YAML tag or anchor", PLAIN_FIX)
+
+    def _check_braces(self, target: Target) -> None:
+        """Refuse a flow mapping whose marks are not its braces, such as one written after a tag."""
+        mapping = target.mapping
+        if self.text[mapping.start_mark.index] != "{" or self.text[mapping.end_mark.index - 1] != "}":
+            message = "a flow mapping with a YAML tag or anchor before its {"
+            raise LayoutError(target.steps, message, PLAIN_FIX)
+
     def result(self) -> str:
         """The text with every splice made; the same splice made twice counts once."""
         ordered = sorted(set(self.splices), reverse=True)
@@ -190,21 +247,18 @@ class Document:
 
     def replace_value(self, target: Target, key: str, plain: str) -> None:
         """Write `plain` (a name or a number, which needs no escaping) as `key`'s value, quoted as it was."""
-        value = value_of(target.mapping, key)
+        index = self._locate(target, key)
+        value = None if index is None else target.mapping.value[index][1]
         if not isinstance(value, ScalarNode) or value.value == plain:
             return
-        self._refuse_shared(target, key)
-        if self._shared(value):
-            raise LayoutError((*target.steps, key), f"{key} is an anchored value", SHARED_FIX)
+        self._check_plain(target, key, value)
         self.splices.append(_scalar_splice(value, plain))
 
     def rename_key(self, target: Target, old: str, new: str) -> None:
-        index = entry(target.mapping, old)
-        if index is None:
-            return
-        self._refuse_shared(target, old)
-        key = target.mapping.value[index][0]
-        if isinstance(key, ScalarNode):
+        index = self._locate(target, old)
+        if index is not None:
+            key = target.mapping.value[index][0]
+            assert isinstance(key, ScalarNode)  # _locate checked it
             self.splices.append(_scalar_splice(key, new))
 
     def insert_first(self, target: Target, entries: list[tuple[str, str]], newline: str = "\n") -> None:
@@ -212,21 +266,30 @@ class Document:
         mapping = target.mapping
         self._refuse_shared(target, entries[0][0])
         if mapping.flow_style:
+            self._check_braces(target)
             rendered = ", ".join(f"{key}: {json.dumps(value, ensure_ascii=False)}" for key, value in entries)
             at = mapping.start_mark.index + 1
             self.splices.append(Splice(at, at, rendered + (", " if mapping.value else "")))
             return
+        if mapping.value:
+            self._check_plain(target, str(mapping.value[0][0].value), mapping.value[0][0])
         lines = yaml.safe_dump(dict(entries), sort_keys=False, allow_unicode=True, width=1 << 30)
         at = mapping.value[0][0].start_mark.index if mapping.value else mapping.start_mark.index
         self.splices.append(Splice(at, at, lines.replace("\n", newline)))
 
     def remove_entries(self, target: Target, keys: tuple[str, ...]) -> None:
-        """Remove the entries of `keys` from `target`; a mapping left empty becomes {}."""
-        removed = {index for key in keys if (index := entry(target.mapping, key)) is not None}
+        """Remove the entries of `keys` from `target`; a mapping left empty becomes {}. An anchor inside a
+        removed entry refuses the edit, since an alias elsewhere may name it."""
+        removed = {index for key in keys if (index := self._locate(target, key)) is not None}
         if not removed:
             return
-        self._refuse_shared(target, target.mapping.value[min(removed)][0].value)
+        for index in removed:
+            key, value = target.mapping.value[index]
+            if self._anchors_in(key.start_mark.index, _content_end(value)):
+                name = str(key.value)
+                raise LayoutError((*target.steps, name), f"{name} holds a YAML anchor", SHARED_FIX)
         if target.mapping.flow_style:
+            self._check_braces(target)
             self.splices.extend(_flow_removal(self.text, target.mapping, removed))
         else:
             self.splices.extend(_block_removal(self.text, target.mapping, removed))
