@@ -149,6 +149,7 @@ The process is data, so it can be read, validated, rendered and extended without
   - the stages (enum from the record contract) and the guide fragment for each stage and role (section 9);
   - the gates. Each gate has a `kind` (`single-human` or `provisional+full+human`) and CEL `requires` expressions. For example, PROVISIONAL requires `version.fast_checks.all(c, c.status == "pass")`. APPROVED requires `full_check.status == "pass" && prev_human_gate.approved && (policy.mode == "auto" || answer.present)`.
   - the edges, with CEL guards, and a CEL `void_scope` that selects the later stages a VOID reopens.
+- **Design changes after an approval** (ADR-0019). Each human-gate approval records the items it approved, with their fingerprints. A later change to one of those items marks only that item `changed_since_approval`. The stage stays where it is, and the next human gate confirms the item with a diff. A CEL rule in `flow.yaml` selects the affected items. New items go through the current stage's checks. VOID at the stage's own gate, and the engineering change after freeze, are unchanged.
 - **Rule lists** replace the tables. Each is an ordered, first-match list of `{when: <CEL>, then: <value>}`, validated against its schema:
   - **checks by iteration:** `when: stage in ["parts","detail"] && iteration == "commit"` gives `then: ["form_check", "check_changed_only"]`;
   - **process-check dispatch:** process × operation × material → handlers, where no match means UNKNOWN coverage;
@@ -537,6 +538,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - `flow.yaml` plus the interpreter, CEL guards and policy (`hw/policy.yaml`), and the CEL rule lists for checks-by-iteration, fidelity and dispatch.
   - Version snapshots, seal and verify, used by the freeze and `--since-version` baselines. They honour the project ignore rules (bead `benchhand-3fc`).
   - Decision records, VOID cascade, the result envelope and `next_actions`.
+  - Scoped approvals (ADR-0019): the approval scope in the decision contract, `changed_since_approval`, and the gate packet's changed-since-approval section.
   - Cut `flow/guides/*.md` from the current SKILL.md and `flow.md` prose.
   - Closes `c7q.2`, `c7q.3`, `c7q.4` and `c7q.14`.
   - Record contract additions, made with the move to TypeSpec:
@@ -591,6 +593,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - An empty or declined answer leaves the gate open.
   - Approval DRs record the channel and the user's words.
   - A VOID cascades to later stages.
+  - A change to an approved item reopens only that item's approval, and the next gate shows its diff (ADR-0019).
   - A PROVISIONAL without passing fast checks is refused.
   - A policy change produces a DR.
   - `flow.yaml`, the policies and the rule lists validate against their schemas, and every CEL expression compiles and type-checks at load.
