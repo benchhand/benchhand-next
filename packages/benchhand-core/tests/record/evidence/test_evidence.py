@@ -662,6 +662,60 @@ def test_physical_evidence_without_its_test_credits_nothing(built: tuple[Path, s
     assert [f.code for f in given.findings] == ["evidence.physical_fields"]
 
 
+# Joint temperatures
+
+
+DATASHEET = {
+    "kind": "datasheet",
+    "reference": "TST",
+    "url": "https://example.org/tst",
+    "accessed": "2026-05-01",
+}
+
+
+def heat_set_temperature_reason(lamp_arm: Path, temperature: dict[str, Any], limit: dict[str, Any]) -> str:
+    """The reason assembly.joint@op:heat_set_base_bushing shows with this use-case temperature and a
+    sourced PETG service temperature limit."""
+    from benchhand_core.record.evidence.assess import _part_of as part_of
+    from benchhand_core.record.evidence.joints import joint_results
+
+    record = view(load_record(lamp_arm))
+    use_case = record.use_case
+    environment = {**use_case["environment"], "temperature": {"status": "known", "value": temperature}}
+    known = {"status": "known", "value": limit, "basis": "measured", "sources": [DATASHEET]}
+    petg = {**record.materials["petg"], "properties": [{"name": "max_service_temperature", "value": known}]}
+    record = replace(
+        record,
+        product={**record.product, "use_case": {**use_case, "environment": environment}},
+        materials={**record.materials, "petg": petg},
+    )
+    placed, _ = inventory(load_record(lamp_arm).assembly, load_record(lamp_arm).parts)
+    return joint_results(record, part_of(placed))[JOINT][1]
+
+
+@pytest.mark.parametrize(
+    ("temperature", "limit", "shown"),
+    [
+        ({"value": 40, "units": "deg_C"}, {"value": 60, "units": "deg_C"}, None),
+        ({"value": 70, "units": "deg_C"}, {"value": 60, "units": "deg_C"}, "above petg"),
+        ({"value": 40, "units": "mm"}, {"value": 60, "units": "deg_C"}, "use-case temperature is unknown"),
+        ({"lower": 50, "upper": 10, "units": "deg_C"}, {"value": 60, "units": "deg_C"}, "is unknown"),
+        ({"value": 40, "units": "deg_C"}, {"value": 60, "units": "mm"}, "is no valid temperature"),
+    ],
+)
+def test_a_joint_temperature_needs_a_valid_temperature(
+    lamp_arm: Path, temperature: dict[str, Any], limit: dict[str, Any], shown: str | None
+) -> None:
+    """assembly_operations.py:752, with manufacturing_intent.py:1326-1355 and 1549-1557: a use-case
+    temperature or host limit whose unit is not a temperature, or an interval with reversed ends, makes the
+    joint unknown; it never judges the joint."""
+    reason = heat_set_temperature_reason(lamp_arm, temperature, limit)
+    if shown is None:
+        assert "temperature" not in reason
+    else:
+        assert shown in reason
+
+
 # Waivers
 
 

@@ -72,16 +72,35 @@ def resolve_property(profile: JsonMap, name: str) -> Resolution | None:
     return Resolution(mapping(match.get("value")), match.get("basis"), tuple(items(match.get("sources"))))
 
 
+TEMPERATURE_UNITS = frozenset({"deg_C", "K"})  # manufacturing_intent.py:96
+
+
 def _to_deg_c(value: float, units: object) -> float:
     return value - 273.15 if units == "K" else value
 
 
+def temperature_c(quantity: JsonMap) -> tuple[float, float] | None:
+    """A temperature quantity as (lower, upper) deg_C; None when its unit is not a temperature or it is no
+    value or interval with lower <= upper (manufacturing_intent.py:1326-1338 `quantity` with the
+    temperature dimension of 1549-1557, and :370 a reversed interval)."""
+    units = quantity.get("units")
+    if units not in TEMPERATURE_UNITS:
+        return None
+    value, lower, upper = quantity.get("value"), quantity.get("lower"), quantity.get("upper")
+    if _number(value) and lower is None and upper is None:
+        return _to_deg_c(float(value), units), _to_deg_c(float(value), units)
+    if value is None and _number(lower) and _number(upper) and lower <= upper:
+        return _to_deg_c(float(lower), units), _to_deg_c(float(upper), units)
+    return None
+
+
 def _upper_deg_c(fact: JsonMap) -> float | None:
+    """The upper use-case temperature; None when it is unknown or no valid temperature (the prototype
+    reports a non-temperature unit as intent.units but still judges with it, manufacturing_intent.py:1335)."""
     if fact.get("status") != "known":
         return None
-    quantity = mapping(fact.get("value"))
-    upper = quantity.get("value") if quantity.get("upper") is None else quantity.get("upper")
-    return None if not _number(upper) else _to_deg_c(float(upper), quantity.get("units"))
+    found = temperature_c(mapping(fact.get("value")))
+    return None if found is None else found[1]
 
 
 def _criterion_mm(criterion: JsonMap) -> tuple[float, float | None] | None:
@@ -166,9 +185,10 @@ def _host_temperature(op: JsonMap, record: RecordView, part_of: PartOf) -> Joint
         return JointFinding("unknown", f"{ident}: {what} is unknown")
     qualified = next(((n, r) for n, r in resolved if _qualified(r)), None)
     name, resolution = qualified or resolved[0]
-    value = resolution.value
-    limit = value.get("lower") if value.get("value") is None else value.get("value")
-    limit_c = _to_deg_c(float(limit), value.get("units")) if _number(limit) else math.inf
+    limit = temperature_c(resolution.value)
+    if limit is None:
+        return JointFinding("unknown", f"{ident}: {profile.get('id')} {name} is no valid temperature")
+    limit_c = limit[0]
     if upper > limit_c:
         return JointFinding(
             "fail",
