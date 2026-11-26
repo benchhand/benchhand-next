@@ -257,11 +257,123 @@
  },
  {
   "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.mass_target missing: has(part.mass_target)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.mass_target null: has(part.mass_target)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.mass_target null: part.mass_target == null",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.mass_target zero: has(part.mass_target)",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.model_frame missing: has(part.model_frame)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.model_frame missing: part.model_frame == \"\"",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.model_frame null: has(part.model_frame)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.model_frame zero: has(part.model_frame)",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "job.status missing: has(job.status)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "job.status null: has(job.status)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "job.status zero: has(job.status)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.procurement missing: has(part.procurement)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.procurement null: has(part.procurement)",
+  "writer": null,
+  "ok": true,
+  "detail": "False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence_record",
+  "case": "part.procurement zero: has(part.procurement)",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
   "kind": "bundle",
   "case": "other profile",
   "writer": null,
   "ok": true,
-  "detail": "refused: cel-go-ref: checked in profile 000000000000, not 8b87c5b9ca06"
+  "detail": "refused: cel-go-ref: checked in profile 000000000000, not 38f0f9a90603"
  },
  {
   "engine": "cel-expr-python",

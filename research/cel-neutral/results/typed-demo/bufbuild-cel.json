@@ -225,6 +225,104 @@
  },
  {
   "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target missing: has(part.mass_target)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target null: has(part.mass_target)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target null: part.mass_target == null",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target zero: has(part.mass_target)",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame missing: has(part.model_frame)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame missing: part.model_frame == \"\"",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame null: has(part.model_frame)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame zero: has(part.model_frame)",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "job.status missing: has(job.status)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "job.status null: has(job.status)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "job.status zero: has(job.status)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.procurement missing: has(part.procurement)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.procurement null: has(part.procurement)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.procurement zero: has(part.procurement)",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
   "kind": "shipped",
   "case": "accept-0.binpb",
   "writer": "cel-go-ref",
@@ -420,7 +518,7 @@
   "kind": "bundle",
   "case": "other profile",
   "ok": true,
-  "detail": "refused: cel-go-ref: checked in profile 000000000000, not 8b87c5b9ca06"
+  "detail": "refused: cel-go-ref: checked in profile 000000000000, not 38f0f9a90603"
  },
  {
   "engine": "bufbuild-cel",
@@ -434,7 +532,7 @@
   "kind": "bundle",
   "case": "substituted payload",
   "ok": true,
-  "detail": "refused: cel-neutral-swap-ts-cWNwaz/accept-0.binpb: the payload isn't the one the checker shipped"
+  "detail": "refused: cel-neutral-swap-ts-AbeRcm/accept-0.binpb: the payload isn't the one the checker shipped"
  },
  {
   "engine": "bufbuild-cel",

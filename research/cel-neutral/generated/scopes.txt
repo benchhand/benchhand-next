@@ -1,4 +1,5 @@
 scope gate_guard: structural, 12 messages (expected structural)
+  omitted jobs/job.schema.json#/$defs/JobRecord/properties/process
   omitted record/part.schema.json#/properties/drawing
   omitted record/part.schema.json#/properties/intent
 scope refused_decision_root: refused, not structural (expected refused)

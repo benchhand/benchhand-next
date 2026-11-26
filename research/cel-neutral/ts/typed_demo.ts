@@ -22,7 +22,8 @@ import { Environment } from "@marcbachmann/cel-js";
 import { check } from "./node_modules/@bufbuild/cel/dist/esm/check.js";
 
 type Rule = { expr: string; expect?: boolean; why?: string; feature?: string; refuse?: boolean; meaning?: string; error?: boolean };
-type Demo = { scope: string; accept: Rule[]; reject: Rule[]; profile: Rule[]; presence: Rule[] };
+type PresenceRecord = { variable: string; field: string; state: string; zero?: unknown; expr: string; expect: boolean };
+type Demo = { scope: string; accept: Rule[]; reject: Rule[]; profile: Rule[]; presence: Rule[]; presence_records: PresenceRecord[] };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const generated = join(root, "generated");
@@ -96,6 +97,7 @@ function bufbuildDemo(): void {
     }
   }
   uncheckedCases(env, bindings);
+  presenceRecords(env, bindings);
   console.log(`@bufbuild/cel checker: ${uncheckable} of ${demo.accept.length + demo.reject.length} rules uncheckable`);
   const acceptSources = new Map(demo.accept.map((r, i) => [`accept-${i}.binpb`, r.expr] as [string, string]));
   for (const engine of readdirSync(join(generated, "checked")).sort()) {
@@ -128,6 +130,31 @@ function uncheckedCases(env: ReturnType<typeof envFromProfile>, bindings: Bindin
     const r = evaluate(rule.expr, {});
     const ok = rule.error ? r.failed : !r.failed && r.got === rule.expect;
     record("presence", rule.expr, ok, `${rule.meaning}: unchecked eval -> ${r.text}`);
+  }
+}
+
+// Presence through the activation path: edit one field of a record (remove it, set it to JSON null, or to
+// a zero value), parse it with protobuf-es fromJson, and evaluate the rule unchecked.
+function presenceRecords(env: ReturnType<typeof envFromProfile>, bindings: Bindings): void {
+  const types = new Map(config.variables.map((v) => [v.name, v.type_name]));
+  for (const c of demo.presence_records) {
+    const name = `${c.variable}.${c.field} ${c.state}: ${c.expr}`;
+    const rec = { ...(activation[c.variable] as Record<string, unknown>) };
+    if (c.state === "missing") delete rec[c.field];
+    else rec[c.field] = c.state === "null" ? null : c.zero;
+    let msg;
+    try {
+      msg = fromJson(messageDesc(registry, types.get(c.variable) ?? ""), rec as never, { registry, ignoreUnknownFields: true });
+    } catch (e) {
+      record("presence_record", name, false, `parser refused: ${firstLine(e)}`);
+      continue;
+    }
+    try {
+      const got = plan(env, parse(c.expr))({ ...bindings, [c.variable]: msg } as Bindings);
+      record("presence_record", name, got === c.expect, show(got));
+    } catch (e) {
+      record("presence_record", name, false, firstLine(e));
+    }
   }
 }
 

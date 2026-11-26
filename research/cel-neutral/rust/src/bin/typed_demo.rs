@@ -46,6 +46,19 @@ struct Demo {
     reject: Vec<Rule>,
     profile: Vec<Rule>,
     presence: Vec<Rule>,
+    presence_records: Vec<PresenceRecord>,
+}
+
+/// One field of an activation record edited: removed, set to JSON null, or set to a zero value.
+#[derive(Deserialize)]
+struct PresenceRecord {
+    variable: String,
+    field: String,
+    state: String,
+    #[serde(default)]
+    zero: serde_json::Value,
+    expr: String,
+    expect: bool,
 }
 
 fn root() -> PathBuf {
@@ -93,6 +106,49 @@ struct Run {
     env: Env,
     act: MapActivation,
     records: Vec<Record>,
+}
+
+impl Run {
+    /// Presence through the activation path: edit one record, parse it with prost-reflect, evaluate.
+    fn presence_records(
+        &mut self,
+        pool: &DescriptorPool,
+        profile: &Profile,
+        base: &serde_json::Value,
+        cases: &[PresenceRecord],
+    ) -> Result<()> {
+        let kept = activation(pool, profile, base)?;
+        for c in cases {
+            let name = format!("{}.{} {}: {}", c.variable, c.field, c.state, c.expr);
+            let mut edited = base.clone();
+            let rec = edited[&c.variable].as_object_mut().context("record")?;
+            match c.state.as_str() {
+                "missing" => {
+                    rec.remove(&c.field);
+                }
+                "null" => {
+                    rec.insert(c.field.clone(), serde_json::Value::Null);
+                }
+                _ => {
+                    rec.insert(c.field.clone(), c.zero.clone());
+                }
+            }
+            self.act = match activation(pool, profile, &edited) {
+                Ok(act) => act,
+                Err(e) => {
+                    self.record("presence_record", &name, (false, format!("parser refused: {e}")), None);
+                    continue;
+                }
+            };
+            let outcome = match self.eval_expr(&c.expr) {
+                Ok(v) => (v == Value::Bool(c.expect), format!("{v:?}")),
+                Err(e) => (false, e.to_string()),
+            };
+            self.record("presence_record", &name, outcome, None);
+        }
+        self.act = kept;
+        Ok(())
+    }
 }
 
 impl Run {
@@ -243,6 +299,7 @@ fn cel_core_demo(demo: &Demo, profile: &Profile, json: &serde_json::Value) -> Re
     let out = root().join("generated/checked/rust-cel-core");
     fs::create_dir_all(&out)?;
     let sources = run.cases(demo, &out)?;
+    run.presence_records(&pool, profile, json, &demo.presence_records)?;
     profile.write_bundle(&out, Checker { engine: ENGINE.into(), version: "0.5.1".into() }, &sources)?;
     run.tampered(profile, demo, &root().join("generated/checked/cel-go-ref"))?;
     run.shipped(profile, demo)?;

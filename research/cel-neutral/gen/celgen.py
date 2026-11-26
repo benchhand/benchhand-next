@@ -236,6 +236,10 @@ class Generator:
         inner = nullable_branch(branches) if key != "allOf" else None
         if inner is not None:
             base = self.type_of(inner, Location(loc.file, f"{loc.pointer}/{key}/0"), hint)
+            if base.kind != "scalar":
+                # Only scalar-or-null is a nullable scalar. A message, list or map or null has two
+                # readings of absence (null and empty), so it is a union like any other.
+                raise NotStructural(f"{key} of a {base.kind} and null isn't a nullable scalar")
             return ProtoType(base.kind, base.name, base.element, nullable=True)
         if any(has_shape(b) for b in branches):
             kind = "a union" if key != "allOf" else "a merge of shapes"
@@ -253,6 +257,8 @@ class Generator:
         if len(types) > 1:
             raise NotStructural(f"a node of several types {types}")
         base = self.single(types[0], node, loc, hint)
+        if nullable and base.kind != "scalar":
+            raise NotStructural(f"a {base.kind} or null isn't a nullable scalar")
         return ProtoType(base.kind, base.name, base.element, nullable=nullable)
 
     def untyped_values(self, node: dict) -> ProtoType:
@@ -466,6 +472,7 @@ def main(argv: list[str] | None = None) -> int:
             if conflicts:
                 unexpected.append(scope)
     report += [f"wrote {path}" for path in write_protos(merged, args.out)]
+    args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "scopes.txt").write_text("\n".join(report) + "\n")
     print("\n".join(report))
     if unexpected:

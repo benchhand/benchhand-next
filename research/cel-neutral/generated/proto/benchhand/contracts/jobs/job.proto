@@ -15,14 +15,13 @@ message JobRecord {
   string cwd = 6;
   string host = 7;
   .benchhand.contracts.jobs.job.ProcessIdentity owner = 8;
-  .benchhand.contracts.jobs.job.ProcessIdentity process = 9;
-  string resultPath = 10;
-  string logPath = 11;
-  google.protobuf.Int64Value exitCode = 12;
-  google.protobuf.StringValue error = 13;
-  string createdAt = 14;
-  google.protobuf.StringValue startedAt = 15;
-  google.protobuf.StringValue finishedAt = 16;
+  string resultPath = 9;
+  string logPath = 10;
+  google.protobuf.Int64Value exitCode = 11;
+  google.protobuf.StringValue error = 12;
+  string createdAt = 13;
+  google.protobuf.StringValue startedAt = 14;
+  google.protobuf.StringValue finishedAt = 15;
 }
 
 // jobs/job.schema.json#/$defs/JobProgress

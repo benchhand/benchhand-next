@@ -39,6 +39,8 @@ scopes:
       # Both reach union-valued fields (facts, scales, tolerances).
       - record/part.schema.json#/properties/intent
       - record/part.schema.json#/properties/drawing
+      # A message or null: two readings of absence, so not a nullable scalar.
+      - jobs/job.schema.json#/$defs/JobRecord/properties/process
 
   # Refused: the decision root is a oneOf of gate and design decisions.
   refused_decision_root:

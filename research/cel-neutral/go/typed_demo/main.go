@@ -39,11 +39,23 @@ type rule struct {
 }
 
 type demo struct {
-	Scope    string `yaml:"scope"`
-	Accept   []rule `yaml:"accept"`
-	Reject   []rule `yaml:"reject"`
-	Profile  []rule `yaml:"profile"`
-	Presence []rule `yaml:"presence"`
+	Scope           string           `yaml:"scope"`
+	Accept          []rule           `yaml:"accept"`
+	Reject          []rule           `yaml:"reject"`
+	Profile         []rule           `yaml:"profile"`
+	Presence        []rule           `yaml:"presence"`
+	PresenceRecords []presenceRecord `yaml:"presence_records"`
+}
+
+// presenceRecord edits one field of an activation record: removes it, sets it to JSON null, or sets it
+// to a zero value.
+type presenceRecord struct {
+	Variable string `yaml:"variable"`
+	Field    string `yaml:"field"`
+	State    string `yaml:"state"`
+	Zero     any    `yaml:"zero"`
+	Expr     string `yaml:"expr"`
+	Expect   bool   `yaml:"expect"`
 }
 
 func must[T any](v T, err error) T {
@@ -88,13 +100,61 @@ func activation(files *protoregistry.Files, p *profile.Profile, path string) map
 	must(0, json.Unmarshal(must(os.ReadFile(path)), &raw))
 	out := map[string]any{}
 	for _, v := range p.Manifest.Variables {
-		desc := must(files.FindDescriptorByName(protoreflect.FullName(v.Type)))
-		msg := dynamicpb.NewMessage(desc.(protoreflect.MessageDescriptor))
-		// Omitted (non-structural) fields aren't declared, so the binding drops them.
-		must(0, protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(raw[v.Name], msg))
-		out[v.Name] = msg
+		out[v.Name] = must(parseRecord(files, v.Type, raw[v.Name]))
 	}
 	return out
+}
+
+// parseRecord turns one JSON record into the declared message with protojson, the activation path.
+func parseRecord(files *protoregistry.Files, typeName string, raw []byte) (any, error) {
+	desc := must(files.FindDescriptorByName(protoreflect.FullName(typeName)))
+	msg := dynamicpb.NewMessage(desc.(protoreflect.MessageDescriptor))
+	// Omitted (non-structural) fields aren't declared, so the binding drops them.
+	return msg, protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(raw, msg)
+}
+
+// presenceRecords runs presence through the activation path: edit a record, parse it, evaluate.
+func (r *run) presenceRecords(files *protoregistry.Files, p *profile.Profile, path string, cases []presenceRecord) {
+	var base map[string]map[string]any
+	must(0, json.Unmarshal(must(os.ReadFile(path)), &base))
+	types := map[string]string{}
+	for _, v := range p.Manifest.Variables {
+		types[v.Name] = v.Type
+	}
+	kept := r.vars
+	defer func() { r.vars = kept }()
+	for _, c := range cases {
+		name := fmt.Sprintf("%s.%s %s: %s", c.Variable, c.Field, c.State, c.Expr)
+		rec := map[string]any{}
+		for k, v := range base[c.Variable] {
+			rec[k] = v
+		}
+		switch c.State {
+		case "missing":
+			delete(rec, c.Field)
+		case "null":
+			rec[c.Field] = nil
+		default:
+			rec[c.Field] = c.Zero
+		}
+		msg, err := parseRecord(files, types[c.Variable], must(json.Marshal(rec)))
+		if err != nil {
+			r.record("presence_record", name, false, "parser refused: "+err.Error(), "")
+			continue
+		}
+		r.vars = map[string]any{}
+		for k, v := range kept {
+			r.vars[k] = v
+		}
+		r.vars[c.Variable] = msg
+		ast, iss := r.env.Compile(c.Expr)
+		if iss.Err() != nil {
+			r.record("presence_record", name, false, firstLine(iss.Err()), "")
+			continue
+		}
+		got, err := r.eval(ast)
+		r.record("presence_record", name, err == nil && got == c.Expect, fmt.Sprint(got, err), "")
+	}
 }
 
 // cases runs accept, reject and profile cases and returns the sources of the CheckedExprs it wrote.
@@ -256,6 +316,7 @@ func main() {
 	outDir := filepath.Join(gen, "checked", "go")
 	must(0, os.MkdirAll(outDir, 0o755))
 	sources := r.cases(d, outDir)
+	r.presenceRecords(files, p, filepath.Join(gen, "activation", d.Scope+".json"), d.PresenceRecords)
 	checker := profile.Checker{Engine: engine, Version: "cel.dev/cel-go v0.33.4"}
 	must(0, p.WriteBundle(outDir, checker, sources, nil))
 	r.tampered(p, d, filepath.Join(gen, "checked", "cel-go-ref"))

@@ -3,7 +3,7 @@
  "name": "checks_by_iteration_bindings",
  "descriptor_set": {
   "file": "types.binpb",
-  "sha256": "72000d838b506117b6725af5769c56764f0c6e1ad14823cc136005b6e05e3170"
+  "sha256": "0854c321d7b5270dde084b908806a78f8f201ee929cf9316f75bf9a30ec8922a"
  },
  "container": "",
  "variables": [

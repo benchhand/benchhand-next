@@ -50,3 +50,14 @@ def test_the_committed_scopes_have_no_conflict(tmp_path: Path) -> None:
     code, report = run(tmp_path, yaml.safe_load((ROOT / "scopes.yaml").read_text())["scopes"])
     assert code == 0, report
     assert "conflicting projection" not in report
+
+
+def test_a_message_or_null_is_refused_as_a_union(tmp_path: Path) -> None:
+    # JobRecord.process is a oneOf of an object and null: two readings of absence, not a nullable scalar.
+    job = {
+        "expect": "refused",
+        "variables": {"job": {"schema": "jobs/job.schema.json", "pointer": "/$defs/JobRecord"}},
+    }
+    code, report = run(tmp_path, {"j": job})
+    assert code == 0, report
+    assert "JobRecord/properties/process: oneOf of a message and null isn't a nullable scalar" in report

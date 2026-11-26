@@ -102,6 +102,35 @@ def run_cases(env: cel.Env, data: dict, demo: dict, records: list[dict]) -> dict
     return sources
 
 
+def edited_record(base: dict, case: dict) -> dict:
+    """The case's variable record with one field removed, set to JSON null, or set to its zero value."""
+    rec = json.loads(json.dumps(base[case["variable"]]))
+    if case["state"] == "missing":
+        rec.pop(case["field"], None)
+    else:
+        rec[case["field"]] = None if case["state"] == "null" else case["zero"]
+    return rec
+
+
+def presence_records(
+    env: cel.Env, pool: descriptor_pool.DescriptorPool, base: dict, demo: dict
+) -> list[dict]:
+    """Presence through the activation path: protobuf JSON parsing of an edited record, then evaluation."""
+    records: list[dict] = []
+    types = demo["types"]
+    for case in demo["presence_records"]:
+        name = f"{case['variable']}.{case['field']} {case['state']}: {case['expr']}"
+        data = {n: as_message(pool, types[n], v) for n, v in base.items()}
+        try:
+            data[case["variable"]] = as_message(pool, types[case["variable"]], edited_record(base, case))
+        except json_format.ParseError as exc:
+            record(records, "presence_record", name, (False, f"parser refused: {exc}"))
+            continue
+        got = env.compile(case["expr"]).eval(data=data).value()
+        record(records, "presence_record", name, (got == case["expect"], repr(got)))
+    return records
+
+
 def presence_outcome(env: cel.Env, case: dict) -> tuple[bool, str]:
     expr, err = compile_or_error(env, case["expr"])
     if expr is None:
@@ -181,6 +210,7 @@ def main() -> int:
     data = {name: as_message(pool, types[name], value) for name, value in activation.items()}
     records: list[dict] = []
     sources = run_cases(env, data, demo, records)
+    records += presence_records(env, pool, activation, {**demo, "types": types})
     write_bundle(GENERATED / "checked/python", CHECKER, profile, sources)
     refuses_tampered_bundle(profile, demo, records)
     eval_shipped(env, profile, data, demo, records)

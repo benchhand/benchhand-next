@@ -109,3 +109,38 @@ presence:
   - expr: 'has(benchhand.contracts.jobs.job.JobRecord{status: ""}.status)'
     meaning: has() on a plain scalar set to its zero value
     expect: false
+# Presence through the activation path: each case edits one field of a
+# record in generated/activation/gate_guard.json (removes it, sets it to
+# JSON null, or sets it to a zero value), parses the record with the
+# engine's own protobuf JSON parser, and evaluates the rule. Field kinds:
+# part.mass_target is a nullable scalar (DoubleValue), part.model_frame an
+# optional scalar, job.status a required scalar, part.procurement a message.
+presence_records:
+  - {variable: part, field: mass_target, state: missing,
+     expr: has(part.mass_target), expect: false}
+  - {variable: part, field: mass_target, state: 'null',
+     expr: has(part.mass_target), expect: false}
+  - {variable: part, field: mass_target, state: 'null',
+     expr: part.mass_target == null, expect: true}
+  - {variable: part, field: mass_target, state: zero, zero: 0.0,
+     expr: has(part.mass_target), expect: true}
+  - {variable: part, field: model_frame, state: missing,
+     expr: has(part.model_frame), expect: false}
+  - {variable: part, field: model_frame, state: missing,
+     expr: 'part.model_frame == ""', expect: true}
+  - {variable: part, field: model_frame, state: 'null',
+     expr: has(part.model_frame), expect: false}
+  - {variable: part, field: model_frame, state: zero, zero: '',
+     expr: has(part.model_frame), expect: true}
+  - {variable: job, field: status, state: missing,
+     expr: has(job.status), expect: false}
+  - {variable: job, field: status, state: 'null',
+     expr: has(job.status), expect: false}
+  - {variable: job, field: status, state: zero, zero: '',
+     expr: has(job.status), expect: false}
+  - {variable: part, field: procurement, state: missing,
+     expr: has(part.procurement), expect: false}
+  - {variable: part, field: procurement, state: 'null',
+     expr: has(part.procurement), expect: false}
+  - {variable: part, field: procurement, state: zero, zero: {},
+     expr: has(part.procurement), expect: true}
