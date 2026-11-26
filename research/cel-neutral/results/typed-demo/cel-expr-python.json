@@ -177,6 +177,86 @@
  },
  {
   "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.mass_target == null",
+  "writer": null,
+  "ok": true,
+  "detail": "a missing wrapper reads as null: True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{}.mass_target)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on a missing wrapper: False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.mass_target < 1.0",
+  "writer": null,
+  "ok": true,
+  "detail": "bare selection of a missing wrapper in arithmetic: error 'UNKNOWN: No matching overloads found : _<_(null_type, double)'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{mass_target: 0.0} .mass_target)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on a wrapper set to zero: True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{mass_target: null} .mass_target)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on a wrapper set to null: False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.form_class == \"\"",
+  "writer": null,
+  "ok": true,
+  "detail": "a missing optional scalar reads as its zero value: True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{}.form_class)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on a missing optional scalar: False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{form_class: \"\"}.form_class)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on an optional scalar set to its zero value: True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.jobs.job.JobRecord{}.status)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on a missing plain scalar: False"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.jobs.job.JobRecord{status: \"\"}.status)",
+  "writer": null,
+  "ok": true,
+  "detail": "has() on a plain scalar set to its zero value: False"
+ },
+ {
+  "engine": "cel-expr-python",
   "kind": "bundle",
   "case": "other profile",
   "writer": null,
@@ -190,6 +270,54 @@
   "writer": null,
   "ok": true,
   "detail": "refused: python/accept-0.binpb: stale, the source changed since it was checked"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "True"
  },
  {
   "engine": "cel-expr-python",

@@ -93,7 +93,20 @@ def run_cases(env: cel.Env, data: dict, demo: dict, records: list[dict]) -> dict
         else:
             got = expr.eval(data=data).value() if expr else err
             record(records, "profile", case["expr"], (got == case["expect"], f"{case['feature']}: {got!r}"))
+    for case in demo["presence"]:
+        record(records, "presence", case["expr"], presence_outcome(env, case))
     return sources
+
+
+def presence_outcome(env: cel.Env, case: dict) -> tuple[bool, str]:
+    expr, err = compile_or_error(env, case["expr"])
+    if expr is None:
+        return False, f"{case['meaning']}: {err}"
+    result = expr.eval(data={})
+    failed = result.type().name() == "ERROR"
+    got = str(result.value()).splitlines()[0] if failed else result.value()
+    ok = failed if case.get("error") else (not failed and got == case["expect"])
+    return ok, f"{case['meaning']}: {'error ' if failed else ''}{got!r}"
 
 
 def eval_shipped(env: cel.Env, profile: Profile, data: dict, demo: dict, records: list[dict]) -> None:

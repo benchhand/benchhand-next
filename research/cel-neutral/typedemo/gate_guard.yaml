@@ -69,3 +69,43 @@ profile:
   - expr: job.progress.fraction > 0
     feature: cross_type_numeric_comparisons false (double > int)
     refuse: true
+# Presence: how missing, zero and null read, per kind of field. Each case
+# builds the message with a literal, so every engine sees the same input.
+# `expect` is the value; `error: true` means evaluation must fail.
+# mass_target is a nullable scalar (google.protobuf.DoubleValue), form_class
+# an optional scalar (proto3 `optional string`), status a plain scalar.
+presence:
+  - expr: 'benchhand.contracts.record.part.Part{}.mass_target == null'
+    meaning: a missing wrapper reads as null
+    expect: true
+  - expr: 'has(benchhand.contracts.record.part.Part{}.mass_target)'
+    meaning: has() on a missing wrapper
+    expect: false
+  - expr: 'benchhand.contracts.record.part.Part{}.mass_target < 1.0'
+    meaning: bare selection of a missing wrapper in arithmetic
+    error: true
+  - expr: >-
+      has(benchhand.contracts.record.part.Part{mass_target: 0.0}
+      .mass_target)
+    meaning: has() on a wrapper set to zero
+    expect: true
+  - expr: >-
+      has(benchhand.contracts.record.part.Part{mass_target: null}
+      .mass_target)
+    meaning: has() on a wrapper set to null
+    expect: false
+  - expr: 'benchhand.contracts.record.part.Part{}.form_class == ""'
+    meaning: a missing optional scalar reads as its zero value
+    expect: true
+  - expr: 'has(benchhand.contracts.record.part.Part{}.form_class)'
+    meaning: has() on a missing optional scalar
+    expect: false
+  - expr: 'has(benchhand.contracts.record.part.Part{form_class: ""}.form_class)'
+    meaning: has() on an optional scalar set to its zero value
+    expect: true
+  - expr: 'has(benchhand.contracts.jobs.job.JobRecord{}.status)'
+    meaning: has() on a missing plain scalar
+    expect: false
+  - expr: 'has(benchhand.contracts.jobs.job.JobRecord{status: ""}.status)'
+    meaning: has() on a plain scalar set to its zero value
+    expect: false

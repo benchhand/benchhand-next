@@ -20,8 +20,8 @@ import { Environment } from "@marcbachmann/cel-js";
 // Not exported by the package: the checker, imported from the same dist/ so it shares module state.
 import { check } from "./node_modules/@bufbuild/cel/dist/esm/check.js";
 
-type Rule = { expr: string; expect?: boolean; why?: string; feature?: string; refuse?: boolean };
-type Demo = { scope: string; accept: Rule[]; reject: Rule[]; profile: Rule[] };
+type Rule = { expr: string; expect?: boolean; why?: string; feature?: string; refuse?: boolean; meaning?: string; error?: boolean };
+type Demo = { scope: string; accept: Rule[]; reject: Rule[]; profile: Rule[]; presence: Rule[] };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const generated = join(root, "generated");
@@ -94,17 +94,7 @@ function bufbuildDemo(): void {
       record("reject", rule.expr, false, `checker unsupported; unchecked eval -> ${got}`);
     }
   }
-  for (const rule of demo.profile) {
-    let got: unknown;
-    try {
-      got = plan(env, parse(rule.expr))(bindings);
-    } catch (e) {
-      got = new Error(firstLine(e));
-    }
-    const failed = got instanceof Error || isCelError(got);
-    const detail = `${rule.feature}: unchecked eval -> ${got instanceof Error ? got.message : show(got)}`;
-    record("profile", rule.expr, rule.refuse ? failed : got === (rule.expect ?? true), detail);
-  }
+  uncheckedCases(env, bindings);
   console.log(`@bufbuild/cel checker: ${uncheckable} of ${demo.accept.length + demo.reject.length} rules uncheckable`);
   const acceptSources = new Map(demo.accept.map((r, i) => [`accept-${i}.binpb`, r.expr] as [string, string]));
   for (const engine of readdirSync(join(generated, "checked")).sort()) {
@@ -131,6 +121,30 @@ function bufbuildDemo(): void {
   failures += records.filter((r) => !r.ok).length;
   writeResults(root, "bufbuild-cel", records);
   console.log(`@bufbuild/cel: ${failures} failures, profile ${profile.digest.slice(0, 12)}`);
+}
+
+// Profile and presence cases, evaluated unchecked: @bufbuild/cel has no checker to refuse with, so a
+// profile case passes only if evaluation itself fails or gives the expected value.
+type Bindings = Parameters<ReturnType<typeof plan>>[0];
+function uncheckedCases(env: ReturnType<typeof envFromProfile>, bindings: Bindings): void {
+  const evaluate = (expr: string, vars: Bindings) => {
+    try {
+      const got = plan(env, parse(expr))(vars);
+      return { failed: isCelError(got), got, text: show(got) };
+    } catch (e) {
+      return { failed: true, got: undefined, text: firstLine(e) };
+    }
+  };
+  for (const rule of demo.profile) {
+    const r = evaluate(rule.expr, bindings);
+    const ok = rule.refuse ? r.failed : r.got === (rule.expect ?? true);
+    record("profile", rule.expr, ok, `${rule.feature}: unchecked eval -> ${r.text}`);
+  }
+  for (const rule of demo.presence) {
+    const r = evaluate(rule.expr, {});
+    const ok = rule.error ? r.failed : !r.failed && r.got === rule.expect;
+    record("presence", rule.expr, ok, `${rule.meaning}: unchecked eval -> ${r.text}`);
+  }
 }
 
 // A bundle from another profile, and an entry whose source changed, must both be refused.

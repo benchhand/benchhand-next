@@ -33,6 +33,10 @@ struct Rule {
     feature: String,
     #[serde(default)]
     refuse: bool,
+    #[serde(default)]
+    meaning: String,
+    #[serde(default)]
+    error: bool,
 }
 
 #[derive(Deserialize)]
@@ -41,6 +45,7 @@ struct Demo {
     accept: Vec<Rule>,
     reject: Vec<Rule>,
     profile: Vec<Rule>,
+    presence: Vec<Rule>,
 }
 
 fn root() -> PathBuf {
@@ -142,6 +147,14 @@ impl Run {
                 (false, Err(e)) => (false, format!("{}: {e}", rule.feature)),
             };
             self.record("profile", &rule.expr, outcome, None);
+        }
+        for rule in &demo.presence {
+            let outcome = match (rule.error, self.eval_expr(&rule.expr)) {
+                (_, Err(e)) => (false, format!("{}: {e}", rule.meaning)),
+                (true, Ok(v)) => (matches!(v, Value::Error(_)), format!("{}: {v:?}", rule.meaning)),
+                (false, Ok(v)) => (v == Value::Bool(rule.expect.unwrap_or(true)), format!("{}: {v:?}", rule.meaning)),
+            };
+            self.record("presence", &rule.expr, outcome, None);
         }
         Ok(sources)
     }

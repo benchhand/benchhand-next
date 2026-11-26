@@ -155,6 +155,76 @@
   },
   {
     "engine": "cel-core",
+    "kind": "presence",
+    "case": "benchhand.contracts.record.part.Part{}.mass_target == null",
+    "ok": true,
+    "detail": "a missing wrapper reads as null: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{}.mass_target)",
+    "ok": true,
+    "detail": "has() on a missing wrapper: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "benchhand.contracts.record.part.Part{}.mass_target < 1.0",
+    "ok": true,
+    "detail": "bare selection of a missing wrapper in arithmetic: Error(EvalError { message: \"no matching overload for function: _<_\", kind: NoMatchingOverload })"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{mass_target: 0.0} .mass_target)",
+    "ok": true,
+    "detail": "has() on a wrapper set to zero: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{mass_target: null} .mass_target)",
+    "ok": true,
+    "detail": "has() on a wrapper set to null: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "benchhand.contracts.record.part.Part{}.form_class == \"\"",
+    "ok": true,
+    "detail": "a missing optional scalar reads as its zero value: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{}.form_class)",
+    "ok": true,
+    "detail": "has() on a missing optional scalar: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{form_class: \"\"}.form_class)",
+    "ok": true,
+    "detail": "has() on an optional scalar set to its zero value: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.jobs.job.JobRecord{}.status)",
+    "ok": true,
+    "detail": "has() on a missing plain scalar: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.jobs.job.JobRecord{status: \"\"}.status)",
+    "ok": true,
+    "detail": "has() on a plain scalar set to its zero value: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
     "kind": "bundle",
     "case": "other profile",
     "ok": true,
@@ -166,6 +236,54 @@
     "case": "stale source",
     "ok": true,
     "detail": "refused: rust-cel-core/accept-0.binpb: stale, the source changed since it was checked"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-0.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-1.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-2.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-3.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-4.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-5.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
   },
   {
     "engine": "cel-core",

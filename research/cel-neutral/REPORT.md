@@ -217,6 +217,23 @@ What each step does:
 
     No generated Rust or TypeScript structs are needed to evaluate rules. The host's own Rust and TypeScript types still come from the same JSON Schemas through the D17 generators (`typify`, `json-schema-to-typescript`).
 
+### Presence: missing, explicit null and zero
+
+A JSON record can leave a field out, set it to `null`, or set it to its zero value. After the protobuf JSON parser, what a rule sees depends on the field's kind in the profile:
+
+| Field kind (JSON Schema) | proto3 | Missing | Explicit `null` | Zero (`""`, `0`, `false`) |
+|---|---|---|---|---|
+| Nullable scalar (`[T, null]`, `oneOf` with `null`) | `google.protobuf.*Value` | reads `null`; `has()` is false; arithmetic on it is an evaluation error | the same as missing | `has()` is true; reads the zero |
+| Optional scalar | `optional T` | reads the zero value; `has()` is false | the parser rejects it, so the record doesn't load | `has()` is true |
+| Required scalar | plain `T` | reads the zero value; `has()` is false | the parser rejects it | `has()` is **false**: proto3 can't tell zero from missing |
+| Message | message | `has()` is false; selecting through it reads defaults | the parser treats it as missing | not applicable |
+
+So two cases are lossy by design: a required scalar set to its zero value looks missing to `has()`, and an optional scalar that is missing reads as its zero value. A rule that must tell them apart guards the read with `has()`, and only an optional or nullable field can be told apart at all.
+
+`typedemo/gate_guard.yaml` has ten `presence` cases that build each kind with a message literal, so every engine evaluates the same input. cel-go, cel-expr-python, cel-core and @bufbuild/cel each gave all ten the values in the table (`results/typed-demo/<engine>.json`, kind `presence`). The explicit-`null` rows for optional and required scalars are read from the protobuf JSON specification, not measured here.
+
+The **presence lint** that the standard requires (rule 3) is unmeasured: no spike code implements it. It would flag a bare read of an optional or nullable field outside a `has()` guard, and a `has()` on a required scalar, where the result can't mean "present".
+
 ### The bad rules, per engine
 
 The seven bad rules in `typedemo/gate_guard.yaml`, and where each engine stops them. "check" means the type check rejected it; "eval" means it got as far as evaluation.
@@ -554,13 +571,13 @@ ADR-0014 is accepted, so this is an amendment to its Consequences, or a new ADR 
 
 ## CEL adoption standard
 
-This section applies to any project that adopts CEL, so it can become a harness-plugins steering standard. Each rule names the check that enforces it.
+This section applies to any project that adopts CEL, so it can become a harness-plugins steering standard. Each rule names the check that enforces it. Rules 1, 2 and 5 are requirements of the **protobuf portability profile**: the profile in which rules are typed against a FileDescriptorSet and cross languages as CheckedExprs. A project whose rules run in one engine with native types can drop them.
 
-1. **Rules are CEL strings, and the type environment is data.** Generate a FileDescriptorSet and a cel-go environment YAML from the schema that is the source of truth. Never hand-write either one. Check: a CI job regenerates both and fails on a diff.
-2. **Type structural scopes only.** Every node a rule can reach has one shape. Refuse a union (`oneOf`, `anyOf`, a merging `allOf`) and an untyped node on a reachable path, with its path and reason. Flatten the union in the schema, or omit the field from the scope. Don't type it `dyn`. Check: the generator exits non-zero on a refused scope.
-3. **Map nullability on purpose.** A nullable scalar becomes a protobuf wrapper and an optional scalar gets field presence, so `has()` works. An absent field is an error unless a rule guards it with `has()`.
+1. **Rules are CEL strings, and the type environment is data** (protobuf portability profile). Generate a FileDescriptorSet and the profile manifest from the schema that is the source of truth. Never hand-write either one. Check: a CI job regenerates both and fails on a diff.
+2. **Type structural scopes only** (protobuf portability profile). Every node a rule can reach has one shape. Refuse a shape-changing union, a `oneOf` or `anyOf` whose branches carry different shapes or an `allOf` that merges shapes, and an untyped node on a reachable path, with its path and reason. Don't refuse what doesn't change the shape: validation-only combinators (a `oneOf` of `required` clauses, `not`, `if`/`then`/`else`) are ignored, and a two-branch union with `null` is a nullable scalar (rule 3). Flatten a real union in the schema, or omit the field from the scope. Don't type it `dyn`. Check: the generator exits non-zero on a refused scope.
+3. **Specify presence per profile.** For each field kind (nullable, optional and required scalar, message), write down what a rule reads when the field is missing, explicitly `null` and zero, and what `has()` returns. A nullable scalar becomes a protobuf wrapper and an optional scalar gets field presence. Check: presence cases for every kind and every state run on each engine, and a presence lint flags a bare read of an optional or nullable field outside a `has()` guard and a `has()` on a required scalar.
 4. **Check before the first evaluation.** Check every rule when it loads, or in a compile step before it can run, and return every issue with its file path, line and column. Check each slot's output type. A rule that fails to check or to evaluate never counts as a pass. Check: the adapter tests.
-5. **Ship a checked rule as a CheckedExpr.** A rule crosses a process or language boundary as a `cel.expr.CheckedExpr` in a `google.protobuf.Any`. It carries the digests of the environment YAML and descriptor set it was checked against. An evaluator refuses a digest that differs from its own. Digest a deterministic re-encoding, never the writer's bytes.
+5. **Ship a checked rule as a CheckedExpr** (protobuf portability profile). A rule crosses a process or language boundary as a `cel.expr.CheckedExpr` in a `google.protobuf.Any`, in a bundle that carries the profile digest, the checker identity and each rule's source SHA-256. The profile digest is the SHA-256 of the manifest's RFC 8785 (JCS) encoding, never of protobuf bytes. An evaluator refuses a digest that differs from its own profile's and a source that changed. Check: tampered-bundle tests in each adapter.
 6. **Wrap the engine in one adapter per runtime,** with the same operations everywhere: load the environment, check, build a program from a CheckedExpr, evaluate, and report the engine's identity. Values leave the adapter as `cel.expr.Value` protobuf JSON.
 7. **Choose engines by evidence.** The criteria are: a checker, CheckedExpr input and output, environment YAML input, the project's suite result, maintenance and licence. As of 2026-11, the choices are:
     - Go: cel-go.

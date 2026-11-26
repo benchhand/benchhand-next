@@ -34,13 +34,16 @@ type rule struct {
 	Why     string `yaml:"why"`
 	Feature string `yaml:"feature"`
 	Refuse  bool   `yaml:"refuse"`
+	Meaning string `yaml:"meaning"`
+	Error   bool   `yaml:"error"`
 }
 
 type demo struct {
-	Scope   string `yaml:"scope"`
-	Accept  []rule `yaml:"accept"`
-	Reject  []rule `yaml:"reject"`
-	Profile []rule `yaml:"profile"`
+	Scope    string `yaml:"scope"`
+	Accept   []rule `yaml:"accept"`
+	Reject   []rule `yaml:"reject"`
+	Profile  []rule `yaml:"profile"`
+	Presence []rule `yaml:"presence"`
 }
 
 func must[T any](v T, err error) T {
@@ -137,7 +140,22 @@ func (r *run) cases(d demo, outDir string) map[string]string {
 			r.record("profile", c.Expr, err == nil && got == c.Expect, fmt.Sprintf("%s: %v %v", c.Feature, got, err), "")
 		}
 	}
+	r.presence(d.Presence)
 	return sources
+}
+
+// presence runs the presence cases: missing, zero and null on wrapper, optional and plain fields.
+func (r *run) presence(cases []rule) {
+	for _, c := range cases {
+		ast, iss := r.env.Compile(c.Expr)
+		if iss.Err() != nil {
+			r.record("presence", c.Expr, false, c.Meaning+": "+firstLine(iss.Err()), "")
+			continue
+		}
+		got, err := r.eval(ast)
+		ok := (c.Error && err != nil) || (!c.Error && err == nil && got == c.Expect)
+		r.record("presence", c.Expr, ok, fmt.Sprintf("%s: %v %v", c.Meaning, got, err), "")
+	}
 }
 
 // shipped evaluates the bundles another engine wrote, without parsing or checking them here.

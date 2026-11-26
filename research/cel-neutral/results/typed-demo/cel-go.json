@@ -155,6 +155,76 @@
  },
  {
   "engine": "cel-go",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.mass_target == null",
+  "ok": true,
+  "detail": "a missing wrapper reads as null: true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{}.mass_target)",
+  "ok": true,
+  "detail": "has() on a missing wrapper: false \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.mass_target \u003c 1.0",
+  "ok": true,
+  "detail": "bare selection of a missing wrapper in arithmetic: \u003cnil\u003e no such overload: _\u003c_"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{mass_target: 0.0} .mass_target)",
+  "ok": true,
+  "detail": "has() on a wrapper set to zero: true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{mass_target: null} .mass_target)",
+  "ok": true,
+  "detail": "has() on a wrapper set to null: false \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.form_class == \"\"",
+  "ok": true,
+  "detail": "a missing optional scalar reads as its zero value: true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{}.form_class)",
+  "ok": true,
+  "detail": "has() on a missing optional scalar: false \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{form_class: \"\"}.form_class)",
+  "ok": true,
+  "detail": "has() on an optional scalar set to its zero value: true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.jobs.job.JobRecord{}.status)",
+  "ok": true,
+  "detail": "has() on a missing plain scalar: false \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.jobs.job.JobRecord{status: \"\"}.status)",
+  "ok": true,
+  "detail": "has() on a plain scalar set to its zero value: false \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
   "kind": "bundle",
   "case": "other profile",
   "ok": true,
@@ -170,22 +240,6 @@
  {
   "engine": "cel-go",
   "kind": "shipped",
-  "case": "accept-4.binpb",
-  "writer": "cel-go-ref",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-5.binpb",
-  "writer": "cel-go-ref",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
   "case": "accept-0.binpb",
   "writer": "cel-go-ref",
   "ok": true,
@@ -218,8 +272,16 @@
  {
   "engine": "cel-go",
   "kind": "shipped",
-  "case": "accept-3.binpb",
-  "writer": "python",
+  "case": "accept-4.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "cel-go-ref",
   "ok": true,
   "detail": "true \u003cnil\u003e"
  },
@@ -266,6 +328,30 @@
  {
   "engine": "cel-go",
   "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
   "case": "accept-2.binpb",
   "writer": "rust-cel-core",
   "ok": true,
@@ -291,22 +377,6 @@
   "engine": "cel-go",
   "kind": "shipped",
   "case": "accept-5.binpb",
-  "writer": "rust-cel-core",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-0.binpb",
-  "writer": "rust-cel-core",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-1.binpb",
   "writer": "rust-cel-core",
   "ok": true,
   "detail": "true \u003cnil\u003e"
