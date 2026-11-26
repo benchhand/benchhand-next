@@ -13,13 +13,13 @@ Each page cites where every element comes from, and marks what is planned, in re
 | [flow.md](flow.md) | The design flow as a state machine: stages, gates, PROVISIONAL, APPROVED and VOID, the VOID cascade and engineering change | hand-written until Phase 2 generates it from `flow.yaml` |
 | [layers.md](layers.md) | The layered architecture, the repository layout, and the package dependencies as `pyproject.toml` declares them | hand-written |
 | [domain-model.md](../contract/generated/domain-model.md) | The domain model of the contracts | generated |
-| [function-map.md](function-map.md) | The function map, with `reference-map.yaml` beside it | generated |
+| [function-map.md](function-map.md) | The function map: where each prototype file ends up, with its status (ported, partial, in progress, planned or dropped) and phase, from [`reference-map.yaml`](reference-map.yaml) | generated |
 
 The generated pages come from their own generator. Don't edit them by hand.
 
 ## Legend
 
-Every hand-written page uses these styles. The status is relative to `main` at `d974f57`.
+Every hand-written page uses these styles. The status is relative to `main` at `71c1a54`.
 
 ```mermaid
 flowchart LR
@@ -41,7 +41,7 @@ flowchart LR
 ```
 
 - **Implemented** (solid green): the code exists on `main`.
-- **In review, Phase 1** (orange, dashed): built on an unmerged branch, which the page names. The Mermaid source marks each such element with a `%% in-review: <lane>` comment.
+- **In review, Phase 1** (orange, dashed): built on an unmerged branch, which the page names. The Mermaid source marks each such element with a `%% in-review: <lane>` comment. At `71c1a54` no element is in review.
 - **Planned, Phase N** (grey, dashed): the plan places it in phase N of its Steps, and it isn't built.
 - **Open** (red, dotted): the plan or an ADR names it, but its phase, its shape or a host result is undecided. The label says what is open. Where the plan's [Open questions](../design-plan.md#open-questions) list the item, the page links it.
 - Sequence diagrams can't dash a participant. They put the status in the participant's name, and shade in-review steps orange.

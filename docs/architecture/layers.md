@@ -16,7 +16,7 @@ flowchart TB
     subgraph core["core"]
       flowEngine["Flow engine<br/>flow.yaml graph and state machine, CEL guards, decision records, policy<br/>Phase 2"]:::planned
       guide["Guide service<br/>per-stage and per-role instructions served by flow.guide<br/>Phase 2 and Phase 3"]:::planned
-      record["Record service<br/>schemas, typed record ops, validate, migrate, evidence, release<br/>validate and migrate on main, the rest later"]:::impl
+      record["Record service<br/>schemas, typed record ops, validate, migrate, evidence, release<br/>validate, migrate and evidence on main, the rest later"]:::impl
       jobs["Job service<br/>long jobs, process groups, progress, cancellation<br/>on main"]:::impl
       middleware["Middleware chain<br/>validation, policy, audit, provenance, cache, telemetry<br/>open: no phase"]:::open
       providerHost["Provider host<br/>JSON-RPC 2.0 plugin protocol, lifecycle, timeouts<br/>open: no phase"]:::open
@@ -132,7 +132,7 @@ flowchart TB
 ## Legend
 
 - Styles as in the [legend](README.md#legend). Solid arrows exist on `main`, and dashed arrows are planned.
-- The record service is solid because `store`, `validate` and `migrate` are on `main`. Evidence is in review, and versions and release come in Phases 2 and 4 ([containers.md](containers.md#components-of-benchhand-core)).
+- The record service is solid because `store`, `validate`, `migrate` and `evidence` are on `main`. Versions and release come in Phases 2 and 4 ([containers.md](containers.md#components-of-benchhand-core)).
 - Plan section 1 also lists elicitation on the MCP surface, and forms in the interaction layer. ADR-0018 drops form elicitation from v1, so neither is drawn.
 - **Open: no phase.** The middleware chain, the provider host, `viewer-ocp` and `policy-default` have no phase in the plan's Steps. **Open: the SDK's environment.** The plan says `model.py` imports `benchhand-sdk`, but the kernel manifest example doesn't list it among its dependencies. The plan's [Open questions](../design-plan.md#open-questions) list neither item.
 
@@ -145,7 +145,7 @@ flowchart TB
 | Core to provider runtime | Section 2 lists the packages and states no edges between them | `benchhand-core` declares `benchhand-provider`, and doesn't import it |
 | Declared, unused | Not stated | `benchhand-provider` declares `benchhand-contracts`, and doesn't import it yet |
 | Phase 1 contracts | Phase 1: record, envelope, provider protocol, flow, policy | No envelope or flow contract on `main`; `docs/phases/phase-0-1.md` doesn't list them as not built |
-| Phase 1 services | Phase 1: migrate and evidence | Migrate is on `main`, and evidence on an unmerged branch. `docs/phases/phase-0-1.md` still calls migrate "built on a branch, not yet reviewed" |
+| Phase 1 services | Phase 1: migrate and evidence | Both are on `main`. `docs/phases/phase-0-1.md` still lists both under "Not built": migrate as "built on a branch, not yet reviewed", and evidence as "Nothing writes evidence or checks what it cites" |
 | TypeSpec timing | Phase 2: the record additions are "made with the move to TypeSpec" | ADR-0017: the move to TypeSpec happened in Phase 1 |
 | Forms | Section 1 lists elicitation and forms | ADR-0018: no form elicitation in v1; section 11 was updated, section 1 wasn't |
 | Long calls | Section 11 and provider-protocol section 8: about 50 s | ADR-0018: about 30 s |

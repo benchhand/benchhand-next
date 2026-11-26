@@ -1,7 +1,7 @@
 # Data flow
 
 Five sequences: one MCP tool call, a long job, evidence and freeze, release, and record migration.
-Names come from the code where it exists on `main` or in review, and from the plan otherwise.
+Names come from the code where it exists on `main`, and from the plan otherwise.
 
 ## (a) One MCP tool call
 
@@ -105,8 +105,7 @@ sequenceDiagram
   participant S as MCP server, Phase 3
   participant K as Kernel and check providers, Phase 4
   participant V as Record versions and bundles, Phase 2
-  %% in-review: evidence
-  participant E as Evidence service, in review, Phase 1
+  participant E as Evidence service, on main
   participant F as Flow engine, Phase 2
   participant R as Record store, on main
 
@@ -118,16 +117,13 @@ sequenceDiagram
   S->>K: collision/check, process-check/check
   K-->>S: results, as artifacts
   S->>V: sealed check packets, bound to the manifest sha256 of vN
-  %% in-review: evidence
-  rect rgb(255, 243, 224)
-    S->>E: read_built_version(root, record, vN, shipped_guidelines)
-    E->>R: current record
-    E-->>S: BuiltVersion, or BuiltVersionError when vN isn't built or fails its seal
-    S->>E: assess(record, built, today)
-    E->>E: expected obligations, sealed packets, evidence ledger, waivers
-    E->>E: acceptance inventory, then acceptance_digest gives evidence_sha256
-    E-->>S: EvidenceAssessment: statuses, facets, findings, complete, acceptance formed or refused
-  end
+  S->>E: read_built_version(root, record, vN, shipped_guidelines)
+  E->>R: current record
+  E-->>S: BuiltVersion, or BuiltVersionError when vN isn't built or fails its seal
+  S->>E: assess(record, built, today)
+  E->>E: expected obligations, sealed packets, evidence ledger, waivers
+  E->>E: acceptance inventory, then acceptance_digest gives evidence_sha256
+  E-->>S: EvidenceAssessment: statuses, facets, findings, complete, acceptance formed or refused
   Note over S,E: Open: which tool runs the assessment isn't stated
   S->>F: design_freeze gate, a single human gate
   F-->>S: gate packet, next action: ask the user
@@ -155,8 +151,7 @@ sequenceDiagram
   participant S as MCP server, Phase 3
   participant F as Flow engine, Phase 2
   participant Rel as Release packaging, Phase 4
-  %% in-review: evidence
-  participant E as Evidence service, in review, Phase 1
+  participant E as Evidence service, on main
   participant R as Record store, on main
 
   S->>F: RELEASE gate, a single human gate
@@ -171,11 +166,8 @@ sequenceDiagram
   Rel->>R: read flow.frozen and the release decision
   Rel->>Rel: refuse unless flow.frozen names vN and its manifest_sha256
   Rel->>Rel: refuse unless the release decision is approved
-  %% in-review: evidence
-  rect rgb(255, 243, 224)
-    Rel->>E: read_built_version and assess on vN
-    E-->>Rel: acceptance with evidence_sha256
-  end
+  Rel->>E: read_built_version and assess on vN
+  E-->>Rel: acceptance with evidence_sha256
   Rel->>Rel: refuse unless evidence_sha256 equals flow.frozen.evidence_sha256
   Rel->>Rel: refuse a product export that holds a context or tooling part
   Note over Rel: Open: the plan names no other refusal checks
@@ -260,8 +252,7 @@ sequenceDiagram
 
 ## Legend
 
-- Each participant's name carries its status: "on main", "in review, Phase 1", "Phase N" (planned) or "open phase" (named in the plan, with no phase in its Steps). See the [legend](README.md#legend).
-- Orange-shaded steps run code that is in review, Phase 1: evidence, on branch `pi-subagents/task-2-3d60620-6b98-s0-t0`.
+- Each participant's name carries its status: "on main", "Phase N" (planned) or "open phase" (named in the plan, with no phase in its Steps). See the [legend](README.md#legend).
 - A solid arrow is a call or a message, and a dashed arrow is its reply. An open arrowhead is a notification.
 - **Open: 30 s or 50 s.** ADR-0018 sends work over about 30 s to a job handle; plan section 11 and provider-protocol section 8 say about 50 s. The diagrams follow ADR-0018, the later decision.
 - **Open: provider request to job.** The plan says the server manages provider workers and jobs, and that `$/progress` feeds job-handle status. `JobService` runs a command under a supervisor, and no document says how a provider request becomes such a job.
@@ -284,7 +275,7 @@ sequenceDiagram
 - (c) Evidence and freeze:
   - `docs/design-plan.md`: [Steps (phased)](../design-plan.md#steps-phased), Phase 2 (version snapshots, seal and verify; decision records) and Phase 4 (providers); [11. Adaptive interaction layer (D8)](../design-plan.md#11-adaptive-interaction-layer-d8) (the human-gate row, `flow.record_decision`, "An empty or declined answer means no answer").
   - `contracts/record/product.tsp` (`flow.frozen`) and `contracts/record/decision.tsp` (gate decisions), on `main`.
-  - In review: `packages/benchhand-core/src/benchhand_core/record/evidence/` (`reader.py` `read_built_version`, `assess.py` `assess`, `digest.py` `acceptance_digest`) on branch `pi-subagents/task-2-3d60620-6b98-s0-t0`.
+  - Code on `main`: `packages/benchhand-core/src/benchhand_core/record/evidence/` (`reader.py` `read_built_version`, `assess.py` `assess`, `digest.py` `acceptance_digest`).
   - Prototype `benchhand/benchhand` at `release.toml` `reference_commit` `412b5d9`: [`skills/cad-flow/references/flow.md` "Gate control"](https://github.com/benchhand/benchhand/blob/412b5d9ae2faa420f909c1f50cc98a696651539f/skills/cad-flow/references/flow.md#gate-control) (DESIGN freeze is a single human gate).
 - (d) Release:
   - `docs/design-plan.md`: [Steps (phased)](../design-plan.md#steps-phased), Phase 4 ("Release packaging (`hw/releases/<REV>/`, refusal checks and the acceptance digest against the freeze)"); [12a. Documentation set](../design-plan.md#12a-documentation-set-annotations-groups-materials-and-finish) (STEP AP242 as the primary deliverable, `product.step` and `product.glb`, the context and tooling refusal).

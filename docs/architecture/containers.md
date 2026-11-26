@@ -80,8 +80,7 @@ flowchart TB
       store["store: read_record, load_record,<br/>save_document, save_decision, save_record"]:::impl
       validate["validate(root)<br/>rules: bom, interfaces, assembly, drawing, decisions, verification"]:::impl
       migrate["migrate: migrate(root, apply, resume), undo(backup), RULES"]:::impl
-      %% in-review: evidence
-      evidence["evidence: read_built_version, assess, acceptance_digest<br/>in review, Phase 1"]:::review
+      evidence["evidence: read_built_version, assess, acceptance_digest"]:::impl
       versions["versions: snapshot, seal, verify<br/>Phase 2"]:::planned
       release["release packaging: hw/releases/REV<br/>Phase 4"]:::planned
       recordOps["typed record ops: record.add_requirement, add_part, add_evidence and more<br/>record.* tools Phase 3"]:::planned
@@ -108,7 +107,7 @@ flowchart TB
   validate -->|"reads the record"| store
   store -->|"checks every document against its contract"| contracts
   migrate -->|"validates a migrated copy"| validate
-  evidence -.->|"reads the record"| store
+  evidence -->|"reads the record"| store
   versions -.-> evidence
   release -.->|"acceptance digest against the freeze"| evidence
   providerHost -.->|"$/progress to report_progress"| jobService
@@ -175,7 +174,6 @@ flowchart LR
 ## Legend
 
 - Styles as in the [legend](README.md#legend). Solid arrows exist on `main`, and dashed arrows are planned.
-- **In review, Phase 1:** `evidence` is on branch `pi-subagents/task-2-3d60620-6b98-s0-t0`, not merged.
 - **Open: no phase in Steps.** The plan names the middleware chain, the provider host, `viewer-ocp`, `policy-default`, and the `recheck` and `work` modules, but no phase of its Steps delivers them. The plan's [Open questions](../design-plan.md#open-questions) don't list them.
 - **Open: OpenAPI and Zod.** ADR-0017 adds them with the first HTTP or Zod consumer, which no phase names yet.
 - The `benchhand` CLI node is solid because the CLI exists; on `main` it has `version` and `record migrate`. The provider and SDK packages exist on `main` as empty stubs, so their nodes stay dashed until Phase 4.
@@ -196,6 +194,5 @@ flowchart LR
 - `docs/contract/provider-protocol.md`: [1. Transport](../contract/provider-protocol.md#1-transport), [4. Hooks](../contract/provider-protocol.md#4-hooks), [5. Notifications from the provider](../contract/provider-protocol.md#5-notifications-from-the-provider) and [6. Artifacts and paths](../contract/provider-protocol.md#6-artifacts-and-paths).
 - `docs/contract/versioning.md`: [Generated outputs](../contract/versioning.md#generated-outputs) and [Drift check](../contract/versioning.md#drift-check).
 - `docs/phases/phase-0-1.md`: [What was built](../phases/phase-0-1.md#what-was-built) and [Not built, which the plan puts in Phase 1](../phases/phase-0-1.md#not-built-which-the-plan-puts-in-phase-1).
-- Code on `main`: `packages/benchhand-core/src/benchhand_core/record/` (`store.py`, `validate.py`, `rules/`, `migrate/`), `packages/benchhand-core/src/benchhand_core/jobs/` (`service.py`, `supervisor.py`, `process.py`, `store.py`), `packages/benchhand/src/benchhand/cli.py`, `contracts/`, `tools/gen/contracts_gen/`, `ui/shared/contracts/`.
+- Code on `main`: `packages/benchhand-core/src/benchhand_core/record/` (`store.py`, `validate.py`, `rules/`, `migrate/`, `evidence/`), `packages/benchhand-core/src/benchhand_core/jobs/` (`service.py`, `supervisor.py`, `process.py`, `store.py`), `packages/benchhand/src/benchhand/cli.py`, `contracts/`, `tools/gen/contracts_gen/`, `ui/shared/contracts/`.
 - `docs/contract/record-migration.md`: [Dry run and apply](../contract/record-migration.md#dry-run-and-apply).
-- In review: `packages/benchhand-core/src/benchhand_core/record/evidence/` on branch `pi-subagents/task-2-3d60620-6b98-s0-t0`.
