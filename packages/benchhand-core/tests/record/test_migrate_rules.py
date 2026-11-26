@@ -22,7 +22,7 @@ def _run(rule: Rule, root: Path) -> list[str]:
     for pattern in rule.documents:
         for file in sorted(root.glob(pattern)):
             path = file.relative_to(root).as_posix()
-            rewrite = rule.transform(path, file.read_bytes().decode("utf-8"))
+            rewrite = rule.run(path, file.read_bytes().decode("utf-8"))
             file.write_bytes(rewrite.text.encode("utf-8"))
             findings.extend(
                 f"{finding.severity.value} {finding.code} {finding.path} {finding.pointer or ''}".rstrip()

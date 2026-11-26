@@ -9,7 +9,7 @@ commit or PR that introduced the form the row rewrites. docs/contract/record-mig
 from __future__ import annotations
 
 from benchhand_core.record.migrate import decisions, product
-from benchhand_core.record.migrate.renames import csv_columns, yaml_keys
+from benchhand_core.record.migrate.renames import csv_columns, csv_numbers, yaml_keys
 from benchhand_core.record.migrate.rule import Rule
 from benchhand_core.record.migrate.yaml_edit import ANY
 
@@ -70,6 +70,15 @@ RULES: tuple[Rule, ...] = (
         transform=csv_columns({"requirement_id": "requirement"}),
     ),
     Rule(
+        id="bom-number-spacing",
+        documents=("hw/bom.csv",),
+        changes="white space around a number in a numeric column (level, qty, mass) is removed; the "
+        "prototype's int() and float() accepted it",
+        source="164ab11c (the plugin import, validate.py)",
+        fixture=_fixture("bom-number-spacing"),
+        transform=csv_numbers("bom-row"),
+    ),
+    Rule(
         id="evidence-configuration-rev",
         documents=("hw/manufacturing/evidence.yaml",),
         changes="entries[].configuration.part_rev becomes rev",
@@ -99,8 +108,8 @@ RULES: tuple[Rule, ...] = (
     Rule(
         id="decision-deprecated",
         documents=DECISIONS,
-        changes="status deprecated without superseded-by becomes rejected when the body says it was never "
-        "adopted; otherwise the file is refused until the user picks a status",
+        changes="status deprecated without superseded-by is refused until the user picks accepted, rejected "
+        "or superseded",
         source="1a7efb7e (#110, MADR 4.0.0 decision records)",
         fixture=_fixture("decision-deprecated"),
         transform=decisions.deprecated,

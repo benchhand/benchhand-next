@@ -1,2 +1,2 @@
-info migrate.deprecated_rejected hw/decisions/DR-001-glue-the-pivot-pins.md /status
+error migrate.deprecated_status hw/decisions/DR-001-glue-the-pivot-pins.md /status
 error migrate.deprecated_status hw/decisions/DR-003-ship-in-a-padded-envelope.md /status

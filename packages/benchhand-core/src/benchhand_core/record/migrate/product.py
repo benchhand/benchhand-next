@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from yaml.nodes import MappingNode, ScalarNode
+from yaml.nodes import ScalarNode
 
 from benchhand_core.record.errors import RECORD_VERSION
 from benchhand_core.record.finding import Finding, info, pointer
-from benchhand_core.record.migrate import yaml_edit
 from benchhand_core.record.migrate.rule import Rewrite
+from benchhand_core.record.migrate.yaml_edit import Document, Steps, value_of
 
 HUMAN_APPROVAL = "human_approval"
 POLICY_ACTION = (
@@ -18,14 +18,14 @@ POLICY_ACTION = (
 
 def record_version(path: str, text: str) -> Rewrite:
     """record_version 2 (or the PR #319 record version 1) becomes 3; the service has checked which it is."""
-    root = yaml_edit.compose(text)
-    value = yaml_edit.value_of(root, "record_version") if isinstance(root, MappingNode) else None
-    if not isinstance(value, ScalarNode) or value.value == str(RECORD_VERSION):
-        return Rewrite(text)
-    return Rewrite(yaml_edit.apply(text, [yaml_edit.replace_scalar(value, str(RECORD_VERSION))]))
+    document = Document.parse(text)
+    target = document.root_target()
+    if target is not None:
+        document.replace_value(target, "record_version", str(RECORD_VERSION))
+    return Rewrite(document.result())
 
 
-def _policy_note(path: str, steps: tuple[str | int, ...], value: object) -> Finding:
+def _policy_note(path: str, steps: Steps, value: object) -> Finding:
     return info(
         "migrate.gates_now_ask",
         path,
@@ -41,16 +41,15 @@ def human_approval(path: str, text: str) -> Rewrite:
     """Remove flow.profile.human_approval and its flow.profile.asked entry. The migration writes no
     hw/policy.yaml, so every gate asks; a value other than all, which let some gates pass without the user,
     is reported."""
-    root = yaml_edit.compose(text)
-    splices: list[yaml_edit.Splice | None] = []
+    document = Document.parse(text)
     findings: list[Finding] = []
-    for steps, profile in yaml_edit.mappings_at(root, ("flow", "profile")):
-        value = yaml_edit.value_of(profile, HUMAN_APPROVAL)
+    for profile in document.mappings_at(("flow", "profile")):
+        value = value_of(profile.mapping, HUMAN_APPROVAL)
         if value is not None:
-            splices.append(yaml_edit.remove_entry(text, profile, HUMAN_APPROVAL))
             shown = value.value if isinstance(value, ScalarNode) else "a collection"
             if shown != "all":
-                findings.append(_policy_note(path, steps, shown))
-        for _, asked in yaml_edit.mappings_at(profile, ("asked",)):
-            splices.append(yaml_edit.remove_entry(text, asked, HUMAN_APPROVAL))
-    return Rewrite(yaml_edit.apply(text, splices), tuple(findings))
+                findings.append(_policy_note(path, profile.steps, shown))
+            document.remove_entries(profile, (HUMAN_APPROVAL,))
+    for asked in document.mappings_at(("flow", "profile", "asked")):
+        document.remove_entries(asked, (HUMAN_APPROVAL,))
+    return Rewrite(document.result(), tuple(findings))

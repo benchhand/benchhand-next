@@ -1,0 +1,1 @@
+info migrate.csv_number_spacing hw/bom.csv /0/qty

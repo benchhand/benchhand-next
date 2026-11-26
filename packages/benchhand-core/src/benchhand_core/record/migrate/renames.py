@@ -1,10 +1,13 @@
-"""Rules that rename YAML keys at a path, or CSV header cells."""
+"""Rules that rename YAML keys at a path, or CSV header cells, and strip white space around v2 numbers."""
 
 from __future__ import annotations
 
-from benchhand_core.record.finding import Finding, error, pointer
-from benchhand_core.record.migrate import csv_edit, yaml_edit
+from benchhand_core.record import contracts
+from benchhand_core.record.finding import Finding, error, info, pointer
+from benchhand_core.record.formats import columns
+from benchhand_core.record.migrate import csv_edit
 from benchhand_core.record.migrate.rule import Rewrite, Transform
+from benchhand_core.record.migrate.yaml_edit import Document, entry
 
 YamlPath = tuple[str, ...]
 
@@ -23,21 +26,20 @@ def yaml_keys(paths: tuple[YamlPath, ...], renames: dict[str, str]) -> Transform
     """Rename the keys `renames` names in every mapping at each of `paths`."""
 
     def transform(path: str, text: str) -> Rewrite:
-        root = yaml_edit.compose(text)
-        splices: list[yaml_edit.Splice | None] = []
+        document = Document.parse(text)
         conflicts: list[Finding] = []
         for yaml_path in paths:
-            for steps, mapping in yaml_edit.mappings_at(root, yaml_path):
+            for target in document.mappings_at(yaml_path):
                 for old, new in renames.items():
-                    if yaml_edit.entry(mapping, old) is None:
+                    if entry(target.mapping, old) is None:
                         continue
-                    if yaml_edit.entry(mapping, new) is not None:
-                        conflicts.append(_conflict(path, pointer(*steps, old), old, new))
+                    if entry(target.mapping, new) is not None:
+                        conflicts.append(_conflict(path, pointer(*target.steps, old), old, new))
                         continue
-                    splices.append(yaml_edit.rename_key(mapping, old, new))
+                    document.rename_key(target, old, new)
         if conflicts:
             return Rewrite(text, tuple(conflicts))
-        return Rewrite(yaml_edit.apply(text, splices))
+        return Rewrite(document.result())
 
     return transform
 
@@ -46,7 +48,7 @@ def csv_columns(renames: dict[str, str]) -> Transform:
     """Rename the header cells `renames` names; the data rows are left byte for byte."""
 
     def transform(path: str, text: str) -> Rewrite:
-        names = [cell.name for cell in csv_edit.header_cells(text)]
+        names = [cell.value for cell in csv_edit.header_cells(text)]
         # A header cell has no JSON Pointer: the contract points into CSV data rows only.
         conflicts = tuple(
             _conflict(path, None, f"column {old}", f"column {new}")
@@ -56,5 +58,26 @@ def csv_columns(renames: dict[str, str]) -> Transform:
         if conflicts:
             return Rewrite(text, conflicts)
         return Rewrite(csv_edit.rename_header(text, renames))
+
+    return transform
+
+
+def csv_numbers(contract: str) -> Transform:
+    """Strip the white space around a number in a numeric column, which the prototype's int() and float()
+    accepted and the record version 3 reader does not; every other byte is left as it is."""
+
+    def transform(path: str, text: str) -> Rewrite:
+        numeric = {column.name: column for column in columns(contracts.schema(contract)) if column.numeric}
+        stripped = csv_edit.strip_numbers(text, numeric)
+        if stripped.count == 0:
+            return Rewrite(text)
+        note = info(
+            "migrate.csv_number_spacing",
+            path,
+            f"white space around {stripped.count} numeric cells removed (first at /{stripped.first[0]}/"
+            f"{stripped.first[1]}); record version 3 reads a number without it",
+            pointer=pointer(*stripped.first),
+        )
+        return Rewrite(stripped.text, (note,))
 
     return transform

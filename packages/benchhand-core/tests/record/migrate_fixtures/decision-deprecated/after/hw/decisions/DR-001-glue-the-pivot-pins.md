@@ -1,5 +1,5 @@
 ---
-status: rejected
+status: deprecated
 date: 2026-10-02
 ---
 

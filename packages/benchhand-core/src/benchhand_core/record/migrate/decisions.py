@@ -1,7 +1,8 @@
 """Rules for hw/decisions/DR-###-<slug>.md: MADR 4.0.0 front matter to the record version 3 decision.
 
-Each rule edits the front matter text in place (yaml_edit), so comments, quoting and the Markdown body stay as
-written. A file whose front matter already has `kind` is a record version 3 decision and is left alone.
+Each rule edits the front matter text in place (yaml_edit), so comments, quoting, block or flow style and the
+Markdown body stay as written. A file whose front matter already has `kind` is a record version 3 decision
+and is left alone, so every rule is idempotent.
 """
 
 from __future__ import annotations
@@ -11,36 +12,34 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
-import yaml
-from yaml.nodes import MappingNode, ScalarNode, SequenceNode
+from yaml.nodes import Node, ScalarNode, SequenceNode
 
 from benchhand_core.record.finding import Finding, error, info
 from benchhand_core.record.formats import FRONT_MATTER, FormatError, parse_yaml
-from benchhand_core.record.migrate import yaml_edit
 from benchhand_core.record.migrate.rule import Rewrite
+from benchhand_core.record.migrate.yaml_edit import Document, Target, value_of
 from benchhand_core.record.store import DECISION_FILE
 
 TITLE = re.compile(r"^# (?P<title>.*\S)\s*$", re.MULTILINE)
-NEVER_ADOPTED = re.compile(r"\bnever\s+(?:been\s+)?adopted\b", re.IGNORECASE)
 KEY_RENAMES = {"decision-makers": "decision_makers", "superseded-by": "superseded_by"}
 NAME_LISTS = ("decision-makers", "consulted", "informed", "superseded-by")  # v3 states each with 1+ items
 
 
 @dataclass(frozen=True)
 class Madr:
-    """A prototype decision file split for editing: the front matter text, where it starts, its parsed
-    data and its composed node, and the body."""
+    """A prototype decision file split for editing: where its front matter text sits, that text parsed and
+    composed, and the body."""
 
     text: str
     front_start: int
-    front: str
+    front_end: int
     data: dict[str, Any]
-    node: MappingNode
+    document: Document
+    target: Target
     body: str
 
-    def edited(self, splices: list[yaml_edit.Splice | None]) -> str:
-        end = self.front_start + len(self.front)
-        return self.text[: self.front_start] + yaml_edit.apply(self.front, splices) + self.text[end:]
+    def edited(self) -> str:
+        return self.text[: self.front_start] + self.document.result() + self.text[self.front_end :]
 
     @property
     def superseded(self) -> bool:
@@ -48,7 +47,7 @@ class Madr:
 
     @property
     def newline(self) -> str:
-        return "\r\n" if "\r\n" in self.front else "\n"
+        return "\r\n" if "\r\n" in self.document.text else "\n"
 
 
 def madr(text: str) -> Madr | None:
@@ -58,12 +57,14 @@ def madr(text: str) -> Madr | None:
         raise FormatError("no YAML front matter between --- lines at the top of the file")
     front = match["front"] or ""
     data = parse_yaml(front)
-    node = yaml_edit.compose(front)
-    if not isinstance(data, dict) or not isinstance(node, MappingNode):
+    document = Document.parse(front)
+    target = document.root_target()
+    if not isinstance(data, dict) or target is None:
         raise FormatError("the front matter is not a mapping")
     if "kind" in data:
         return None
-    return Madr(text, match.start("front"), front, data, node, match["body"])
+    start = match.start("front") if match["front"] is not None else match.start("body")
+    return Madr(text, start, start + len(front), data, document, target, match["body"])
 
 
 def _decision_id(path: str) -> str | None:
@@ -89,72 +90,43 @@ def gate(path: str, text: str) -> Rewrite:
         subject=_decision_id(path),
         action="No change is needed. Gates the flow approves from now on are recorded as kind: gate.",
     )
-    return Rewrite(record.edited([yaml_edit.remove_entry(record.front, record.node, "gate")]), (note,))
-
-
-def _status_node(record: Madr) -> ScalarNode | None:
-    value = yaml_edit.value_of(record.node, "status")
-    return value if isinstance(value, ScalarNode) else None
+    record.document.remove_entries(record.target, ("gate",))
+    return Rewrite(record.edited(), (note,))
 
 
 def deprecated(path: str, text: str) -> Rewrite:
     """status: deprecated has no record version 3 status. With superseded-by it becomes superseded (the
-    decision-front-matter rule); a body that says it was never adopted makes it rejected; otherwise the
-    file is refused until the user picks a status."""
+    decision-front-matter rule); without it the file is refused until the user picks a status."""
     record = madr(text)
     if record is None or record.data.get("status") != "deprecated" or record.superseded:
         return Rewrite(text)
-    status = _status_node(record)
-    subject = _decision_id(path)
-    if status is not None and NEVER_ADOPTED.search(record.body):
-        note = info(
-            "migrate.deprecated_rejected",
-            path,
-            "status deprecated becomes rejected: the body says the decision was never adopted",
-            pointer="/status",
-            subject=subject,
-        )
-        return Rewrite(record.edited([yaml_edit.replace_scalar(status, "rejected")]), (note,))
     refusal = error(
         "migrate.deprecated_status",
         path,
-        "status deprecated has no record version 3 counterpart, and the file names no superseded-by and "
-        "does not say the decision was never adopted",
+        "status deprecated has no record version 3 counterpart, and the file names no superseded-by",
         pointer="/status",
-        subject=subject,
+        subject=_decision_id(path),
         action="Set status to accepted, rejected, or superseded with superseded-by: [DR-###] naming its "
         "replacement, then migrate again.",
     )
     return Rewrite(text, (refusal,))
 
 
-def _identity(record: Madr, decision_id: str, title: str) -> yaml_edit.Splice:
-    """The id, kind and title lines, inserted at the top of the front matter."""
-    lines = yaml.safe_dump(
-        {"id": decision_id, "kind": "design", "title": title},
-        sort_keys=False,
-        allow_unicode=True,
-        width=1 << 30,
-    )
-    return yaml_edit.Splice(0, 0, lines.replace("\n", record.newline))
-
-
-def _empty(node: object) -> bool:
+def _empty(node: Node | None) -> bool:
     return (isinstance(node, SequenceNode) and not node.value) or (
         isinstance(node, ScalarNode) and node.tag.endswith(":null")
     )
 
 
-def _renamed_keys(record: Madr) -> list[yaml_edit.Splice | None]:
+def _rename_keys(record: Madr) -> None:
     """The prototype's hyphenated keys under their record version 3 names, and the name lists left empty
     (which record version 3 states with at least one name) removed."""
-    splices: list[yaml_edit.Splice | None] = []
-    for key in NAME_LISTS:
-        if _empty(yaml_edit.value_of(record.node, key)):
-            splices.append(yaml_edit.remove_entry(record.front, record.node, key))
-        elif key in KEY_RENAMES:
-            splices.append(yaml_edit.rename_key(record.node, key, KEY_RENAMES[key]))
-    return splices
+    mapping = record.target.mapping
+    empty = tuple(key for key in NAME_LISTS if _empty(value_of(mapping, key)))
+    record.document.remove_entries(record.target, empty)
+    for old, new in KEY_RENAMES.items():
+        if old not in empty:
+            record.document.rename_key(record.target, old, new)
 
 
 def _id_and_title(path: str, record: Madr) -> tuple[str, str] | Finding:
@@ -191,8 +163,10 @@ def front_matter(path: str, text: str) -> Rewrite:
     identity = _id_and_title(path, record)
     if isinstance(identity, Finding):
         return Rewrite(text, (identity,))
-    splices = [_identity(record, *identity), *_renamed_keys(record)]
-    status = _status_node(record)
-    if record.superseded and status is not None:
-        splices.append(yaml_edit.replace_scalar(status, "superseded"))
-    return Rewrite(record.edited(splices))
+    decision_id, title = identity
+    entries = [("id", decision_id), ("kind", "design"), ("title", title)]
+    record.document.insert_first(record.target, entries, record.newline)
+    _rename_keys(record)
+    if record.superseded:
+        record.document.replace_value(record.target, "status", "superseded")
+    return Rewrite(record.edited())
