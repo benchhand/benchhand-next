@@ -18,29 +18,36 @@ Each diagram follows one area of the prototype at `412b5d9`. A prototype file is
 | cad-design | 15 | 15 | 0 | 0 | 0 | 0 |
 | cad-drawings | 27 | 26 | 0 | 0 | 0 | 1 |
 | cad-fits | 5 | 5 | 0 | 0 | 0 | 0 |
-| cad-flow | 11 | 10 | 0 | 0 | 1 | 0 |
-| cad-model | 29 | 26 | 0 | 0 | 0 | 3 |
+| cad-flow | 11 | 10 | 0 | 1 | 0 | 0 |
+| cad-model | 29 | 26 | 0 | 1 | 0 | 2 |
 | cad-motion | 21 | 21 | 0 | 0 | 0 | 0 |
 | cad-recheck | 2 | 2 | 0 | 0 | 0 | 0 |
-| cad-record | 36 | 24 | 0 | 5 | 6 | 1 |
+| cad-record | 36 | 24 | 0 | 8 | 2 | 2 |
 | cad-render | 7 | 7 | 0 | 0 | 0 | 0 |
 | cad-review-dfm | 1 | 1 | 0 | 0 | 0 | 0 |
 | cad-review-mech | 1 | 1 | 0 | 0 | 0 | 0 |
 | cad-viewer | 10 | 10 | 0 | 0 | 0 | 0 |
 | agents and harness | 14 | 10 | 0 | 0 | 0 | 4 |
 | examples | 1 | 1 | 0 | 0 | 0 | 0 |
-| **all** | **205** | 184 | 0 | 5 | 7 | 9 |
+| **all** | **205** | 184 | 0 | 10 | 2 | 9 |
 
 Partly ported:
 
-- `skills/cad-record/scripts/check_packet.py`: Ported: whether a sealed packet counts, and what its outcomes show. Left out: building and publishing a packet (`build`, `emit`), which the check producers do (Phase 4).
+- `skills/cad-flow/scripts/process_lifecycle.py`: Ported: the process identity and the supervision of a process group. Left out: the scoped run claims (`claim_run`, `RunGuard`) and the stray-run report (`strays`) that the build, FEA and sweep scripts use; Phase 4 owns them, with the tools that run those jobs.
+- `skills/cad-model/scripts/cadmodel/record.py`: Ported: reading a written version snapshot (`read_snapshot`). Left out: capturing and writing the snapshot a version is built from (`snapshot`, `write_snapshot`, `read_folder`), which the Phase 2 version service owns. Its loaders of sibling modules are dropped: service boundaries replace them.
+- `skills/cad-record/scripts/assembly_data.py`: Ported: the occurrence inventory and placements. Left out: the drawing item resolver (`drawing_item`) for the drawing tools and the joint tree (`joint_tree`) for the motion tools, both Phase 4.
+- `skills/cad-record/scripts/check_packet.py`: Ported: the seal and binding checks of a published packet (reader.py), and whether a sealed packet counts and what its outcomes show (packets.py). Left out: building and publishing a packet (`build`, `emit`), which the check producers do (Phase 4).
 - `skills/cad-record/scripts/evidence.py`: Ported: the assessment of one built version and its acceptance digest. Left out: the stage gates and the selection gate (Phase 2); release policy, stamped packets and version acceptance (Phase 4); producer orchestration and the CLI, which go to the tool that runs the checks, not yet named.
 - `skills/cad-record/scripts/guidelines.py`: Ported: discovery, validation and applicability of the guideline sets, and their digests. Phase 4 owns limit resolution and its trace (`resolve_guidelines`, `write_trace`), and the calibration flag and packet keys; the process checks and stack-up use them. Phase 2 owns the shipped-set copies a version build makes (`snapshot_files`). Phase 3 owns the pin warnings that machine_profile.py reports.
 - `skills/cad-record/scripts/manufacturing_intent.py`: Ported: the expected obligations, the use-case assessment and joint property resolution; the record contracts and the record store do its schema and unit checks. Left out: route and capability resolution for the process checks (`part_route`, `capability_limit`, Phase 4); the use-case question templates (`use_case_questions`, `blank_use_case`), for the record.* tools (Phase 3); the x-plausible value warnings validate.py reports (`plausibility_problems`), which no phase names.
-- `skills/cad-record/layout.json`: Ported: the record document paths, the OS and tool junk the reader skips, and the sealed history migrate leaves alone. Left out: the version, bundle and cache locations with their seal manifests and layout findings (Phase 2); the release package (Phase 4); the git storage rules setup writes (Phase 3).
+- `skills/cad-record/scripts/schema_registry.py`: Ported: the document and `$ref` validators over the published schemas. Left out: the validator with one extra keyword (`keyword_validator`), which reads the x-plausible value warnings; no phase names those warnings.
+- `skills/cad-record/scripts/validate.py`: Ported: the contract and cross-document rules of the record. Left out: the motion-case check (`check_motion_cases`) and the release-readiness check (`check_release_readiness`), which go with the motion and release tools in Phase 4.
+- `skills/cad-record/layout.json`: Ported: the record document paths, the OS and tool junk the reader skips, the sealed history migrate leaves alone, and reading the version and check layout with its seal manifests. Left out: publishing versions and bundles, the cache locations, the layout findings and the full layout API (Phase 2); the release package (Phase 4); the git storage rules setup writes (Phase 3).
 
 Phase open:
 
+- `skills/cad-flow/scripts/scratch.py`: No phase of the design-plan Steps names the `work` module; containers.md marks it open.
+- `skills/cad-recheck/scripts/stamp.py`: Verify belongs with versions. No phase of the design-plan Steps names the `recheck` module; containers.md marks it open.
 - `skills/cad-record/assets/manufacturing/`: The evidence code reads these guideline and material-profile sets, but they aren't a package asset yet: they become one when the guideline catalog is ported, a design-plan [Open question](../design-plan.md#open-questions).
 
 ## cad-analysis
@@ -467,7 +474,7 @@ flowchart LR
     p6 -->|"P1"| h7
     p6 -->|"P1"| h8
     p7 -->|"P4"| h2
-    p8 -->|"P2"| h9
+    p8 -->|"phase open"| h9
     p9 -->|"P3"| h10
     p10 -->|"P2"| h0
     p10 -->|"P2"| h1
@@ -477,7 +484,7 @@ flowchart LR
     class p3 planned
     class p4 planned
     class p5 planned
-    class p6 ported
+    class p6 partial
     class p7 planned
     class p8 planned
     class p9 planned
@@ -545,8 +552,9 @@ flowchart LR
         h5["benchhand-sdk/"]
         h6["dropped: loads sibling modules by path; service boundaries replace that"]
         h7["benchhand-core/middleware/provenance.py"]
-        h8["benchhand-provider/envs.py"]
-        h9["benchhand-core/middleware/cache.py"]
+        h8["benchhand-core/record/evidence/reader.py"]
+        h9["benchhand-provider/envs.py"]
+        h10["benchhand-core/middleware/cache.py"]
     end
     p0 -->|"P2"| h0
     p0 -->|"P2"| h1
@@ -574,14 +582,14 @@ flowchart LR
     p15 -->|"P4"| h5
     p16 -->|"P4"| h5
     p17 -->|"P2"| h7
-    p18 -. dropped .-> h6
+    p18 -->|"P1"| h8
     p19 -->|"P4"| h2
     p19 -->|"P4"| h3
     p20 -->|"P4"| h5
-    p21 -->|"P4"| h8
+    p21 -->|"P4"| h9
     p22 -->|"P4"| h2
     p22 -->|"P4"| h3
-    p23 -->|"P2"| h9
+    p23 -->|"P2"| h10
     p24 -->|"P4"| h2
     p24 -->|"P4"| h3
     p25 -->|"P4"| h3
@@ -607,7 +615,7 @@ flowchart LR
     class p15 planned
     class p16 planned
     class p17 planned
-    class p18 dropped
+    class p18 partial
     class p19 planned
     class p20 planned
     class p21 planned
@@ -628,6 +636,7 @@ flowchart LR
     class h7 home
     class h8 home
     class h9 home
+    class h10 home
     classDef ported fill:#d8f3dc,stroke:#2d6a4f
     classDef partial fill:#f1faf3,stroke:#2d6a4f,stroke-width:2px,stroke-dasharray: 6 3
     classDef inprogress fill:#fff3bf,stroke:#b08900
@@ -744,7 +753,7 @@ flowchart LR
     end
     p0 -->|"P2"| h0
     p0 -->|"P2"| h1
-    p1 -->|"P2"| h2
+    p1 -->|"phase open"| h2
     class p0 planned
     class p1 planned
     class h0 home
@@ -807,34 +816,35 @@ flowchart LR
         h3["benchhand-core/record/docs/"]
         h4["dropped: generated from contracts/ (ADR-0017)"]
         h5["benchhand-core/record/evidence/packets.py"]
-        h6["benchhand/cli/"]
-        h7["benchhand-core/flow/decisions.py"]
-        h8["benchhand-core/record/rules/interfaces.py"]
-        h9["benchhand-core/flow/envelope.py"]
-        h10["benchhand-core/record/evidence/"]
-        h11["benchhand-core/record/evidence/paths.py"]
-        h12["benchhand-core/record/evidence/path_judge.py"]
-        h13["flow/checks-by-iteration.rules.yaml"]
-        h14["benchhand-core/flow/profile.py"]
-        h15["benchhand-core/record/evidence/guidelines.py"]
-        h16["benchhand-core/record/evidence/guideline_files.py"]
-        h17["benchhand-core/flow/impact.py"]
-        h18["benchhand-core/record/documents.py"]
-        h19["benchhand-core/record/machine_profile.py"]
-        h20["benchhand-core/record/evidence/obligations.py"]
-        h21["benchhand-core/record/evidence/use_case.py"]
-        h22["benchhand-core/record/evidence/joints.py"]
-        h23["benchhand-core/record/versions/prune.py"]
-        h24["benchhand-core/record/release/"]
-        h25["benchhand-core/record/sarif.py"]
-        h26["benchhand-contracts/validation.py"]
-        h27["benchhand-core/record/selection.py"]
-        h28["benchhand-core/middleware/cache.py"]
-        h29["benchhand-core/record/validate.py"]
-        h30["benchhand-core/record/formats.py"]
-        h31["benchhand-core/record/ignore.py"]
-        h32["benchhand-core/record/migrate/inventory.py"]
-        h33["contracts/record/"]
+        h6["benchhand-core/record/evidence/reader.py"]
+        h7["benchhand/cli/"]
+        h8["benchhand-core/flow/decisions.py"]
+        h9["benchhand-core/record/rules/interfaces.py"]
+        h10["benchhand-core/flow/envelope.py"]
+        h11["benchhand-core/record/evidence/"]
+        h12["benchhand-core/record/evidence/paths.py"]
+        h13["benchhand-core/record/evidence/path_judge.py"]
+        h14["flow/checks-by-iteration.rules.yaml"]
+        h15["benchhand-core/flow/profile.py"]
+        h16["benchhand-core/record/evidence/guidelines.py"]
+        h17["benchhand-core/record/evidence/guideline_files.py"]
+        h18["benchhand-core/flow/impact.py"]
+        h19["benchhand-core/record/documents.py"]
+        h20["benchhand-core/record/machine_profile.py"]
+        h21["benchhand-core/record/evidence/obligations.py"]
+        h22["benchhand-core/record/evidence/use_case.py"]
+        h23["benchhand-core/record/evidence/joints.py"]
+        h24["benchhand-core/record/versions/prune.py"]
+        h25["benchhand-core/record/release/"]
+        h26["benchhand-core/record/sarif.py"]
+        h27["benchhand-contracts/validation.py"]
+        h28["benchhand-core/record/selection.py"]
+        h29["benchhand-core/middleware/cache.py"]
+        h30["benchhand-core/record/validate.py"]
+        h31["dropped: replaced by the strict reader in record/formats.py (`parse_yaml`), which refuses a duplicate or non-text key and keeps dates as text; the prototype's libyaml fast path isn't carried over"]
+        h32["benchhand-core/record/ignore.py"]
+        h33["benchhand-core/record/migrate/inventory.py"]
+        h34["contracts/record/"]
     end
     p0 -->|"P2"| h0
     p0 -->|"P2"| h1
@@ -843,44 +853,46 @@ flowchart LR
     p3 -->|"P4"| h3
     p4 -. dropped .-> h4
     p5 -->|"P1"| h5
-    p6 -->|"P3"| h6
-    p7 -->|"P2"| h7
-    p8 -->|"P2"| h8
-    p9 -->|"P2"| h9
-    p10 -->|"P1"| h10
-    p11 -->|"P1"| h11
+    p5 -->|"P1"| h6
+    p6 -->|"P3"| h7
+    p7 -->|"P2"| h8
+    p8 -->|"P2"| h9
+    p9 -->|"P2"| h10
+    p10 -->|"P1"| h11
     p11 -->|"P1"| h12
-    p12 -->|"P2"| h13
-    p13 -->|"P2"| h14
+    p11 -->|"P1"| h13
+    p12 -->|"P2"| h14
+    p13 -->|"P2"| h15
     p14 -->|"P4"| h3
-    p15 -->|"P1"| h15
     p15 -->|"P1"| h16
-    p16 -->|"P2"| h17
-    p17 -->|"P2"| h18
-    p18 -->|"P3"| h19
-    p19 -->|"P1"| h20
+    p15 -->|"P1"| h17
+    p16 -->|"P2"| h18
+    p17 -->|"P2"| h19
+    p18 -->|"P3"| h20
     p19 -->|"P1"| h21
     p19 -->|"P1"| h22
-    p20 -->|"P2"| h23
-    p21 -->|"P4"| h24
-    p22 -->|"P3"| h25
-    p23 -->|"P1"| h26
-    p24 -->|"P2"| h27
+    p19 -->|"P1"| h23
+    p20 -->|"P2"| h24
+    p21 -->|"P4"| h25
+    p22 -->|"P3"| h26
+    p23 -->|"P1"| h27
+    p24 -->|"P2"| h28
     p25 -->|"P2"| h0
-    p26 -->|"P2"| h28
-    p27 -->|"P1"| h29
-    p28 -->|"P1"| h30
+    p26 -->|"P2"| h29
+    p27 -->|"P1"| h30
+    p28 -. dropped .-> h31
     p29 -->|"P4"| h3
-    p30 -->|"phase open"| h10
-    p31 -->|"P3"| h6
-    p32 -->|"P1"| h18
-    p32 -->|"P1"| h31
+    p30 -->|"phase open"| h11
+    p31 -->|"P3"| h7
+    p32 -->|"P1"| h19
     p32 -->|"P1"| h32
+    p32 -->|"P1"| h33
+    p32 -->|"P1"| h6
     p33 -->|"P2"| h1
-    p34 -->|"P1"| h33
-    p35 -->|"P3"| h25
+    p34 -->|"P1"| h34
+    p35 -->|"P3"| h26
     class p0 planned
-    class p1 ported
+    class p1 partial
     class p2 planned
     class p3 planned
     class p4 dropped
@@ -902,12 +914,12 @@ flowchart LR
     class p20 planned
     class p21 planned
     class p22 planned
-    class p23 ported
+    class p23 partial
     class p24 planned
     class p25 planned
     class p26 planned
-    class p27 ported
-    class p28 ported
+    class p27 partial
+    class p28 dropped
     class p29 planned
     class p30 planned
     class p31 planned
@@ -946,9 +958,10 @@ flowchart LR
     class h28 home
     class h29 home
     class h30 home
-    class h31 home
+    class h31 dropped
     class h32 home
     class h33 home
+    class h34 home
     classDef ported fill:#d8f3dc,stroke:#2d6a4f
     classDef partial fill:#f1faf3,stroke:#2d6a4f,stroke-width:2px,stroke-dasharray: 6 3
     classDef inprogress fill:#fff3bf,stroke:#b08900

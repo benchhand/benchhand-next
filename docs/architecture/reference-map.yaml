@@ -396,7 +396,12 @@ entries:
       - packages/benchhand-core/src/benchhand_core/jobs/process.py
       - packages/benchhand-core/src/benchhand_core/jobs/supervisor.py
     phase: 1
-    status: ported
+    status: partial
+    note: >-
+      Ported: the process identity and the supervision of a process group.
+      Left out: the scoped run claims (`claim_run`, `RunGuard`) and the
+      stray-run report (`strays`) that the build, FEA and sweep scripts use;
+      Phase 4 owns them, with the tools that run those jobs.
   - path: skills/cad-flow/scripts/run.py
     home: packages/benchhand-provider/src/benchhand_provider/envs.py
     phase: 4
@@ -405,8 +410,11 @@ entries:
     basis: inferred
   - path: skills/cad-flow/scripts/scratch.py
     home: packages/benchhand-core/src/benchhand_core/work/
-    phase: 2
+    phase: null
     status: planned
+    note: >-
+      No phase of the design-plan Steps names the `work` module; containers.md
+      marks it open.
   - path: skills/cad-flow/scripts/setup.py
     home: packages/benchhand/src/benchhand/cli/setup.py
     phase: 3
@@ -518,8 +526,15 @@ entries:
     status: planned
     basis: inferred
   - path: skills/cad-model/scripts/cadmodel/record.py
-    status: dropped
-    reason: "loads sibling modules by path; service boundaries replace that"
+    home: packages/benchhand-core/src/benchhand_core/record/evidence/reader.py
+    phase: 1
+    status: partial
+    note: >-
+      Ported: reading a written version snapshot (`read_snapshot`). Left out:
+      capturing and writing the snapshot a version is built from (`snapshot`,
+      `write_snapshot`, `read_folder`), which the Phase 2 version service owns.
+      Its loaders of sibling modules are dropped: service boundaries replace
+      them.
     basis: inferred
   - path: skills/cad-model/scripts/cadmodel/runner.py
     home:
@@ -678,9 +693,11 @@ entries:
     status: planned
   - path: skills/cad-recheck/scripts/stamp.py
     home: packages/benchhand-core/src/benchhand_core/recheck/
-    phase: 2
+    phase: null
     status: planned
-    note: "verify belongs with versions"
+    note: >-
+      Verify belongs with versions. No phase of the design-plan Steps names the
+      `recheck` module; containers.md marks it open.
 
   # cad-record
   - path: skills/cad-record/SKILL.md
@@ -692,7 +709,11 @@ entries:
   - path: skills/cad-record/scripts/assembly_data.py
     home: packages/benchhand-core/src/benchhand_core/record/rules/assembly.py
     phase: 1
-    status: ported
+    status: partial
+    note: >-
+      Ported: the occurrence inventory and placements. Left out: the drawing
+      item resolver (`drawing_item`) for the drawing tools and the joint tree
+      (`joint_tree`) for the motion tools, both Phase 4.
     basis: inferred
   - path: skills/cad-record/scripts/assembly_operations.py
     home: packages/benchhand-core/src/benchhand_core/record/rules/assembly.py
@@ -711,13 +732,16 @@ entries:
     reason: "generated from contracts/ (ADR-0017)"
     basis: inferred
   - path: skills/cad-record/scripts/check_packet.py
-    home: packages/benchhand-core/src/benchhand_core/record/evidence/packets.py
+    home:
+      - packages/benchhand-core/src/benchhand_core/record/evidence/packets.py
+      - packages/benchhand-core/src/benchhand_core/record/evidence/reader.py
     phase: 1
     status: partial
     note: >-
-      Ported: whether a sealed packet counts, and what its outcomes show. Left
-      out: building and publishing a packet (`build`, `emit`), which the check
-      producers do (Phase 4).
+      Ported: the seal and binding checks of a published packet (reader.py),
+      and whether a sealed packet counts and what its outcomes show
+      (packets.py). Left out: building and publishing a packet (`build`,
+      `emit`), which the check producers do (Phase 4).
     basis: inferred
   - path: skills/cad-record/scripts/cli.py
     home: packages/benchhand/src/benchhand/cli/
@@ -839,7 +863,12 @@ entries:
   - path: skills/cad-record/scripts/schema_registry.py
     home: packages/benchhand-contracts/src/benchhand_contracts/validation.py
     phase: 1
-    status: ported
+    status: partial
+    note: >-
+      Ported: the document and `$ref` validators over the published schemas.
+      Left out: the validator with one extra keyword (`keyword_validator`),
+      which reads the x-plausible value warnings; no phase names those
+      warnings.
     basis: inferred
   - path: skills/cad-record/scripts/selection.py
     home: packages/benchhand-core/src/benchhand_core/record/selection.py
@@ -859,11 +888,18 @@ entries:
   - path: skills/cad-record/scripts/validate.py
     home: packages/benchhand-core/src/benchhand_core/record/validate.py
     phase: 1
-    status: ported
+    status: partial
+    note: >-
+      Ported: the contract and cross-document rules of the record. Left out:
+      the motion-case check (`check_motion_cases`) and the release-readiness
+      check (`check_release_readiness`), which go with the motion and release
+      tools in Phase 4.
   - path: skills/cad-record/scripts/yaml_loader.py
-    home: packages/benchhand-core/src/benchhand_core/record/formats.py
-    phase: 1
-    status: ported
+    status: dropped
+    reason: >-
+      replaced by the strict reader in record/formats.py (`parse_yaml`), which
+      refuses a duplicate or non-text key and keeps dates as text; the
+      prototype's libyaml fast path isn't carried over
     basis: inferred
   - path: skills/cad-record/assets/docs-templates/
     home: packages/benchhand-core/src/benchhand_core/record/docs/
@@ -891,14 +927,16 @@ entries:
       - packages/benchhand-core/src/benchhand_core/record/documents.py
       - packages/benchhand-core/src/benchhand_core/record/ignore.py
       - packages/benchhand-core/src/benchhand_core/record/migrate/inventory.py
+      - packages/benchhand-core/src/benchhand_core/record/evidence/reader.py
     phase: 1
     status: partial
     note: >-
       Ported: the record document paths, the OS and tool junk the reader skips,
-      and the sealed history migrate leaves alone. Left out: the version, bundle
-      and cache locations with their seal manifests and layout findings (Phase
-      2); the release package (Phase 4); the git storage rules setup writes
-      (Phase 3).
+      the sealed history migrate leaves alone, and reading the version and
+      check layout with its seal manifests. Left out: publishing versions and
+      bundles, the cache locations, the layout findings and the full layout API
+      (Phase 2); the release package (Phase 4); the git storage rules setup
+      writes (Phase 3).
     basis: inferred
   - path: skills/cad-record/references/
     home: flow/guides/
