@@ -278,22 +278,35 @@ class _Sides:
     guidelines: GuidelineCatalog
 
 
-def _staleness(snapshot: Path, current: Record, sides: _Sides) -> ChangedSinceBuild | NotComputed:
+def _staleness(
+    snapshot: Path, current: Record, sides: _Sides, catalog_missing: bool
+) -> tuple[ChangedSinceBuild | NotComputed, frozenset[str]]:
     """What changed between the built record and the current one (evidence.py:1695-1698), guideline sets
-    included (manufacturing_intent.py:1235 reads a snapshot's own copies only)."""
+    included (manufacturing_intent.py:1235 reads a snapshot's own copies only), and the subjects a missing
+    shipped catalog affects. Those count as changed in `source` even when every hash matches: without the
+    catalog the current record cannot show it resolves the sets the build did."""
+    current_view = with_guideline_digests(view(current), sides.guidelines)
+    placed_now = inventory(current.assembly, current.parts)[0]
+    affected = (
+        fp.guideline_subjects(current_view, placed_now, sides.geometry) if catalog_missing else frozenset()
+    )
     if not snapshot.is_dir():
-        return NotComputed(f"the version has no record snapshot at {snapshot}")
+        return NotComputed(f"the version has no record snapshot at {snapshot}"), affected
     try:
         built = read_snapshot(snapshot, current)
     except RecordError as error:
-        return NotComputed(f"the record snapshot does not read: {error.path}: {error.message}")
+        return NotComputed(f"the record snapshot does not read: {error.path}: {error.message}"), affected
     built_view = with_guideline_digests(view(built), sides.built_guidelines)
-    current_view = with_guideline_digests(view(current), sides.guidelines)
     placed_before = inventory(built.assembly, built.parts)[0]
-    placed_now = inventory(current.assembly, current.parts)[0]
+    if catalog_missing:
+        affected |= fp.guideline_subjects(built_view, placed_before, sides.built_geometry)
     before = fp.subject_fingerprints(built_view, placed_before, sides.built_geometry)
     after = fp.subject_fingerprints(current_view, placed_now, sides.geometry)
-    return ChangedSinceBuild(fp.changed_domains(before, after))
+    changed = fp.changed_domains(before, after)
+    for key in affected:
+        shown = {*changed.get(key, ()), "source"}
+        changed[key] = tuple(domain for domain in fp.DOMAINS if domain in shown)
+    return ChangedSinceBuild(changed), affected
 
 
 MISSING = "is missing"
@@ -385,10 +398,12 @@ def read_built_version(
         discover_guidelines([Layer(snapshot_guidelines, copies=True)]),
         guidelines,
     )
+    catalog_missing = holds_shipped_copies(snapshot_guidelines) and not guidelines.has_shipped
+    staleness, affected = _staleness(folder / "record", record, sides, catalog_missing)
     return BuiltVersion(
         label=version,
         manifest_sha256=manifest_sha,
-        staleness=_staleness(folder / "record", record, sides),
+        staleness=staleness,
         packets=packets,
         packet_findings=packet_findings,
         bound_bundles=bound,
@@ -397,5 +412,6 @@ def read_built_version(
         bundle_seals=bundles,
         path_verdicts=verdicts,
         guidelines=guidelines,
-        guideline_catalog_missing=holds_shipped_copies(snapshot_guidelines) and not guidelines.has_shipped,
+        guideline_catalog_missing=catalog_missing,
+        catalog_missing_subjects=affected,
     )

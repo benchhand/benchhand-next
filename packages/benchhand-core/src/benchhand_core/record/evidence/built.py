@@ -70,6 +70,9 @@ class BuiltVersion:
     bundle_seals: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     path_verdicts: Mapping[PathQuery, Verdict] = field(default_factory=dict)
     # the current guideline catalog (the project's sets over the shipped ones) the `source` fingerprints
-    # resolve through; `guideline_catalog_missing` when the build copied shipped sets but none are read now
+    # resolve through; `guideline_catalog_missing` when the build copied shipped sets but none are read now,
+    # and then `catalog_missing_subjects` are the subject keys whose `source` resolves a guideline set in
+    # the build or now: their evidence is stale whatever the hashes show
     guidelines: GuidelineCatalog = field(default_factory=GuidelineCatalog)
     guideline_catalog_missing: bool = False
+    catalog_missing_subjects: frozenset[str] = frozenset()

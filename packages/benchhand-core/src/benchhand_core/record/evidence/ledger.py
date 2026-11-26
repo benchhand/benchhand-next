@@ -198,6 +198,8 @@ def _fingerprinted(entry: JsonMap, index: int, ctx: EntryContext) -> EntryJudgem
         finding = entry_finding("evidence.unqualified", index, message)
         return EntryJudgement("unknown", (f"{ident} is unqualified",), (finding,))
     changed = fp.evidence_staleness(entry, current)
+    if "source" in recorded and fp.subject_key(subject) in ctx.built.catalog_missing_subjects:
+        changed = tuple(d for d in fp.DOMAINS if d in {*changed, "source"})
     if changed:
         reason = f"{ident} relied on {', '.join(changed)} that changed"
         if ctx.built.guideline_catalog_missing and "source" in changed:

@@ -19,6 +19,7 @@ import yaml
 from benchhand_core.record.evidence import fingerprints as fp
 from benchhand_core.record.evidence.assess import assess
 from benchhand_core.record.evidence.built import NotComputed
+from benchhand_core.record.evidence.guidelines import with_guideline_digests
 from benchhand_core.record.evidence.obligations import required_checks
 from benchhand_core.record.evidence.reader import BuiltVersionError, read_built_version
 from benchhand_core.record.evidence.view import view
@@ -86,11 +87,13 @@ def packet(
     return {**data, **fields}
 
 
-def current_fingerprints(root: Path, subject: dict[str, Any]) -> dict[str, str]:
+def current_fingerprints(root: Path, subject: dict[str, Any], shipped: Path | None = None) -> dict[str, str]:
     record = load_record(root)
-    built = read_built_version(root, record, "v1", shipped_guidelines=None)
+    built = read_built_version(root, record, "v1", shipped_guidelines=shipped)
     placed, _ = inventory(record.assembly, record.parts)
-    return fp.fingerprints(view(record), placed, subject, built.current_geometry)
+    return fp.fingerprints(
+        with_guideline_digests(view(record), built.guidelines), placed, subject, built.current_geometry
+    )
 
 
 def ledger_entry(root: Path, manifest_sha: str, **fields: Any) -> dict[str, Any]:
@@ -430,6 +433,26 @@ def test_a_build_whose_shipped_sets_are_not_read_now_is_stale(
     found = statuses(run(lamp_arm, shipped=None))[ROUTE]
     assert found["result"] == "stale"
     assert found["reasons"][0].startswith("guideline.catalog_missing:")
+
+
+def test_a_missing_shipped_catalog_is_stale_even_when_project_copies_match(
+    lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """The shipped sets copied byte for byte into the project after the build give the same digests, but
+    without the shipped catalog the build's sets cannot be shown: packet and ledger evidence of the part are
+    stale with guideline.catalog_missing."""
+    shipped = shipped_copy(tmp_path)
+    version_sha = build(lamp_arm, shipped=shipped)
+    write_packet(lamp_arm, "process", packet(lamp_arm, {ROUTE: "pass"}), version_sha)
+    entry = ledger_entry(lamp_arm, version_sha, id="EV-002", obligation=ROUTE, level="process_planned")
+    entry["fingerprints"] = current_fingerprints(lamp_arm, entry["subject"], shipped=shipped)
+    write_ledger(lamp_arm, entry)
+    assert statuses(run(lamp_arm, shipped=shipped))[ROUTE]["result"] == "pass"
+    shutil.copytree(shipped, lamp_arm / "hw/manufacturing/guidelines")
+    found = statuses(run(lamp_arm, shipped=None))[ROUTE]
+    assert found["result"] == "stale"
+    assert len(found["reasons"]) == 2
+    assert all("guideline.catalog_missing" in reason for reason in found["reasons"])
 
 
 def test_a_changed_model_frame_of_a_bought_part_makes_the_evidence_stale(

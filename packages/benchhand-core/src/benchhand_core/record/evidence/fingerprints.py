@@ -480,17 +480,34 @@ def fingerprints(
     return {domain: digest(values[domain]) for domain in DOMAINS if domain in values}
 
 
+def _subject_keys(record: RecordView, view: _Values) -> list[str]:
+    keys = ["product", *sorted(record.parts), *sorted(record.interfaces)]
+    keys += [f"op:{op['id']}" for op in view.operations if isinstance(op.get("id"), str)]
+    return keys + sorted(record.requirements)
+
+
+def guideline_subjects(
+    record: RecordView, inventory: Inventory | None, geometry: Mapping[str, str | None]
+) -> frozenset[str]:
+    """The subject keys whose `source` domain holds a guideline set: a part whose route's capability
+    profile resolves one, and every subject that part is a member of."""
+    view = _Values(record, inventory, geometry)
+    resolving = {pn for pn in record.parts if view._guideline_sources(pn)}
+    return frozenset(
+        key
+        for key in _subject_keys(record, view)
+        if key in resolving or (key not in record.parts and resolving & set(view.members(key)))
+    )
+
+
 def subject_fingerprints(
     record: RecordView, inventory: Inventory | None, geometry: Mapping[str, str | None]
 ) -> dict[str, dict[str, str]]:
     """The fingerprints of every subject: product, parts, interfaces, operations and requirements
     (impact.py:472)."""
     view = _Values(record, inventory, geometry)
-    keys = ["product", *sorted(record.parts), *sorted(record.interfaces)]
-    keys += [f"op:{op['id']}" for op in view.operations if isinstance(op.get("id"), str)]
-    keys += sorted(record.requirements)
     found = {}
-    for key in keys:
+    for key in _subject_keys(record, view):
         values = view.values(key)
         found[key] = {domain: digest(values[domain]) for domain in DOMAINS if domain in values}
     return found
