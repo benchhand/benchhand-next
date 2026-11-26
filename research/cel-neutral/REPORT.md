@@ -339,3 +339,25 @@ Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `
 ADR-0014 is accepted, so this is an amendment to its Consequences, or a new ADR that ADR-0014 links to; the owner picks. Proposed text:
 
 > CEL is compiled and type-checked at load, against types generated from the contracts. The generated artefacts are a FileDescriptorSet and a cel-go environment YAML per rule scope, and only structural scopes are typed. A rule crosses a language boundary as a `cel.expr.CheckedExpr`, together with the digest of the environment it was checked against. Every runtime runs its own CEL engine behind one adapter interface, and every engine passes one shared conformance suite in CI. That suite includes rules that must fail the check. The engine choices and the suite live in plan section 5, not in this ADR, so changing an engine doesn't reopen the decision.
+
+## CEL adoption standard
+
+This section applies to any project that adopts CEL, so it can become a harness-plugins steering standard. Each rule names the check that enforces it.
+
+1. **Rules are CEL strings, and the type environment is data.** Generate a FileDescriptorSet and a cel-go environment YAML from the schema that is the source of truth. Never hand-write either one. Check: a CI job regenerates both and fails on a diff.
+2. **Type structural scopes only.** Every node a rule can reach has one shape. Refuse a union (`oneOf`, `anyOf`, a merging `allOf`) and an untyped node on a reachable path, with its path and reason. Flatten the union in the schema, or omit the field from the scope. Don't type it `dyn`. Check: the generator exits non-zero on a refused scope.
+3. **Map nullability on purpose.** A nullable scalar becomes a protobuf wrapper and an optional scalar gets field presence, so `has()` works. An absent field is an error unless a rule guards it with `has()`.
+4. **Check before the first evaluation.** Check every rule when it loads, or in a compile step before it can run, and return every issue with its file path, line and column. Check each slot's output type. A rule that fails to check or to evaluate never counts as a pass. Check: the adapter tests.
+5. **Ship a checked rule as a CheckedExpr.** A rule crosses a process or language boundary as a `cel.expr.CheckedExpr` in a `google.protobuf.Any`. It carries the digests of the environment YAML and descriptor set it was checked against. An evaluator refuses a digest that differs from its own. Digest a deterministic re-encoding, never the writer's bytes.
+6. **Wrap the engine in one adapter per runtime,** with the same operations everywhere: load the environment, check, build a program from a CheckedExpr, evaluate, and report the engine's identity. Values leave the adapter as `cel.expr.Value` protobuf JSON.
+7. **Choose engines by evidence.** The criteria are: a checker, CheckedExpr input and output, environment YAML input, the project's suite result, maintenance and licence. As of 2026-11, the choices are:
+    - Go: cel-go.
+    - Python: cel-expr-python.
+    - Rust: cel-core, or cel-cxx where a C++ toolchain and Bazel are acceptable.
+    - TypeScript: @bufbuild/cel, evaluating CheckedExprs only.
+
+    An engine without a checker may only run rules a checker has already checked.
+8. **Run one conformance suite on every engine in CI.** Use cel-spec's simple tests in protobuf JSON, plus the project's own typed cases. The typed cases include rules that must fail the check: a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable. Also fail CI when the checkers disagree on a shipped rule. Pin each engine's version and options, and record them.
+9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
+10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
+11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
