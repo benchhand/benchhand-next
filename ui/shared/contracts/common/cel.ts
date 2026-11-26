@@ -2,7 +2,19 @@
 // Source: contracts/common/cel.tsp
 
 /**
- * Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
+ * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
-export type BenchhandCELExpressionProvisional = string;
+export type CelExpression = string;
+/**
+ * One or more CEL expressions, each of which must hold
+ *
+ * @minItems 1
+ */
+export type CelExpressions = [CelExpression, ...CelExpression[]];
 
+/**
+ * Provisional: the CEL expression types (ADR-0014). Every CEL field of every contract refers to CelExpression or CelExpressions here, and that $ref is how the flow interpreter finds them all
+ */
+export interface BenchhandCELExpressionTypesProvisional {
+  [k: string]: unknown;
+}

@@ -3,19 +3,25 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from pydantic import Field, RootModel
 
 
-class BenchhandCelExpressionProvisional(RootModel[str]):
+class BenchhandCelExpressionTypesProvisional(RootModel[Any]):
     root: Annotated[
-        str,
+        Any,
         Field(
             examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
+            title="benchhand CEL expression types, provisional",
         ),
     ]
     """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
+    Provisional: the CEL expression types (ADR-0014). Every CEL field of every contract refers to CelExpression or CelExpressions here, and that $ref is how the flow interpreter finds them all
+    """
+
+
+class CelExpression(RootModel[str]):
+    root: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
+    """
+    A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
     """

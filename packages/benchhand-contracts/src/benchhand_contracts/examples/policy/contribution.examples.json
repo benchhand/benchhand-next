@@ -5,16 +5,20 @@
       "schema_id": "https://benchhand.github.io/benchhand/contracts/policy/contribution.schema.json",
       "valid": [
         {
-          "rules": {
-            "rigor": [
-              {
-                "when": "policy.rigor == \"regulated\"",
-                "then": [
-                  "record.requirements.all(r, r.standard.present)"
-                ]
-              }
-            ]
-          },
+          "rules": [
+            {
+              "rules_version": 1,
+              "kind": "rigor",
+              "rules": [
+                {
+                  "when": "policy.rigor == \"regulated\"",
+                  "then": [
+                    "record.requirements.all(r, r.standard.present)"
+                  ]
+                }
+              ]
+            }
+          ],
           "gates": {
             "design_freeze": {
               "human": [
@@ -24,16 +28,20 @@
           }
         },
         {
-          "rules": {
-            "dispatch": [
-              {
-                "when": "obligation.family.startsWith(\"process.welding.\")",
-                "then": [
-                  "process.welding"
-                ]
-              }
-            ]
-          }
+          "rules": [
+            {
+              "rules_version": 1,
+              "kind": "dispatch",
+              "rules": [
+                {
+                  "when": "obligation.family.startsWith(\"process.welding.\")",
+                  "then": [
+                    "process.welding"
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ],
       "invalid": [
@@ -42,16 +50,20 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules": {
-              "rigor": [
-                {
-                  "when": "policy.rigor == \"regulated\"",
-                  "then": [
-                    "record.requirements.all(r, r.standard.present)"
-                  ]
-                }
-              ]
-            },
+            "rules": [
+              {
+                "rules_version": 1,
+                "kind": "rigor",
+                "rules": [
+                  {
+                    "when": "policy.rigor == \"regulated\"",
+                    "then": [
+                      "record.requirements.all(r, r.standard.present)"
+                    ]
+                  }
+                ]
+              }
+            ],
             "gates": {
               "design_freeze": {
                 "human": [
@@ -67,9 +79,9 @@
           "mutation": "wrong-type",
           "pointer": "/rules",
           "instance": {
-            "rules": [
-              "not-an-object"
-            ],
+            "rules": {
+              "not": "an-array"
+            },
             "gates": {
               "design_freeze": {
                 "human": [
@@ -90,16 +102,20 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules": {
-              "dispatch": [
-                {
-                  "when": "obligation.family.startsWith(\"process.welding.\")",
-                  "then": [
-                    "process.welding"
-                  ]
-                }
-              ]
-            },
+            "rules": [
+              {
+                "rules_version": 1,
+                "kind": "dispatch",
+                "rules": [
+                  {
+                    "when": "obligation.family.startsWith(\"process.welding.\")",
+                    "then": [
+                      "process.welding"
+                    ]
+                  }
+                ]
+              }
+            ],
             "x-conformance-unknown": true
           }
         },
@@ -108,9 +124,9 @@
           "mutation": "wrong-type",
           "pointer": "/rules",
           "instance": {
-            "rules": [
-              "not-an-object"
-            ]
+            "rules": {
+              "not": "an-array"
+            }
           }
         }
       ]

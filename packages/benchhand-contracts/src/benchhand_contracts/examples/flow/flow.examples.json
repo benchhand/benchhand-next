@@ -46,33 +46,7 @@
               "gate": "layout_freeze"
             }
           ],
-          "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-          "rules": {
-            "checks_by_iteration": [
-              {
-                "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                "then": [
-                  "form_check",
-                  "check_changed_only"
-                ]
-              }
-            ],
-            "dispatch": [
-              {
-                "when": "obligation.process == \"fdm\"",
-                "then": [
-                  "process.fdm"
-                ]
-              }
-            ],
-            "fidelity": [
-              {
-                "when": "stage == \"parts\"",
-                "then": "F2"
-              }
-            ],
-            "rigor": []
-          }
+          "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version"
         }
       ],
       "invalid": [
@@ -121,33 +95,7 @@
                 "gate": "layout_freeze"
               }
             ],
-            "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-            "rules": {
-              "checks_by_iteration": [
-                {
-                  "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                  "then": [
-                    "form_check",
-                    "check_changed_only"
-                  ]
-                }
-              ],
-              "dispatch": [
-                {
-                  "when": "obligation.process == \"fdm\"",
-                  "then": [
-                    "process.fdm"
-                  ]
-                }
-              ],
-              "fidelity": [
-                {
-                  "when": "stage == \"parts\"",
-                  "then": "F2"
-                }
-              ],
-              "rigor": []
-            }
+            "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version"
           }
         },
         {
@@ -197,32 +145,6 @@
               }
             ],
             "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-            "rules": {
-              "checks_by_iteration": [
-                {
-                  "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                  "then": [
-                    "form_check",
-                    "check_changed_only"
-                  ]
-                }
-              ],
-              "dispatch": [
-                {
-                  "when": "obligation.process == \"fdm\"",
-                  "then": [
-                    "process.fdm"
-                  ]
-                }
-              ],
-              "fidelity": [
-                {
-                  "when": "stage == \"parts\"",
-                  "then": "F2"
-                }
-              ],
-              "rigor": []
-            },
             "x-conformance-unknown": true
           }
         },
@@ -272,33 +194,7 @@
                 "gate": "layout_freeze"
               }
             ],
-            "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-            "rules": {
-              "checks_by_iteration": [
-                {
-                  "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                  "then": [
-                    "form_check",
-                    "check_changed_only"
-                  ]
-                }
-              ],
-              "dispatch": [
-                {
-                  "when": "obligation.process == \"fdm\"",
-                  "then": [
-                    "process.fdm"
-                  ]
-                }
-              ],
-              "fidelity": [
-                {
-                  "when": "stage == \"parts\"",
-                  "then": "F2"
-                }
-              ],
-              "rigor": []
-            }
+            "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version"
           }
         }
       ]

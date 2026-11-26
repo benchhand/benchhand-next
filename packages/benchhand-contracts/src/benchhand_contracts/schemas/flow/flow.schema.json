@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/flow/flow.schema.json",
   "title": "benchhand flow definition (flow.yaml), provisional",
-  "description": "Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements, the VOID cascade scope and the ordered first-match rule lists. The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check",
+  "description": "Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check",
   "x-status": "provisional",
   "x-version": "0.1.0",
   "type": "object",
@@ -12,8 +12,7 @@
     "stages",
     "gates",
     "edges",
-    "void_scope",
-    "rules"
+    "void_scope"
   ],
   "properties": {
     "flow_version": {
@@ -41,15 +40,12 @@
     },
     "void_scope": {
       "description": "Selects the stages a VOID reopens besides the voided stage, evaluated for each stage after it",
-      "$ref": "../common/cel.schema.json"
+      "$ref": "../common/cel.schema.json#/$defs/CelExpression"
     },
     "reapproval_scope": {
       "description": "Provisional (ADR-0019, owned by Phase 2): selects the approved items a change affects, next to void_scope. An affected item whose fingerprint differs from its approval is changed_since_approval",
       "x-status": "provisional",
-      "$ref": "../common/cel.schema.json"
-    },
-    "rules": {
-      "$ref": "#/$defs/FlowRules"
+      "$ref": "../common/cel.schema.json#/$defs/CelExpression"
     }
   },
   "examples": [
@@ -95,53 +91,10 @@
           "gate": "layout_freeze"
         }
       ],
-      "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-      "rules": {
-        "checks_by_iteration": [
-          {
-            "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-            "then": [
-              "form_check",
-              "check_changed_only"
-            ]
-          }
-        ],
-        "dispatch": [
-          {
-            "when": "obligation.process == \"fdm\"",
-            "then": [
-              "process.fdm"
-            ]
-          }
-        ],
-        "fidelity": [
-          {
-            "when": "stage == \"parts\"",
-            "then": "F2"
-          }
-        ],
-        "rigor": []
-      }
+      "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version"
     }
   ],
   "$defs": {
-    "CelExpressions": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "$ref": "../common/cel.schema.json"
-      }
-    },
-    "FlowCheckId": {
-      "description": "A check id that a check-by-iteration rule selects, such as static.changed_only",
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
-    },
-    "FlowHandlerId": {
-      "description": "A process-check handler id that a dispatch rule selects, such as process.fdm",
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
-    },
     "FlowStage": {
       "type": "object",
       "additionalProperties": false,
@@ -220,7 +173,7 @@
           ],
           "properties": {
             "human": {
-              "$ref": "#/$defs/CelExpressions"
+              "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
             }
           }
         }
@@ -257,14 +210,14 @@
           ],
           "properties": {
             "provisional": {
-              "$ref": "#/$defs/CelExpressions"
+              "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
             },
             "full": {
               "description": "When the full check counts as done",
-              "$ref": "#/$defs/CelExpressions"
+              "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
             },
             "human": {
-              "$ref": "#/$defs/CelExpressions"
+              "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
             }
           }
         }
@@ -289,152 +242,7 @@
           "$ref": "../record/common.schema.json#/$defs/gate_id"
         },
         "guard": {
-          "$ref": "../common/cel.schema.json"
-        }
-      }
-    },
-    "FlowRules": {
-      "description": "The ordered first-match rule lists: the first rule whose when holds gives the value, and no match gives none",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "checks_by_iteration",
-        "dispatch",
-        "fidelity",
-        "rigor"
-      ],
-      "properties": {
-        "checks_by_iteration": {
-          "description": "Which checks run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/FlowCheckRule"
-          }
-        },
-        "dispatch": {
-          "description": "Which process-check handlers judge an obligation, from its process, operation and material. No match means UNKNOWN coverage, never a pass",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/FlowDispatchRule"
-          }
-        },
-        "fidelity": {
-          "description": "The form-check fidelity at a stage",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/FlowFidelityRule"
-          }
-        },
-        "rigor": {
-          "description": "Requirements added under a rigor policy, such as regulated; each must hold as well as the gate's own",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/FlowRigorRule"
-          }
-        }
-      }
-    },
-    "FlowCheckRule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "when",
-        "then"
-      ],
-      "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json"
-        },
-        "then": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/FlowCheckSelection"
-          }
-        }
-      }
-    },
-    "FlowCheckSelection": {
-      "description": "A check that always runs when its rule matches, or one that also needs its own condition, such as being stale",
-      "anyOf": [
-        {
-          "$ref": "#/$defs/FlowCheckId"
-        },
-        {
-          "$ref": "#/$defs/FlowConditionalCheck"
-        }
-      ]
-    },
-    "FlowConditionalCheck": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "check",
-        "when"
-      ],
-      "properties": {
-        "check": {
-          "$ref": "#/$defs/FlowCheckId"
-        },
-        "when": {
-          "$ref": "../common/cel.schema.json"
-        }
-      }
-    },
-    "FlowDispatchRule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "when",
-        "then"
-      ],
-      "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json"
-        },
-        "then": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "$ref": "#/$defs/FlowHandlerId"
-          }
-        }
-      }
-    },
-    "FlowFidelityRule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "when",
-        "then"
-      ],
-      "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json"
-        },
-        "then": {
-          "enum": [
-            "F0",
-            "F1",
-            "F2",
-            "F3"
-          ]
-        }
-      }
-    },
-    "FlowRigorRule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "when",
-        "then"
-      ],
-      "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json"
-        },
-        "then": {
-          "$ref": "#/$defs/CelExpressions"
+          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
         }
       }
     },

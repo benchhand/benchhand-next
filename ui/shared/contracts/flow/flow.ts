@@ -7,43 +7,25 @@
 export type FlowGuideFragment = string;
 export type FlowGate = FlowSingleHumanGate | FlowStagedGate;
 /**
- * @minItems 1
- */
-export type CelExpressions = [BenchhandCELExpressionProvisional, ...BenchhandCELExpressionProvisional[]];
-/**
- * Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
- */
-export type BenchhandCELExpressionProvisional = string;
-/**
- * When the full check counts as done
+ * One or more CEL expressions, each of which must hold
  *
  * @minItems 1
+ *
+ * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
-export type CelExpressions1 = [BenchhandCELExpressionProvisional, ...BenchhandCELExpressionProvisional[]];
+export type CelExpressions = [string, ...string[]];
 /**
- * Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
+ * One or more CEL expressions, each of which must hold
+ *
+ * @minItems 1
+ *
+ * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
-export type BenchhandCELExpressionProvisional1 = string;
-/**
- * Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
- */
-export type BenchhandCELExpressionProvisional2 = string;
-/**
- * A check that always runs when its rule matches, or one that also needs its own condition, such as being stale
- */
-export type FlowCheckSelection = FlowCheckId | FlowConditionalCheck;
-/**
- * A check id that a check-by-iteration rule selects, such as static.changed_only
- */
-export type FlowCheckId = string;
-/**
- * A process-check handler id that a dispatch rule selects, such as process.fdm
- */
-export type FlowHandlerId = string;
+export type CelExpressions1 = [string, ...string[]];
 export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | "part";
 
 /**
- * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements, the VOID cascade scope and the ordered first-match rule lists. The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check
+ * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check
  */
 export interface BenchhandFlowDefinitionFlowYamlProvisional {
   flow_version: 1;
@@ -55,9 +37,14 @@ export interface BenchhandFlowDefinitionFlowYamlProvisional {
   stages: [FlowStage, ...FlowStage[]];
   gates: FlowGate[];
   edges: FlowEdge[];
-  void_scope: BenchhandCELExpressionProvisional1;
-  reapproval_scope?: BenchhandCELExpressionProvisional2;
-  rules: FlowRules;
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  void_scope: string;
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  reapproval_scope?: string;
 }
 export interface FlowStage {
   /**
@@ -190,51 +177,10 @@ export interface FlowEdge {
    * A flow gate id; flow.yaml names the gates
    */
   gate?: string;
-  guard?: BenchhandCELExpressionProvisional;
-}
-/**
- * The ordered first-match rule lists: the first rule whose when holds gives the value, and no match gives none
- */
-export interface FlowRules {
   /**
-   * Which checks run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
-  checks_by_iteration: FlowCheckRule[];
-  /**
-   * Which process-check handlers judge an obligation, from its process, operation and material. No match means UNKNOWN coverage, never a pass
-   */
-  dispatch: FlowDispatchRule[];
-  /**
-   * The form-check fidelity at a stage
-   */
-  fidelity: FlowFidelityRule[];
-  /**
-   * Requirements added under a rigor policy, such as regulated; each must hold as well as the gate's own
-   */
-  rigor: FlowRigorRule[];
-}
-export interface FlowCheckRule {
-  when: BenchhandCELExpressionProvisional;
-  then: FlowCheckSelection[];
-}
-export interface FlowConditionalCheck {
-  check: FlowCheckId;
-  when: BenchhandCELExpressionProvisional;
-}
-export interface FlowDispatchRule {
-  when: BenchhandCELExpressionProvisional;
-  /**
-   * @minItems 1
-   */
-  then: [FlowHandlerId, ...FlowHandlerId[]];
-}
-export interface FlowFidelityRule {
-  when: BenchhandCELExpressionProvisional;
-  then: "F0" | "F1" | "F2" | "F3";
-}
-export interface FlowRigorRule {
-  when: BenchhandCELExpressionProvisional;
-  then: CelExpressions;
+  guard?: string;
 }
 /**
  * What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate, and void withdraws its provisional approval because of a change the user named. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words. form is refused: form elicitation is not used (ADR-0018)

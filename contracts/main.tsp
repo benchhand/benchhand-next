@@ -35,6 +35,7 @@ import "./common/cel.tsp";
 import "./common/finding.tsp";
 import "./envelope/envelope.tsp";
 import "./flow/flow.tsp";
+import "./flow/rules.tsp";
 import "./jobs/job.tsp";
 import "./policy/contribution.tsp";
 import "./provider/manifest.tsp";

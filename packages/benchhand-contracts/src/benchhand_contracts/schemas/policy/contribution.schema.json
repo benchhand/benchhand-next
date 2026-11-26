@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/policy/contribution.schema.json",
   "title": "benchhand policy provider contribution, provisional",
-  "description": "Provisional: what one policy provider adds to the flow (ADR-0014): rules for flow.yaml's rule lists and CEL requirements for its gates. The merge order is fixed. For each rule list, the contributed rules come before flow.yaml's rules, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads",
+  "description": "Provisional: what one policy provider adds to the flow (ADR-0014): rule lists in the shape of flow/<kind>.rules.yaml, and CEL requirements for the gates of flow.yaml. The merge order is fixed. A contributed rule list's rules come before the rules of the flow's list of the same kind, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads",
   "x-status": "provisional",
   "x-version": "0.1.0",
   "type": "object",
@@ -10,7 +10,11 @@
   "minProperties": 1,
   "properties": {
     "rules": {
-      "$ref": "#/$defs/PolicyContributionRules"
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "../flow/rules.schema.json"
+      }
     },
     "gates": {
       "description": "Requirements by the gate id flow.yaml declares",
@@ -26,16 +30,20 @@
   },
   "examples": [
     {
-      "rules": {
-        "rigor": [
-          {
-            "when": "policy.rigor == \"regulated\"",
-            "then": [
-              "record.requirements.all(r, r.standard.present)"
-            ]
-          }
-        ]
-      },
+      "rules": [
+        {
+          "rules_version": 1,
+          "kind": "rigor",
+          "rules": [
+            {
+              "when": "policy.rigor == \"regulated\"",
+              "then": [
+                "record.requirements.all(r, r.standard.present)"
+              ]
+            }
+          ]
+        }
+      ],
       "gates": {
         "design_freeze": {
           "human": [
@@ -45,54 +53,23 @@
       }
     },
     {
-      "rules": {
-        "dispatch": [
-          {
-            "when": "obligation.family.startsWith(\"process.welding.\")",
-            "then": [
-              "process.welding"
-            ]
-          }
-        ]
-      }
+      "rules": [
+        {
+          "rules_version": 1,
+          "kind": "dispatch",
+          "rules": [
+            {
+              "when": "obligation.family.startsWith(\"process.welding.\")",
+              "then": [
+                "process.welding"
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "$defs": {
-    "PolicyContributionRules": {
-      "type": "object",
-      "additionalProperties": false,
-      "minProperties": 1,
-      "properties": {
-        "checks_by_iteration": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "../flow/flow.schema.json#/$defs/FlowCheckRule"
-          }
-        },
-        "dispatch": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "../flow/flow.schema.json#/$defs/FlowDispatchRule"
-          }
-        },
-        "fidelity": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "../flow/flow.schema.json#/$defs/FlowFidelityRule"
-          }
-        },
-        "rigor": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "../flow/flow.schema.json#/$defs/FlowRigorRule"
-          }
-        }
-      }
-    },
     "PolicyGateRequirements": {
       "description": "Extra requirements for the steps of one gate",
       "type": "object",
@@ -100,13 +77,13 @@
       "minProperties": 1,
       "properties": {
         "provisional": {
-          "$ref": "../flow/flow.schema.json#/$defs/CelExpressions"
+          "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
         },
         "full": {
-          "$ref": "../flow/flow.schema.json#/$defs/CelExpressions"
+          "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
         },
         "human": {
-          "$ref": "../flow/flow.schema.json#/$defs/CelExpressions"
+          "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
         }
       }
     }

@@ -8,17 +8,8 @@ direction: right
     class: document
     label: "contribution"
     shape: sql_table
-    "rules": "PolicyContributionRules"
+    "rules": "rules[1..*]"
     "gates": "PolicyGateRequirements by key"
-  }
-  "policy_contribution__PolicyContributionRules": {
-    class: owned
-    label: "PolicyContributionRules"
-    shape: sql_table
-    "checks_by_iteration": "FlowCheckRule[1..*]"
-    "dispatch": "FlowDispatchRule[1..*]"
-    "fidelity": "FlowFidelityRule[1..*]"
-    "rigor": "FlowRigorRule[1..*]"
   }
   "policy_contribution__PolicyGateRequirements": {
     class: owned
@@ -29,30 +20,11 @@ direction: right
     "human": "CelExpressions"
   }
 }
-"stub__flow_flow__FlowCheckRule": {
+"stub__flow_rules": {
   class: stub
-  label: "FlowCheckRule\n(flow/flow)"
-  link: "../../flow/flow/02-flowrules.svg"
-}
-"stub__flow_flow__FlowDispatchRule": {
-  class: stub
-  label: "FlowDispatchRule\n(flow/flow)"
-  link: "../../flow/flow/02-flowrules.svg"
-}
-"stub__flow_flow__FlowFidelityRule": {
-  class: stub
-  label: "FlowFidelityRule\n(flow/flow)"
-  link: "../../flow/flow/02-flowrules.svg"
-}
-"stub__flow_flow__FlowRigorRule": {
-  class: stub
-  label: "FlowRigorRule\n(flow/flow)"
-  link: "../../flow/flow/02-flowrules.svg"
+  label: "rules\n(flow/rules)"
+  link: "../../flow/rules/01-rules.svg"
 }
 
-"aggregate__policy_contribution"."policy_contribution__PolicyContributionRules"."checks_by_iteration" -> "stub__flow_flow__FlowCheckRule": "checks_by_iteration [0..*]" { class: association }
-"aggregate__policy_contribution"."policy_contribution__PolicyContributionRules"."dispatch" -> "stub__flow_flow__FlowDispatchRule": "dispatch [0..*]" { class: association }
-"aggregate__policy_contribution"."policy_contribution__PolicyContributionRules"."fidelity" -> "stub__flow_flow__FlowFidelityRule": "fidelity [0..*]" { class: association }
-"aggregate__policy_contribution"."policy_contribution__PolicyContributionRules"."rigor" -> "stub__flow_flow__FlowRigorRule": "rigor [0..*]" { class: association }
-"aggregate__policy_contribution"."policy_contribution"."rules" -> "aggregate__policy_contribution"."policy_contribution__PolicyContributionRules": "rules [0..1]" { class: composition }
+"aggregate__policy_contribution"."policy_contribution"."rules" -> "stub__flow_rules": "rules [0..*]" { class: association }
 "aggregate__policy_contribution"."policy_contribution"."gates" -> "aggregate__policy_contribution"."policy_contribution__PolicyGateRequirements": "gates [0..*]" { class: composition }

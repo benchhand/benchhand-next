@@ -86,7 +86,7 @@ def _check_source(rel_path: str, schema: dict[str, Any]) -> None:
     if rel_path != CEL_CONTRACT:
         for pointer in _plain_cel_strings(schema, ""):
             raise ContractSourceError(
-                f"{rel_path}#{pointer}: a CEL expression is a plain string; $ref {CEL_CONTRACT} instead"
+                f"{rel_path}#{pointer}: a CEL expression is a plain string; $ref {CEL_CONTRACT}#/$defs/CelExpression instead"
             )
 
 

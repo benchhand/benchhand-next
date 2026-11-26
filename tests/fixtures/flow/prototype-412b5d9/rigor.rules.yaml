@@ -1,0 +1,9 @@
+# The prototype at 412b5d9, written in the flow/rules.schema.json shape.
+# flow_profile_gate.py: regulated rigor refuses a flow profile setting
+# that turns a check off.
+rules_version: 1
+kind: rigor
+rules:
+  - when: policy.rigor == "regulated"
+    then:
+      - "!record.flow.profile.exists(s, s.turns_check_off)"

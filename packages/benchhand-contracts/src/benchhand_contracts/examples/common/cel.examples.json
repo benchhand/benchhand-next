@@ -6,6 +6,13 @@
       "valid": [
         "version.fast_checks.all(c, c.status == \"pass\")"
       ],
+      "invalid": []
+    },
+    {
+      "schema_id": "https://benchhand.github.io/benchhand/contracts/common/cel.schema.json#/$defs/CelExpression",
+      "valid": [
+        "version.fast_checks.all(c, c.status == \"pass\")"
+      ],
       "invalid": [
         {
           "example": 0,

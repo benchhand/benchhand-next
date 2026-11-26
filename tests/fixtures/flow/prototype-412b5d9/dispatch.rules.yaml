@@ -1,0 +1,39 @@
+# The prototype at 412b5d9, written in the flow/rules.schema.json shape.
+# process_checks/dispatch.py handler_for: a route family, a purchase
+# family, or a process family of the part's own process kind. No match is
+# UNKNOWN coverage.
+rules_version: 1
+kind: dispatch
+rules:
+  - when: obligation.level == "physically_validated"
+    then: [physical.ledger]
+  - when: >-
+      obligation.family in
+      ["route.consistency", "route.operation_plan", "optical.route"]
+    then: [route]
+  - when: obligation.family.startsWith("purchase.")
+    then: [process.purchased]
+  - when: >-
+      obligation.family.startsWith("process.fdm.")
+      && part.process == "fdm"
+    then: [process.fdm]
+  - when: >-
+      obligation.family.startsWith("process.resin.")
+      && part.process == "resin"
+    then: [process.resin]
+  - when: >-
+      obligation.family.startsWith("process.cnc.")
+      && part.process == "cnc"
+    then: [process.cnc]
+  - when: >-
+      obligation.family.startsWith("process.laser.")
+      && part.process == "laser"
+    then: [process.laser]
+  - when: >-
+      obligation.family.startsWith("process.casting.")
+      && part.process == "casting"
+    then: [process.casting]
+  - when: >-
+      obligation.family.startsWith("process.drilling.")
+      && part.operations.exists(o, o == "drilling")
+    then: [process.drilling]

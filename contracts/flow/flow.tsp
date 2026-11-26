@@ -10,7 +10,7 @@ using Common.Cel;
 @baseUri("https://benchhand.github.io/benchhand/contracts/flow/flow/")
 namespace Flow.Flow;
 
-/** Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements, the VOID cascade scope and the ordered first-match rule lists. The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check */
+/** Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check */
 @summary("benchhand flow definition (flow.yaml), provisional")
 @id("https://benchhand.github.io/benchhand/contracts/flow/flow.schema.json")
 @extension("x-version", "0.1.0")
@@ -31,20 +31,7 @@ model Flow {
   /** Provisional (ADR-0019, owned by Phase 2): selects the approved items a change affects, next to void_scope. An affected item whose fingerprint differs from its approval is changed_since_approval */
   @extension("x-status", "provisional")
   reapproval_scope?: CelExpression;
-
-  rules: FlowRules;
 }
-
-@minItems(1)
-model CelExpressions is CelExpression[];
-
-/** A check id that a check-by-iteration rule selects, such as static.changed_only */
-@pattern("^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$")
-scalar FlowCheckId extends string;
-
-/** A process-check handler id that a dispatch rule selects, such as process.fdm */
-@pattern("^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$")
-scalar FlowHandlerId extends string;
 
 model FlowStage {
   id: Records.Common.stage;
@@ -105,55 +92,6 @@ model FlowEdge {
   to: Records.Common.stage;
   gate?: Records.Common.gate_id;
   guard?: CelExpression;
-}
-
-/** The ordered first-match rule lists: the first rule whose when holds gives the value, and no match gives none */
-model FlowRules {
-  /** Which checks run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order */
-  checks_by_iteration: FlowCheckRule[];
-
-  /** Which process-check handlers judge an obligation, from its process, operation and material. No match means UNKNOWN coverage, never a pass */
-  dispatch: FlowDispatchRule[];
-
-  /** The form-check fidelity at a stage */
-  fidelity: FlowFidelityRule[];
-
-  /** Requirements added under a rigor policy, such as regulated; each must hold as well as the gate's own */
-  rigor: FlowRigorRule[];
-}
-
-model FlowCheckRule {
-  when: CelExpression;
-  then: FlowCheckSelection[];
-}
-
-/** A check that always runs when its rule matches, or one that also needs its own condition, such as being stale */
-union FlowCheckSelection {
-  FlowCheckId,
-  FlowConditionalCheck,
-}
-
-model FlowConditionalCheck {
-  check: FlowCheckId;
-  when: CelExpression;
-}
-
-model FlowDispatchRule {
-  when: CelExpression;
-
-  @minItems(1)
-  @uniqueItems
-  then: FlowHandlerId[];
-}
-
-model FlowFidelityRule {
-  when: CelExpression;
-  then: "F0" | "F1" | "F2" | "F3";
-}
-
-model FlowRigorRule {
-  when: CelExpression;
-  then: CelExpressions;
 }
 
 /** What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate, and void withdraws its provisional approval because of a change the user named. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words. form is refused: form elicitation is not used (ADR-0018) */
@@ -262,19 +200,6 @@ model ApprovedItemState {
       }
     ],
     void_scope: "stage.index > voided.stage.index && stage.built_on == voided.version",
-    rules: #{
-      checks_by_iteration: #[
-        #{
-          when: "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-          then: #["form_check", "check_changed_only"],
-        }
-      ],
-      dispatch: #[
-        #{ when: "obligation.process == \"fdm\"", then: #["process.fdm"] }
-      ],
-      fidelity: #[#{ when: "stage == \"parts\"", then: "F2" }],
-      rigor: #[],
-    },
   }
 );
 @@example(

@@ -1,14 +1,30 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/common/cel.schema.json",
-  "title": "benchhand CEL expression, provisional",
-  "description": "Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string",
-  "x-cel": true,
+  "title": "benchhand CEL expression types, provisional",
+  "description": "Provisional: the CEL expression types (ADR-0014). Every CEL field of every contract refers to CelExpression or CelExpressions here, and that $ref is how the flow interpreter finds them all",
   "x-status": "provisional",
   "x-version": "0.1.0",
-  "type": "string",
-  "minLength": 1,
   "examples": [
     "version.fast_checks.all(c, c.status == \"pass\")"
-  ]
+  ],
+  "$defs": {
+    "CelExpression": {
+      "description": "A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on",
+      "x-cel": true,
+      "type": "string",
+      "minLength": 1,
+      "examples": [
+        "version.fast_checks.all(c, c.status == \"pass\")"
+      ]
+    },
+    "CelExpressions": {
+      "description": "One or more CEL expressions, each of which must hold",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/CelExpression"
+      }
+    }
+  }
 }

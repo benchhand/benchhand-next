@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from benchhand_contracts.base import ContractModel
 from pydantic import ConfigDict, Field, StringConstraints
-from ..flow import flow_schema
-from typing import Annotated
 from ..common import cel_schema
+from typing import Annotated
+from ..flow import rules_schema
 
 
 class PolicyGateRequirements(ContractModel):
@@ -19,34 +19,42 @@ class PolicyGateRequirements(ContractModel):
         extra="forbid",
         populate_by_name=True,
     )
-    provisional: Annotated[list[cel_schema.BenchhandCelExpressionProvisional] | None, Field(min_length=1)] = (
-        None
-    )
-    full: Annotated[list[cel_schema.BenchhandCelExpressionProvisional] | None, Field(min_length=1)] = None
-    human: Annotated[list[cel_schema.BenchhandCelExpressionProvisional] | None, Field(min_length=1)] = None
-
-
-class PolicyContributionRules(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    checks_by_iteration: Annotated[list[flow_schema.FlowCheckRule] | None, Field(min_length=1)] = None
-    dispatch: Annotated[list[flow_schema.FlowDispatchRule] | None, Field(min_length=1)] = None
-    fidelity: Annotated[list[flow_schema.FlowFidelityRule] | None, Field(min_length=1)] = None
-    rigor: Annotated[list[flow_schema.FlowRigorRule] | None, Field(min_length=1)] = None
+    provisional: Annotated[list[cel_schema.CelExpression] | None, Field(min_length=1)] = None
+    """
+    One or more CEL expressions, each of which must hold
+    """
+    full: Annotated[list[cel_schema.CelExpression] | None, Field(min_length=1)] = None
+    """
+    One or more CEL expressions, each of which must hold
+    """
+    human: Annotated[list[cel_schema.CelExpression] | None, Field(min_length=1)] = None
+    """
+    One or more CEL expressions, each of which must hold
+    """
 
 
 class BenchhandPolicyProviderContributionProvisional(ContractModel):
     """
-    Provisional: what one policy provider adds to the flow (ADR-0014): rules for flow.yaml's rule lists and CEL requirements for its gates. The merge order is fixed. For each rule list, the contributed rules come before flow.yaml's rules, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads
+    Provisional: what one policy provider adds to the flow (ADR-0014): rule lists in the shape of flow/<kind>.rules.yaml, and CEL requirements for the gates of flow.yaml. The merge order is fixed. A contributed rule list's rules come before the rules of the flow's list of the same kind, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads
     """
 
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    rules: PolicyContributionRules | None = None
+    rules: Annotated[
+        list[
+            Annotated[
+                rules_schema.ChecksByIterationRules
+                | rules_schema.DispatchRules
+                | rules_schema.FidelityRules
+                | rules_schema.RigorRules,
+                Field(discriminator="kind"),
+            ]
+        ]
+        | None,
+        Field(min_length=1),
+    ] = None
     gates: Annotated[
         dict[Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")], PolicyGateRequirements] | None,
         Field(min_length=1),

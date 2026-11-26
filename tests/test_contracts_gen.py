@@ -166,7 +166,7 @@ def test_load_contracts_refuses_a_cel_expression_that_is_a_plain_string(schemas_
 
 
 def test_load_contracts_takes_a_cel_expression_that_refers_to_the_cel_type(schemas_dir: Path) -> None:
-    prop = {"description": "A CEL guard", "$ref": "../common/cel.schema.json"}
+    prop = {"description": "A CEL guard", "$ref": "../common/cel.schema.json#/$defs/CelExpression"}
     schema = {**NEW_SCHEMA, "properties": {"guard": prop}}
     (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
     assert f"{SYNTHETIC_DIR}/widget.schema.json" in [

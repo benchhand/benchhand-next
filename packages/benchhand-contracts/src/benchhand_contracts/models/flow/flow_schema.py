@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Annotated, Dict, Literal
 from pydantic import ConfigDict, Field, StringConstraints
 from benchhand_contracts.base import ContractModel
+from ..common import cel_schema
 from ..record import common_schema, decision_schema
 from enum import Enum
 
@@ -15,7 +16,10 @@ class Requires(ContractModel):
         extra="forbid",
         populate_by_name=True,
     )
-    human: Annotated[list[Annotated[str, StringConstraints(min_length=1)]], Field(min_length=1)]
+    human: Annotated[list[cel_schema.CelExpression], Field(min_length=1)]
+    """
+    One or more CEL expressions, each of which must hold
+    """
 
 
 class FlowSingleHumanGate(ContractModel):
@@ -44,12 +48,18 @@ class Requires1(ContractModel):
         extra="forbid",
         populate_by_name=True,
     )
-    provisional: Annotated[list[Annotated[str, StringConstraints(min_length=1)]], Field(min_length=1)]
-    full: Annotated[list[Annotated[str, StringConstraints(min_length=1)]], Field(min_length=1)]
+    provisional: Annotated[list[cel_schema.CelExpression], Field(min_length=1)]
+    """
+    One or more CEL expressions, each of which must hold
+    """
+    full: Annotated[list[cel_schema.CelExpression], Field(min_length=1)]
     """
     When the full check counts as done
     """
-    human: Annotated[list[Annotated[str, StringConstraints(min_length=1)]], Field(min_length=1)]
+    human: Annotated[list[cel_schema.CelExpression], Field(min_length=1)]
+    """
+    One or more CEL expressions, each of which must hold
+    """
 
 
 class FlowStagedGate(ContractModel):
@@ -89,105 +99,11 @@ class FlowEdge(ContractModel):
     A flow gate id; flow.yaml names the gates
     """
     guard: Annotated[
-        str | None,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
+        str | None, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
     ] = None
     """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
+    A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
     """
-
-
-class FlowConditionalCheck(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    check: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$")]
-    """
-    A check id that a check-by-iteration rule selects, such as static.changed_only
-    """
-    when: Annotated[
-        str,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
-    ]
-    """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
-    """
-
-
-class FlowDispatchRule(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    when: Annotated[
-        str,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
-    ]
-    """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
-    """
-    then: Annotated[
-        list[Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$")]],
-        Field(min_length=1),
-    ]
-
-
-class Then(Enum):
-    f0 = "F0"
-    f1 = "F1"
-    f2 = "F2"
-    f3 = "F3"
-
-
-class FlowFidelityRule(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    when: Annotated[
-        str,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
-    ]
-    """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
-    """
-    then: Then
-
-
-class FlowRigorRule(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    when: Annotated[
-        str,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
-    ]
-    """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
-    """
-    then: Annotated[list[Annotated[str, StringConstraints(min_length=1)]], Field(min_length=1)]
 
 
 class Status(Enum):
@@ -314,27 +230,6 @@ class FlowStage(ContractModel):
     guides: FlowGuides
 
 
-class FlowCheckRule(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    when: Annotated[
-        str,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
-    ]
-    """
-    Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
-    """
-    then: list[
-        FlowConditionalCheck | Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$")]
-    ]
-
-
 class ApprovalScope(ContractModel):
     """
     Provisional (ADR-0019, owned by Phase 2): the items a human-gate approval covers, each with its fingerprint at approval time, computed the way the evidence service fingerprints its inputs. The decision contract refers to it once Phase 2 adds it there
@@ -347,36 +242,9 @@ class ApprovalScope(ContractModel):
     items: Annotated[list[ApprovedItem], Field(min_length=1)]
 
 
-class FlowRules(ContractModel):
-    """
-    The ordered first-match rule lists: the first rule whose when holds gives the value, and no match gives none
-    """
-
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    checks_by_iteration: list[FlowCheckRule]
-    """
-    Which checks run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order
-    """
-    dispatch: list[FlowDispatchRule]
-    """
-    Which process-check handlers judge an obligation, from its process, operation and material. No match means UNKNOWN coverage, never a pass
-    """
-    fidelity: list[FlowFidelityRule]
-    """
-    The form-check fidelity at a stage
-    """
-    rigor: list[FlowRigorRule]
-    """
-    Requirements added under a rigor policy, such as regulated; each must hold as well as the gate's own
-    """
-
-
 class BenchhandFlowDefinitionFlowYamlProvisional(ContractModel):
     """
-    Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements, the VOID cascade scope and the ordered first-match rule lists. The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check
+    Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check
     """
 
     model_config = ConfigDict(
@@ -391,25 +259,14 @@ class BenchhandFlowDefinitionFlowYamlProvisional(ContractModel):
     gates: list[Annotated[FlowSingleHumanGate | FlowStagedGate, Field(discriminator="kind")]]
     edges: list[FlowEdge]
     void_scope: Annotated[
-        str,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
+        str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
     ]
     """
     Selects the stages a VOID reopens besides the voided stage, evaluated for each stage after it
     """
     reapproval_scope: Annotated[
-        str | None,
-        Field(
-            examples=['version.fast_checks.all(c, c.status == "pass")'],
-            min_length=1,
-            title="benchhand CEL expression, provisional",
-        ),
+        str | None, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
     ] = None
     """
     Provisional (ADR-0019, owned by Phase 2): selects the approved items a change affects, next to void_scope. An affected item whose fingerprint differs from its approval is changed_since_approval
     """
-    rules: FlowRules

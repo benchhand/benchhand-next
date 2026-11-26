@@ -4,3 +4,5 @@
 import type { ValidateFunction } from "ajv";
 
 export declare const validate: ValidateFunction;
+export declare const validateCelExpression: ValidateFunction;
+export declare const validateCelExpressions: ValidateFunction;

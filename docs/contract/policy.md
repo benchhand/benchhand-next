@@ -22,12 +22,12 @@ Without `hw/policy.yaml`, every gate asks and the rigor is `standard`. Migrate r
 
 A policy provider adds CEL to the flow without code:
 
-- rules for the flow's rule lists, in the shapes of [flow.yaml](flow.md#rule-lists)
+- rule lists in the shape of the flow's [`*.rules.yaml` files](flow.md#rule-lists)
 - requirements for the `provisional`, `full` and `human` steps of a gate, by gate id.
 
 The merge order is fixed:
 
-1. For each rule list, the contributed rules come before the rules of `flow.yaml`, so a contributed rule matches first.
+1. A contributed rule list's rules come before the rules of the flow's list of the same `kind`, so a contributed rule matches first.
 2. The interpreter takes the contributions in ascending order of provider name. Each contribution keeps its own rule order.
 3. A gate's contributed requirements hold as well as the requirements of `flow.yaml`. The interpreter checks the `flow.yaml` requirements first, then each provider's in the same provider order.
 

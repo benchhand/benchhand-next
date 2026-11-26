@@ -1,0 +1,13 @@
+# The prototype at 412b5d9, written in the flow/rules.schema.json shape.
+# "the form check on the unit's PNs (F1 at L1, F2 at L2, F3 from L3)"
+rules_version: 1
+kind: fidelity
+rules:
+  - when: stage == "layout"
+    then: F1
+  - when: stage == "parts"
+    then: F2
+  - when: stage.index >= stages.detail.index
+    then: F3
+  - when: "true"
+    then: F0

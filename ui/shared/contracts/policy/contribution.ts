@@ -2,19 +2,27 @@
 // Source: contracts/policy/contribution.tsp
 
 /**
- * Provisional: a CEL expression (ADR-0014). Every CEL field of every contract refers to this one type, and the $ref is how the flow interpreter finds them all; x-cel is a readable annotation that nothing depends on. The interpreter compiles and type-checks each expression at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string
+ * Provisional: one rule-list file, flow/<kind>.rules.yaml (ADR-0014). A rule list replaces a decision table: an ordered, first-match list of {when, then} rules, where the first rule whose when holds gives the value. kind names the list and decides the shape of then. checks_by_iteration gives the checks to run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order; no match runs none. dispatch gives the process-check handlers for an obligation, from its process, operation and material; no match means UNKNOWN coverage, never a pass. fidelity gives the form-check fidelity at a stage. rigor gives requirements that hold as well as a gate's own under a rigor policy such as regulated
  */
-export type BenchhandCELExpressionProvisional = string;
+export type BenchhandRuleListFlowKindRulesYamlProvisional =
+  ChecksByIterationRules | DispatchRules | FidelityRules | RigorRules;
 /**
+ * One or more CEL expressions, each of which must hold
+ *
  * @minItems 1
+ *
+ * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
-export type CelExpressions = [BenchhandCELExpressionProvisional, ...BenchhandCELExpressionProvisional[]];
+export type CelExpressions = [string, ...string[]];
 
 /**
- * Provisional: what one policy provider adds to the flow (ADR-0014): rules for flow.yaml's rule lists and CEL requirements for its gates. The merge order is fixed. For each rule list, the contributed rules come before flow.yaml's rules, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads
+ * Provisional: what one policy provider adds to the flow (ADR-0014): rule lists in the shape of flow/<kind>.rules.yaml, and CEL requirements for the gates of flow.yaml. The merge order is fixed. A contributed rule list's rules come before the rules of the flow's list of the same kind, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads
  */
 export interface BenchhandPolicyProviderContributionProvisional {
-  rules?: PolicyContributionRules;
+  /**
+   * @minItems 1
+   */
+  rules?: [BenchhandRuleListFlowKindRulesYamlProvisional, ...BenchhandRuleListFlowKindRulesYamlProvisional[]];
   /**
    * Requirements by the gate id flow.yaml declares
    */
@@ -22,53 +30,70 @@ export interface BenchhandPolicyProviderContributionProvisional {
     [k: string]: PolicyGateRequirements;
   };
 }
-export interface PolicyContributionRules {
-  /**
-   * @minItems 1
-   */
-  checks_by_iteration?: [FlowCheckRule, ...FlowCheckRule[]];
-  /**
-   * @minItems 1
-   */
-  dispatch?: [FlowDispatchRule, ...FlowDispatchRule[]];
-  /**
-   * @minItems 1
-   */
-  fidelity?: [FlowFidelityRule, ...FlowFidelityRule[]];
-  /**
-   * @minItems 1
-   */
-  rigor?: [FlowRigorRule, ...FlowRigorRule[]];
+export interface ChecksByIterationRules {
+  rules_version: 1;
+  kind: "checks_by_iteration";
+  rules: ChecksByIterationRule[];
 }
-export interface FlowCheckRule {
-  when: BenchhandCELExpressionProvisional;
+export interface ChecksByIterationRule {
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  when: string;
   /**
    * Items: A check that always runs when its rule matches, or one that also needs its own condition, such as being stale
    */
-  then: (string | FlowConditionalCheck)[];
+  then: (string | ConditionalCheck)[];
 }
-export interface FlowConditionalCheck {
+export interface ConditionalCheck {
   /**
-   * A check id that a check-by-iteration rule selects, such as static.changed_only
+   * A check id, such as static.changed_only
    */
   check: string;
-  when: BenchhandCELExpressionProvisional;
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  when: string;
 }
-export interface FlowDispatchRule {
-  when: BenchhandCELExpressionProvisional;
+export interface DispatchRules {
+  rules_version: 1;
+  kind: "dispatch";
+  rules: DispatchRule[];
+}
+export interface DispatchRule {
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  when: string;
   /**
    * @minItems 1
    *
-   * Items: A process-check handler id that a dispatch rule selects, such as process.fdm
+   * Items: A process-check handler id, such as process.fdm
    */
   then: [string, ...string[]];
 }
-export interface FlowFidelityRule {
-  when: BenchhandCELExpressionProvisional;
+export interface FidelityRules {
+  rules_version: 1;
+  kind: "fidelity";
+  rules: FidelityRule[];
+}
+export interface FidelityRule {
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  when: string;
   then: "F0" | "F1" | "F2" | "F3";
 }
-export interface FlowRigorRule {
-  when: BenchhandCELExpressionProvisional;
+export interface RigorRules {
+  rules_version: 1;
+  kind: "rigor";
+  rules: RigorRule[];
+}
+export interface RigorRule {
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  when: string;
   then: CelExpressions;
 }
 /**

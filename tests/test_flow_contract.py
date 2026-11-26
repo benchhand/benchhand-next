@@ -1,4 +1,4 @@
-"""flow/flow.schema.json: it expresses the prototype's flow, and its gate-decision request follows ADR-0018."""
+"""flow/flow and flow/rules: they express the prototype's flow, and the gate-decision request follows ADR-0018."""
 
 from __future__ import annotations
 
@@ -12,36 +12,48 @@ import pytest
 import yaml
 from benchhand_contracts import violations
 
-FLOW_ID = "https://benchhand.github.io/benchhand/contracts/flow/flow.schema.json"
+CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
+FLOW_ID = f"{CONTRACTS}flow/flow.schema.json"
+RULES_ID = f"{CONTRACTS}flow/rules.schema.json"
 REQUEST_ID = f"{FLOW_ID}#/$defs/GateDecisionRequest"
-PROTOTYPE_FLOW = Path(__file__).parent / "fixtures/flow/prototype-412b5d9.yaml"
-CEL_REF = "../common/cel.schema.json"
+PROTOTYPE = Path(__file__).parent / "fixtures/flow/prototype-412b5d9"
+RULE_KINDS = {
+    "checks-by-iteration": "checks_by_iteration",
+    "dispatch": "dispatch",
+    "fidelity": "fidelity",
+    "rigor": "rigor",
+}
+CEL_REF = "../common/cel.schema.json#/$defs/CelExpression"
+CEL_LIST_REF = "../common/cel.schema.json#/$defs/CelExpressions"
 CEL_FIELDS = [
-    "/properties/void_scope",
-    "/properties/reapproval_scope",
-    "/$defs/CelExpressions/items",
-    "/$defs/FlowEdge/properties/guard",
-    "/$defs/FlowCheckRule/properties/when",
-    "/$defs/FlowConditionalCheck/properties/when",
-    "/$defs/FlowDispatchRule/properties/when",
-    "/$defs/FlowFidelityRule/properties/when",
-    "/$defs/FlowRigorRule/properties/when",
+    ("flow", "/properties/void_scope"),
+    ("flow", "/properties/reapproval_scope"),
+    ("flow", "/$defs/FlowEdge/properties/guard"),
+    ("rules", "/$defs/ChecksByIterationRule/properties/when"),
+    ("rules", "/$defs/ConditionalCheck/properties/when"),
+    ("rules", "/$defs/DispatchRule/properties/when"),
+    ("rules", "/$defs/FidelityRule/properties/when"),
+    ("rules", "/$defs/RigorRule/properties/when"),
 ]
 CEL_LISTS = [
-    "/$defs/FlowSingleHumanGate/properties/requires/properties/human",
-    "/$defs/FlowStagedGate/properties/requires/properties/provisional",
-    "/$defs/FlowStagedGate/properties/requires/properties/full",
-    "/$defs/FlowStagedGate/properties/requires/properties/human",
-    "/$defs/FlowRigorRule/properties/then",
+    ("flow", "/$defs/FlowSingleHumanGate/properties/requires/properties/human"),
+    ("flow", "/$defs/FlowStagedGate/properties/requires/properties/provisional"),
+    ("flow", "/$defs/FlowStagedGate/properties/requires/properties/full"),
+    ("flow", "/$defs/FlowStagedGate/properties/requires/properties/human"),
+    ("rules", "/$defs/RigorRule/properties/then"),
 ]
 
 
 def _prototype_flow() -> dict[str, Any]:
-    return yaml.safe_load(PROTOTYPE_FLOW.read_text())
+    return yaml.safe_load((PROTOTYPE / "flow.yaml").read_text())
 
 
-def _schema() -> dict[str, Any]:
-    return json.loads((files("benchhand_contracts") / "schemas/flow/flow.schema.json").read_text())
+def _prototype_rules(name: str) -> dict[str, Any]:
+    return yaml.safe_load((PROTOTYPE / f"{name}.rules.yaml").read_text())
+
+
+def _schema(name: str = "flow") -> dict[str, Any]:
+    return json.loads((files("benchhand_contracts") / f"schemas/flow/{name}.schema.json").read_text())
 
 
 def _at(schema: dict[str, Any], pointer: str) -> Any:
@@ -54,18 +66,37 @@ def _request() -> dict[str, Any]:
     return copy.deepcopy(_schema()["$defs"]["GateDecisionRequest"]["examples"][0])
 
 
-@pytest.mark.parametrize("pointer", CEL_FIELDS)
-def test_every_cel_field_refers_to_the_one_cel_type(pointer: str) -> None:
-    assert _at(_schema(), pointer)["$ref"] == CEL_REF
+@pytest.mark.parametrize(("contract", "pointer"), CEL_FIELDS)
+def test_every_cel_field_refers_to_the_one_cel_type(contract: str, pointer: str) -> None:
+    assert _at(_schema(contract), pointer)["$ref"] == CEL_REF
 
 
-@pytest.mark.parametrize("pointer", CEL_LISTS)
-def test_every_cel_list_is_a_list_of_the_one_cel_type(pointer: str) -> None:
-    assert _at(_schema(), pointer)["$ref"] == "#/$defs/CelExpressions"
+@pytest.mark.parametrize(("contract", "pointer"), CEL_LISTS)
+def test_every_cel_list_is_a_list_of_the_one_cel_type(contract: str, pointer: str) -> None:
+    assert _at(_schema(contract), pointer)["$ref"] == CEL_LIST_REF
 
 
 def test_the_prototype_flow_validates() -> None:
     assert violations(FLOW_ID, _prototype_flow()) == []
+
+
+@pytest.mark.parametrize(("name", "kind"), RULE_KINDS.items())
+def test_each_prototype_rule_list_validates_as_its_kind(name: str, kind: str) -> None:
+    rules = _prototype_rules(name)
+    assert rules["kind"] == kind
+    assert violations(RULES_ID, rules) == []
+
+
+def test_a_rule_whose_then_belongs_to_another_kind_is_refused() -> None:
+    fidelity = _prototype_rules("fidelity")
+    fidelity["rules"][0]["then"] = ["process.fdm"]
+    assert violations(RULES_ID, fidelity)
+
+
+def test_a_dispatch_rule_names_at_least_one_handler() -> None:
+    dispatch = _prototype_rules("dispatch")
+    dispatch["rules"][0]["then"] = []
+    assert violations(RULES_ID, dispatch)
 
 
 def test_the_prototype_flow_has_every_stage_and_its_gates() -> None:

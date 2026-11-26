@@ -12,9 +12,8 @@ direction: right
     "stages": "FlowStage[1..*]" { constraint: "req" }
     "gates": "FlowGate[]" { constraint: "req" }
     "edges": "FlowEdge[]" { constraint: "req" }
-    "void_scope": "cel" { constraint: "req" }
-    "reapproval_scope": "cel"
-    "rules": "FlowRules" { constraint: "req" }
+    "void_scope": "CelExpression" { constraint: "req" }
+    "reapproval_scope": "CelExpression"
   }
   "flow_flow__FlowStage": {
     class: owned
@@ -75,13 +74,8 @@ direction: right
     "from": "stage" { constraint: "req" }
     "to": "stage" { constraint: "req" }
     "gate": "gate_id"
-    "guard": "cel"
+    "guard": "CelExpression"
   }
-}
-"stub__flow_flow__FlowRules": {
-  class: stub
-  label: "FlowRules"
-  link: "./02-flowrules.svg"
 }
 
 "aggregate__flow_flow"."flow_flow__FlowSingleHumanGate" -> "aggregate__flow_flow"."flow_flow__FlowGate": { class: inheritance }
@@ -92,4 +86,3 @@ direction: right
 "aggregate__flow_flow"."flow_flow__FlowStagedGate"."requires" -> "aggregate__flow_flow"."flow_flow__FlowStagedGate__requires": "requires [1]" { class: composition }
 "aggregate__flow_flow"."flow_flow"."gates" -> "aggregate__flow_flow"."flow_flow__FlowGate": "gates [0..*]" { class: composition }
 "aggregate__flow_flow"."flow_flow"."edges" -> "aggregate__flow_flow"."flow_flow__FlowEdge": "edges [0..*]" { class: composition }
-"aggregate__flow_flow"."flow_flow"."rules" -> "stub__flow_flow__FlowRules": "rules [1]" { class: composition }

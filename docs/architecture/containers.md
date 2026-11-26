@@ -135,9 +135,8 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  tsp["contracts/*.tsp<br/>TypeSpec, the only source of shapes<br/>record: 18 documents and 2 libraries; jobs, provider protocol and manifest, common finding"]:::impl
-  missing["Result envelope and flow contracts<br/>listed for Phase 1, not on main; Phase 2 uses them"]:::planned
-  later["MCP tool inputs and outputs, benchhand.toml, rule lists,<br/>CEL profile manifest and rules bundle,<br/>preview-host HTTP API, App postMessage<br/>with their users, Phases 2 to 5"]:::planned
+  tsp["contracts/*.tsp<br/>TypeSpec, the only source of shapes<br/>record: 18 documents and 2 libraries; jobs, provider protocol and manifest, common finding<br/>provisional: result envelope, flow.yaml, rule lists, policy contribution, common CEL"]:::impl
+  later["MCP tool inputs and outputs, benchhand.toml,<br/>CEL profile manifest and rules bundle,<br/>preview-host HTTP API, App postMessage<br/>with their users, Phases 2 to 5"]:::planned
   bundle["tsp compile --warn-as-error<br/>one JSON Schema bundle, unpublished"]:::impl
   normalise["tools/gen contracts_gen normalise<br/>one published schema per contract"]:::impl
   published["Published JSON Schema 2020-12<br/>benchhand_contracts/schemas"]:::impl
@@ -153,7 +152,6 @@ flowchart LR
   ci["just contracts-check<br/>format, metaschema and lint, drift, breaking change"]:::impl
 
   tsp --> bundle --> normalise --> published
-  missing -.-> tsp
   later -.-> tsp
   published --> pydantic
   published --> validator
