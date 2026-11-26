@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/record/policy.schema.json",
   "title": "benchhand gate policy (hw/policy.yaml)",
-  "description": "How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. An absent file means every gate asks",
-  "x-version": "1.0.0",
+  "description": "How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. rigor is the rigor policy: regulated adds the requirements of flow.yaml's rigor rules. An absent file means every gate asks and the rigor is standard",
+  "x-version": "1.1.0",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -31,6 +31,14 @@
       "additionalProperties": {
         "$ref": "#/$defs/gate"
       }
+    },
+    "rigor": {
+      "description": "The rigor policy. An absent rigor is standard",
+      "enum": [
+        "standard",
+        "regulated"
+      ],
+      "default": "standard"
     }
   },
   "if": {
@@ -72,6 +80,10 @@
       "policy_version": 1,
       "default": "auto",
       "decision": "DR-001"
+    },
+    {
+      "policy_version": 1,
+      "rigor": "regulated"
     }
   ],
   "$defs": {

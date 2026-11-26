@@ -269,7 +269,7 @@ def test_a_ref_into_another_contracts_definition_names_the_helper_it_points_at()
         },
     )
     model = build_model([holder, request])
-    assert model.classes["flow_request"].members == ["channel: channel = app|chat"]
+    assert _fields(model.classes["flow_request"]) == ["channel: channel = app|chat"]
 
 
 def test_a_tuple_of_classes_holds_one_per_position() -> None:

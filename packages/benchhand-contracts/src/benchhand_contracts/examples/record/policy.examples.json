@@ -24,6 +24,10 @@
           "policy_version": 1,
           "default": "auto",
           "decision": "DR-001"
+        },
+        {
+          "policy_version": 1,
+          "rigor": "regulated"
         }
       ],
       "invalid": [
@@ -132,6 +136,33 @@
             "policy_version": "not-a-number",
             "default": "auto",
             "decision": "DR-001"
+          }
+        },
+        {
+          "example": 3,
+          "mutation": "remove-property",
+          "pointer": "/policy_version",
+          "instance": {
+            "rigor": "regulated"
+          }
+        },
+        {
+          "example": 3,
+          "mutation": "add-unknown-property",
+          "pointer": "/x-conformance-unknown",
+          "instance": {
+            "policy_version": 1,
+            "rigor": "regulated",
+            "x-conformance-unknown": true
+          }
+        },
+        {
+          "example": 3,
+          "mutation": "wrong-type",
+          "pointer": "/policy_version",
+          "instance": {
+            "policy_version": "not-a-number",
+            "rigor": "regulated"
           }
         }
       ]

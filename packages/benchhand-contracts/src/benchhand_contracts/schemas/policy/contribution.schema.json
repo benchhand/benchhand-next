@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand/contracts/policy/contribution.schema.json",
+  "title": "benchhand policy provider contribution, provisional",
+  "description": "Provisional: what one policy provider adds to the flow (ADR-0014): rules for flow.yaml's rule lists and CEL requirements for its gates. The merge order is fixed. For each rule list, the contributed rules come before flow.yaml's rules, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads",
+  "x-status": "provisional",
+  "x-version": "0.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "rules": {
+      "$ref": "#/$defs/PolicyContributionRules"
+    },
+    "gates": {
+      "description": "Requirements by the gate id flow.yaml declares",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "../record/common.schema.json#/$defs/gate_id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/PolicyGateRequirements"
+      },
+      "minProperties": 1
+    }
+  },
+  "examples": [
+    {
+      "rules": {
+        "rigor": [
+          {
+            "when": "policy.rigor == \"regulated\"",
+            "then": [
+              "record.requirements.all(r, r.standard.present)"
+            ]
+          }
+        ]
+      },
+      "gates": {
+        "design_freeze": {
+          "human": [
+            "record.verification.all(v, v.reviewed_by.present)"
+          ]
+        }
+      }
+    },
+    {
+      "rules": {
+        "dispatch": [
+          {
+            "when": "obligation.family.startsWith(\"process.welding.\")",
+            "then": [
+              "process.welding"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "PolicyContributionRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "checks_by_iteration": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "../flow/flow.schema.json#/$defs/FlowCheckRule"
+          }
+        },
+        "dispatch": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "../flow/flow.schema.json#/$defs/FlowDispatchRule"
+          }
+        },
+        "fidelity": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "../flow/flow.schema.json#/$defs/FlowFidelityRule"
+          }
+        },
+        "rigor": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "../flow/flow.schema.json#/$defs/FlowRigorRule"
+          }
+        }
+      }
+    },
+    "PolicyGateRequirements": {
+      "description": "Extra requirements for the steps of one gate",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "provisional": {
+          "$ref": "../flow/flow.schema.json#/$defs/CelExpressions"
+        },
+        "full": {
+          "$ref": "../flow/flow.schema.json#/$defs/CelExpressions"
+        },
+        "human": {
+          "$ref": "../flow/flow.schema.json#/$defs/CelExpressions"
+        }
+      }
+    }
+  }
+}

@@ -88,6 +88,8 @@ The check doesn't follow `$ref`s into other definitions outside strict keywords,
 
 Before the first release nothing is published, so a narrowing keeps its version. `jobs/job.schema.json` 1.0.0 narrowed `Timestamp` this way when the contracts moved to TypeSpec: a `pattern` now refuses a lowercase `t` or `z` and a space for the `T` (ADR-0017), where `format: date-time` alone was an annotation that accepted any string. `just contracts-equivalence` shows that this is the only change in what the contracts accept. With the pattern taken out, the published schemas give the hand-written verdict on each of the 186,516 instances, 522 replayed and 185,994 mutants: the same list of violations in Python, and the same validity and first error in Ajv. The results are in `tools/equiv/results/`. The recipe is migration evidence against the hand-written contracts at `41598c2`, so it runs on demand and is not a CI gate: a later contract change rightly differs from them.
 
+`record/policy.schema.json` 1.1.0 added the optional `rigor`, `standard` or `regulated`, where an absent value means `standard`. The change is additive, so it raised the minor version.
+
 `record/common.schema.json` 1.1.0 widened the `obligation_id` pattern: a part anchor can now carry an `@occurrence` after its PN and a `:region` after its `#feature`, so two checks of one part at different occurrences or regions get different ids. Every id the pattern accepted before, it still accepts. The breaking-change check reports any changed `pattern` as `pattern-changed`. With no release tag reachable it skips, so the widening is argued here and raises the minor version.
 
 - A breaking change needs a higher major `x-version` than the schema had at the release tag, for example `1.4.0` to `2.0.0`. The check passes a schema whose major version went up, whatever else changed.
@@ -102,6 +104,8 @@ Before the first release nothing is published, so a narrowing keeps its version.
 `flow/flow.schema.json` (version `0.1.0`) is provisional. It is the shape of `flow.yaml` ([flow definition](flow.md)), and Phase 2 writes the file and its interpreter. Its `ApprovalScope`, `ApprovedItemState` and `reapproval_scope` carry `x-status: provisional` as well, because Phase 2's scoped approvals (ADR-0019) own them. `GateDecisionRequest.channel` refers to the decision record's channel, written in place in `record/decision.schema.json`, so the decision schema didn't change.
 
 `common/cel.schema.json` (version `0.1.0`) is provisional. It is the one CEL expression type (ADR-0014). Every CEL field refers to it by `$ref`, which is how the flow interpreter finds the expressions, and the generator refuses a string or a list of strings whose description says CEL. The type has no `format`: `jsonschema lint` refuses a format outside the specification, prefixed or not.
+
+`policy/contribution.schema.json` (version `0.1.0`) is provisional. It is what a policy provider adds to the flow ([policy](policy.md#provider-contributions)). Phase 2 builds the merge in the flow interpreter, and the provider protocol's `policy/evaluate` result doesn't refer to it yet.
 
 ## The acceptance digest
 

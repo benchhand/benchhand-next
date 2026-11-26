@@ -36,6 +36,7 @@ import "./common/finding.tsp";
 import "./envelope/envelope.tsp";
 import "./flow/flow.tsp";
 import "./jobs/job.tsp";
+import "./policy/contribution.tsp";
 import "./provider/manifest.tsp";
 import "./provider/protocol.tsp";
 import "./record/assembly.tsp";

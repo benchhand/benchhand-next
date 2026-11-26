@@ -9,6 +9,15 @@ from pydantic import ConfigDict, Field, StringConstraints
 from typing import Annotated, Literal
 
 
+class Rigor(Enum):
+    """
+    The rigor policy. An absent rigor is standard
+    """
+
+    standard = "standard"
+    regulated = "regulated"
+
+
 class Mode(Enum):
     ask = "ask"
     chat = "chat"
@@ -29,7 +38,7 @@ class Gate(ContractModel):
 
 class BenchhandGatePolicyHwPolicyYaml(ContractModel):
     """
-    How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. An absent file means every gate asks
+    How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. rigor is the rigor policy: regulated adds the requirements of flow.yaml's rigor rules. An absent file means every gate asks and the rigor is standard
     """
 
     model_config = ConfigDict(
@@ -48,4 +57,8 @@ class BenchhandGatePolicyHwPolicyYaml(ContractModel):
     gates: dict[Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")], Gate] | None = None
     """
     Per-gate modes, keyed by the gate id flow.yaml declares
+    """
+    rigor: Rigor = Rigor.standard
+    """
+    The rigor policy. An absent rigor is standard
     """

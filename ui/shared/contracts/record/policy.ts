@@ -4,7 +4,7 @@
 export type Mode = "ask" | "chat" | "auto";
 
 /**
- * How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. An absent file means every gate asks
+ * How each flow gate asks for approval (ADR-0003): ask (the default) asks the user through the richest interaction the client offers, chat asks in the conversation, auto approves without a human (for development and tests). Gates guide the process; they are not a security control. Every relaxation from ask cites the decision that records it. rigor is the rigor policy: regulated adds the requirements of flow.yaml's rigor rules. An absent file means every gate asks and the rigor is standard
  */
 export interface BenchhandGatePolicyHwPolicyYaml {
   policy_version: 1;
@@ -22,6 +22,10 @@ export interface BenchhandGatePolicyHwPolicyYaml {
   gates?: {
     [k: string]: Gate;
   };
+  /**
+   * The rigor policy. An absent rigor is standard
+   */
+  rigor?: "standard" | "regulated";
 }
 export interface Gate {
   mode: Mode;
