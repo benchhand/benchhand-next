@@ -1,0 +1,16 @@
+[package]
+name = "cel_neutral_rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.105"
+cel = { version = "=0.16.1", features = ["json"] }
+cel-core = "=0.5.1"
+cel-core-proto = "=0.5.1"
+prost = "0.14"
+prost-reflect = { version = "0.16", features = ["serde"] }
+prost-types = "0.14"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+serde_yaml = "0.9"
