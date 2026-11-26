@@ -58,8 +58,21 @@ def main() -> int:
             continue
         failures += 1
         print(f"BAD reject {case['expr']!r} type-checked; expected: {case['why']}")
+    failures += eval_shipped(env, data, demo["accept"])
     print(f"cel-expr-python: {failures} failures")
     return 1 if failures else 0
+
+
+def eval_shipped(env: cel.Env, data: dict, accept: list[dict]) -> int:
+    """Evaluate the Any-wrapped CheckedExprs the other engines wrote, without parsing or checking them here."""
+    failures = 0
+    for engine_dir in sorted(p for p in (GENERATED / "checked").iterdir() if p.name != "python"):
+        for i, case in enumerate(accept):
+            got = env.deserialize((engine_dir / f"accept-{i}.binpb").read_bytes()).eval(data=data).value()
+            ok = got == case["expect"]
+            failures += not ok
+            print(f"{'ok ' if ok else 'BAD'} shipped from {engine_dir.name} accept-{i} -> {got!r}")
+    return failures
 
 
 if __name__ == "__main__":
