@@ -20,7 +20,7 @@ Rust can have the same standing as Python as an evaluator, with one engine choic
 - **cel-cxx 0.2.5** wraps cel-cpp, the checker that cel-expr-python uses. It caught all seven bad rules. Its build runs Bazel inside `cargo build`, and its Rust API has no CheckedExpr input or output.
 - **`cel` 0.16.1**, the most used Rust crate, has no checker and no protobuf support. A rule with a wrong field passes until a record lacks that field.
 
-A pyo3 binding of our own over cel-core took 87 lines of Rust and builds a 2 MB abi3 wheel. It ran the typed demo and the shipped CheckedExprs from Python. So a Rust host component is cheap to reach from the Python host.
+A pyo3 binding of our own over cel-core took 87 lines of Rust and built an abi3 wheel (its size is an unretained measurement). It ran the typed demo and the shipped CheckedExprs from Python. So a Rust host component is cheap to reach from the Python host.
 
 Recommendation, which is for the owner to decide:
 
@@ -36,7 +36,7 @@ For Rust, the owner's ask then comes down to a required Rust conformance job, a 
 
 ## Engines per language
 
-Each engine ran two tests. The typed demo (`typedemo/gate_guard.yaml`) checks six good rules and seven bad ones against the generated gate-guard scope. The shared suite (`conformance/`) is 1640 cel-spec tests, described in the conformance section. Registry and GitHub figures are from 2026-11-26.
+Each engine ran two tests. The typed demo (`typedemo/gate_guard.yaml`) checks six good rules and seven bad ones against the generated gate-guard scope. The shared suite (`conformance/`) is 1640 cel-spec tests, described in the conformance section. Registry and GitHub figures (stars, pushes, issues, downloads) are a snapshot read on 2026-11-26 and not retained in this directory; treat them as unretained.
 
 ### Rust
 
@@ -51,7 +51,7 @@ Each engine ran two tests. The typed demo (`typedemo/gate_guard.yaml`) checks si
 | Typed demo: bad rules rejected at check | 6 of 7 (accepts `decision.status == 1`) | 7 of 7 | 0 of 7 | Not run | Not run |
 | Shared suite | 1639 of 1640 | 1512 of 1640 (87 failures are `disableCheck` tests it can't run unchecked) | 1546 of 1640 | Not run | Not run |
 | Own conformance claim | 100% of cel-spec over parse, check and eval | None stated | Full conformance as a goal; 688 upstream tests listed as ignored | Validated against cel-spec, with a skip list | "Flexible enough to bend the spec" |
-| Build | `cargo build`, about 6 s incremental | `cargo build` runs Bazel 8.3.1 (it downloads it) to compile cel-cpp. The time wasn't measured: the previous run's cel-cpp build-script directories span 18:06 to 18:46, retries included. It needs a C++ toolchain and leaves a 785 MB `target/` | `cargo build` | `cargo build` | `cargo build` |
+| Build | `cargo build` (time unmeasured) | `cargo build` runs Bazel 8.3.1 (it downloads it) to compile cel-cpp. It needs a C++ toolchain and leaves a large `target/`. Time and size are unmeasured: no build log was retained | `cargo build` | `cargo build` | `cargo build` |
 | Maintenance | 5 stars, last push 2026-02-16, 15 open issues, 17k downloads, one maintainer | 36 stars, last push 2026-10-12, 0 open issues, 5k downloads | 719 stars, last push 2026-11-24, 28 open issues, 6.9M downloads, a governance file | 4 stars, last push 2026-11-25; its README says a code assistant wrote it | Release 1.0.9 on 2026-11-15, 50k downloads |
 | Licence | MIT OR Apache-2.0 | Apache-2.0 | MIT | Apache-2.0 | MIT |
 
@@ -65,10 +65,9 @@ Each engine ran two tests. The typed demo (`typedemo/gate_guard.yaml`) checks si
 
 Measured:
 
-- 87 lines of Rust plus a 7-line type stub.
-- A 50 s release build, which compiled pyo3, cel-core and their dependencies (the shared `target/` held only debug builds). maturin builds a 2.0 MB `cp312-abi3` wheel for macOS arm64.
-- The typed demo gives the same result as cel-core: 6 of 6 good rules, 6 of 7 bad rules rejected.
-- It evaluated the CheckedExprs that cel-go and cel-expr-python wrote, 12 of 12.
+- 87 lines of Rust plus a 6-line type stub (`rust-py/src/lib.rs`, `py/cel_core_py.pyi`).
+- A `cp312-abi3` wheel for macOS arm64 from `maturin build --release`. Its build time and size are unretained: the wheel isn't in this worktree (`rust-py/target/wheels` is absent).
+- In the previous run, before the profile manifest, its typed demo matched cel-core's (6 of 6 good rules, 6 of 7 bad rules rejected) and it evaluated the 12 CheckedExprs cel-go and cel-expr-python wrote. That run left no committed result. `py/rust_binding_demo.py` now builds from the manifest and reads the cel-go and cel-expr-python bundles through the bundle check, but it writes no results file and hasn't been rerun, so these counts are unmeasured at HEAD.
 
 The binding doesn't yet return maps, timestamps or messages to Python, and it has no wheel matrix. Finishing it is about one to three days (estimate). On top of that come a CI matrix and a release for each cel-core update. The matrix covers macOS, Linux (manylinux, x86-64 and arm64) and Windows wheels.
 
@@ -79,12 +78,12 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 | Checker | In `dist/` but not exported. Two unmerged pull requests would export it: #237 (2026-01) and #344 (2026-10). The internal checker throws "Unsupported expression kind" on any call or macro, so 0 of the 13 demo rules could be checked. | Public `env.check()` | Archived 2026-04 |
 | Type declaration | protobuf-es registry from the FileDescriptorSet; `objectType(desc)` per variable | `registerType(name, {fields})` and `registerVariable`; the demo maps the descriptor set to it (`ts/typed_demo.ts`) | Not assessed |
 | CheckedExpr | Evaluates one (`plan(env, checkedExpr)`); writes one only through the internal checker | No proto AST | Not assessed |
-| Typed demo: bad rules rejected at check | 0 of 7 (all 7 fail at evaluation) | 5 of 7: a nullable scalar (a proto wrapper) has no cel-js type and becomes `dyn`, so `job.progress.fraction + "x"` passes | Not run |
-| Shipped CheckedExprs evaluated | 18 of 18 (cel-go, cel-expr-python, cel-core) | Not possible | Not run |
+| Typed demo: bad rules rejected at check | 0 of 7. Evaluated unchecked, 6 fail at evaluation and `decision.status == 1` returns `false` | 5 of 7: a nullable scalar (a proto wrapper) has no cel-js type and becomes `dyn`, so `job.progress.fraction + "x"` passes | Not run |
+| Shipped CheckedExprs evaluated | 24 of 24 from four writers: the cel-go typed demo, `go/celcheck`, cel-expr-python and cel-core (`results/typed-demo/bufbuild-cel.json`) | Not possible | Not run |
 | Shared suite | 1324 of 1640 (only the strings extension ships) | 1037 of 1640 | Not run |
 | Defaults that differ from cel-spec | None found | Homogeneous list and map literals on, optional types off. The runner sets them back. | Not assessed |
-| Browser bundle (esbuild, minified / gzip) | 278 KB / 68 KB; 285 KB / 70 KB with a protobuf registry and the strings extension | 82 KB / 24 KB, no dependencies | Not assessed |
-| Node-only APIs | None (it bundled for `--platform=browser`) | None | Not assessed |
+| Browser bundle (esbuild, minified / gzip) | Unmeasured. The previous run's figures had no committed entry point or recipe, and esbuild isn't installed here | Unmeasured | Not assessed |
+| Node-only APIs | Unmeasured, for the same reason | Unmeasured | Not assessed |
 | Maintenance | Beta. 43 stars, last push 2026-11-13, 24 open issues | 217 stars, last push 2026-11-05, 22 open issues | Archived |
 | Licence | Apache-2.0 | MIT | MIT |
 
@@ -95,7 +94,7 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 | Checker | Yes | Yes (cel-cpp) |
 | Env YAML | Reads it (`cel.FromConfig`) | Reads it (`cel.NewEnvConfigFromYaml`), message-typed variables included |
 | CheckedExpr | Reads and writes | Reads and writes (`serialize`, `deserialize`) |
-| Typed demo | 7 of 7 rejected; evaluated 12 of 12 shipped from Python and cel-core | 7 of 7 rejected; evaluated 12 of 12 shipped from cel-go and cel-core |
+| Typed demo | 7 of 7 rejected; evaluated 18 of 18 shipped from `go/celcheck`, cel-expr-python and cel-core (`results/typed-demo/cel-go.json`) | 7 of 7 rejected; evaluated 18 of 18 shipped from the cel-go typed demo, `go/celcheck` and cel-core (`results/typed-demo/cel-expr-python.json`) |
 | Shared suite | 1611 of 1640 | 1610 of 1640 |
 
 ## Language-neutral artefacts
@@ -104,7 +103,7 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 |---|---|---|---|---|---|
 | **FileDescriptorSet** (`generated/types.binpb`, 4.8 KB) | `buf build --exclude-source-info` from the generated `.proto` | cel-go (`cel.TypeDescs`), cel-expr-python (`descriptor_pool`), cel-core (`ProstProtoRegistry`), cel-cxx (`with_file_descriptor_set`), @bufbuild/cel (`createFileRegistry`) | cel-js: the demo maps each message to `registerType` (about 30 lines) | cel 0.16 | Yes, every engine in the typed demo |
 | **Env YAML** (cel-go `env.Config`; `generated/env/gate_guard.env.yaml`, `conformance/env.yaml`) | `gen/celgen.py`; cel-go can also write one from an `Env` | cel-go (`cel.FromConfig`), cel-expr-python (`cel.NewEnvConfigFromYaml`) | cel-core (40 lines), cel-cxx (15 lines), @bufbuild/cel (5 lines, variables only), cel-js (with the descriptor mapping) | cel 0.16 (no typed variables; the runner maps extension names) | Yes. cel-expr-python reads message-typed variables from it, which the Kubernetes report left unverified (its row 26) |
-| **CheckedExpr** (`cel.expr.CheckedExpr` in a `google.protobuf.Any`; `generated/checked/<engine>/`) | cel-go, cel-expr-python, cel-core, the pyo3 binding | cel-go, cel-expr-python, cel-core, @bufbuild/cel, the pyo3 binding | none needed | cel-cxx's Rust API, cel-js, cel 0.16 | Yes: six rules, every writer to every reader, all `true` |
+| **CheckedExpr** (`cel.expr.CheckedExpr` in a `google.protobuf.Any`; `generated/checked/<engine>/`) | cel-go, cel-expr-python, cel-core, the pyo3 binding | cel-go, cel-expr-python, cel-core, @bufbuild/cel, the pyo3 binding | none needed | cel-cxx's Rust API, cel-js, cel 0.16 | Yes: six rules, every bundle-writing engine to every reader, all `true` (`results/typed-demo/`) |
 | **cel-spec SimpleTestFile** (`cel.expr.conformance.test`; `conformance/suite.json`) | cel-spec in textproto; @bufbuild/cel-spec ships it as protobuf JSON | The conformance runners in the cel-go, cel-cpp, cel-core, cel-rust and ferricel repositories (not run here) | Seven runners here, one per engine, 100 to 150 lines each, plus `conformance/compare.py` | | Yes, the JSON form, on every engine |
 | **cel-spec `cel.expr.conformance.Environment`** (`env_config.proto`) | Not written here | Untested | Untested | Untested | No. It holds the env YAML's fields plus a `message_type_extension` FileDescriptorSet, so one file could carry both artefacts. |
 | **cel-spec TestSuite** (`suite.proto`, the cel-go `celtest` format) | Not written here | cel-go `tools/celtest` (not run) | Untested | Untested | No |
@@ -112,7 +111,7 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 Findings from the artefact tests:
 
 - **A CheckedExpr is portable across engines.** cel-core read the ones cel-go and cel-expr-python wrote, and the other way round. @bufbuild/cel read all three. No engine needed the source text or a second check.
-- **The bytes aren't stable, the message is.** Re-running cel-go's writer gave different bytes of the same length for all six rules. Decoded, the old and new CheckedExprs are `proto.Equal`, and re-encoding both with Go's `Deterministic` marshal option gives identical bytes (`go/cmpchecked`). Map entries in the reference and type maps change order. So a digest of a CheckedExpr has to come from a deterministic re-encoding, not from the bytes a writer emitted.
+- **The bytes aren't stable, the message is.** In the previous run, re-running cel-go's writer gave different bytes of the same length for all six rules; the two runs' raw bytes weren't retained, so that count is unretained. Decoded, the old and new CheckedExprs are `proto.Equal`, and re-encoding both with Go's `Deterministic` marshal option gives identical bytes (`go/cmpchecked`). Map entries in the reference and type maps change order. So a digest of a CheckedExpr has to come from a deterministic re-encoding, not from the bytes a writer emitted.
 - **A CheckedExpr carries no environment identity.** It names message types and overload ids but not the descriptor set, the extension versions or the checker options. The rules bundle has to carry the profile digest ("The environment profile"), and the evaluator has to compare it with the digest of the profile it built.
 - **The env YAML is not an identity.** Two engines read it as is. The other four need an adapter, and each adapter maps extension names by hand, which is where versions can drift. It also says nothing about checker options. The extension list is also the main source of conformance gaps (see the next sections).
 - **JSON is the neutral encoding of the test files.** textproto needs descriptors at parse time in every language except Go and C++; the protobuf JSON form loads with a plain JSON parser.
@@ -317,7 +316,7 @@ What this means for the design:
 The upstream scores above are diagnostic. A score says how much of cel-spec an engine covers, and most of what it misses is outside any benchhand profile. The required CI gate is different:
 
 - **Every selected engine runs the supported-profile suite**: the accept, reject, profile and presence cases of each profile, the tampered-bundle cases, and the shipped CheckedExprs from every other writer. Values must match the expected ones, and each reject or profile case must fail where expected. An engine runs each case in its role: an evaluator runs the bundle cases, and only a checker of record runs the reject cases as a gate.
-- **A missing engine fails.** `conformance/run.sh` no longer skips cel-cxx when its runner isn't built: it exits 1, and it deletes old results first, so a stale file can't stand in for an engine that didn't run. `conformance/compare.py` exits 1 for any engine in its list with no results.
+- **A missing engine fails.** `conformance/run.sh` exits 1 when the cel-cxx runner isn't built, and it deletes old results first, so a stale file can't stand in for an engine that didn't run. `conformance/compare.py` exits 1 for any engine in its list with no results.
 - **An unexpected change fails.** `compare.py` compares each engine's failing tests with `conformance/expected/suite-failures.json`. A new failure and a new pass both fail the run, so an engine upgrade that changes behaviour is reviewed and the baseline is updated on purpose (`--update-baseline`). Removing `results/cel-js.jsonl` made it exit 1 with `FAIL cel-js: no results`.
 - **The browser is supported for the restricted profile only.** @bufbuild/cel 0.6.2 ignores a CheckedExpr's type and reference maps when it plans one: it re-resolves names itself. So it relies on the reference checker having checked the rule in the same profile, and the gate runs it only on bundles whose profile has no optional or bindings extension.
 
@@ -339,6 +338,8 @@ The typed demos are not yet wired into `run.sh`. Each one exits non-zero on a mi
 | Typed demo: bad rules rejected | 7 of 7, exit 1, including `decision.status == 1` | 7 of 7, exit 1 |
 
 A pinned install for CI should verify both the signature and the provenance, once a release carries `-format` and policy support.
+
+The CLI rows are a previous run's observations, and neither binary is in this worktree. `cli/compile_demo.sh` reruns the 6 and 7 expression cases with a binary. The checksum comparison and the coverage output were not retained, so those rows are unretained.
 
 ### What it reads and writes
 
@@ -376,7 +377,7 @@ Use the `cel-expr` CLI beside `celcheck` for `rules test` and for authors.
 
 ## cel-policy
 
-cel-policy (github.com/cel-expr/cel-policy, Apache-2.0, created 2026-05-07, 9 stars, last push 2026-08-18) defines a YAML policy format and holds its conformance suite. The suite has 28 policy cases, plus 16 compile-error cases that a conforming compiler must reject.
+cel-policy (github.com/cel-expr/cel-policy, Apache-2.0, created 2026-05-07, 9 stars, last push 2026-08-18; a snapshot, unretained) defines a YAML policy format and holds its conformance suite. The suite had 28 policy cases, plus 16 compile-error cases that a conforming compiler must reject, when read (unretained; not run here).
 
 A policy has:
 
@@ -412,7 +413,7 @@ A `*.rules.yaml` in the plan is an ordered, first-match list of `{when, then}`. 
 | Compile the policy against the generated descriptor set | `cel-expr compile -format policy` (main, unsigned) | Exit 0. Output type `list(string)` |
 | Compile a policy with a wrong field and a `string` output among `list(string)` outputs | the same | Exit 1, both errors, each at its file, line and column in the `.celpolicy`, with a caret. That run used a scratch file; the committed equivalents are `policy/bad/field.celpolicy` and `policy/bad/output_type.celpolicy`, rerun with `celcheck` (`results/policy-bad.txt`) |
 | Compile the six files in `policy/bad/` | `policy/bad/run.sh` (`go/celcheck`) | 5 refused as expected, 1 accepted as expected (`not_caught_false_expression`) |
-| Evaluate four cases on real proto types | `cel-expr eval -format policy -tests policy/tests.json` | 4 of 4 pass; node coverage 80%, branch coverage 80% |
+| Evaluate four cases on real proto types | `cel-expr eval -format policy -tests policy/tests.json` | 4 of 4 pass; node coverage 80%, branch coverage 80% (CLI output unretained; the same four cases pass on three evaluators in `results/typed-demo/policy-*.json`) |
 | Compile to one CheckedExpr | `go/celcheck policy` (over `cel.dev/cel-go/policy` v0.33.3) | `policy.Compile` returns one checked AST. With `variables` it is `cel.@block([iteration == "commit"], … @index0 …)`. Without them it is nested `?:` |
 | Evaluate that CheckedExpr, with `variables` | cel-expr-python, cel-core, @bufbuild/cel | cel-expr-python 4 of 4. cel-core and @bufbuild/cel fail: neither has a runtime `cel.@block` |
 | Evaluate that CheckedExpr, without `variables` | the same three | 4 of 4 on each |
@@ -562,13 +563,32 @@ These three make Rust providers first-rate as evaluators, on the condition above
 | 3. `dyn` escape hatch | Not used. cel-js shows the cost: a field typed `dyn` lost two type errors in the demo |
 | 4, 5. Compile at load with paths; output type per slot | Host check at load, all issues returned; the bundle records each output type |
 | 6. Never pass a broken rule | The adapter's `eval` contract |
-| 7, 8. Cost | Bounds and a timeout in every adapter; cel-go's static estimate in CI |
-| 9. Environment profiles | One env YAML per profile, generated; the bundle records which one |
-| 11. Pin runtime behaviour | `identity()` in every adapter and in the bundle |
-| 12, 13. Known-function test; library discipline | `load` refuses unknown extensions; the extension list is the intersection of the executing engines |
-| 24. Absent versus null | Optional scalars have presence and nullable ones are wrappers, so `has()` works in every engine that reads protos |
+| 7, 8. Cost | Collection bounds in the schema and cel-go's static estimate in CI are the enforced bound. A runtime timeout counts only where the engine can interrupt evaluation (standard rule 10) |
+| 9. Environment profiles | The profile manifest per scope, with its JCS digest in every bundle ("The environment profile") |
+| 11. Pin runtime behaviour | `identity()` in every adapter and the checker identity in the bundle |
+| 12, 13. Known-function test; library discipline | `load` refuses an extension version or option outside the adapter's inventory; the profile cases test enabled and excluded functions on each engine |
+| 24. Absent versus null | The presence table and cases ("Presence: missing, explicit null and zero"); the presence lint is unmeasured |
 | 25. Table-driven rule tests | `typedemo/*.yaml` is that format; a `rules test` command runs it on the host engine |
-| 26. Environment as data | Adopted now. cel-expr-python reads message-typed variables from the env YAML, which the Kubernetes report left unverified |
+| 26. Environment as data | Adopted now, as the manifest. cel-expr-python reads message-typed variables from the env YAML it generates, which the Kubernetes report left unverified |
+
+### Kubernetes controls for benchhand: adopted or deferred
+
+The sibling report's controls, decided for benchhand only. The CEL adoption standard keeps only the ones that hold for any project.
+
+| Control (Kubernetes row) | For benchhand | Where, or why deferred |
+|---|---|---|
+| Declared source profile per rules file (9) | Adopted | Each `flow.yaml` and `*.celpolicy` names its profile; the bundle carries the profile digest |
+| Provider negotiation (9) | Deferred | A provider states the profiles it evaluates; the host sends only bundles in one of them. Needs the provider protocol (plan section 5) |
+| Known-function inventory (12) | Adopted | Each adapter's extension inventory and the `profile` cases |
+| Introduction and removal tests for profile options (12) | Deferred | Until a second profile version exists; then each option gets `introduced < removed` and a case per version |
+| Presence lint (24) | Adopted, unmeasured | Standard rule 3; not yet written |
+| Table-driven behaviour tests (25) | Adopted | `typedemo/*.yaml`, `policy/tests.json` |
+| Nesting lint (7) | Deferred | Needs the comprehension-depth limit chosen per profile; cel-go's cost estimate covers the worst cases meanwhile |
+| Enforceable runtime budget (7, 8) | Adopted for cel-go, deferred elsewhere | cel-go's cost limit interrupts; the other engines' limits are unverified, so the static estimate is their bound |
+| Diagnostic messages and paths (4, 15) | Adopted | Every issue carries file, line and column; the host adds the rule's path in its file |
+| Typed provider parameters (19) | Deferred | The descriptor set can type them; the provider contract that would declare them isn't written |
+| Transition semantics, `prev` (16) | Deferred | No rule in plan section 5 compares versions yet |
+| Ratcheting (17) | Deferred | Follows transition semantics |
 
 ## Proposed changes to plan section 5 and ADR-0014
 
@@ -620,7 +640,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
     An engine without a checker may only run rules a checker has already checked.
 8. **Run one conformance suite on every engine in CI.** Use cel-spec's simple tests in protobuf JSON, plus the project's own typed cases. The typed cases include rules that must fail the check: a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable. Also fail CI when the checkers disagree on a shipped rule. Pin each engine's version and options, and record them. For the cel-go reference, use a small tool that builds the environment from the profile manifest with explicit options, and test that an excluded function or syntax fails to check. Use one pinned cel-go version for the checker and the conformance oracle. The `cel-expr` CLI can run typed test cases, but it writes no CheckedExpr. Install it only from a release whose signature and provenance you verify.
 9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
-10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
+10. **Bound the cost where it can be enforced.** Bound every collection a scope exposes in the schema, and run a static cost estimate (cel-go's) on shipped rules in CI, refusing a rule over the budget. At runtime, a bound counts only if the engine can stop the evaluation: cel-go's cost limit and interrupt checks do, and a timeout around an evaluation that can't be interrupted does not. For an engine without one (cel-expr-python, cel-core and @bufbuild/cel, unverified), the static estimate and the collection bounds are the bound, and a wall-clock timeout only reports. Check: the CI cost step, and an adapter test that an over-budget rule fails where the engine supports a limit.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
 12. **Write a rule list as a cel-policy file, in the supported policy profile.** An ordered first-match list is a cel-policy `match` block. The profile is what was shown to run on every evaluator: one flat `match`, an unconditional final choice, and no `variables`. Compile it with a pinned policy compiler and ship the one CheckedExpr it produces. Know what the compiler checks: output-type assignability, a literal `false` condition, and a literally true choice before the last one. It doesn't catch a condition that is false without being the literal, or a `match` with no final choice. Add each further feature only when tests of its emitted CheckedExpr pass on every target evaluator. Check: the compile step refuses what the profile excludes, and the policy test cases run on each evaluator.
 13. **Point rule-writing agents at the generated environment.** Agent skills and MCP tools for CEL read the generated environment and descriptor set, and never write their own: use the `cel-expr` MCP server in fixed-environment mode. When no generated environment covers a scope, the agent stops and asks for one. Check: the plugin's skills carry no environment-authoring step.
@@ -633,27 +653,28 @@ From `research/cel-neutral/`, with the builds already in place:
 |---|---|---|
 | Regenerate the types | `cd py && uv run python ../gen/celgen.py ../scopes.yaml --out ../generated`, then `cd ../generated && buf build --exclude-source-info -o types.binpb` | seconds |
 | Typed demo, per engine | The `typed_demo` program in `go/`, `py/`, `rust/`, `rust-cxx/` (binary `cel_neutral_cxx`) and `ts/` | seconds each |
-| Typed demo through the pyo3 binding | `cd rust-py && maturin build --release`, then `cd py && uv run --with <wheel> python rust_binding_demo.py` | 50 s build |
-| Shared suite on all seven engines | `conformance/run.sh` | 15 s |
+| Typed demo through the pyo3 binding | `cd rust-py && maturin build --release`, then `cd py && uv run --with <wheel> python rust_binding_demo.py` | unmeasured |
+| Shared suite on all seven engines, the gate | `conformance/run.sh` (exits 1 on a missing engine or a baseline change) | seconds |
+| celgen's conflicting-projection test | `uv run pytest research/cel-neutral/gen/test_celgen.py` from the repository root | seconds |
 | The `cel-expr` CLI on the typed demo | `cd py && uv run python ../cli/env_json.py ../generated/env/gate_guard.env.yaml ../cli/gate_guard.env.json`, then `cli/compile_demo.sh <cel-expr> cli/gate_guard.env.json` | seconds |
 | The reference checker on the typed demo; the `tools/compiler` probe | `cd go && go run ./celcheck rules gate_guard ../typedemo/gate_guard.yaml`; `go run ./toolscompiler` | seconds |
 | The rule list as a policy | `cel-expr eval -format policy -env cli/checks_by_iteration.env.json -fds generated/types.binpb -expr policy/checks_by_iteration.celpolicy -tests policy/tests.json`; `cd go && go run ./celcheck policy <profile> ../policy/<name>.celpolicy <name>`; then the `policy_demo` program in `py/`, `rust/` and `ts/` | seconds each |
 | The policies the compiler or profile must refuse | `policy/bad/run.sh`, which writes `results/policy-bad.txt` | seconds |
 
-The typed demo exits non-zero on cel-core (the `string == int` rule), on @bufbuild/cel (no checker) and on cel-js (the two `dyn` wrappers). Each exit code reports an engine finding listed above.
+The typed demo exits non-zero on cel-core (`string == int`, and `cel.bind` outside the profile), on @bufbuild/cel (no checker, and an unenforced check-time option) and on cel-js (the two `dyn` wrappers). Each exit code reports an engine finding listed above. Every outcome is in `results/typed-demo/<engine>.json`.
 
 Builds in this worktree:
 
-- The cel-cxx release build, with its Bazel build of cel-cpp, came from the previous run. This run added a second binary to it, which relinked in 14 s without rebuilding cel-cpp.
-- The pyo3 binding compiled cel-core again in the release profile (50 s, pure Rust).
-- No other engine was built from source.
+- The cel-cxx release build, with its Bazel build of cel-cpp, came from an earlier run. Its typed demo wasn't rerun for this revision: cel-cxx has no CheckedExpr API, so it can't take part in the bundle cases.
+- The pyo3 wheel isn't in this worktree, so the binding wasn't rerun.
+- No engine was built from source for this revision; build times aren't retained.
 
 `target/`, `node_modules/`, `.venv/` and the raw `results/*.jsonl` are ignored and not committed.
 
 ## Untested, and the risks
 
 - **ferricel and rscel weren't run.** Their rows come from their documentation.
-- **A CheckedExpr against a different environment wasn't tested.** The bundle's digest check is a design requirement, not a measured behaviour.
+- **A CheckedExpr against a different environment is refused, not evaluated.** Each adapter refuses a bundle with another profile's digest (`bundle` cases in `results/typed-demo/`). What an engine would do with a mismatched CheckedExpr if the check were skipped wasn't tested.
 - **Two cel-cxx causes are assumptions.** The backtick and timestamp-range failures are read as defaults in cel-cxx's build. They weren't traced into its cel-cpp version.
 - **cel-core in a browser was out of scope.** It compiles to WebAssembly in principle; that would give one Rust engine in every runtime, but this run built no new engine.
 - **The `cel.expr.conformance.Environment` proto and the `celtest` suite format weren't exercised.**

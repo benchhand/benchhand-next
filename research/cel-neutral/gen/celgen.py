@@ -423,6 +423,24 @@ def run_scope(schemas: Schemas, scope: str, spec: dict, out: Path, report: list[
     return gen
 
 
+def merge_messages(merged: dict[str, ProtoMessage], new: dict[str, ProtoMessage]) -> list[str]:
+    """Add one scope's messages to the shared set. A schema node maps to one protobuf message whatever the
+    scope, so two scopes that project the same node with different fields (different omissions) would
+    share one message with the wrong field set. That is refused, with the message and both field lists;
+    the merged set keeps the first projection."""
+    conflicts = []
+    for full, message in new.items():
+        old = merged.get(full)
+        if old is None:
+            merged[full] = message
+            continue
+        if [(f.name, f.type) for f in old.fields] != [(f.name, f.type) for f in message.fields]:
+            have = sorted(f.name for f in old.fields)
+            want = sorted(f.name for f in message.fields)
+            conflicts.append(f"conflicting projection of {full} ({message.source}): fields {want}, another scope has {have}")
+    return conflicts
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Generate CEL type artefacts from the published contract schemas."
@@ -441,7 +459,10 @@ def main(argv: list[str] | None = None) -> int:
         if (gen is None) != (spec.get("expect") == "refused"):
             unexpected.append(scope)
         if gen is not None:
-            merged.messages.update(gen.messages)
+            conflicts = merge_messages(merged.messages, gen.messages)
+            report.extend(f"scope {scope}: {c}" for c in conflicts)
+            if conflicts:
+                unexpected.append(scope)
     report += [f"wrote {path}" for path in write_protos(merged, args.out)]
     (args.out / "scopes.txt").write_text("\n".join(report) + "\n")
     print("\n".join(report))
