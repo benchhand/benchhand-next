@@ -7,14 +7,16 @@ The reader discovers the sets and hashes their bytes (`GuidelineCatalog`); these
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
 
 from benchhand_core.record.evidence.joints import LENGTH_MM
-from benchhand_core.record.evidence.view import JsonMap, RecordView, mapping
+from benchhand_core.record.evidence.view import JsonMap, RecordView, items, mapping
 
 SCOPE_FACTS = ("material_family", "filler", "shore", "nozzle_material")
+MICROMETRE_TOLERANCE = 1e-6  # guidelines.py:90
 # file-name prefix of a shipped set a version build copies into its record/ (guidelines.py:74)
 SHIPPED_COPY = "shipped--"
 # capability profile id -> material profile name -> id@revision -> sha256
@@ -38,13 +40,99 @@ class GuidelineSet:
 
 
 @dataclass(frozen=True)
+class Refusal:
+    """A guideline file discovery refused: where it is shown and why (guidelines.py:152)."""
+
+    path: str
+    problems: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class GuidelineCatalog:
-    """The sets discovered by id, the ids a refused file declared (they resolve to nothing), and whether any
-    set is a shipped set or a version's copy of one (guidelines.py:175)."""
+    """The sets discovered by id, the ids a refused file declared (they resolve to nothing), whether any set
+    is a shipped set or a version's copy of one, and the refused files (guidelines.py:175)."""
 
     sets: Mapping[str, GuidelineSet] = field(default_factory=dict)
     blocked: frozenset[str] = frozenset()
     has_shipped: bool = False
+    refused: tuple[Refusal, ...] = ()
+
+
+def _finite(value: object) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def quantity_problem(where: str, data: Any) -> str | None:
+    """Why `data` is no quantity the resolver can read: no units, a number that is not finite, or a reversed
+    interval (guidelines.py:242 `_quantity_problems`, manufacturing_intent.py:357 `quantity`). The contract
+    already limits units to the known names."""
+    data = mapping(data)
+    if not isinstance(data.get("units"), str):
+        return f"{where}: a quantity needs units"
+    numbers = [data[key] for key in ("value", "lower", "upper") if key in data]
+    if not numbers or not all(_finite(n) for n in numbers):
+        return f"{where}: a quantity needs finite numbers"
+    if "value" not in data and data.get("lower", 0) > data.get("upper", 0):
+        return f"{where}: interval {data['lower']:g}..{data['upper']:g} {data['units']} is reversed"
+    return None
+
+
+def _sizes_problems(where: str, sizes: Any) -> list[str]:
+    """A discrete size set: every item readable, a whole number of micrometres, no two the same size
+    (guidelines.py:222)."""
+    problems: list[str] = []
+    seen: dict[int, int] = {}
+    for position, item in enumerate(items(sizes)):
+        problem = quantity_problem(f"{where}/{position}", item)
+        scale = LENGTH_MM.get(mapping(item).get("units") or "")
+        if problem is not None or scale is None or "value" not in mapping(item):
+            problems.extend([problem] if problem else [])
+            continue
+        exact = float(item["value"]) * scale * 1000.0
+        if abs(exact - round(exact)) > MICROMETRE_TOLERANCE:
+            problems.append(f"{where}/{position}: {exact:g} um is not a whole number of micrometres")
+        elif round(exact) in seen:
+            problems.append(
+                f"{where}/{position}: duplicate of {where}/{seen[round(exact)]} ({round(exact)} um)"
+            )
+        else:
+            seen[round(exact)] = position
+    return problems
+
+
+def _limit_problems(index: int, limit: JsonMap) -> list[str]:
+    """guidelines.py:203 `_limit_problems`."""
+    problems: list[str] = []
+    if "quantity" in limit and (problem := quantity_problem(f"limits/{index}/quantity", limit["quantity"])):
+        problems.append(problem)
+    if "quantities" in limit:
+        problems.extend(_sizes_problems(f"limits/{index}/quantities", limit["quantities"]))
+    relative = limit.get("relative")
+    if not isinstance(relative, Mapping):
+        return problems
+    if not _finite(relative.get("factor")):
+        problems.append(f"limits/{index}/relative/factor: {relative.get('factor')} is not finite")
+    floor = relative.get("floor")
+    problem = quantity_problem(f"limits/{index}/relative/floor", floor)
+    if problem is not None:
+        problems.append(problem)
+    elif mapping(floor).get("units") not in LENGTH_MM:
+        problems.append(f"limits/{index}/relative: the floor of a line-width limit is a length")
+    return problems
+
+
+def guideline_problems(data: JsonMap) -> list[str]:
+    """The rules of a guideline set the contract cannot state (guidelines.py:186-200 `validate`): its scope's
+    nozzle interval and every limit's quantities can be read."""
+    problems: list[str] = []
+    scope = mapping(data.get("scope"))
+    if "nozzle_diameter" in scope and (
+        problem := quantity_problem("scope/nozzle_diameter", scope["nozzle_diameter"])
+    ):
+        problems.append(problem)
+    for index, limit in enumerate(items(data.get("limits"))):
+        problems.extend(_limit_problems(index, mapping(limit)))
+    return problems
 
 
 @dataclass(frozen=True)

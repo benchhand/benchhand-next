@@ -455,6 +455,30 @@ def test_a_missing_shipped_catalog_is_stale_even_when_project_copies_match(
     assert all("guideline.catalog_missing" in reason for reason in found["reasons"])
 
 
+def test_a_guideline_with_an_unreadable_quantity_is_refused(
+    lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """guidelines.py:186-200, 242-246: a set whose nozzle interval is reversed passes the schema but is
+    refused at discovery. It never enters resolution, so it stales nothing, and it gets a finding."""
+    shipped = shipped_copy(tmp_path)
+    version_sha = build(lamp_arm, shipped=shipped)
+    write_packet(lamp_arm, "process", packet(lamp_arm, {ROUTE: "pass"}), version_sha)
+    bad = yaml.safe_load((shipped / "fdm.nozzle.d0_4.yaml").read_text(encoding="utf-8"))
+    bad["id"] = "fdm.nozzle.reversed"
+    bad["scope"]["nozzle_diameter"] = {"lower": 0.6, "upper": 0.4, "units": "mm"}
+    bad.pop("extends", None)
+    write_yaml(lamp_arm / "hw/manufacturing/guidelines/fdm.nozzle.reversed.yaml", bad)
+    record = load_record(lamp_arm)
+    built_version = read_built_version(lamp_arm, record, "v1", shipped_guidelines=shipped)
+    assert "fdm.nozzle.reversed" not in built_version.guidelines.sets
+    assert "fdm.nozzle.reversed" in built_version.guidelines.blocked
+    result = assess(record, built_version, TODAY).model_dump(mode="json", exclude_none=True)
+    assert statuses(result)[ROUTE]["result"] == "pass"
+    [finding] = [f for f in result["findings"] if f["code"] == "intent.guideline"]
+    assert finding["path"] == "hw/manufacturing/guidelines/fdm.nozzle.reversed.yaml"
+    assert "reversed" in finding["message"]
+
+
 def test_a_changed_model_frame_of_a_bought_part_makes_the_evidence_stale(
     built: tuple[Path, str], write_packet: WritePacket
 ) -> None:

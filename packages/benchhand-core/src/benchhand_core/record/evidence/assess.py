@@ -170,6 +170,13 @@ def _path_refusals(state: _State) -> None:
             state.findings.append(_finding(problem.code, "error", FINDINGS, message, pointer=pointer))
 
 
+def _guideline_refusals(state: _State) -> None:
+    """A guideline file discovery refused is reported; it resolves nothing (manufacturing_intent.py:1245)."""
+    for refusal in state.built.guidelines.refused:
+        message = f"{refusal.path} is refused: {'; '.join(refusal.problems)}"
+        state.findings.append(_finding("intent.guideline", "error", refusal.path, message))
+
+
 def _ledger_sources(state: _State) -> None:
     """The accepted ledger (evidence.py:792-816)."""
     context = EntryContext(state.record, state.placed, state.by_id, state.built, state.today)
@@ -351,6 +358,7 @@ def assess(record: Record, built: BuiltVersion, today: date) -> EvidenceAssessme
     )
     _record_sources(state)
     _packet_sources(state)
+    _guideline_refusals(state)
     _ledger_sources(state)
     _path_refusals(state)
     _dispositions(state)

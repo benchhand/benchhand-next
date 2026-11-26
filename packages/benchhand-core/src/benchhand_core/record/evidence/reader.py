@@ -388,8 +388,9 @@ def read_built_version(
     }
     bundles = {path: bundle_problems(root, path) for path in cited_bundles(view(record))}
     verdicts = judge_all(root, ledger_queries(view(record)))
-    layers = [Layer(root / documents.GUIDELINES_DIR)]
-    layers += [Layer(shipped_guidelines, shipped=True)] if shipped_guidelines is not None else []
+    layers = [Layer(root / documents.GUIDELINES_DIR, documents.GUIDELINES_DIR)]
+    shipped = [Layer(shipped_guidelines, "shipped", shipped=True)] if shipped_guidelines is not None else []
+    layers += shipped
     guidelines = discover_guidelines(layers)
     snapshot_guidelines = folder / "record" / documents.GUIDELINES_DIR.removeprefix(f"{documents.HW}/")
     sides = _Sides(
