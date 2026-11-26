@@ -458,6 +458,23 @@ def test_a_missing_shipped_catalog_is_stale_even_when_project_copies_match(
     assert all("guideline.catalog_missing" in reason for reason in found["reasons"])
 
 
+def test_a_shipped_catalog_shadowed_by_project_copies_keeps_the_evidence_current(
+    lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
+) -> None:
+    """The shipped catalog is read even when byte-identical project copies win every id: the digests match,
+    so packet and ledger evidence of the part stay current, with no guideline.catalog_missing."""
+    shipped = shipped_copy(tmp_path)
+    version_sha = build(lamp_arm, shipped=shipped)
+    write_packet(lamp_arm, "process", packet(lamp_arm, {ROUTE: "pass"}), version_sha)
+    entry = ledger_entry(lamp_arm, version_sha, id="EV-002", obligation=ROUTE, level="process_planned")
+    entry["fingerprints"] = current_fingerprints(lamp_arm, entry["subject"], shipped=shipped)
+    write_ledger(lamp_arm, entry)
+    shutil.copytree(shipped, lamp_arm / "hw/manufacturing/guidelines")
+    result = run(lamp_arm, shipped=shipped)
+    assert statuses(result)[ROUTE]["result"] == "pass"
+    assert not any("guideline.catalog_missing" in json.dumps(f) for f in result["findings"])
+
+
 def test_a_guideline_with_an_unreadable_quantity_is_refused(
     lamp_arm: Path, write_packet: WritePacket, tmp_path: Path
 ) -> None:

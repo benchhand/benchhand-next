@@ -115,7 +115,9 @@ def _refuse_key_collisions(winners: dict[str, GuidelineSet]) -> set[str]:
 
 
 def discover(layers: Iterable[Layer]) -> GuidelineCatalog:
-    """The catalog of the layers, the first holding an id winning (guidelines.py:312)."""
+    """The catalog of the layers, the first holding an id winning (guidelines.py:312). A shipped layer that
+    holds a valid set counts as read even when other layers win all its ids; a version's copy counts only
+    when it wins."""
     winners: dict[str, GuidelineSet] = {}
     blocked: set[str] = set()
     refused: list[Refusal] = []
@@ -124,6 +126,7 @@ def discover(layers: Iterable[Layer]) -> GuidelineCatalog:
         scan = _scan(layer)
         blocked |= scan.blocked
         refused += scan.refused
+        has_shipped = has_shipped or (layer.shipped and scan.shipped)
         for ident, guideline in scan.found.items():
             if ident not in winners and ident not in blocked:
                 winners[ident] = guideline

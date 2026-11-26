@@ -49,8 +49,9 @@ class Refusal:
 
 @dataclass(frozen=True)
 class GuidelineCatalog:
-    """The sets discovered by id, the ids a refused file declared (they resolve to nothing), whether any set
-    is a shipped set or a version's copy of one, and the refused files (guidelines.py:175)."""
+    """The sets discovered by id, the ids a refused file declared (they resolve to nothing), whether a
+    shipped catalog holding a valid set was read (whichever sets won) or a version's copy of a shipped set
+    won, and the refused files (guidelines.py:175)."""
 
     sets: Mapping[str, GuidelineSet] = field(default_factory=dict)
     blocked: frozenset[str] = frozenset()
