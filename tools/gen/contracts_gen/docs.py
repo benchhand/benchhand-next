@@ -7,6 +7,7 @@ import posixpath
 from pathlib import Path
 from typing import Any
 
+from .domain_render import DOMAIN_MODEL_FILE, render_domain_model
 from .sources import GENERATED_NOTICE, SCHEMA_SUFFIX, Contract
 
 CONSTRAINT_KEYWORDS = (
@@ -34,10 +35,12 @@ def write_docs(contracts: list[Contract], out_dir: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(render_contract(contract), encoding="utf-8")
     (out_dir / "README.md").write_text(render_index(contracts), encoding="utf-8")
+    (out_dir / DOMAIN_MODEL_FILE).write_text(render_domain_model(contracts), encoding="utf-8")
 
 
 def render_index(contracts: list[Contract]) -> str:
     lines = ["# Contract reference", "", f"{GENERATED_NOTICE} Sources: `contracts/`.", ""]
+    lines += [f"- [Domain model]({DOMAIN_MODEL_FILE}): class diagrams of every contract, by group", ""]
     for contract in contracts:
         title = contract.schema.get("title", contract.stem)
         lines.append(f"- [{title}]({contract.stem}.md): `{contract.source}`, version {_version(contract)}")
