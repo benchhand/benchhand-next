@@ -134,7 +134,7 @@ Equal env YAML and descriptor-set hashes don't prove that two engines run the sa
 - `options`: `cross_type_numeric_comparisons` and `homogeneous_aggregate_literals`, both `false`, from `scopes.yaml`'s `profile_options`;
 - `container` and `manifest_version`.
 
-The **profile digest** is the SHA-256 of the manifest's canonical JSON, RFC 8785 (JCS). It is never taken over protobuf bytes. `gen/profile.py` refuses a manifest with a float, a non-ASCII string or an integer above 2^53. For that subset, JCS is sorted keys with no whitespace, which each language's standard JSON encoder produces: Python's `json.dumps(sort_keys=True)`, Go's `encoding/json` with HTML escaping off, serde_json without `preserve_order`, and a key-sorting `JSON.stringify` in TypeScript. All four computed the same digests (`generated/profile/digests.txt`; gate_guard `48201f8857b0…`).
+The **profile digest** is the SHA-256 of the manifest's canonical JSON, RFC 8785 (JCS). It is never taken over protobuf bytes. `gen/profile.py` refuses a manifest with a float, a non-ASCII string or an integer above 2^53. For that subset, JCS is sorted keys with no whitespace, which each language's standard JSON encoder produces: Python's `json.dumps(sort_keys=True)`, Go's `encoding/json` with HTML escaping off, serde_json without `preserve_order`, and a key-sorting `JSON.stringify` in TypeScript. All four computed the same digests (`generated/profile/digests.txt`; gate_guard `38f0f9a90603…`).
 
 ### Adapters build their environment from the manifest
 

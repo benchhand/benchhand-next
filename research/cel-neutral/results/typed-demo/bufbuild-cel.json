@@ -532,7 +532,7 @@
   "kind": "bundle",
   "case": "substituted payload",
   "ok": true,
-  "detail": "refused: cel-neutral-swap-ts-AbeRcm/accept-0.binpb: the payload isn't the one the checker shipped"
+  "detail": "refused: cel-neutral-swap-ts-HWZywZ/accept-0.binpb: the payload isn't the one the checker shipped"
  },
  {
   "engine": "bufbuild-cel",

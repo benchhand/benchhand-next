@@ -340,7 +340,7 @@
   "kind": "bundle",
   "case": "substituted payload",
   "ok": true,
-  "detail": "refused: cel-neutral-swap-1841764589/accept-0.binpb: the payload isn't the one the checker shipped"
+  "detail": "refused: cel-neutral-swap-850357372/accept-0.binpb: the payload isn't the one the checker shipped"
  },
  {
   "engine": "cel-go",
