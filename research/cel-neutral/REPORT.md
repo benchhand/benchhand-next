@@ -95,3 +95,22 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 | CheckedExpr | Reads and writes | Reads and writes (`serialize`, `deserialize`) |
 | Typed demo | 7 of 7 rejected; evaluated 12 of 12 shipped from Python and cel-core | 7 of 7 rejected; evaluated 12 of 12 shipped from cel-go and cel-core |
 | Shared suite | 1611 of 1640 | 1610 of 1640 |
+
+## Language-neutral artefacts
+
+| Artefact | Written by | Read natively by | Read through an adapter | Not read | Tested here |
+|---|---|---|---|---|---|
+| **FileDescriptorSet** (`generated/types.binpb`, 4.8 KB) | `buf build --exclude-source-info` from the generated `.proto` | cel-go (`cel.TypeDescs`), cel-expr-python (`descriptor_pool`), cel-core (`ProstProtoRegistry`), cel-cxx (`with_file_descriptor_set`), @bufbuild/cel (`createFileRegistry`) | cel-js: the demo maps each message to `registerType` (about 30 lines) | cel 0.16 | Yes, every engine in the typed demo |
+| **Env YAML** (cel-go `env.Config`; `generated/env/gate_guard.env.yaml`, `conformance/env.yaml`) | `gen/celgen.py`; cel-go can also write one from an `Env` | cel-go (`cel.FromConfig`), cel-expr-python (`cel.NewEnvConfigFromYaml`) | cel-core (40 lines), cel-cxx (15 lines), @bufbuild/cel (5 lines, variables only), cel-js (with the descriptor mapping) | cel 0.16 (no typed variables; the runner maps extension names) | Yes. cel-expr-python reads message-typed variables from it, which the Kubernetes report left unverified (its row 26) |
+| **CheckedExpr** (`cel.expr.CheckedExpr` in a `google.protobuf.Any`; `generated/checked/<engine>/`) | cel-go, cel-expr-python, cel-core, the pyo3 binding | cel-go, cel-expr-python, cel-core, @bufbuild/cel, the pyo3 binding | none needed | cel-cxx's Rust API, cel-js, cel 0.16 | Yes: six rules, every writer to every reader, all `true` |
+| **cel-spec SimpleTestFile** (`cel.expr.conformance.test`; `conformance/suite.json`) | cel-spec in textproto; @bufbuild/cel-spec ships it as protobuf JSON | The conformance runners in the cel-go, cel-cpp, cel-core, cel-rust and ferricel repositories (not run here) | Seven runners here, one per engine, 100 to 150 lines each, plus `conformance/compare.py` | | Yes, the JSON form, on every engine |
+| **cel-spec `cel.expr.conformance.Environment`** (`env_config.proto`) | Not written here | Untested | Untested | Untested | No. It holds the env YAML's fields plus a `message_type_extension` FileDescriptorSet, so one file could carry both artefacts. |
+| **cel-spec TestSuite** (`suite.proto`, the cel-go `celtest` format) | Not written here | cel-go `tools/celtest` (not run) | Untested | Untested | No |
+
+Findings from the artefact tests:
+
+- **A CheckedExpr is portable across engines.** cel-core read the ones cel-go and cel-expr-python wrote, and the other way round. @bufbuild/cel read all three. No engine needed the source text or a second check.
+- **The bytes aren't stable, the message is.** Re-running cel-go's writer gave different bytes of the same length for all six rules. Decoded, the old and new CheckedExprs are `proto.Equal`, and re-encoding both with Go's `Deterministic` marshal option gives identical bytes (`go/cmpchecked`). Map entries in the reference and type maps change order. So a digest of a CheckedExpr has to come from a deterministic re-encoding, not from the bytes a writer emitted.
+- **A CheckedExpr carries no environment identity.** It names message types and overload ids but not the descriptor set or extension versions. An evaluator given a CheckedExpr from a different environment fails late or not at all (untested). The bundle has to carry the digest of the env YAML and descriptor set, and the evaluator has to compare it.
+- **The env YAML is the weakest artefact.** Two engines read it as is. The other four need an adapter, and each adapter maps extension names by hand, which is where versions can drift. The extension list is also the main source of conformance gaps (see the next sections).
+- **JSON is the neutral encoding of the test files.** textproto needs descriptors at parse time in every language except Go and C++; the protobuf JSON form loads with a plain JSON parser.
