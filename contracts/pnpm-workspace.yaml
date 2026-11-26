@@ -1,0 +1,5 @@
+# mermaid-cli renders the generated diagrams in tests.
+# It drives the system Chrome, so puppeteer's install script,
+# which downloads a browser, stays off.
+allowBuilds:
+  puppeteer: false

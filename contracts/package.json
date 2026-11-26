@@ -5,6 +5,7 @@
   "packageManager": "pnpm@11.0.0",
   "description": "The TypeSpec source of the benchhand contracts (ADR-0017), with the pinned compiler, emitter and JSON Schema CLI. tools/gen compiles it and generates everything else.",
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "12.2.0",
     "@sourcemeta/jsonschema": "17.3.3",
     "@typespec/compiler": "1.18.0",
     "@typespec/json-schema": "1.18.0"
