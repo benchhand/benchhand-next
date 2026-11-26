@@ -72,6 +72,19 @@ def test_the_map_loads_homes_phases_statuses_and_reasons(tmp_path: Path) -> None
             "  - path: a.py\n    status: planned\n    home: x\n    phase: 9\n",
             "`phase` is a number from 0 to 7",
         ),
+        (
+            "  - path: a.py\n    status: partial\n    home: x\n    phase: 1\n",
+            "a partial entry needs a `note` naming what is left out",
+        ),
+        (
+            "  - path: a.py\n    status: planned\n    home: x\n    phase: null\n",
+            "an entry with no phase needs a `note` naming the open question",
+        ),
+        (
+            "  - path: a.py\n    status: ported\n    home: x\n    phase: null\n    note: n\n",
+            "only a planned entry may have no phase",
+        ),
+        ("  - path: a.py\n    status: planned\n    home: x\n", "`phase` is a number from 0 to 7"),
         ("  - path: a.py\n    status: planned\n    home: x\n    phase: 1\n    why: y\n", "unknown key `why`"),
         (
             "  - path: a.py\n    status: dropped\n    reason: r\n    home: x\n",
@@ -179,6 +192,39 @@ def test_a_ported_entry_needs_its_home_in_this_repository(tmp_path: Path) -> Non
     check_homes(reference, repo)
 
 
+PARTIAL_MAP = """\
+reference_commit: abc1234
+entries:
+  - path: skills/cad-x/scripts/half.py
+    home: packages/benchhand-core/src/benchhand_core/record/half.py
+    phase: 1
+    status: partial
+    note: "Left out: the gates (Phase 2)."
+  - path: skills/cad-x/assets/
+    home: packages/benchhand-core/src/benchhand_core/record/
+    phase: null
+    status: planned
+    note: "Waits on an open question."
+"""
+
+
+def test_a_partial_entry_needs_its_home_and_renders_apart_with_its_note(tmp_path: Path) -> None:
+    reference = load_map(_write_map(tmp_path, PARTIAL_MAP))
+    with pytest.raises(MapError, match="half.py: partial, but packages/.*/record/half.py doesn't exist"):
+        check_homes(reference, tmp_path)
+    text = render_function_map(reference)
+    assert "class p0 partial" in text
+    assert "classDef partial " in text
+    assert "- `skills/cad-x/scripts/half.py`: Left out: the gates (Phase 2)." in text
+    assert "| **all** | **2** | 1 | 0 | 1 | 0 | 0 |" in text
+
+
+def test_an_entry_without_a_phase_has_an_open_arrow(tmp_path: Path) -> None:
+    text = render_function_map(load_map(_write_map(tmp_path, PARTIAL_MAP)))
+    assert 'p1 -->|"phase open"| h1' in text
+    assert "Phase open:\n\n- `skills/cad-x/assets/`: Waits on an open question." in text
+
+
 EXPECTED_FLOWCHART = textwrap.dedent(
     """\
     flowchart LR
@@ -210,6 +256,7 @@ EXPECTED_FLOWCHART = textwrap.dedent(
         class h3 dropped
         class h4 home
         classDef ported fill:#d8f3dc,stroke:#2d6a4f
+        classDef partial fill:#f1faf3,stroke:#2d6a4f,stroke-width:2px,stroke-dasharray: 6 3
         classDef inprogress fill:#fff3bf,stroke:#b08900
         classDef planned fill:#e7f0fa,stroke:#3a6ea5
         classDef dropped fill:#eeeeee,stroke:#888888,stroke-dasharray: 4 3,color:#666666
@@ -220,7 +267,7 @@ EXPECTED_FLOWCHART = textwrap.dedent(
 def test_each_area_is_a_flowchart_with_phases_on_the_edges_and_dropped_items_apart(tmp_path: Path) -> None:
     text = render_function_map(load_map(_write_map(tmp_path, MAP)))
     assert text.split("```mermaid\n")[1].split("\n```")[0] == EXPECTED_FLOWCHART
-    assert "| **all** | **4** | 1 | 1 | 1 | 1 |" in text
+    assert "| **all** | **4** | 1 | 1 | 0 | 1 | 1 |" in text
 
 
 def test_the_committed_map_is_valid_and_its_diagrams_are_current() -> None:

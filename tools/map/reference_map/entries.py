@@ -9,7 +9,9 @@ from typing import Any
 
 import yaml
 
-STATUSES = ("planned", "in-progress", "ported", "dropped")
+STATUSES = ("planned", "in-progress", "partial", "ported", "dropped")
+BUILT = ("partial", "ported")
+"""The statuses whose home holds code on main."""
 PHASES = range(0, 8)
 ENTRY_KEYS = {"path", "home", "phase", "status", "reason", "note", "basis"}
 SKILL_PREFIX = "skills/"
@@ -101,9 +103,19 @@ def _entry_problems(item: dict[str, Any]) -> list[str]:
     names = [homes] if isinstance(homes, str) else homes
     if not names or not all(isinstance(home, str) and home for home in names):
         found.append("`home` is a path or command, or a list of them")
-    if item.get("phase") not in PHASES:
-        found.append("`phase` is a number from 0 to 7")
+    found += _phase_problems(item)
+    if item["status"] == "partial" and not item.get("note"):
+        found.append("a partial entry needs a `note` naming what is left out and which phase owns it")
     return found + (["only a dropped entry has a `reason`"] if "reason" in item else [])
+
+
+def _phase_problems(item: dict[str, Any]) -> list[str]:
+    """A phase from 0 to 7, or null for a planned entry whose home waits on an open question."""
+    if "phase" in item and item["phase"] is None:
+        if item["status"] != "planned":
+            return ["only a planned entry may have no phase"]
+        return [] if item.get("note") else ["an entry with no phase needs a `note` naming the open question"]
+    return [] if item.get("phase") in PHASES else ["`phase` is a number from 0 to 7, or null"]
 
 
 def _duplicates(entries: tuple[Entry, ...]) -> list[str]:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .entries import Entry, MapError, ReferenceMap, pattern_regex
+from .entries import BUILT, Entry, MapError, ReferenceMap, pattern_regex
 
 REQUIRED_PATTERNS = (
     "skills/*/scripts/**/*.py",
@@ -72,11 +72,11 @@ def _skills_without_entries(files: set[str], entries: tuple[Entry, ...]) -> list
 
 
 def check_homes(reference: ReferenceMap, repo_root: Path) -> None:
-    """A ported entry's home must exist in this repository."""
+    """A ported or partial entry's home must exist in this repository."""
     problems = [
-        f"{entry.path}: ported, but {home} doesn't exist"
+        f"{entry.path}: {entry.status}, but {home} doesn't exist"
         for entry in reference.entries
-        if entry.status == "ported"
+        if entry.status in BUILT
         for home in entry.homes
         if not (repo_root / home).exists()
     ]

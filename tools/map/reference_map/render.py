@@ -15,6 +15,7 @@ AREA_TITLES = {"agents-and-harness": "agents and harness", "examples": "examples
 _PACKAGE_SOURCE = re.compile(r"^packages/([^/]+)/src/[^/]+/(.*)$")
 _CLASSES = (
     "classDef ported fill:#d8f3dc,stroke:#2d6a4f",
+    "classDef partial fill:#f1faf3,stroke:#2d6a4f,stroke-width:2px,stroke-dasharray: 6 3",
     "classDef inprogress fill:#fff3bf,stroke:#b08900",
     "classDef planned fill:#e7f0fa,stroke:#3a6ea5",
     "classDef dropped fill:#eeeeee,stroke:#888888,stroke-dasharray: 4 3,color:#666666",
@@ -27,14 +28,18 @@ def render_function_map(reference: ReferenceMap) -> str:
     lines += [
         f"Each diagram follows one area of the prototype at `{reference.reference_commit[:7]}`. "
         "A prototype file is on the left and its home in benchhand-next is on the right. "
-        "The arrow names the phase that builds the home: `P1` is Phase 1 of the design plan.",
+        "The arrow names the phase that builds the home: `P1` is Phase 1 of the design plan. "
+        "`phase open` means the home waits on an open question.",
         "",
         "- Green: ported.",
+        "- Pale green with a dashed green border: partial. Part of the file is ported; the list below says "
+        "what is left and which phase owns it.",
         "- Amber: in progress.",
         "- Blue: planned.",
         "- Gray and dashed: dropped. The box it points to gives the reason.",
         "",
         *_totals(reference),
+        *_partial_notes(reference),
     ]
     for area in _areas(reference):
         entries = [entry for entry in reference.entries if entry.area == area]
@@ -66,6 +71,18 @@ def _totals(reference: ReferenceMap) -> list[str]:
     total = status_counts(reference)
     cells = " | ".join(str(total[status]) for status in STATUSES)
     return [*lines, f"| **all** | **{len(reference.entries)}** | {cells} |", ""]
+
+
+def _partial_notes(reference: ReferenceMap) -> list[str]:
+    """What each partial entry leaves out, and the open question each entry without a phase waits on."""
+    lines: list[str] = []
+    for title, entries in (
+        ("Partly ported:", [entry for entry in reference.entries if entry.status == "partial"]),
+        ("Phase open:", [entry for entry in reference.entries if entry.homes and entry.phase is None]),
+    ):
+        if entries:
+            lines += [title, "", *(f"- `{entry.path}`: {entry.note}" for entry in entries), ""]
+    return lines
 
 
 def _label(text: str) -> str:
@@ -120,5 +137,5 @@ def _targets(entry: Entry) -> list[tuple[str, str]]:
     """The right-hand nodes of an entry, each with the arrow to it."""
     if entry.status == "dropped":
         return [(f"dropped: {entry.reason}", "-. dropped .->")]
-    arrow = f'-->|"P{entry.phase}"|'
+    arrow = '-->|"phase open"|' if entry.phase is None else f'-->|"P{entry.phase}"|'
     return [(_short_home(home), arrow) for home in entry.homes]

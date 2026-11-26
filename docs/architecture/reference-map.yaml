@@ -11,8 +11,10 @@
 #
 # path: a file, a directory with a trailing `/`, or a glob.
 # home: a path or a CLI command, or a list of them.
-# phase: 0 to 7, from the Steps in docs/design-plan.md.
-# status: planned, in-progress, ported or dropped (with a reason).
+# phase: 0 to 7, from the Steps in docs/design-plan.md, or null for a planned
+#   entry whose home waits on an open question (its note names the question).
+# status: planned, in-progress, partial, ported or dropped (with a reason). A
+#   partial entry's note says what is left out and which phase owns it.
 # basis: inferred where the design-plan table doesn't name the home.
 reference_commit: 412b5d9ae2faa420f909c1f50cc98a696651539f
 entries:
@@ -711,8 +713,11 @@ entries:
   - path: skills/cad-record/scripts/check_packet.py
     home: packages/benchhand-core/src/benchhand_core/record/evidence/packets.py
     phase: 1
-    status: in-progress
-    note: "in progress, Phase 1"
+    status: partial
+    note: >-
+      Ported: whether a sealed packet counts, and what its outcomes show. Left
+      out: building and publishing a packet (`build`, `emit`), which the check
+      producers do (Phase 4).
     basis: inferred
   - path: skills/cad-record/scripts/cli.py
     home: packages/benchhand/src/benchhand/cli/
@@ -739,15 +744,19 @@ entries:
   - path: skills/cad-record/scripts/evidence.py
     home: packages/benchhand-core/src/benchhand_core/record/evidence/
     phase: 1
-    status: in-progress
-    note: "in progress, Phase 1"
+    status: partial
+    note: >-
+      Ported: the assessment of one built version and its acceptance digest.
+      Left out: the stage gates and the selection gate (Phase 2); release
+      policy, stamped packets and version acceptance (Phase 4); producer
+      orchestration and the CLI, which go to the tool that runs the checks, not
+      yet named.
   - path: skills/cad-record/scripts/evidence_paths.py
     home:
       - packages/benchhand-core/src/benchhand_core/record/evidence/paths.py
       - packages/benchhand-core/src/benchhand_core/record/evidence/path_judge.py
     phase: 1
-    status: in-progress
-    note: "in progress, Phase 1"
+    status: ported
     basis: inferred
   - path: skills/cad-record/scripts/fail_fast.py
     home: flow/checks-by-iteration.rules.yaml
@@ -770,8 +779,14 @@ entries:
       - packages/benchhand-core/src/benchhand_core/record/evidence/guidelines.py
       - packages/benchhand-core/src/benchhand_core/record/evidence/guideline_files.py
     phase: 1
-    status: in-progress
-    note: "in progress, Phase 1"
+    status: partial
+    note: >-
+      Ported: discovery, validation and applicability of the guideline sets, and
+      their digests. Phase 4 owns limit resolution and its trace
+      (`resolve_guidelines`, `write_trace`), and the calibration flag and packet
+      keys; the process checks and stack-up use them. Phase 2 owns the
+      shipped-set copies a version build makes (`snapshot_files`). Phase 3 owns
+      the pin warnings that machine_profile.py reports.
     basis: inferred
   - path: skills/cad-record/scripts/impact.py
     home: packages/benchhand-core/src/benchhand_core/flow/impact.py
@@ -791,10 +806,20 @@ entries:
     status: planned
     basis: inferred
   - path: skills/cad-record/scripts/manufacturing_intent.py
-    home: packages/benchhand-core/src/benchhand_core/record/evidence/use_case.py
+    home:
+      - packages/benchhand-core/src/benchhand_core/record/evidence/obligations.py
+      - packages/benchhand-core/src/benchhand_core/record/evidence/use_case.py
+      - packages/benchhand-core/src/benchhand_core/record/evidence/joints.py
     phase: 1
-    status: in-progress
-    note: "in progress, Phase 1"
+    status: partial
+    note: >-
+      Ported: the expected obligations, the use-case assessment and joint
+      property resolution; the record contracts and the record store do its
+      schema and unit checks. Left out: route and capability resolution for the
+      process checks (`part_route`, `capability_limit`, Phase 4); the use-case
+      question templates (`use_case_questions`, `blank_use_case`), for the
+      record.* tools (Phase 3); the x-plausible value warnings validate.py
+      reports (`plausibility_problems`), which no phase names.
     basis: inferred
   - path: skills/cad-record/scripts/prune.py
     home: packages/benchhand-core/src/benchhand_core/record/versions/prune.py
@@ -847,9 +872,13 @@ entries:
     basis: inferred
   - path: skills/cad-record/assets/manufacturing/
     home: packages/benchhand-core/src/benchhand_core/record/evidence/
-    phase: 1
-    status: in-progress
-    note: "in progress, Phase 1: guideline and material-profile data"
+    phase: null
+    status: planned
+    note: >-
+      The evidence code reads these guideline and material-profile sets, but
+      they aren't a package asset yet: they become one when the guideline
+      catalog is ported, a design-plan [Open
+      question](../design-plan.md#open-questions).
     basis: inferred
   - path: skills/cad-record/assets/project-template/
     home: packages/benchhand/src/benchhand/cli/
@@ -858,10 +887,18 @@ entries:
     note: "project scaffold"
     basis: inferred
   - path: skills/cad-record/layout.json
-    home: packages/benchhand-core/src/benchhand_core/record/migrate/
+    home:
+      - packages/benchhand-core/src/benchhand_core/record/documents.py
+      - packages/benchhand-core/src/benchhand_core/record/ignore.py
+      - packages/benchhand-core/src/benchhand_core/record/migrate/inventory.py
     phase: 1
-    status: in-progress
-    note: "in progress, Phase 1: migrate locates a record by its layout"
+    status: partial
+    note: >-
+      Ported: the record document paths, the OS and tool junk the reader skips,
+      and the sealed history migrate leaves alone. Left out: the version, bundle
+      and cache locations with their seal manifests and layout findings (Phase
+      2); the release package (Phase 4); the git storage rules setup writes
+      (Phase 3).
     basis: inferred
   - path: skills/cad-record/references/
     home: flow/guides/
