@@ -329,7 +329,7 @@ def _acceptance(state: _State) -> dict[str, Any]:
     if refusals:
         return {"status": "refused", "reason": "; ".join(f"{f.path}: {f.message}" for f in refusals)}
     # every collected sealed and bound packet, including one the assessment refuses (evidence.py:1326-1334)
-    found, reason = acceptance_inventory(state.record, state.built.packets, state.built.files)
+    found, reason = acceptance_inventory(state.record, state.built.bound_bundles, state.built.files)
     if found is None:
         return {"status": "refused", "reason": reason}
     return {"status": "formed", "evidence_sha256": acceptance_digest(found), "inventory": found}

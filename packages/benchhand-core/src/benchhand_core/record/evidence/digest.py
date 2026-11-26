@@ -16,7 +16,7 @@ import json
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from benchhand_core.record.evidence.built import FileState, Packet
+from benchhand_core.record.evidence.built import FileState
 from benchhand_core.record.evidence.fingerprints import record_artifacts
 from benchhand_core.record.evidence.view import RecordView, items, mapping
 
@@ -50,7 +50,7 @@ def cited_bundles(record: RecordView) -> set[str]:
     return {path for path in found if isinstance(path, str)}
 
 
-def cited_paths(record: RecordView, packets: Iterable[Packet]) -> set[str]:
+def cited_paths(record: RecordView, bundles: Iterable[str]) -> set[str]:
     """The hw/ paths the inventory needs beside the ledger files and the sources directory: cited
     artifacts and bundle manifests, dispositioned and packet bundle manifests, and named source artifacts."""
     found: set[object] = set()
@@ -60,27 +60,25 @@ def cited_paths(record: RecordView, packets: Iterable[Packet]) -> set[str]:
             found.add(f"{entry['bundle'].get('path')}/{MANIFEST}")
     for disposition in record.dispositions:
         found.add(f"{mapping(disposition.get('producer')).get('bundle')}/{MANIFEST}")
-    found.update(f"{packet.bundle}/{MANIFEST}" for packet in packets)
+    found.update(f"{bundle}/{MANIFEST}" for bundle in bundles)
     found.update(f"hw/{rel}" for rel in record_artifacts(record))
     return {path for path in found if isinstance(path, str)}
 
 
-def inventory_paths(
-    record: RecordView, packets: Iterable[Packet], files: Mapping[str, FileState]
-) -> set[str]:
+def inventory_paths(record: RecordView, bundles: Iterable[str], files: Mapping[str, FileState]) -> set[str]:
     """Every hw/ path of the acceptance inventory, given the files the reader found (it lists the ledger
     files that exist and every file below the sources directory)."""
     present = {path for path in LEDGER_FILES if path in files}
     sources = {path for path in files if path == SOURCES_DIR or path.startswith(f"{SOURCES_DIR}/")}
-    return cited_paths(record, packets) | present | sources
+    return cited_paths(record, bundles) | present | sources
 
 
 def acceptance_inventory(
-    record: RecordView, packets: Iterable[Packet], files: Mapping[str, FileState]
+    record: RecordView, bundles: Iterable[str], files: Mapping[str, FileState]
 ) -> tuple[dict[str, str] | None, str | None]:
     """(inventory, None), or (None, why it cannot be formed): a path the reader could not read."""
     inventory, problems = {}, []
-    for path in sorted(inventory_paths(record, packets, files)):
+    for path in sorted(inventory_paths(record, bundles, files)):
         state = files.get(path)
         if state is None or state.sha256 is None:
             problems.append(f"{path} {state.problem if state is not None else 'was not read'}")

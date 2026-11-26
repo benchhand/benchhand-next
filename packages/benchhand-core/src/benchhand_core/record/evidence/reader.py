@@ -151,13 +151,27 @@ def _stale(problems: Sequence[str]) -> str:
     return f"stale: {problems[0]}" + (f" (+{len(problems) - 1} more)" if len(problems) > 1 else "")
 
 
-def _packet_problem(root: Path, directory: Path, version: str, version_sha: str) -> tuple[Any, str | None]:
-    """The parsed result.json of a check bundle and why it is no valid packet (evidence.py:1185)."""
+def _bound_problem(root: Path, directory: Path, version: str, version_sha: str) -> str | None:
+    """Why a check bundle is not sealed and bound to this build: a link, no result.json or manifest, a
+    failed seal or another build (evidence.py:1185-1204, the seal verified before the packet is read)."""
     link = linked_on_the_way(root, directory)
     if link is not None:
-        return None, f"{link} is a symbolic link"
+        return f"{link} is a symbolic link"
     if not (directory / "result.json").is_file():
-        return None, "it has no result.json"
+        return "it has no result.json"
+    if not (directory / MANIFEST).is_file():
+        return f"it has no {MANIFEST}"
+    problems = seal_problems(directory)
+    if problems:
+        return _stale(problems)
+    manifest, _ = _manifest(directory)
+    if manifest is None or manifest.get("version_manifest_sha256") != version_sha:
+        return f"stale: it is bound to another build of {version}"
+    return None
+
+
+def _packet_problem(directory: Path) -> tuple[Any, str | None]:
+    """The parsed result.json of a sealed, bound check bundle and why it is no valid packet."""
     try:
         data = json.loads((directory / "result.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -169,14 +183,6 @@ def _packet_problem(root: Path, directory: Path, version: str, version_sha: str)
     if found:
         where = found[0].pointer or "/"
         return None, f"result.json breaks manufacturing-check-result at {where}: {found[0].message}"
-    if not (directory / MANIFEST).is_file():
-        return None, f"it has no {MANIFEST}"
-    problems = seal_problems(directory)
-    if problems:
-        return None, _stale(problems)
-    manifest, _ = _manifest(directory)
-    if manifest is None or manifest.get("version_manifest_sha256") != version_sha:
-        return None, f"stale: it is bound to another build of {version}"
     return data, None
 
 
@@ -187,25 +193,29 @@ def _packet_invalid(bundle: str, message: str) -> Finding:
 
 def collect_packets(
     root: Path, version: str, version_sha: str
-) -> tuple[tuple[Packet, ...], tuple[Finding, ...]]:
+) -> tuple[tuple[Packet, ...], tuple[Finding, ...], tuple[str, ...]]:
     """The packets sealed for `version` under hw/checks/<V>/<S>/result.json, and a packet.invalid finding for
     each bundle that is behind a link, has no result.json, is unreadable, no packet, unsealed, stale or bound
     to another build (evidence.py:1207). The prototype skips a bundle without result.json; here a damaged
-    packet cannot disappear that way."""
+    packet cannot disappear that way. Also returns every sealed, bound bundle, its packet valid or not."""
     checks = f"hw/checks/{version}"
     folder = root / checks
     link = linked_on_the_way(root, folder) if folder.exists() or folder.is_symlink() else None
     if link is not None:
-        return (), (_packet_invalid(checks, f"{link} is a symbolic link"),)
-    packets, findings = [], []
+        return (), (_packet_invalid(checks, f"{link} is a symbolic link"),), ()
+    packets, findings, bound = [], [], []
     for directory in sorted(folder.iterdir()) if folder.is_dir() else []:
         bundle = f"{checks}/{directory.name}"
-        data, problem = _packet_problem(root, directory, version, version_sha)
+        data: Any = None
+        problem = _bound_problem(root, directory, version, version_sha)
+        if problem is None:
+            bound.append(bundle)
+            data, problem = _packet_problem(directory)
         if problem is not None:
             findings.append(_packet_invalid(bundle, problem))
             continue
         packets.append(Packet(bundle, _sha256(directory / MANIFEST), data))
-    return tuple(packets), tuple(findings)
+    return tuple(packets), tuple(findings), tuple(bound)
 
 
 def _snapshot_document(snapshot: Path, rel: str, contract: str, model: type[ContractModel]) -> Any:
@@ -355,8 +365,8 @@ def read_built_version(
     assert manifest is not None
     manifest_sha = _sha256(folder / MANIFEST)
     geometry = current_geometry(hw)
-    packets, packet_findings = collect_packets(root, version, manifest_sha)
-    wanted = cited_paths(view(record), packets) | set(LEDGER_FILES) | set(_sources(root))
+    packets, packet_findings, bound = collect_packets(root, version, manifest_sha)
+    wanted = cited_paths(view(record), bound) | set(LEDGER_FILES) | set(_sources(root))
     files = {path: file_state(root, path) for path in sorted(wanted)}
     files = {
         path: state
@@ -381,6 +391,7 @@ def read_built_version(
         staleness=_staleness(folder / "record", record, sides),
         packets=packets,
         packet_findings=packet_findings,
+        bound_bundles=bound,
         current_geometry=geometry,
         files=files,
         bundle_seals=bundles,
