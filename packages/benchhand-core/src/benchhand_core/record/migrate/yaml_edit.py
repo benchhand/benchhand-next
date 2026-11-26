@@ -41,6 +41,7 @@ class LayoutError(ValueError):
 SHARED_FIX = "Write the shared node out in full in place of its anchor (&) and its aliases (*), then migrate."
 PLAIN_FIX = "Remove the YAML tag (!!) or anchor (&) from it, writing the value in full, then migrate again."
 BLOCK_FIX = "Write the mapping in block style, one entry per line, then migrate again."
+EXPLICIT_FIX = "Write the entry as `key: value` on one line, without the ? explicit-key marker, then migrate."
 
 
 @dataclass(frozen=True, order=True)
@@ -212,6 +213,9 @@ class Document:
         if index is not None:
             self._refuse_shared(target, key)
             self._check_plain(target, key, target.mapping.value[index][0])
+            if _explicit_key(self.text, target.mapping.value[index][0]):
+                message = f"{key} is written as an explicit key (? {key})"
+                raise LayoutError((*target.steps, key), message, EXPLICIT_FIX)
         return index
 
     def _check_plain(self, target: Target, key: str, node: Node) -> None:
@@ -328,6 +332,12 @@ def _flow_removal(text: str, mapping: MappingNode, removed: set[int]) -> list[Sp
     return splices
 
 
+def _explicit_key(text: str, key: Node) -> bool:
+    """Whether `key` is written after a `?` explicit-key marker."""
+    before = text[: key.start_mark.index].rstrip(" \t")
+    return before.endswith("?")
+
+
 def _block_removal(text: str, mapping: MappingNode, removed: set[int]) -> list[Splice]:
     entries = mapping.value
     if len(removed) == len(entries):
@@ -338,10 +348,14 @@ def _block_removal(text: str, mapping: MappingNode, removed: set[int]) -> list[S
         if index in covered:
             continue
         start = entries[index][0].start_mark.index
-        if not text[_line_start(text, start) : start].strip():
+        prefix = text[_line_start(text, start) : start].strip()
+        if not prefix:
             end = _after_line(text, _content_end(entries[index][1]))
             splices.append(Splice(_line_start(text, start), end, ""))
             continue
+        if not prefix.endswith("-"):
+            message = "a removed entry starts its line after something other than a dash"
+            raise LayoutError((), message, BLOCK_FIX)
         # The first entry, written after a sequence dash: the next kept key takes its place on that line, and
         # the removed entries between them go with it.
         following = next(other for other in range(index + 1, len(entries)) if other not in removed)

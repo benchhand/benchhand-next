@@ -1,0 +1,8 @@
+record_version: 2
+flow:
+  stage: layout
+  profile:
+    decision: "DR-002"
+    critique: "full"
+    ? human_approval
+    : key
