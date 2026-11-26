@@ -3,7 +3,7 @@
  "checker": {
   "engine": "cel-go",
   "options": "profile manifest",
-  "version": "0.30.0"
+  "version": "cel.dev/cel-go v0.33.4"
  },
  "entries": [
   {

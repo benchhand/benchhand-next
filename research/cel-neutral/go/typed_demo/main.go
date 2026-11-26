@@ -14,7 +14,7 @@ import (
 
 	"celneutral/go/profile"
 
-	"github.com/google/cel-go/cel"
+	"cel.dev/cel-go/cel"
 	"go.yaml.in/yaml/v3"
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -198,7 +198,7 @@ func main() {
 	outDir := filepath.Join(gen, "checked", "go")
 	must(0, os.MkdirAll(outDir, 0o755))
 	sources := r.cases(d, outDir)
-	checker := map[string]string{"engine": engine, "version": "0.30.0", "options": "profile manifest"}
+	checker := map[string]string{"engine": engine, "version": "cel.dev/cel-go v0.33.4", "options": "profile manifest"}
 	must(0, p.WriteBundle(outDir, checker, sources, nil))
 	r.tampered(p, outDir)
 	for _, dir := range must(filepath.Glob(filepath.Join(gen, "checked", "*"))) {

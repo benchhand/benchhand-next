@@ -1,14 +1,15 @@
 {
+ "profile_sha256": "9d81c3ec564e5566a2e892825f1798337df5f3a65ea2fb019ceb460951deb499",
  "checker": {
-  "engine": "cel-go policy",
-  "version": "0.33.4"
+  "engine": "celcheck",
+  "options": "profile manifest only",
+  "version": "cel.dev/cel-go v0.33.4"
  },
  "entries": [
   {
    "file": "checks_by_iteration.binpb",
-   "source": "policy/checks_by_iteration.celpolicy",
-   "source_sha256": "db033196276fd91399f53c1811bfb9797e8bf505b73d4eabb092cc096d53d9e3"
+   "source_sha256": "db033196276fd91399f53c1811bfb9797e8bf505b73d4eabb092cc096d53d9e3",
+   "source": "policy/checks_by_iteration.celpolicy"
   }
- ],
- "profile_sha256": "9d81c3ec564e5566a2e892825f1798337df5f3a65ea2fb019ceb460951deb499"
+ ]
 }

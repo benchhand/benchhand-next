@@ -27,7 +27,7 @@ Recommendation, which is for the owner to decide:
 - Keep cel-expr-python as the Python engine and checker at load.
 - Make cel-core the Rust engine, behind the same small adapter, pinned and held to the shared suite.
 - Use `@bufbuild/cel` in the browser, to evaluate CheckedExprs only.
-- Use cel-go in CI as the reference checker and the conformance oracle, through a small tool over `cel.dev/cel-go/tools/compiler`. That package reads our env YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI checks the same way, 7 of 7, but writes no CheckedExpr, so it serves for authoring and `rules test` only.
+- Use cel-go in CI as the reference checker and the conformance oracle, through `go/celcheck`: a small tool that builds the environment from the profile manifest with explicit options and writes CheckedExprs. One pinned cel-go version serves both. `tools/compiler` isn't the reference, because it appends the latest optional and bindings extensions. The `cel-expr` CLI writes no CheckedExpr, so it serves for authoring and `rules test` only.
 - Generate the descriptor set and environment YAML with the contracts (ADR-0017).
 - Write rule lists as cel-policy files (`.celpolicy`), **pending the owner's decision**. `benchhand rules compile` and CI compile them with the pinned cel-go reference checker into the rules bundle, and the host refuses a list whose compiled entry is missing or stale. Standalone expressions are still checked at load by cel-expr-python. A benchhand `{when, then}` list is a cel-policy `match` block whose final choice is unconditional; dispatch's final choice outputs `"unknown"`, which keeps no match → UNKNOWN.
 - Vendor three of the six cel-expr/skills agent skills into a harness-plugins `rules` plugin: `cel-testing`, `cel-debugging`, and `cel-authoring` with its environment step replaced. As shipped, `cel-authoring` has the agent hand-write the environment and build descriptors with `protoc`, which the generated environment replaces.
@@ -90,7 +90,7 @@ The binding doesn't yet return maps, timestamps or messages to Python, and it ha
 
 ### The reference engines
 
-| | cel-go 0.30.0 | cel-expr-python 0.1.4 |
+| | cel-go (`cel.dev/cel-go` v0.33.4) | cel-expr-python 0.1.4 |
 |---|---|---|
 | Checker | Yes | Yes (cel-cpp) |
 | Env YAML | Reads it (`cel.FromConfig`) | Reads it (`cel.NewEnvConfigFromYaml`), message-typed variables included |
@@ -171,7 +171,7 @@ Each writer puts a `bundle.json` beside its CheckedExprs: the profile digest, th
 - **cel-core's parser always expands `cel.bind`.** The adapter can't turn it off. A rule checked only by cel-core could use bindings outside the profile. Only reference-checked rules run on cel-core ("The engine roles").
 - **@bufbuild/cel doesn't enforce check-time options or declarations.** It evaluates only CheckedExprs from the reference checker.
 - **cel-go and cel-cpp number bindings differently.** cel-go declares `cel.@block` in bindings version 1, and cel-expr-python's env config has no version 1. So the profile that compiles policy `variables` (`checks_by_iteration_bindings`) is refused by all three evaluators' adapters. That profile is outside the supported one.
-- **The policy compiler in `go-policy/` reads the manifest, but repeats a small loader** instead of using `go/profile`. It is on a different cel-go module path. The reference checker ("The reference checker") removes this.
+- **The `tools/compiler` route adds extensions the manifest doesn't list.** It isn't used as the checker ("The reference checker").
 
 ## The type pipeline
 
@@ -280,7 +280,7 @@ Each engine has one runner (`go/conformance`, `py/conformance.py`, `rust/src/bin
 
 | Engine | Failures | Causes |
 |---|---:|---|
-| cel-go 0.30.0 | 29 | `cel.block` isn't public (22). Three map literals that cel-spec rejects (two with a repeated key, one with a float key) evaluate instead of failing. Two optional lookups on a map return `false` instead of an error. `indexOf` and `lastIndexOf` with an out-of-range start return a value. |
+| cel-go v0.33.4 | 29 | `cel.block` isn't public (22). Three map literals that cel-spec rejects (two with a repeated key, one with a float key) evaluate instead of failing. Two optional lookups on a map return `false` instead of an error. `indexOf` and `lastIndexOf` with an out-of-range start return a value. |
 | cel-expr-python 0.1.4 | 30 | `cel.block` (22). `transformMap` fails with "no overload for cel.@mapInsert" (6), a gap in the binding's comprehensions extension. `string(-0.0045)` gives `-0.0044999999999999997`. One repeated map key. |
 | cel-core 0.5.1 | 1 | `optional_type` isn't declared. It is the only engine that runs `cel.block`. |
 | cel-cxx 0.2.5 | 128 | 87 `disableCheck` tests: the Rust API compiles only with the checker, so tests that cel-spec runs unchecked fail at the check. `cel.block` (22). 12 timestamp and duration range errors aren't raised. Backtick-quoted field names are refused (6), which looks like a parser option off in cel-cxx's defaults (assumption). One repeated map key. cel-expr-python wraps the same cel-cpp and passes all of these, so the gaps come from cel-cxx's build or options, not from cel-cpp. |
@@ -326,14 +326,25 @@ So the CLI can't replace `go/cmpchecked`, and it can't write the CheckedExprs th
 
 cel-go is moving to the module path `cel.dev/cel-go`. From 2026-09-08, `github.com/google/cel-go/tools/compiler` holds only aliases, and the tagged modules are `cel.dev/cel-go` v0.33.4 and `cel.dev/cel-go/tools` and `/policy` v0.33.3. The package gives:
 
-- `EnvironmentFile(path)`, which reads the env as YAML (cel-go's `env.Config`, so **our env YAML as is**), or as a textproto or binary `cel.expr.conformance.Environment`.
-- `TypeDescriptorSetFile(path)`. It infers the format from the extension and takes `.binarypb`, `.fds` or `.pb`, so buf's `.binpb` has to be renamed.
+- `EnvironmentFile(path)`, which reads the env as YAML (cel-go's `env.Config`), or as a textproto or binary `cel.expr.conformance.Environment`.
+- `TypeDescriptorSetFile(path)`. It infers the format from the extension and takes `.binarypb`, `.fds` or `.pb`, so buf's `.binpb` has to be copied under another name.
 - `CompiledExpression{Path}`, which reads a CheckedExpr, and `FileExpression` for a `.cel` or `.celpolicy` file.
-- `NewCompiler` always adds the `optional` and `bindings` extensions.
+- `NewCompiler` **always appends the latest `optional` and `bindings` extensions** (`compiler.go`, `extensionOpt`), whatever the env file says.
 
-`go-policy/compilerfile` (85 lines) loads our two artefacts with those options, with no adapter code. It accepted 6 of 6 rules and rejected 7 of 7, and wrote each CheckedExpr to `generated/checked/cel-go-tools/`. cel-expr-python, cel-go, cel-core and @bufbuild/cel each evaluated all 6 of them.
+So it can't be an exact-profile checker. `go/toolscompiler` runs the nine profile cases through it with the gate-guard env YAML, which names strings only. Two excluded features check: `part.?mass_target.hasValue()` and `cel.bind(x, 1, x == 1)` (`results/typed-demo/tools-compiler.json`, 7 of 9 as the profile says). A browser-profile rule could pass that checker and then fail in @bufbuild/cel.
 
-The CI reference checker is therefore a small Go tool over `tools/compiler`. That's the same amount of code as `go/cmpchecked`, not a CLI we download. Use the CLI beside it for `rules test` and for authors.
+### The reference checker
+
+`go/celcheck` is the reference checker: cel-go with exactly the profile's environment. `go/profile` builds it from the manifest with explicit options (`cel.TypeDescs`, the declared variables, each listed extension at its pinned version through `cel.FromConfig`, and `cel.CrossTypeNumericComparisons`), and appends nothing. It has two commands:
+
+- `celcheck rules <profile> <file>` checks accept, reject and profile cases and writes `generated/checked/cel-go-ref/` with its bundle. It exits non-zero when an accept case fails, a reject case checks, or a profile case that uses an excluded function or syntax checks.
+- `celcheck policy <profile> <file> <name>` compiles a `.celpolicy` into `generated/checked-policy/<profile>/`, bound to the policy's source digest.
+
+On the gate-guard profile it accepted 6 of 6, rejected 7 of 7, and refused all 6 excluded features while the 3 enabled ones checked (`results/typed-demo/celcheck.json`). The policy with `variables` fails to compile in the restricted profile (`undeclared reference to 'cel.@block'`), which is the intended refusal.
+
+**One cel-go version.** The conformance oracle (`go/conformance`), the typed demo, `celcheck` and the `tools/compiler` probe all build from one module, `go/go.mod`, pinned to `cel.dev/cel-go` v0.33.4 (and `/policy` v0.33.3, which resolves against it). Moving the oracle from `github.com/google/cel-go` v0.30.0 left its suite total at 1611 of 1640; only the wording of the 22 `cel.block` errors changed (`conformance/results/failures-cel-go.txt`). So the oracle's score now describes the same cel-go build that checks the rules.
+
+Use the `cel-expr` CLI beside `celcheck` for `rules test` and for authors.
 
 ## cel-policy
 
@@ -366,7 +377,7 @@ A `*.rules.yaml` in the plan is an ordered, first-match list of `{when, then}`. 
 | Compile the policy against the generated descriptor set | `cel-expr compile -format policy` (main, unsigned) | Exit 0. Output type `list(string)` |
 | Compile a policy with a wrong field and a `string` output among `list(string)` outputs | the same | Exit 1, both errors, each at its file, line and column in the `.celpolicy`, with a caret |
 | Evaluate four cases on real proto types | `cel-expr eval -format policy -tests policy/tests.json` | 4 of 4 pass; node coverage 80%, branch coverage 80% |
-| Compile to one CheckedExpr | `go-policy` (60 lines over `cel.dev/cel-go/policy` v0.33.3) | `policy.Compile` returns one checked AST. With `variables` it is `cel.@block([iteration == "commit"], … @index0 …)`. Without them it is nested `?:` |
+| Compile to one CheckedExpr | `go/celcheck policy` (over `cel.dev/cel-go/policy` v0.33.3) | `policy.Compile` returns one checked AST. With `variables` it is `cel.@block([iteration == "commit"], … @index0 …)`. Without them it is nested `?:` |
 | Evaluate that CheckedExpr, with `variables` | cel-expr-python, cel-core, @bufbuild/cel | cel-expr-python 4 of 4. cel-core and @bufbuild/cel fail: neither has a runtime `cel.@block` |
 | Evaluate that CheckedExpr, without `variables` | the same three | 4 of 4 on each |
 
@@ -421,7 +432,7 @@ Vendoring means a copy with a recorded upstream commit, as `reference/` does for
 The checker runs in two places, and an evaluator anywhere.
 
 1. **At load, in the host.** The Python host checks every standalone expression (gate `requires`, edge guards, `void_scope`) with cel-expr-python against the profile, as ADR-0014 already requires: a typo fails at load. Errors carry the rule's file path, for example `flow.yaml#/gates/PROVISIONAL/requires/0`, and the line, column and caret (Kubernetes rows 4 and 5). Each slot's output type is checked too: `requires` and `when` must be `bool`. Rule lists aren't compiled at load: the host loads their CheckedExprs from the bundle and refuses a list whose entry is missing or stale ("Should benchhand adopt the format?").
-2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. The cel-go side is a small tool over `cel.dev/cel-go/tools/compiler`, which loads the generated artefacts with `EnvironmentFile` and `TypeDescriptorSetFile` and writes CheckedExprs (`go-policy/compilerfile`). The `cel-expr` CLI runs the typed `rules test` cases (`eval -tests`, with coverage). cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
+2. **In CI, with cel-go as the reference.** CI checks every rules file that ships with cel-go, cel-expr-python and cel-core. It fails when they disagree on whether a rule checks or on its output type. That differential check is what finds a checker gap like cel-core's `string == int`. The cel-go side is `go/celcheck`, which builds its environment from the profile manifest with explicit options and writes CheckedExprs. The `cel-expr` CLI runs the typed `rules test` cases (`eval -tests`, with coverage). cel-go's cost estimator also runs here, which gives Kubernetes row 8 (a static cost estimate) without a Python cost API.
 
 A successful check produces a **compiled rules bundle**:
 
@@ -543,7 +554,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
     - TypeScript: @bufbuild/cel, evaluating CheckedExprs only.
 
     An engine without a checker may only run rules a checker has already checked.
-8. **Run one conformance suite on every engine in CI.** Use cel-spec's simple tests in protobuf JSON, plus the project's own typed cases. The typed cases include rules that must fail the check: a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable. Also fail CI when the checkers disagree on a shipped rule. Pin each engine's version and options, and record them. For the cel-go reference, use a small tool over `cel.dev/cel-go/tools/compiler`, which reads the environment YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI can run typed test cases, but it writes no CheckedExpr. Install it only from a release whose signature and provenance you verify.
+8. **Run one conformance suite on every engine in CI.** Use cel-spec's simple tests in protobuf JSON, plus the project's own typed cases. The typed cases include rules that must fail the check: a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable. Also fail CI when the checkers disagree on a shipped rule. Pin each engine's version and options, and record them. For the cel-go reference, use a small tool that builds the environment from the profile manifest with explicit options, and test that an excluded function or syntax fails to check. Use one pinned cel-go version for the checker and the conformance oracle. The `cel-expr` CLI can run typed test cases, but it writes no CheckedExpr. Install it only from a release whose signature and provenance you verify.
 9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
 10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
@@ -561,8 +572,8 @@ From `research/cel-neutral/`, with the builds already in place:
 | Typed demo through the pyo3 binding | `cd rust-py && maturin build --release`, then `cd py && uv run --with <wheel> python rust_binding_demo.py` | 50 s build |
 | Shared suite on all seven engines | `conformance/run.sh` | 15 s |
 | The `cel-expr` CLI on the typed demo | `cd py && uv run python ../cli/env_json.py ../generated/env/gate_guard.env.yaml ../cli/gate_guard.env.json`, then `cli/compile_demo.sh <cel-expr> cli/gate_guard.env.json` | seconds |
-| cel-go's `tools/compiler` on the typed demo | `cd go-policy && go run ./compilerfile` | seconds |
-| The rule list as a policy | `cel-expr eval -format policy -env policy/env.json -fds generated/types.binpb -expr policy/checks_by_iteration.celpolicy -tests policy/tests.json`; `cd go-policy && go run . ../policy/<name>.celpolicy ../generated/checked-policy/<name>.binpb`; then the `policy_demo` program in `py/`, `rust/` and `ts/` | seconds each |
+| The reference checker on the typed demo; the `tools/compiler` probe | `cd go && go run ./celcheck rules gate_guard ../typedemo/gate_guard.yaml`; `go run ./toolscompiler` | seconds |
+| The rule list as a policy | `cel-expr eval -format policy -env cli/checks_by_iteration.env.json -fds generated/types.binpb -expr policy/checks_by_iteration.celpolicy -tests policy/tests.json`; `cd go && go run ./celcheck policy <profile> ../policy/<name>.celpolicy <name>`; then the `policy_demo` program in `py/`, `rust/` and `ts/` | seconds each |
 
 The typed demo exits non-zero on cel-core (the `string == int` rule), on @bufbuild/cel (no checker) and on cel-js (the two `dyn` wrappers). Each exit code reports an engine finding listed above.
 

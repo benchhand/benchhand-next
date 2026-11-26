@@ -18,9 +18,9 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/common/env"
-	"github.com/google/cel-go/ext"
+	"cel.dev/cel-go/cel"
+	"cel.dev/cel-go/common/env"
+	"cel.dev/cel-go/ext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 )

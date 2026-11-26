@@ -88,7 +88,7 @@
   "kind": "reject",
   "case": "undeclared.x == 1",
   "ok": true,
-  "detail": "ERROR: \u003cinput\u003e:1:1: undeclared reference to 'undeclared' (in container '')"
+  "detail": "ERROR: \u003cinput\u003e:1:1: undeclared reference to 'undeclared'"
  },
  {
   "engine": "cel-go",
@@ -116,7 +116,7 @@
   "kind": "profile",
   "case": "math.greatest(1, 2) == 2",
   "ok": true,
-  "detail": "math extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'math' (in container '')"
+  "detail": "math extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'math'"
  },
  {
   "engine": "cel-go",
@@ -130,21 +130,21 @@
   "kind": "profile",
   "case": "cel.bind(x, 1, x == 1)",
   "ok": true,
-  "detail": "bindings extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'cel' (in container '')"
+  "detail": "bindings extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'cel'"
  },
  {
   "engine": "cel-go",
   "kind": "profile",
   "case": "base64.encode(b\"a\") == \"YQ==\"",
   "ok": true,
-  "detail": "encoders extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'base64' (in container '')"
+  "detail": "encoders extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'base64'"
  },
  {
   "engine": "cel-go",
   "kind": "profile",
   "case": "[2, 1].sort() == [1, 2]",
   "ok": true,
-  "detail": "lists extension (excluded): ERROR: \u003cinput\u003e:1:12: undeclared reference to 'sort' (in container '')"
+  "detail": "lists extension (excluded): ERROR: \u003cinput\u003e:1:12: undeclared reference to 'sort'"
  },
  {
   "engine": "cel-go",
@@ -170,8 +170,32 @@
  {
   "engine": "cel-go",
   "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
   "case": "accept-1.binpb",
-  "writer": "python",
+  "writer": "cel-go-ref",
   "ok": true,
   "detail": "true \u003cnil\u003e"
  },
@@ -179,7 +203,15 @@
   "engine": "cel-go",
   "kind": "shipped",
   "case": "accept-2.binpb",
-  "writer": "python",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "cel-go-ref",
   "ok": true,
   "detail": "true \u003cnil\u003e"
  },
@@ -218,24 +250,16 @@
  {
   "engine": "cel-go",
   "kind": "shipped",
-  "case": "accept-5.binpb",
-  "writer": "rust-cel-core",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
-  "case": "accept-0.binpb",
-  "writer": "rust-cel-core",
-  "ok": true,
-  "detail": "true \u003cnil\u003e"
- },
- {
-  "engine": "cel-go",
-  "kind": "shipped",
   "case": "accept-1.binpb",
-  "writer": "rust-cel-core",
+  "writer": "python",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "python",
   "ok": true,
   "detail": "true \u003cnil\u003e"
  },
@@ -259,6 +283,30 @@
   "engine": "cel-go",
   "kind": "shipped",
   "case": "accept-4.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true \u003cnil\u003e"
+ },
+ {
+  "engine": "cel-go",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
   "writer": "rust-cel-core",
   "ok": true,
   "detail": "true \u003cnil\u003e"
