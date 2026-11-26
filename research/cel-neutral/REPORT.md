@@ -29,6 +29,7 @@ Recommendation, which is for the owner to decide:
 - Use `@bufbuild/cel` in the browser, to evaluate CheckedExprs only.
 - Use cel-go in CI as the reference checker and the conformance oracle, through a small tool over `cel.dev/cel-go/tools/compiler`. That package reads our env YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI checks the same way, 7 of 7, but writes no CheckedExpr, so it serves for authoring and `rules test` only.
 - Generate the descriptor set and environment YAML with the contracts (ADR-0017).
+- Write rule lists as cel-policy files (`.celpolicy`), compiled by cel-go's policy compiler to one CheckedExpr each. A benchhand `{when, then}` list is a cel-policy `match` block. cel-expr-python evaluated the compiled policy. cel-core and @bufbuild/cel evaluated it once policy `variables` were left out, because those compile to `cel.@block`, which neither runtime has.
 
 For Rust, the owner's ask then comes down to a required Rust conformance job, a Rust adapter crate, and contract types for Rust providers. Whether a host component moves to Rust is a plan section 4 (D12) decision. As of this report, D12 says "no Rust".
 
@@ -339,7 +340,7 @@ The checker runs in two places, and an evaluator anywhere.
 
 A successful check produces a **compiled rules bundle**:
 
-- the CheckedExpr of each rule, keyed by its file path;
+- the CheckedExpr of each rule, keyed by its file path. A rule list written as a `.celpolicy` is compiled by cel-go's policy compiler into one CheckedExpr for the whole list;
 - the rule's output type;
 - the digest of the env YAML and of the descriptor set it was checked against;
 - the checker's identity (engine, version, options), as Kubernetes row 11 asks.
@@ -452,6 +453,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
 9. **Enable only shared extensions.** The environment names only extensions that every engine that runs the rules has, at a pinned version. The adapter's load step refuses any other.
 10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
+12. **Write a rule list as a cel-policy file.** An ordered first-match list is a cel-policy `match` block. Compile it with a policy compiler (cel-go, cel-cpp or cel-java), which checks that every output has the same type and that no choice is unreachable. Ship the one CheckedExpr it produces. Use policy `variables` only if every engine that runs the policy evaluates `cel.@block`. Check: the policy conformance cases and the project's suite on each evaluator.
 
 ## Reproduce the results
 
