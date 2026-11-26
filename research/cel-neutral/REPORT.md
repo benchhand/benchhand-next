@@ -315,3 +315,27 @@ These three make Rust providers first-rate. A Rust host component is a different
 | 24. Absent versus null | Optional scalars have presence and nullable ones are wrappers, so `has()` works in every engine that reads protos |
 | 25. Table-driven rule tests | `typedemo/*.yaml` is that format; a `rules test` command runs it on the host engine |
 | 26. Environment as data | Adopted now. cel-expr-python reads message-typed variables from the env YAML, which the Kubernetes report left unverified |
+
+## Proposed changes to plan section 5 and ADR-0014
+
+These are proposals. Nothing in `docs/` changes in this branch.
+
+### Plan section 5, "Flow engine and rules (D14)"
+
+Replace the **Interpreter** bullet's type sentence. Current text: "CEL activation variables are typed from the contracts (D17), so the CEL type-checker catches wrong field names." Proposed:
+
+> CEL activation variables are typed from the contracts (D17). `contracts_gen` generates, from the published JSON Schemas, a FileDescriptorSet and one cel-go environment YAML per rule scope. A scope is typed only when it is structural: a union on a path a rule can reach is refused at generation, with the path and the reason. The checker then catches wrong field names, wrong operand types and reads of omitted fields.
+
+Replace the **CEL runtime** bullet. Current text: "`cel-expr-python`, Google's C++-backed binding, which is young (0.1.x). A Rust-backed binding is the fallback behind one small adapter interface. The conformance suite runs the same expressions on both." Proposed:
+
+> - **CEL engines**, each behind the same five-operation adapter (`load`, `check`, `program`, `eval`, `identity`). The Python host checks and evaluates with `cel-expr-python`. Rust components and providers use `cel-core`, with `cel-cxx` as the fallback. The browser evaluates checked rules with `@bufbuild/cel` and doesn't check. CI checks with `cel-go` as the reference. A Python fallback is a pyo3 binding over `cel-core`.
+> - **Compiled rules.** The host checks every rule at load and writes a rules bundle. The bundle holds each rule's CheckedExpr and output type, plus the digests of the env YAML and descriptor set, and the checker's identity. An evaluator in any language runs the bundle without checking again and refuses a digest that differs from its own environment. The bundle shape lives in `contracts/`.
+> - **Conformance.** One suite runs on every engine in CI: cel-spec's simple tests in protobuf JSON, plus benchhand's typed accept and reject cases. CI also fails when cel-go, cel-expr-python and cel-core disagree on whether a shipped rule checks. The environment may enable only extensions that every executing engine has.
+
+Plan section 4 (D12), the CEL row of the table: change Rust from `cel-rust` to `cel-core` (it has the checker and reads CheckedExprs) and TypeScript from `cel-js` to `@bufbuild/cel` (it evaluates CheckedExprs). If the owner wants a Rust host component, the "no Rust" choice under the table changes too; see the open questions.
+
+### ADR-0014, "The flow is data, the rules are CEL"
+
+ADR-0014 is accepted, so this is an amendment to its Consequences, or a new ADR that ADR-0014 links to; the owner picks. Proposed text:
+
+> CEL is compiled and type-checked at load, against types generated from the contracts. The generated artefacts are a FileDescriptorSet and a cel-go environment YAML per rule scope, and only structural scopes are typed. A rule crosses a language boundary as a `cel.expr.CheckedExpr`, together with the digest of the environment it was checked against. Every runtime runs its own CEL engine behind one adapter interface, and every engine passes one shared conformance suite in CI. That suite includes rules that must fail the check. The engine choices and the suite live in plan section 5, not in this ADR, so changing an engine doesn't reopen the decision.
