@@ -162,6 +162,9 @@ def _packet_problem(root: Path, directory: Path, version: str, version_sha: str)
         data = json.loads((directory / "result.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         return None, f"cannot read result.json: {error}"
+    # TODO(migrate): packets and snapshots stay at record_version 3 (orchestrator decision). When the migrate
+    # service merges, verify the seal on the raw bytes first, then upgrade a record_version 2 packet in
+    # memory by migrate's rules; until then a v2 packet breaks this contract and counts as nothing.
     found = contracts.violations("manufacturing-check-result", data)
     if found:
         where = found[0].pointer or "/"

@@ -11,7 +11,7 @@ from . import common_schema
 
 class BenchhandManufacturingIntentCheckResultResultJsonOfAHwChecksVSBundle(ContractModel):
     """
-    One producer's required-check packet for one version: the obligations it was asked to cover (enumerated from the record before it ran), one outcome per obligation, its findings, the dependency fingerprints it read and whether it covered every expected obligation. A producer cannot shrink its scope by omission: an expected obligation without an outcome makes the packet incomplete, and unknown never counts as pass. Ported unchanged from the prototype's manufacturing-check-result schema at reference_commit 412b5d9
+    One producer's required-check packet for one version: the obligations it was asked to cover (enumerated from the record before it ran), one outcome per obligation, its findings, the dependency fingerprints it read and whether it covered every expected obligation. A producer cannot shrink its scope by omission: an expected obligation without an outcome makes the packet incomplete, and unknown never counts as pass. Ported to v3 from the prototype's manufacturing-check-result schema at reference_commit 412b5d9: its record_version is the v3 record_version
     """
 
     model_config = ConfigDict(
