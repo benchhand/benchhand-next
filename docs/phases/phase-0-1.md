@@ -33,7 +33,7 @@ Status: waiting for the owner's review. Written 2026-11-25 at `main` `41598c2`, 
   - docs (`docs/contract/generated/`);
   - examples.
 
-  `just contracts-check` fails on drift, and on a breaking change without a major version bump. The TypeSpec migration (ADR-0017) is in progress on a branch.
+  `just contracts-check` fails on drift, and on a breaking change without a major version bump. The TypeSpec migration (ADR-0017) is on `main`: the sources are `contracts/*.tsp`, which generate the published schemas.
 - **Record service** (`benchhand_core.record`):
   - typed reads of every `hw/` document, with a strict YAML loader and CSV column checks;
   - writes that check file identity and round-trip before touching a file;

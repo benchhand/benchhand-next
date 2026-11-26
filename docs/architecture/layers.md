@@ -154,7 +154,7 @@ flowchart TB
 | Envelope phase | Phase 1 writes the envelope contract; Phase 2 lists "the result envelope and `next_actions`" | Two phases name the envelope; neither is on `main` |
 | Annotation-set phase | Phase 2 lists the annotation set as a record contract addition; Phase 4 lists "the annotation-set contract" | Two phases name it; neither is on `main` |
 | Phase 1 services | Phase 1: migrate and evidence | Both are on `main`. `docs/phases/phase-0-1.md` still lists both under "Not built": migrate as "built on a branch, not yet reviewed", and evidence as "Nothing writes evidence or checks what it cites". The evidence service now checks what evidence cites, and still writes nothing: `evidence/reader.py` only reads |
-| TypeSpec timing | Phase 2: the record additions are "made with the move to TypeSpec" | ADR-0017: the move to TypeSpec happened in Phase 1. `docs/phases/phase-0-1.md` still says "The TypeSpec migration (ADR-0017) is in progress on a branch" |
+| TypeSpec timing | Phase 2: the record additions are "made with the move to TypeSpec" | ADR-0017: the move to TypeSpec happened in Phase 1, as `docs/phases/phase-0-1.md` now states |
 | Forms | Section 1 lists elicitation and forms | ADR-0018: no form elicitation in v1; section 11 was updated, section 1 wasn't |
 | Long calls | Section 11 and provider-protocol section 8: about 50 s | ADR-0018: about 30 s |
 | CLI | D1 and section 7: `mcp`, `serve`, `install`, `doctor`, `setup`, `policy`, `debug call` | `main` has `version` and `record migrate`, and D1 lists neither |

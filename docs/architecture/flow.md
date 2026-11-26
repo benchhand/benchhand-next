@@ -66,11 +66,15 @@ stateDiagram-v2
   direction TB
   state "Build vN, fast checks 1 to 4" as building
   state "PROVISIONAL<br/>gate decision, status provisional<br/>flow.stage moves to the next stage" as provisional
-  state checksFork <<fork>>
+  state checksAt <<choice>>
   state "Full check on the same vN<br/>fail-fast step 5" as fullCheck
+  state checksFork <<fork>>
+  state "Full check on the same vN<br/>fail-fast step 5, at L2" as l2FullCheck
   state "Light mechanical review<br/>cad-mech-reviewer, at L2 only" as mechReview
   state "Light DFM review<br/>cad-dfm-reviewer, at L2 only" as dfmReview
   state checksJoin <<join>>
+  state checksDone <<choice>>
+  state "Finer sweep<br/>only the full check reruns on the same vN" as finerSweep
   state "Human gate open<br/>gate mode ask or chat" as humanGate
   state "APPROVED<br/>gate decision, status approved<br/>cites the provisional decision" as approved
   state "VOID<br/>gate decision, status void<br/>flow.stage back to this stage" as void
@@ -78,20 +82,27 @@ stateDiagram-v2
   [*] --> building
   building --> building: a fast check fails, fix and build a new version
   building --> provisional: every fast check passes
-  provisional --> checksFork
-  checksFork --> fullCheck
+  provisional --> checksAt
+  checksAt --> checksFork: PARTS, L2
+  checksAt --> fullCheck: LAYOUT freeze, DETAIL, ANALYSIS
+  checksFork --> l2FullCheck
   checksFork --> mechReview
   checksFork --> dfmReview
-  fullCheck --> checksJoin: passes
+  l2FullCheck --> checksJoin: passes
   mechReview --> checksJoin: returns
   dfmReview --> checksJoin: returns
-  fullCheck --> void: fails
+  l2FullCheck --> void: fails
   mechReview --> void: a MAJOR finding
   dfmReview --> void: a MAJOR finding
-  checksJoin --> humanGate: all returned, the previous stage's human gate passed, mode ask or chat
-  checksJoin --> approved: mode auto, the previous stage's human gate passed, no question asked
+  checksJoin --> checksDone: both reviews returned and the full check passed
+  fullCheck --> checksDone: passes
+  fullCheck --> void: fails
+  checksDone --> humanGate: the previous stage's human gate passed, mode ask or chat
+  checksDone --> approved: mode auto, the previous stage's human gate passed, no question asked
   humanGate --> humanGate: empty, declined, cancelled or unanswered, no consent
-  humanGate --> fullCheck: the user asks for a finer sweep on the same vN
+  humanGate --> finerSweep: the user asks for a finer sweep
+  finerSweep --> humanGate: passes, present the gate again
+  finerSweep --> void: fails
   humanGate --> void: the user names a change
   humanGate --> approved: explicit user approval, recorded with its channel
   void --> building: build a fixed version in this stage
@@ -105,6 +116,11 @@ stateDiagram-v2
     At L2, PARTS, the full check counts as done
     only after both light reviews have returned.
     At the other stages only the full check runs.
+  end note
+  note right of finerSweep
+    No light reviews and no fork:
+    the prototype reruns only the full check
+    and presents the gate again.
   end note
   note right of approved
     CEL requires, plan section 5:

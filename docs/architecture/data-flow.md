@@ -67,13 +67,18 @@ sequenceDiagram
   alt cancel
     H->>S: cancel, through a jobs.* tool the plan doesn't name
     S->>J: cancel(job_id)
-    alt the job already ended
+    alt the record is already terminal
       J-->>S: JobHandle with its final status, unchanged
     else a live job this service owns
-      J->>Sup: stop request
-      Sup->>C: TERM to the group, KILL after the grace period
-      J->>St: status cancelled, or the job's own outcome when it exited first
-      J-->>S: JobHandle: status cancelled
+      alt its supervisor still runs
+        J->>Sup: stop request
+        Sup->>C: TERM to the group, KILL after the grace period
+        J->>St: status cancelled
+        J-->>S: JobHandle: status cancelled
+      else its supervisor exited, not yet reaped
+        J->>St: status succeeded for exit 0, else failed
+        J-->>S: JobHandle: the status it wrote, succeeded or failed
+      end
     else another process owns it, its owner is gone but its supervisor runs, or another host recorded it
       J-->>S: JobError, and nothing is signalled
     else nothing runs it any more
@@ -128,21 +133,28 @@ sequenceDiagram
   rect rgb(232, 245, 233)
     S->>R: load_record(root): the caller reads the current record
     S->>E: read_built_version(root, record, vN, *, shipped_guidelines)
-    E->>E: verify the seal of hw/versions/vN/, read its bound packets in hw/checks/vN/
-    E->>R: read_document: the snapshot documents vN was built from
-    alt vN isn't built, or fails its seal
-      E-->>S: BuiltVersionError
+    E->>E: refuse a linked path, then check vN has a manifest, then verify the seal of hw/versions/vN/
+    alt vN isn't built, is reached through a link, or fails its seal
+      E-->>S: BuiltVersionError, before any packet or snapshot read
     else built and sealed
+      E->>E: read its bound packets in hw/checks/vN/
+      E->>R: read_document: the snapshot documents vN was built from
       E-->>S: BuiltVersion
       S->>E: assess(record, built, today)
       E->>E: expected obligations, sealed packets, evidence ledger, waivers
-      E->>E: acceptance: refused on a path or dependency refusal, else the inventory and acceptance_digest
+      alt a path or dependency refusal among the findings
+        E->>E: acceptance refused, with a reason
+      else the acceptance inventory can't be read, e.g. a linked source file
+        E->>E: acceptance refused, with a reason
+      else
+        E->>E: acceptance formed: the inventory and its acceptance_digest
+      end
       E-->>S: EvidenceAssessment: statuses, facets, findings, complete, acceptance
     end
   end
-  alt BuiltVersionError, or acceptance refused: a reason and no evidence_sha256
-    S-->>H: findings, and no freeze
-    Note over S,F: Open: the sources don't say what the freeze does without a digest
+  alt BuiltVersionError, or acceptance refused
+    Note over S,E: On main this ends here: refused, no evidence_sha256
+    Note over S,F: Open: what the freeze does next. product.yaml allows flow.frozen without evidence_sha256, and a release refuses that freeze
   else acceptance formed, with evidence_sha256
     S->>F: design_freeze gate, a single human gate
     F-->>S: gate packet, next action: ask the user
@@ -236,36 +248,46 @@ sequenceDiagram
   A->>CLI: benchhand record migrate --apply HW
   CLI->>M: migrate(root, apply=True)
   M->>HW: read record_version first, as the dry run does
-  M->>L: read the lock before ownership: a held lock refuses a fresh apply,<br/>migrate.locked names --resume and --undo
-  M->>O: create with O_CREAT and O_EXCL, naming pid, host and start time,<br/>else migrate.locked naming the owner
-  M->>L: read it again under ownership, then write it atomically, naming the new backup
-  M->>T: plan again and validate the migrated copy
-  M->>B: preimages and manifest.json with both sha256 values, synced and read back
-  alt the backup can't be written
-    M->>L: remove
-    M-->>CLI: status refused, migrate.backup_failed, nothing in hw/ changed
-  else
-    M->>B: publish COMPLETE atomically, holding the manifest sha256
-    M->>HW: check no file was added or removed since the plan
-    M->>HW: write each changed file: synced temp file, re-hash, rename, hw/product.yaml last
-    alt a write fails or a file changed meanwhile
-      M-->>CLI: status failed, migrate.write_failed or migrate.changed_meanwhile, and the lock stays
-    else every write succeeds
-      M->>HW: sync the directory of every target
-      alt the sync fails
-        M-->>CLI: status failed, migrate.not_durable, and the lock stays
-      else synced
-        M->>HW: validate the record again
-        alt it doesn't validate
-          M-->>CLI: status failed, migrate.invalid_result naming --undo, and the lock stays
-        else it validates
-          M->>L: remove
-          M-->>CLI: status applied, with the undo command
+  alt record_version 3, without --resume
+    M->>L: an owner file or a held lock refuses, migrate.locked
+    M->>HW: validate
+    M-->>CLI: status current: no ownership taken, no backup, nothing written
+  else record_version 1 or 2
+    M->>L: read the lock before ownership: a held lock refuses a fresh apply,<br/>migrate.locked names --resume and --undo
+    M->>O: create with O_CREAT and O_EXCL, naming pid, host and start time,<br/>else migrate.locked naming the owner
+    M->>L: read it again under ownership, then write it atomically, naming the new backup
+    M->>T: plan again and validate the migrated copy
+    M->>B: preimages and manifest.json with both sha256 values, synced and read back
+    alt the backup can't be written
+      M->>L: remove
+      M-->>CLI: status refused, migrate.backup_failed, nothing in hw/ changed
+    else
+      M->>B: publish COMPLETE atomically, holding the manifest sha256
+      M->>HW: check no file was added or removed since the plan
+      loop each changed file, hw/product.yaml last
+        M->>HW: synced temp file, re-hash, rename, sync its directory
+      end
+      alt a file changed meanwhile, or a write or its rename fails
+        M-->>CLI: status failed, migrate.changed_meanwhile or migrate.write_failed,<br/>the loop stops, and the lock stays
+      else the directory sync right after one rename fails
+        M-->>CLI: status failed, migrate.not_durable for that file,<br/>the loop stops, and the lock stays
+      else every file written
+        M->>HW: sync the directory of every target again
+        alt the sync fails
+          M-->>CLI: status failed, migrate.not_durable, and the lock stays
+        else synced
+          M->>HW: validate the record again
+          alt it doesn't validate
+            M-->>CLI: status failed, migrate.invalid_result naming --undo, and the lock stays
+          else it validates
+            M->>L: remove
+            M-->>CLI: status applied, with the undo command
+          end
         end
       end
     end
+    M->>O: remove, whatever the result
   end
-  M->>O: remove, whatever the result
   Note over M,O: A killed run leaves its owner file: every later run gets migrate.locked<br/>naming that owner until someone deletes the file by hand
 
   opt the next run after a stopped apply
@@ -314,7 +336,7 @@ sequenceDiagram
 - Green-shaded steps in (c) and (d) are the read-only evidence seam on `main`: the caller supplies the current record, and the evidence service reads the built version and assesses it. The steps around them are planned orchestration, whose exact calls Phases 2 and 4 don't specify.
 - **Open: tool calls and flow.stage.** Plan section 5 puts CEL guards on transitions. No source says whether a tool call such as `model.build` is checked against the stage.
 - **Open: artifact placement.** The host verifies a provider's artifacts and moves them into `hw/`. No source says which component writes them; the typed record store handles YAML, CSV and decisions only.
-- **Open: a freeze without a digest.** `assess` can refuse acceptance and give no `evidence_sha256`. No source says what the freeze tool does then.
+- **Open: a freeze without a digest.** `read_built_version` or `assess` can refuse, and on `main` that path ends at a refused acceptance with no `evidence_sha256`. `product.yaml` allows `flow.frozen` without `evidence_sha256`, and a release refuses that freeze. No source says whether the freeze tool records such a freeze or refuses it.
 - **Open: 30 s or 50 s.** ADR-0018 sends work over about 30 s to a job handle; plan section 11 and provider-protocol section 8 say about 50 s. The diagrams follow ADR-0018, the later decision.
 - **Open: provider request to job.** The plan says the server manages provider workers and jobs, and that `$/progress` feeds job-handle status. `JobService` runs a command under a supervisor, and no document says how a provider request becomes such a job.
 - **Open: the cancel tool.** The plan names `jobs.start`, `jobs.status` and `jobs.result`, and `jobs.*` for Phase 3; no cancel tool name.
