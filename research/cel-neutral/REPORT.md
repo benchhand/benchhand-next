@@ -30,6 +30,7 @@ Recommendation, which is for the owner to decide:
 - Use cel-go in CI as the reference checker and the conformance oracle, through a small tool over `cel.dev/cel-go/tools/compiler`. That package reads our env YAML and descriptor set as is and writes CheckedExprs. The `cel-expr` CLI checks the same way, 7 of 7, but writes no CheckedExpr, so it serves for authoring and `rules test` only.
 - Generate the descriptor set and environment YAML with the contracts (ADR-0017).
 - Write rule lists as cel-policy files (`.celpolicy`), compiled by cel-go's policy compiler to one CheckedExpr each. A benchhand `{when, then}` list is a cel-policy `match` block. cel-expr-python evaluated the compiled policy. cel-core and @bufbuild/cel evaluated it once policy `variables` were left out, because those compile to `cel.@block`, which neither runtime has.
+- Vendor three of the six cel-expr/skills agent skills into a harness-plugins `rules` plugin: `cel-testing`, `cel-debugging`, and `cel-authoring` with its environment step replaced. As shipped, `cel-authoring` has the agent hand-write the environment and build descriptors with `protoc`, which the generated environment replaces.
 
 For Rust, the owner's ask then comes down to a required Rust conformance job, a Rust adapter crate, and contract types for Rust providers. Whether a host component moves to Rust is a plan section 4 (D12) decision. As of this report, D12 says "no Rust".
 
@@ -329,6 +330,32 @@ Yes, as the source format of rule lists, with three conditions:
 
 This changes plan section 5 slightly. The rule lists become cel-policy files, checked by a policy compiler, rather than a benchhand-defined `{when, then}` shape that the host interprets itself.
 
+## The cel-expr/skills agent skills
+
+cel-expr/skills ships six skills under `skills/` and an MCP server (`cel-expr mcp`). I read them at a41927f. The MCP server exposes `cel_create_environment`, `cel_compile`, `cel_evaluate`, `cel_evaluate_conformance` and `cel_generate_prompt`. It has a fixed-environment mode, in which the tools take no environment argument.
+
+| Skill | Lines | What it does | Fit with the standard |
+|---|---:|---|---|
+| `cel-authoring` | 169 | Write an expression or a `.celpolicy` against an env JSON, compile it with `cel-expr`, and test it | **Conflicts on environments.** When it finds no `*_env.json`, the agent searches the code and writes an `envConfig` itself, and builds a descriptor set with `protoc` on the fly. Both break standard rule 1. It also advises namespaced simple variables (`request.path: string`) over message types, and enum variables declared as `int`. Its policy section matches standard rule 12. |
+| `cel-debugging` | 165 | Fix compile and runtime errors: presence with `has()` or `.?`, overload mismatches, and narrowing `dyn` | Compatible. It narrows `dyn` toward simple types, the same direction as rule 2. Its map-lookup fixes (`'k' in m`) don't apply to message-typed scopes. |
+| `cel-testing` | 104 | Derive test cases from `compile`'s inputSchema, then evaluate until branch and node coverage reach 100% | Compatible, and it fills a gap: the standard has no coverage rule. It installs with `go install …@latest`, which conflicts with pinning (rule 8). The inputSchema bug above (a `double` reported as `boolean` after `has()`) misleads its test generation. |
+| `cel-optimize` | 248 | Simplify an expression and prove it equivalent with the cel-java verifier (a JAR from Maven Central, Java 8+) | Neutral. Its `cel.bind` rewrites run on every engine in the shared suite except @bufbuild/cel. Its optional-chaining rewrites need the optional extension, which @bufbuild/cel and cel-js lack (rule 9). |
+| `cel-conformance-testing` | 209 | Write and run cel-spec conformance tests in textproto for cel-go, cel-cpp and cel-java | Aimed at contributors to the CEL implementations, not at rule authors. The project's suite in this report uses the protobuf JSON form instead. |
+| `cel-doc-generator` | 259 | Write README files for extension libraries in the CEL repositories | Out of scope: it targets the cel-go, cel-cpp and cel-java repositories. |
+
+None of the skills mentions CheckedExprs, a compiled bundle, structural scopes or a generated environment. Their model is an agent that writes an expression and its environment together, for one engine, cel-go.
+
+### What to vendor into a harness-plugins `rules` plugin
+
+- **Vendor `cel-testing`,** pinned to a released, verified `cel-expr`, with a coverage threshold as the check.
+- **Vendor `cel-debugging`** as is.
+- **Vendor the policy section and the error-fixing steps of `cel-authoring`.** Replace its "Locate or Create Environment" step with: use the generated env (converted to JSON with `cli/env_json.py` or written by the generator) and the generated descriptor set; if none exists for the scope, stop and ask for one to be generated. Drop the on-the-fly `protoc` alias.
+- **Leave out `cel-optimize`** until a project needs it. It adds Java to the toolchain.
+- **Leave out `cel-conformance-testing` and `cel-doc-generator`.**
+- **Use the MCP server in fixed-environment mode only,** pointed at the generated environment. Its `cel_create_environment` tool is the hand-written environment in tool form.
+
+Vendoring means a copy with a recorded upstream commit, as `reference/` does for the prototype. The changed steps are a local patch on top.
+
 ## The recommended design
 
 ### Where checking happens
@@ -350,6 +377,8 @@ The host writes the bundle at load, as a cache, and on request (`benchhand rules
 An evaluator only needs the bundle. It compares the two digests with its own environment and refuses a mismatch, then runs each CheckedExpr without checking again. That is how the browser runs typed rules with @bufbuild/cel, which has no public checker. A CheckedExpr's digest comes from a deterministic re-encoding, because writers emit map entries in any order.
 
 So checking is a separate step that ships CheckedExprs, with one condition: the host still checks at load, because users and policy providers can change rules between releases.
+
+Agents that write rules work against the same generated artefacts. The `rules` plugin's skills and the `cel-expr mcp` server in fixed-environment mode read the generated environment and descriptor set, and never author an environment.
 
 ### The engine in each runtime
 
@@ -454,6 +483,7 @@ This section applies to any project that adopts CEL, so it can become a harness-
 10. **Bound the cost.** Bound every collection a scope exposes in the schema, set an evaluation timeout in every adapter, and run a static cost estimate (cel-go's) on shipped rules in CI.
 11. **Leave enum values to a lint.** A string enum becomes a CEL `string`, so the checker doesn't catch a misspelt value. Add a load-time lint that compares string literals with the enum of the field they are compared to.
 12. **Write a rule list as a cel-policy file.** An ordered first-match list is a cel-policy `match` block. Compile it with a policy compiler (cel-go, cel-cpp or cel-java), which checks that every output has the same type and that no choice is unreachable. Ship the one CheckedExpr it produces. Use policy `variables` only if every engine that runs the policy evaluates `cel.@block`. Check: the policy conformance cases and the project's suite on each evaluator.
+13. **Point rule-writing agents at the generated environment.** Agent skills and MCP tools for CEL read the generated environment and descriptor set, and never write their own: use the `cel-expr` MCP server in fixed-environment mode. When no generated environment covers a scope, the agent stops and asks for one. Check: the plugin's skills carry no environment-authoring step.
 
 ## Reproduce the results
 
