@@ -50,7 +50,7 @@ Status: waiting for the owner's review. Written 2026-11-25 at `main` `41598c2`, 
 
 | Item | State | Effect |
 |---|---|---|
-| Record migrate service (prototype v2 to v3) | Built on a branch, not yet reviewed: `benchhand_core.record.migrate` and `benchhand record migrate [--apply] HW`. Its rule table and the three decided defaults are in `docs/contract/record-migration.md`. The test helper `tests/record/prototype_v2.py` is gone. | On a copy of `benchhand-test-project`, everything migrates except the Phase 2 assembly kinds (`bench`, `place`, `instructions`). |
+| Record migrate service (prototype v2 to v3) | Built on a branch, not yet reviewed: `benchhand_core.record.migrate`, and the CLI `benchhand record migrate [--apply [--backup]] HW`. The rule table, how apply writes in place, and the three decided defaults are in `docs/contract/record-migration.md`. The test helper `tests/record/prototype_v2.py` is gone. | On a copy of `benchhand-test-project`, everything migrates except the Phase 2 assembly kinds (`bench`, `place`, `instructions`). |
 | Record evidence service | Evidence documents are read and validated. Nothing writes evidence or checks what it cites. | Needed before verification and release work. |
 | Record release service (snapshot, seal, verify, package) | Not started. | Needed before any version can be frozen. It must honour the ignore rules in bead `benchhand-3fc`. |
 | Port of the cad-agent record test cases | The lamp-arm reference record and the validator cases that still hold are ported. The release and evidence cases wait on those services. | |
@@ -67,11 +67,19 @@ I ran this against a copy of the building agent's test project, `benchhand-test-
    - `decision.reference` for each part citing an unreadable decision.
 
    Nothing in the copy changed. This is the designed refusal, and it shows the missing migrate service.
-2. **After the test fixture converter (v2 to v3):** one finding was left, in `hw/assembly.yaml`. The test project already uses things benchhand-next doesn't have yet:
-   - the `bench` kind (8 operations; prototype PR #334, sub-builds);
-   - the `place` kind (23 operations; plan section 12b);
-   - an `instructions` key on 40 operations.
-3. **With those operations and keys stripped from the copy:** 0 read errors and 0 findings across all 29 parts.
+2. **`benchhand record migrate --apply hw`, on a copy committed to a new git repository:**
+   - 46 of 3,559 files would change (732 diff lines), with 18 `migrate.gate_decision` info findings.
+   - One validation error is left, in `hw/assembly.yaml` at `/operations/0/kind` (`bench`), so apply refuses: it exits 1 and `git status -- hw` shows nothing changed.
+   - The test project already uses things benchhand-next doesn't have yet:
+     - the `bench` kind (8 operations; prototype PR #334, sub-builds);
+     - the `place` kind (23 operations; plan section 12b);
+     - an `instructions` key on 40 operations.
+3. **The same command, with those operations and keys stripped from the copy:**
+   - It wrote 46 files, `hw/product.yaml` last, and printed `to undo: git -C <copy> restore -- hw`.
+   - The other 3,513 files stayed byte-identical, 2,267 of them sealed history under `hw/versions/` and `hw/checks/`.
+   - `validate` then gave 0 read errors and 0 findings across all 29 parts.
+   - `git restore hw` put the copy back byte for byte.
+   - An apply stopped after 1, 20 or 45 files and then rerun with `--backup` gave the same bytes as a clean run.
 4. **Negative check:** with `hw/parts/GHA-0001/` moved away, there is exactly one finding, `bom.unknown_part`: "BOM PN GHA-0001 has no hw/parts/GHA-0001/part.yaml and is not an assembly".
 5. **OS junk:** I wrote `.DS_Store`, `Thumbs.db`, `desktop.ini` and `__pycache__` into hw/, parts/, decisions/ and manufacturing/sources/. There were 0 read errors and 0 findings. A test now pins this.
 6. **Jobs:**
@@ -79,7 +87,7 @@ I ran this against a copy of the building agent's test project, `benchhand-test-
    - a `sleep 30` job, when cancelled, ended as `cancelled` with exit -15;
    - `list_jobs` showed both;
    - the run directory got its own `.gitignore`.
-7. **CLI:** `benchhand version` prints `0.0.0`. The only subcommand is `version`; the others arrive in Phase 3.
+7. **CLI:** `benchhand version` prints `0.0.0`, and `benchhand record migrate` runs as in items 2 and 3. The other subcommands arrive in Phase 3.
 
 ## Gaps the run found, to add to Phase 2's record additions
 
