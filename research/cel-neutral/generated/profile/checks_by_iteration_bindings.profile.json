@@ -1,0 +1,33 @@
+{
+ "manifest_version": 1,
+ "name": "checks_by_iteration_bindings",
+ "descriptor_set": {
+  "file": "types.binpb",
+  "sha256": "72000d838b506117b6725af5769c56764f0c6e1ad14823cc136005b6e05e3170"
+ },
+ "container": "",
+ "variables": [
+  {
+   "name": "stage",
+   "type": "string"
+  },
+  {
+   "name": "iteration",
+   "type": "string"
+  },
+  {
+   "name": "part",
+   "type": "benchhand.contracts.record.part.Part"
+  }
+ ],
+ "extensions": [
+  {
+   "name": "bindings",
+   "version": 1
+  }
+ ],
+ "options": {
+  "cross_type_numeric_comparisons": false,
+  "homogeneous_aggregate_literals": false
+ }
+}

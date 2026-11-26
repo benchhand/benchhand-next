@@ -1,0 +1,34 @@
+{
+  "profile_sha256": "48201f8857b093b8ee9bab3f47a6f0e538abe30e3b5d155261d95782649482c4",
+  "checker": {
+    "engine": "cel-core",
+    "options": "profile manifest",
+    "version": "0.5.1"
+  },
+  "entries": [
+    {
+      "file": "accept-0.binpb",
+      "source_sha256": "9486d6ee3db0d3d6e99c885a3580ca5d483664fdb465329919dc3a424372fd9d"
+    },
+    {
+      "file": "accept-1.binpb",
+      "source_sha256": "90ebbbc11f6835c8a31e8c702a1ac440933133ce747a137ed38484fe40accce6"
+    },
+    {
+      "file": "accept-2.binpb",
+      "source_sha256": "8865141749facbe696a2f590072c8a3c198b1395b55668f2384bf8a762754f65"
+    },
+    {
+      "file": "accept-3.binpb",
+      "source_sha256": "58b9567f08c7016ef7eb68146c9cba94040bbf2c2843cf3221d307ee7ab828d1"
+    },
+    {
+      "file": "accept-4.binpb",
+      "source_sha256": "12868bcc10d01b54eab77ae6fb1e1b061c13d6ac09719e318ea4c1f3fc23f4b8"
+    },
+    {
+      "file": "accept-5.binpb",
+      "source_sha256": "068300df9d1e6d451237c64fc33abd85d0ac832c9385af2e3789aca9ef7a8a85"
+    }
+  ]
+}

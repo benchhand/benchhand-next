@@ -1,6 +1,10 @@
-# The typed demo every engine runs against generated/env/gate_guard.env.yaml
-# and generated/types.binpb. `accept` must type-check and evaluate to
-# `expect` on the activation; `reject` must fail the type check.
+# The typed demo every engine runs against the gate_guard profile
+# (generated/profile/gate_guard.profile.json) and generated/types.binpb.
+# `accept` must type-check and evaluate to `expect` on the activation;
+# `reject` must fail the type check. `profile` is the effective-environment
+# test: each case either uses a feature the manifest enables (`expect`) or
+# one it excludes (`refuse`), so an engine whose environment differs from the
+# manifest fails a case.
 scope: gate_guard
 # Activation: real records from the published schemas' examples and fixtures.
 activation:
@@ -37,3 +41,31 @@ reject:
     why: omitted union field (intent isn't declared)
   - expr: undeclared.x == 1
     why: undeclared variable
+profile:
+  - expr: job.status.upperAscii() == "RUNNING"
+    feature: strings extension, version 4 (enabled)
+    expect: true
+  - expr: '"%s of %d".format(["pair", 30]) == "pair of 30"'
+    feature: strings extension, format (version 4, enabled)
+    expect: true
+  - expr: '[1, "a"].size() == 2'
+    feature: homogeneous_aggregate_literals false
+    expect: true
+  - expr: math.greatest(1, 2) == 2
+    feature: math extension (excluded)
+    refuse: true
+  - expr: part.?mass_target.hasValue()
+    feature: optional syntax (optional extension excluded)
+    refuse: true
+  - expr: cel.bind(x, 1, x == 1)
+    feature: bindings extension (excluded)
+    refuse: true
+  - expr: base64.encode(b"a") == "YQ=="
+    feature: encoders extension (excluded)
+    refuse: true
+  - expr: '[2, 1].sort() == [1, 2]'
+    feature: lists extension (excluded)
+    refuse: true
+  - expr: job.progress.fraction > 0
+    feature: cross_type_numeric_comparisons false (double > int)
+    refuse: true

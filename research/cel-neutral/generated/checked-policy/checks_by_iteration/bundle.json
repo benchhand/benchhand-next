@@ -1,0 +1,14 @@
+{
+ "checker": {
+  "engine": "cel-go policy",
+  "version": "0.33.4"
+ },
+ "entries": [
+  {
+   "file": "checks_by_iteration_flat.binpb",
+   "source": "policy/checks_by_iteration_flat.celpolicy",
+   "source_sha256": "c1a6a1fda4c01c193193828d17ddeb7641436796ca0e31dd4aa63f92c951449b"
+  }
+ ],
+ "profile_sha256": "93737b17b893dffecc63b9ab1e29d35c6bfa7aa689fb5894c925498b3ce7f51d"
+}

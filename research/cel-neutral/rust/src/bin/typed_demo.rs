@@ -1,10 +1,13 @@
 //! The typed demo on the Rust engines.
 //!
-//! cel-core 0.5.1: env YAML (through the adapter in lib.rs) plus the generated FileDescriptorSet, checked
-//! at compile; it also evaluates the CheckedExprs the other engines wrote and writes its own.
+//! cel-core 0.5.1: the environment comes from the gate_guard profile manifest (lib.rs), checked at
+//! compile. It writes its CheckedExprs with a bundle.json, evaluates the bundles the other engines wrote
+//! after checking their profile and sources, runs the profile cases, and writes every outcome to
+//! results/typed-demo/cel-core.json. cel-core is a candidate evaluator, not a checker of record: its own
+//! check results are recorded for comparison.
 //! cel 0.16.1: no checker, so the reject cases are run to show they only fail, if at all, at evaluation.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -12,10 +15,12 @@ use std::sync::Arc;
 use anyhow::{Context as _, Result};
 use cel_core::{Ast, Env, MapActivation, Value};
 use cel_core_proto::{AstToProto, CheckedExpr, ParsedExpr, ProstMessage, check_result_from_proto, from_parsed_expr};
-use cel_neutral_rs::{EnvConfig, env_from_config};
+use cel_neutral_rs::{Profile, Record, env_from_profile, load_profile, write_results};
 use prost::Message;
 use prost_reflect::{DescriptorPool, DynamicMessage};
 use serde::Deserialize;
+
+const ENGINE: &str = "cel-core";
 
 #[derive(Deserialize)]
 struct Rule {
@@ -24,6 +29,10 @@ struct Rule {
     expect: Option<bool>,
     #[serde(default)]
     why: String,
+    #[serde(default)]
+    feature: String,
+    #[serde(default)]
+    refuse: bool,
 }
 
 #[derive(Deserialize)]
@@ -31,15 +40,16 @@ struct Demo {
     scope: String,
     accept: Vec<Rule>,
     reject: Vec<Rule>,
+    profile: Vec<Rule>,
 }
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf()
 }
 
-fn activation(pool: &DescriptorPool, config: &EnvConfig, json: &serde_json::Value) -> Result<MapActivation> {
+fn activation(pool: &DescriptorPool, profile: &Profile, json: &serde_json::Value) -> Result<MapActivation> {
     let mut act = MapActivation::new();
-    for var in &config.variables {
+    for var in &profile.manifest.variables {
         let desc = pool.get_message_by_name(&var.type_name).context("message type")?;
         let value = json[&var.name].to_string();
         let mut de = serde_json::Deserializer::from_str(&value);
@@ -70,56 +80,126 @@ fn eval_shipped(env: &Env, act: &MapActivation, checked: &CheckedExpr) -> Result
     Ok(env.program(&ast)?.eval(act))
 }
 
-fn cel_core_demo(demo: &Demo, config: &EnvConfig, fds: &[u8], json: &serde_json::Value) -> Result<usize> {
-    let env = env_from_config(config, fds)?;
-    let pool = DescriptorPool::decode(fds)?;
-    let act = activation(&pool, config, json)?;
-    let mut failures = 0;
-    let out = root().join("generated/checked/rust-cel-core");
-    fs::create_dir_all(&out)?;
-    for (i, rule) in demo.accept.iter().enumerate() {
-        match env.compile(&rule.expr) {
-            Ok(ast) => {
-                let got = env.program(&ast)?.eval(&act);
-                let ok = got == Value::Bool(rule.expect.unwrap_or(true));
-                failures += usize::from(!ok);
-                println!("{} accept {:?} -> {got}", if ok { "ok " } else { "BAD" }, rule.expr);
-                fs::write(out.join(format!("accept-{i}.binpb")), wrap_any(&ast.to_checked_expr()?))?;
-            }
-            Err(e) => {
-                failures += 1;
-                println!("BAD accept {:?}: {}", rule.expr, e.to_string().lines().next().unwrap_or(""));
-            }
-        }
-    }
-    for rule in &demo.reject {
-        match env.compile(&rule.expr) {
-            Err(e) => println!("ok  reject {:?}: {}", rule.expr, e.to_string().lines().next().unwrap_or("")),
-            Ok(_) => {
-                failures += 1;
-                println!("BAD reject {:?} type-checked; expected: {}", rule.expr, rule.why);
-            }
-        }
-    }
-    failures += shipped(&env, &act, demo)?;
-    println!("cel-core: {failures} failures");
-    Ok(failures)
+fn first_line(e: impl std::fmt::Display) -> String {
+    e.to_string().lines().next().unwrap_or("").to_string()
 }
 
-fn shipped(env: &Env, act: &MapActivation, demo: &Demo) -> Result<usize> {
-    let mut failures = 0;
-    let mut dirs: Vec<_> = fs::read_dir(root().join("generated/checked"))?.flatten().map(|e| e.path()).collect();
-    dirs.sort();
-    for dir in dirs.iter().filter(|d| !d.ends_with("rust-cel-core")) {
-        for (i, rule) in demo.accept.iter().enumerate() {
-            let name = dir.file_name().unwrap().to_string_lossy();
-            let got = unwrap_any(&fs::read(dir.join(format!("accept-{i}.binpb")))?)
-                .and_then(|checked| eval_shipped(env, act, &checked));
-            let ok = matches!(&got, Ok(v) if *v == Value::Bool(rule.expect.unwrap_or(true)));
-            failures += usize::from(!ok);
-            println!("{} shipped from {name} accept-{i} -> {got:?}", if ok { "ok " } else { "BAD" });
-        }
+struct Run {
+    env: Env,
+    act: MapActivation,
+    records: Vec<Record>,
+}
+
+impl Run {
+    fn record(&mut self, kind: &str, case: &str, outcome: (bool, String), writer: Option<&str>) {
+        let (ok, detail) = outcome;
+        let from = writer.map(|w| format!(" from {w}")).unwrap_or_default();
+        println!("{} {kind}{from} {case:?}: {detail}", if ok { "ok " } else { "BAD" });
+        self.records.push(Record {
+            engine: ENGINE.into(),
+            kind: kind.into(),
+            case: case.into(),
+            writer: writer.map(str::to_string),
+            ok,
+            detail,
+        });
     }
+
+    fn eval_expr(&self, expr: &str) -> Result<Value> {
+        let ast = self.env.compile(expr).map_err(|e| anyhow::anyhow!(first_line(e)))?;
+        Ok(self.env.program(&ast)?.eval(&self.act))
+    }
+
+    /// Accept, reject and profile cases; returns the sources of the CheckedExprs written.
+    fn cases(&mut self, demo: &Demo, out: &Path) -> Result<BTreeMap<String, String>> {
+        let mut sources = BTreeMap::new();
+        for (i, rule) in demo.accept.iter().enumerate() {
+            let want = Value::Bool(rule.expect.unwrap_or(true));
+            match self.env.compile(&rule.expr) {
+                Ok(ast) => {
+                    let got = self.env.program(&ast)?.eval(&self.act);
+                    self.record("accept", &rule.expr, (got == want, format!("{got}")), None);
+                    let name = format!("accept-{i}.binpb");
+                    fs::write(out.join(&name), wrap_any(&ast.to_checked_expr()?))?;
+                    sources.insert(name, rule.expr.clone());
+                }
+                Err(e) => self.record("accept", &rule.expr, (false, first_line(e)), None),
+            }
+        }
+        for rule in &demo.reject {
+            let outcome = match self.env.compile(&rule.expr) {
+                Err(e) => (true, first_line(e)),
+                Ok(_) => (false, format!("type-checked; expected: {}", rule.why)),
+            };
+            self.record("reject", &rule.expr, outcome, None);
+        }
+        for rule in &demo.profile {
+            let got = self.eval_expr(&rule.expr);
+            let outcome = match (rule.refuse, got) {
+                (true, Err(e)) => (true, format!("{}: {e}", rule.feature)),
+                (true, Ok(v)) => (false, format!("{}: checked, should be refused; evaluated to {v}", rule.feature)),
+                (false, Ok(v)) => (v == Value::Bool(rule.expect.unwrap_or(true)), format!("{}: {v}", rule.feature)),
+                (false, Err(e)) => (false, format!("{}: {e}", rule.feature)),
+            };
+            self.record("profile", &rule.expr, outcome, None);
+        }
+        Ok(sources)
+    }
+
+    fn shipped(&mut self, profile: &Profile, demo: &Demo) -> Result<()> {
+        let sources: BTreeMap<_, _> =
+            demo.accept.iter().enumerate().map(|(i, r)| (format!("accept-{i}.binpb"), r.expr.clone())).collect();
+        let mut dirs: Vec<_> = fs::read_dir(root().join("generated/checked"))?.flatten().map(|e| e.path()).collect();
+        dirs.sort();
+        for dir in dirs.iter().filter(|d| !d.ends_with("rust-cel-core")) {
+            let writer = dir.file_name().unwrap().to_string_lossy().to_string();
+            let entries = match profile.read_bundle(dir, &sources) {
+                Ok(entries) => entries,
+                Err(e) => {
+                    self.record("bundle", &writer, (false, format!("refused: {e}")), None);
+                    continue;
+                }
+            };
+            for (name, bytes) in entries {
+                let i: usize = name.trim_start_matches("accept-").trim_end_matches(".binpb").parse()?;
+                let want = Value::Bool(demo.accept[i].expect.unwrap_or(true));
+                let got = unwrap_any(&bytes).and_then(|checked| eval_shipped(&self.env, &self.act, &checked));
+                let ok = matches!(&got, Ok(v) if *v == want);
+                self.record("shipped", &name, (ok, format!("{got:?}")), Some(&writer));
+            }
+        }
+        Ok(())
+    }
+
+    /// A bundle from another profile, and an entry whose source changed, must both be refused.
+    fn tampered(&mut self, profile: &Profile, dir: &Path) -> Result<()> {
+        let own: cel_neutral_rs::Bundle = serde_json::from_slice(&fs::read(dir.join("bundle.json"))?)?;
+        let mut other = own.clone();
+        other.profile_sha256 = "0".repeat(64);
+        let edited: BTreeMap<_, _> = own.entries.iter().map(|e| (e.file.clone(), "edited".to_string())).collect();
+        for (what, bundle, sources) in [("other profile", &other, BTreeMap::new()), ("stale source", &own, edited)] {
+            let outcome = match profile.verify_bundle(dir, bundle, &sources) {
+                Err(e) => (true, format!("refused: {e}")),
+                Ok(_) => (false, "accepted".to_string()),
+            };
+            self.record("bundle", what, outcome, None);
+        }
+        Ok(())
+    }
+}
+
+fn cel_core_demo(demo: &Demo, profile: &Profile, json: &serde_json::Value) -> Result<usize> {
+    let pool = DescriptorPool::decode(profile.descriptor_set.as_slice())?;
+    let mut run = Run { env: env_from_profile(profile)?, act: activation(&pool, profile, json)?, records: vec![] };
+    let out = root().join("generated/checked/rust-cel-core");
+    fs::create_dir_all(&out)?;
+    let sources = run.cases(demo, &out)?;
+    profile.write_bundle(&out, &[("engine", ENGINE), ("version", "0.5.1"), ("options", "profile manifest")], &sources)?;
+    run.tampered(profile, &out)?;
+    run.shipped(profile, demo)?;
+    write_results(&root(), ENGINE, &run.records)?;
+    let failures = run.records.iter().filter(|r| !r.ok).count();
+    println!("{ENGINE}: {failures} failures, profile {:.12}", profile.digest);
     Ok(failures)
 }
 
@@ -143,12 +223,10 @@ fn main() -> Result<()> {
     let root = root();
     let demo: Demo = serde_yaml::from_str(&fs::read_to_string(root.join("typedemo/gate_guard.yaml"))?)?;
     let generated = root.join("generated");
-    let env_yaml = fs::read_to_string(generated.join(format!("env/{}.env.yaml", demo.scope)))?;
-    let config: EnvConfig = serde_yaml::from_str(&env_yaml)?;
-    let fds = fs::read(generated.join("types.binpb"))?;
+    let profile = load_profile(&generated, &demo.scope)?;
     let json: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(generated.join(format!("activation/{}.json", demo.scope)))?)?;
-    let failures = cel_core_demo(&demo, &config, &fds, &json)?;
+    let failures = cel_core_demo(&demo, &profile, &json)?;
     cel_rust_demo(&demo, &json)?;
     std::process::exit(i32::from(failures > 0));
 }

@@ -1,0 +1,33 @@
+{
+ "manifest_version": 1,
+ "name": "gate_guard",
+ "descriptor_set": {
+  "file": "types.binpb",
+  "sha256": "72000d838b506117b6725af5769c56764f0c6e1ad14823cc136005b6e05e3170"
+ },
+ "container": "",
+ "variables": [
+  {
+   "name": "decision",
+   "type": "benchhand.contracts.record.decision.GateDecision"
+  },
+  {
+   "name": "job",
+   "type": "benchhand.contracts.jobs.job.JobRecord"
+  },
+  {
+   "name": "part",
+   "type": "benchhand.contracts.record.part.Part"
+  }
+ ],
+ "extensions": [
+  {
+   "name": "strings",
+   "version": 4
+  }
+ ],
+ "options": {
+  "cross_type_numeric_comparisons": false,
+  "homogeneous_aggregate_literals": false
+ }
+}

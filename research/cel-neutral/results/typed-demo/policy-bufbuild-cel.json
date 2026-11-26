@@ -1,0 +1,37 @@
+[
+ {
+  "engine": "bufbuild-cel",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb commit in detail",
+  "ok": true,
+  "detail": "[\"form_check\",\"check_changed_only\"]"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb catalog buy part",
+  "ok": true,
+  "detail": "[\"catalog_check\"]"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb light part",
+  "ok": true,
+  "detail": "[\"mass_check\"]"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb fallback",
+  "ok": true,
+  "detail": "[\"form_check\"]"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "bundle",
+  "case": "checks_by_iteration_bindings",
+  "ok": false,
+  "detail": "refused: checks_by_iteration_bindings: @bufbuild/cel has no bindings version 1"
+ }
+]

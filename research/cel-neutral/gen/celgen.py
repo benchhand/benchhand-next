@@ -365,14 +365,24 @@ def write_protos(gen: Generator, out: Path) -> list[str]:
 
 def env_config(scope: str, spec: dict, types: dict[str, str]) -> dict:
     variables = [
-        {"name": name, "type_name": types[name], "description": f"{var['schema']}#{var.get('pointer', '')}"}
+        {"name": name, "type_name": types[name], "description": variable_source(var)}
         for name, var in spec["variables"].items()
     ]
     config: dict = {"name": scope}
     if spec.get("extensions"):
-        config["extensions"] = [{"name": e} for e in spec["extensions"]]
+        config["extensions"] = [{"name": e["name"], "version": e["version"]} for e in spec["extensions"]]
     config["variables"] = variables
     return config
+
+
+# The CEL primitive types a scope may declare directly, for a variable that no schema node types.
+CEL_PRIMITIVES = {"string", "int", "uint", "double", "bool", "bytes"}
+
+
+def variable_source(var: dict) -> str:
+    if "type" in var:
+        return f"primitive {var['type']}"
+    return f"{var['schema']}#{var.get('pointer', '')}"
 
 
 def generate_scope(schemas: Schemas, scope: str, spec: dict) -> tuple[Generator, dict[str, str]]:
@@ -380,6 +390,11 @@ def generate_scope(schemas: Schemas, scope: str, spec: dict) -> tuple[Generator,
     gen = Generator(schemas, omit)
     types: dict[str, str] = {}
     for name, var in spec["variables"].items():
+        if "type" in var:
+            if var["type"] not in CEL_PRIMITIVES:
+                gen.refusals.append(f"{scope}.{name}: {var['type']} isn't a CEL primitive type")
+            types[name] = var["type"]
+            continue
         loc = Location(var["schema"], var.get("pointer", ""))
         try:
             types[name] = gen.type_of(schemas.node(loc), loc, pascal(name)).name

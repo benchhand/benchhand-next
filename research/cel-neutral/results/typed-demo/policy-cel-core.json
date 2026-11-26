@@ -1,0 +1,37 @@
+[
+  {
+    "engine": "cel-core",
+    "kind": "policy",
+    "case": "checks_by_iteration/checks_by_iteration_flat.binpb commit in detail",
+    "ok": true,
+    "detail": "List([String(\"form_check\"), String(\"check_changed_only\")])"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "policy",
+    "case": "checks_by_iteration/checks_by_iteration_flat.binpb catalog buy part",
+    "ok": true,
+    "detail": "List([String(\"catalog_check\")])"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "policy",
+    "case": "checks_by_iteration/checks_by_iteration_flat.binpb light part",
+    "ok": true,
+    "detail": "List([String(\"mass_check\")])"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "policy",
+    "case": "checks_by_iteration/checks_by_iteration_flat.binpb fallback",
+    "ok": true,
+    "detail": "List([String(\"form_check\")])"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "checks_by_iteration_bindings",
+    "ok": false,
+    "detail": "refused: checks_by_iteration_bindings: cel-core has no bindings version 1"
+  }
+]

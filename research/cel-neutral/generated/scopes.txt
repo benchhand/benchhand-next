@@ -20,6 +20,12 @@ scope refused_part_unscoped: refused, not structural (expected refused)
   record/common.schema.json#/$defs/function_entry/properties/function: the field name is a CEL reserved word
   record/part.schema.json#/$defs/intent/properties/critical_surfaces: oneOf with shape-bearing branches is a union
   record/part.schema.json#/$defs/intent/properties/route: oneOf with shape-bearing branches is a union
+scope checks_by_iteration: structural, 7 messages (expected structural)
+  omitted record/part.schema.json#/properties/drawing
+  omitted record/part.schema.json#/properties/intent
+scope checks_by_iteration_bindings: structural, 7 messages (expected structural)
+  omitted record/part.schema.json#/properties/drawing
+  omitted record/part.schema.json#/properties/intent
 wrote proto/benchhand/contracts/jobs/job.proto
 wrote proto/benchhand/contracts/record/decision.proto
 wrote proto/benchhand/contracts/record/drawing.proto

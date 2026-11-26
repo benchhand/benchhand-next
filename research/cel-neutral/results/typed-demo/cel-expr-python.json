@@ -1,0 +1,290 @@
+[
+ {
+  "engine": "cel-expr-python",
+  "kind": "accept",
+  "case": "decision.status == \"approved\" && has(decision.approval) && decision.approval.channel != \"auto\"",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "accept",
+  "case": "job.status == \"running\" && job.progress.fraction > 0.25",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "accept",
+  "case": "job.argv.exists(a, a == \"--version\")",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "accept",
+  "case": "part.make_buy == \"buy\" && part.procurement.mode == \"catalog\"",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "accept",
+  "case": "has(part.mass_target) && part.mass_target < 1.0",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "accept",
+  "case": "decision.supersedes.all(d, d.startsWith(\"DR-\"))",
+  "writer": null,
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "decision.approvel.channel == \"chat\"",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:9: undefined field 'approvel' not found in struct 'benchhand.contracts.record.decision.GateDecision'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "job.exitcode == 0",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:4: undefined field 'exitcode' not found in struct 'benchhand.contracts.jobs.job.JobRecord'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "job.progress.fraction + \"x\" == \"y\"",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:23: found no matching overload for '_+_' applied to '(wrapper(double), string)'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "part.mass_target > \"1\"",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:18: found no matching overload for '_>_' applied to '(wrapper(double), string)'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "decision.status == 1",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:17: found no matching overload for '_==_' applied to '(string, int)'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "part.intent.route.size() > 0",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:5: undefined field 'intent' not found in struct 'benchhand.contracts.record.part.Part'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "reject",
+  "case": "undeclared.x == 1",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:11: undeclared reference to 'undeclared.x' (in container '')"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "job.status.upperAscii() == \"RUNNING\"",
+  "writer": null,
+  "ok": true,
+  "detail": "strings extension, version 4 (enabled): True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "\"%s of %d\".format([\"pair\", 30]) == \"pair of 30\"",
+  "writer": null,
+  "ok": true,
+  "detail": "strings extension, format (version 4, enabled): True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "[1, \"a\"].size() == 2",
+  "writer": null,
+  "ok": true,
+  "detail": "homogeneous_aggregate_literals false: True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "math.greatest(1, 2) == 2",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:1: undeclared reference to 'math' (in container '')"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "part.?mass_target.hasValue()",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:5: unsupported syntax '.?'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "cel.bind(x, 1, x == 1)",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:10: undeclared reference to 'x' (in container '')"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "base64.encode(b\"a\") == \"YQ==\"",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:1: undeclared reference to 'base64' (in container '')"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "[2, 1].sort() == [1, 2]",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:12: undeclared reference to 'sort' (in container '')"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "profile",
+  "case": "job.progress.fraction > 0",
+  "writer": null,
+  "ok": true,
+  "detail": "INVALID_ARGUMENT: ERROR: <input>:1:23: found no matching overload for '_>_' applied to '(wrapper(double), int)'"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "bundle",
+  "case": "other profile",
+  "writer": null,
+  "ok": true,
+  "detail": "refused: python: checked in profile 000000000000, not 48201f8857b0"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "bundle",
+  "case": "stale source",
+  "writer": null,
+  "ok": true,
+  "detail": "refused: python/accept-0.binpb: stale, the source changed since it was checked"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "True"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "True"
+ }
+]

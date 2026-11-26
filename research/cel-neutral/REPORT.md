@@ -113,9 +113,65 @@ Findings from the artefact tests:
 
 - **A CheckedExpr is portable across engines.** cel-core read the ones cel-go and cel-expr-python wrote, and the other way round. @bufbuild/cel read all three. No engine needed the source text or a second check.
 - **The bytes aren't stable, the message is.** Re-running cel-go's writer gave different bytes of the same length for all six rules. Decoded, the old and new CheckedExprs are `proto.Equal`, and re-encoding both with Go's `Deterministic` marshal option gives identical bytes (`go/cmpchecked`). Map entries in the reference and type maps change order. So a digest of a CheckedExpr has to come from a deterministic re-encoding, not from the bytes a writer emitted.
-- **A CheckedExpr carries no environment identity.** It names message types and overload ids but not the descriptor set or extension versions. An evaluator given a CheckedExpr from a different environment fails late or not at all (untested). The bundle has to carry the digest of the env YAML and descriptor set, and the evaluator has to compare it.
-- **The env YAML is the weakest artefact.** Two engines read it as is. The other four need an adapter, and each adapter maps extension names by hand, which is where versions can drift. The extension list is also the main source of conformance gaps (see the next sections).
+- **A CheckedExpr carries no environment identity.** It names message types and overload ids but not the descriptor set, the extension versions or the checker options. The rules bundle has to carry the profile digest ("The environment profile"), and the evaluator has to compare it with the digest of the profile it built.
+- **The env YAML is not an identity.** Two engines read it as is. The other four need an adapter, and each adapter maps extension names by hand, which is where versions can drift. It also says nothing about checker options. The extension list is also the main source of conformance gaps (see the next sections).
 - **JSON is the neutral encoding of the test files.** textproto needs descriptors at parse time in every language except Go and C++; the protobuf JSON form loads with a plain JSON parser.
+
+## The environment profile
+
+Equal env YAML and descriptor-set hashes don't prove that two engines run the same environment. Before this revision, the demos drifted in three ways:
+
+- the gate-guard YAML enabled strings and optionals, while the TypeScript demo installed strings only;
+- the policy compiler declared its variables in code and added bindings version 1 on its own;
+- the browser policy demo declared variables in code, with no extensions.
+
+### The manifest
+
+`gen/profile.py` writes one manifest per structural scope, `generated/profile/<scope>.profile.json`, after `buf build`. It holds:
+
+- `descriptor_set`: the file name and the SHA-256 of its exact bytes;
+- `variables`: each declaration as a CEL type name, a primitive or a message;
+- `extensions`: each extension with a pinned version, in cel-go's numbering;
+- `options`: `cross_type_numeric_comparisons` and `homogeneous_aggregate_literals`, both `false`, from `scopes.yaml`'s `profile_options`;
+- `container` and `manifest_version`.
+
+The **profile digest** is the SHA-256 of the manifest's canonical JSON, RFC 8785 (JCS). It is never taken over protobuf bytes. `gen/profile.py` refuses a manifest with a float, a non-ASCII string or an integer above 2^53. For that subset, JCS is sorted keys with no whitespace, which each language's standard JSON encoder produces: Python's `json.dumps(sort_keys=True)`, Go's `encoding/json` with HTML escaping off, serde_json without `preserve_order`, and a key-sorting `JSON.stringify` in TypeScript. All four computed the same digests (`generated/profile/digests.txt`; gate_guard `48201f8857b0…`).
+
+### Adapters build their environment from the manifest
+
+| Adapter | File | Builds from the manifest | Refuses at load |
+|---|---|---|---|
+| cel-go | `go/profile/profile.go` | `env.Config` in memory, plus `cel.CrossTypeNumericComparisons` and `cel.HomogeneousAggregateLiterals` from the options | Through `cel.FromConfig`: an unknown extension or version |
+| cel-expr-python | `py/celprofile.py` | env YAML text in memory, with versions | An extension version outside its inventory (`bindings` 0 only: it has no `bindings#1` library); options other than cel-cpp's defaults |
+| cel-core | `rust/src/lib.rs` (`load_profile`, `env_from_profile`) | `EnvConfig` in memory | The same, against its inventory (`bindings` 0: the `cel.bind` macro, no runtime `cel.@block`) |
+| @bufbuild/cel | `ts/celprofile.ts` | `celEnv` with the declared variables and, if listed, `strings` | Any extension but `strings` 4; a container |
+| pyo3 binding | `py/rust_binding_demo.py` | env YAML text from `py/celprofile.py` | cel-core's rules |
+
+Each adapter also checks the descriptor set against the manifest's SHA-256. No demo reads `generated/env/*.env.yaml` any more. That file stays as the cel-go form of the same declarations, for the `cel-expr` CLI (`cli/env_json.py`) and for tools that read env YAML.
+
+An engine without a version switch (cel-cpp, cel-core, @bufbuild/cel) can't prove which version it implements. Its inventory lists the cel-go versions whose functions the shared suite exercised on it, so the version claim rests on the suite result.
+
+### The bundle binds a CheckedExpr to its profile and source
+
+Each writer puts a `bundle.json` beside its CheckedExprs: the profile digest, the checker identity, and the SHA-256 of each entry's source (and, for a policy, the source file). A reader refuses a bundle whose digest differs from its own profile's, and an entry whose source changed since it was checked. Each typed demo also feeds its own bundle back with a zeroed digest and with edited sources, and records both refusals. The bundle is the metadata the adapter's `program` step reads; a bare CheckedExpr can't support that check.
+
+### The effective-environment test
+
+`typedemo/gate_guard.yaml` has nine `profile` cases. Three use features the manifest enables: `upperAscii` and `format` from strings 4, and a mixed-type list literal. Six use features it excludes: math, optional syntax (`.?`), bindings (`cel.bind`), encoders, lists, and a double compared with an int. A case must evaluate as expected, or be refused, exactly as the manifest says. Results, from `results/typed-demo/<engine>.json`:
+
+| Engine | Profile cases as the manifest says | Mismatches |
+|---|---:|---|
+| cel-go | 9 of 9 | none |
+| cel-expr-python | 9 of 9 | none |
+| cel-core | 8 of 9 | `cel.bind(x, 1, x == 1)` checks and evaluates with bindings excluded: the macro is built into cel-core's parser |
+| @bufbuild/cel (unchecked evaluation) | 8 of 9 | `job.progress.fraction > 0` evaluates to `true`. A check-time option can't be enforced by an evaluator; it only holds for CheckedExprs a checker wrote in the profile |
+
+### Known mismatches
+
+- **cel-core's parser always expands `cel.bind`.** The adapter can't turn it off. A rule checked only by cel-core could use bindings outside the profile. Only reference-checked rules run on cel-core ("The engine roles").
+- **@bufbuild/cel doesn't enforce check-time options or declarations.** It evaluates only CheckedExprs from the reference checker.
+- **cel-go and cel-cpp number bindings differently.** cel-go declares `cel.@block` in bindings version 1, and cel-expr-python's env config has no version 1. So the profile that compiles policy `variables` (`checks_by_iteration_bindings`) is refused by all three evaluators' adapters. That profile is outside the supported one.
+- **The policy compiler in `go-policy/` reads the manifest, but repeats a small loader** instead of using `go/profile`. It is on a different cel-go module path. The reference checker ("The reference checker") removes this.
 
 ## The type pipeline
 

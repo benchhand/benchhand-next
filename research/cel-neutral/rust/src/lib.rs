@@ -4,12 +4,15 @@
 //! adapter: about 40 lines that map the env YAML's variables and extensions onto cel-core's `Env`, with
 //! the message types taken from the generated FileDescriptorSet.
 
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{Result, bail};
 use cel_core::{CelType, Env};
 use cel_core_proto::ProstProtoRegistry;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct EnvConfig {
@@ -89,4 +92,187 @@ pub fn env_from_config(config: &EnvConfig, descriptor_set: &[u8]) -> Result<Env>
         env = env.with_variable(var.name.clone(), cel_type(&var.type_name, &var.params)?);
     }
     Ok(env)
+}
+
+// ---- The environment profile: the manifest is the only input to the environment.
+
+/// generated/profile/<name>.profile.json, written by gen/profile.py.
+#[derive(Debug, Deserialize)]
+pub struct Manifest {
+    pub name: String,
+    pub descriptor_set: DescriptorRef,
+    #[serde(default)]
+    pub container: String,
+    pub variables: Vec<ManifestVariable>,
+    pub extensions: Vec<ManifestExtension>,
+    pub options: ProfileOptions,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DescriptorRef {
+    pub file: String,
+    pub sha256: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ManifestVariable {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub type_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ManifestExtension {
+    pub name: String,
+    pub version: u32,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct ProfileOptions {
+    pub cross_type_numeric_comparisons: bool,
+    pub homogeneous_aggregate_literals: bool,
+}
+
+/// A loaded manifest, its digest, and the descriptor set it names.
+pub struct Profile {
+    pub manifest: Manifest,
+    pub digest: String,
+    pub descriptor_set: Vec<u8>,
+}
+
+/// What the cel-core adapter implements, in cel-go's extension numbering. cel-core has no version
+/// switch; these are the versions whose functions the shared suite exercised on it. Bindings is 0:
+/// the `cel.bind` macro works, but cel-core doesn't evaluate the `cel.@block` call of version 1.
+const CEL_CORE_EXTENSIONS: &[(&str, &[u32])] =
+    &[("strings", &[4]), ("optional", &[2]), ("math", &[1]), ("encoders", &[0]), ("bindings", &[0])];
+/// cel-core's checker defaults; it has no switch for them.
+const CEL_CORE_OPTIONS: ProfileOptions =
+    ProfileOptions { cross_type_numeric_comparisons: false, homogeneous_aggregate_literals: false };
+
+pub fn sha256_hex(data: &[u8]) -> String {
+    use sha2::Digest as _;
+    hex::encode(sha2::Sha256::digest(data))
+}
+
+/// The profile digest: SHA-256 of the manifest's RFC 8785 (JCS) encoding. For the manifest's ASCII,
+/// integer-only subset that is serde_json's sorted-key compact form (no `preserve_order` feature).
+pub fn profile_digest(raw: &[u8]) -> Result<String> {
+    let value: serde_json::Value = serde_json::from_slice(raw)?;
+    Ok(sha256_hex(serde_json::to_string(&value)?.as_bytes()))
+}
+
+pub fn load_profile(generated: &Path, name: &str) -> Result<Profile> {
+    let raw = fs::read(generated.join(format!("profile/{name}.profile.json")))?;
+    let manifest: Manifest = serde_json::from_slice(&raw)?;
+    let descriptor_set = fs::read(generated.join(&manifest.descriptor_set.file))?;
+    if sha256_hex(&descriptor_set) != manifest.descriptor_set.sha256 {
+        bail!("{name}: the descriptor set doesn't match the manifest's SHA-256");
+    }
+    for ext in &manifest.extensions {
+        let known = CEL_CORE_EXTENSIONS.iter().find(|(n, _)| *n == ext.name);
+        if !known.is_some_and(|(_, versions)| versions.contains(&ext.version)) {
+            bail!("{name}: cel-core has no {} version {}", ext.name, ext.version);
+        }
+    }
+    if manifest.options != CEL_CORE_OPTIONS {
+        bail!("{name}: options {:?} differ from cel-core's {:?}", manifest.options, CEL_CORE_OPTIONS);
+    }
+    Ok(Profile { digest: profile_digest(&raw)?, manifest, descriptor_set })
+}
+
+/// The cel-core environment for a profile: its declarations and extensions, nothing else.
+pub fn env_from_profile(profile: &Profile) -> Result<Env> {
+    let m = &profile.manifest;
+    let config = EnvConfig {
+        name: m.name.clone(),
+        container: m.container.clone(),
+        extensions: m.extensions.iter().map(|e| Extension { name: e.name.clone() }).collect(),
+        variables: m
+            .variables
+            .iter()
+            .map(|v| Variable { name: v.name.clone(), type_name: v.type_name.clone(), params: vec![] })
+            .collect(),
+    };
+    env_from_config(&config, &profile.descriptor_set)
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Bundle {
+    pub profile_sha256: String,
+    pub checker: BTreeMap<String, String>,
+    pub entries: Vec<BundleEntry>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BundleEntry {
+    pub file: String,
+    pub source_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+}
+
+fn dir_name(dir: &Path) -> String {
+    dir.file_name().unwrap_or_default().to_string_lossy().to_string()
+}
+
+impl Profile {
+    pub fn write_bundle(&self, dir: &Path, checker: &[(&str, &str)], sources: &BTreeMap<String, String>) -> Result<()> {
+        let bundle = Bundle {
+            profile_sha256: self.digest.clone(),
+            checker: checker.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            entries: sources
+                .iter()
+                .map(|(f, s)| BundleEntry { file: f.clone(), source_sha256: sha256_hex(s.as_bytes()), source: None })
+                .collect(),
+        };
+        fs::write(dir.join("bundle.json"), serde_json::to_string_pretty(&bundle)? + "\n")?;
+        Ok(())
+    }
+
+    /// Each entry's bytes, after refusing a bundle from another profile or a stale entry.
+    pub fn read_bundle(&self, dir: &Path, sources: &BTreeMap<String, String>) -> Result<BTreeMap<String, Vec<u8>>> {
+        let raw = fs::read(dir.join("bundle.json"))
+            .map_err(|_| anyhow::anyhow!("{}: no bundle.json, so the profile is unknown", dir_name(dir)))?;
+        self.verify_bundle(dir, &serde_json::from_slice(&raw)?, sources)
+    }
+
+    pub fn verify_bundle(
+        &self,
+        dir: &Path,
+        bundle: &Bundle,
+        sources: &BTreeMap<String, String>,
+    ) -> Result<BTreeMap<String, Vec<u8>>> {
+        let name = dir_name(dir);
+        if bundle.profile_sha256 != self.digest {
+            bail!("{name}: checked in profile {:.12}, not {:.12}", bundle.profile_sha256, self.digest);
+        }
+        let mut out = BTreeMap::new();
+        for entry in &bundle.entries {
+            match sources.get(&entry.file) {
+                Some(src) if sha256_hex(src.as_bytes()) == entry.source_sha256 => {}
+                _ => bail!("{name}/{}: stale, the source changed since it was checked", entry.file),
+            }
+            out.insert(entry.file.clone(), fs::read(dir.join(&entry.file))?);
+        }
+        Ok(out)
+    }
+}
+
+/// One outcome in results/typed-demo/<engine>.json.
+#[derive(Debug, Serialize)]
+pub struct Record {
+    pub engine: String,
+    pub kind: String,
+    pub case: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub writer: Option<String>,
+    pub ok: bool,
+    pub detail: String,
+}
+
+pub fn write_results(root: &Path, name: &str, records: &[Record]) -> Result<()> {
+    let dir = root.join("results/typed-demo");
+    fs::create_dir_all(&dir)?;
+    fs::write(dir.join(format!("{name}.json")), serde_json::to_string_pretty(records)? + "\n")?;
+    Ok(())
 }
