@@ -5,3 +5,4 @@ rust-cxx/target/
 go/bin/
 # Raw runner output; run conformance/run.sh to rebuild it. summary.md and failures-*.txt are kept.
 conformance/results/*.jsonl
+rust-py/target/
