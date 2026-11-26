@@ -12,7 +12,7 @@ Each class is a contract root, a named `$defs` object or union, or an object wri
 
 ## Overview: the record documents
 
-15 documents of the record, with their top-level properties. An arrow is a `$ref` from anywhere in the document, counted; the libraries are contracts that hold shared definitions and no document of their own.
+18 documents of the record, with their top-level properties. An arrow is a `$ref` from anywhere in the document, counted; the libraries are contracts that hold shared definitions and no document of their own.
 
 ```mermaid
 classDiagram
@@ -46,10 +46,29 @@ classDiagram
         specification_reference?: string or null
         specification_revision?: string or null
     }
+    class record_bundle_manifest["bundle-manifest"] {
+        <<document>>
+        files: object
+        version_manifest_sha256?: sha256
+        parts?: object
+    }
     class record_decision["decision"] {
         <<document>>
         id: decision
         kind: enum gate|design
+    }
+    class record_evidence_assessment["evidence-assessment"] {
+        <<document>>
+        version: version
+        manifest_sha256: sha256
+        build_staleness: enum computed|not_computed
+        expected_sha256: sha256
+        statuses: obligation_status[]
+        facets: object
+        findings: finding[]
+        critical: critical_finding[]
+        complete: boolean
+        acceptance: acceptance_formed or acceptance_refused
     }
     class record_interfaces["interfaces"] {
         <<document>>
@@ -58,6 +77,19 @@ classDiagram
     class record_manufacturing_capabilities["manufacturing-capabilities"] {
         <<document>>
         profiles: profile[]
+    }
+    class record_manufacturing_check_result["manufacturing-check-result"] {
+        <<document>>
+        schema_version: const 1
+        record_version: record_version
+        producer: text
+        scope: subject[]
+        expected: obligation[]
+        outcomes: obligation_outcome[]
+        findings: finding[]
+        dependencies: object
+        complete: boolean
+        result: outcome = pass|fail|unknown|not_applicable|not_assessed
     }
     class record_manufacturing_evidence["manufacturing-evidence"] {
         <<document>>
@@ -154,9 +186,11 @@ classDiagram
         <<library>>
     }
     record_assembly --> record_common : 8 refs
+    record_evidence_assessment --> record_common : 2 refs
     record_interfaces --> record_common : 20 refs
     record_interfaces --> record_drawing : 4 refs
     record_manufacturing_capabilities --> record_common : 30 refs
+    record_manufacturing_check_result --> record_common : 4 refs
     record_manufacturing_evidence --> record_common : 5 refs
     record_manufacturing_findings --> record_common : 1 refs
     record_manufacturing_guideline --> record_common : 3 refs
@@ -453,7 +487,7 @@ classDiagram
 
 ## `record`
 
-243 classes, more than 40, so there is one diagram per document.
+253 classes, more than 40, so there is one diagram per document.
 
 ### `record/assembly`
 
@@ -686,6 +720,22 @@ classDiagram
         supplier_part_number?: string or null
         specification_reference?: string or null
         specification_revision?: string or null
+    }
+```
+
+### `record/bundle-manifest`
+
+2 classes.
+
+```mermaid
+classDiagram
+    class record_bundle_manifest["bundle-manifest"] {
+        files: object
+        version_manifest_sha256?: sha256
+        parts?: object
+    }
+    class record_bundle_manifest__version_part["version_part"] {
+        source_sha256?: sha256
     }
 ```
 
@@ -1325,6 +1375,77 @@ classDiagram
     record_drawing__fit "1" *-- "0..1" record_drawing__axial_retainer : axial_retainer
 ```
 
+### `record/evidence-assessment`
+
+7 classes.
+
+```mermaid
+classDiagram
+    class record_evidence_assessment["evidence-assessment"] {
+        version: version
+        manifest_sha256: sha256
+        build_staleness: enum computed|not_computed
+        expected_sha256: sha256
+        statuses: obligation_status[]
+        facets: object
+        findings: finding[]
+        critical: critical_finding[]
+        complete: boolean
+        acceptance: acceptance_formed or acceptance_refused
+    }
+    class record_evidence_assessment__obligation_status["obligation_status"] {
+        obligation: obligation
+        result: evidence_result
+        sources: string[]
+        reasons: string[]
+        waiver?: waiver
+    }
+    class record_evidence_assessment__critical_finding["critical_finding"] {
+        finding: semantic_id
+        code?: finding_code
+        bundle: project_path
+        obligation?: obligation_id
+        consequence?: text
+    }
+    class record_evidence_assessment__acceptance["evidence-assessment.acceptance"] {
+        <<abstract>>
+        status: discriminator
+    }
+    class record_evidence_assessment__acceptance_formed["acceptance_formed"] {
+        status: const formed
+        evidence_sha256: sha256
+        inventory: object
+    }
+    class record_evidence_assessment__acceptance_refused["acceptance_refused"] {
+        status: const refused
+        reason: text
+    }
+    class record_evidence_assessment__facets["facets"] {
+        cad_valid: facet_result
+        geometrically_manufacturable: facet_result
+        process_planned: facet_result
+        simulation_supported: facet_result
+        physically_validated: facet_result
+    }
+    class common_finding["common/finding.finding"] {
+        <<external>>
+    }
+    class record_common__obligation["record/common.obligation"] {
+        <<external>>
+    }
+    class record_common__waiver["record/common.waiver"] {
+        <<external>>
+    }
+    record_evidence_assessment__obligation_status --> "1" record_common__obligation : obligation
+    record_evidence_assessment__obligation_status --> "0..1" record_common__waiver : waiver
+    record_evidence_assessment "1" *-- "0..*" record_evidence_assessment__obligation_status : statuses
+    record_evidence_assessment --> "0..*" common_finding : findings
+    record_evidence_assessment "1" *-- "0..*" record_evidence_assessment__critical_finding : critical
+    record_evidence_assessment__acceptance <|-- record_evidence_assessment__acceptance_formed
+    record_evidence_assessment__acceptance <|-- record_evidence_assessment__acceptance_refused
+    record_evidence_assessment "1" *-- "1" record_evidence_assessment__acceptance : acceptance
+```
+
 ### `record/interfaces`
 
 14 classes.
@@ -1728,6 +1849,42 @@ classDiagram
     record_manufacturing_capabilities "1" *-- "0..*" record_manufacturing_capabilities__profile : profiles
     record_manufacturing_capabilities__qty_nozzle_diameter <|-- record_manufacturing_guideline__scope__nozzle_diameter
     record_manufacturing_capabilities__qty_nozzle_diameter <|-- record_manufacturing_guideline__limit__quantities
+```
+
+### `record/manufacturing-check-result`
+
+1 classes.
+
+```mermaid
+classDiagram
+    class record_manufacturing_check_result["manufacturing-check-result"] {
+        schema_version: const 1
+        record_version: record_version
+        producer: text
+        scope: subject[]
+        expected: obligation[]
+        outcomes: obligation_outcome[]
+        findings: finding[]
+        dependencies: object
+        complete: boolean
+        result: outcome = pass|fail|unknown|not_applicable|not_assessed
+    }
+    class record_common__finding["record/common.finding"] {
+        <<external>>
+    }
+    class record_common__obligation["record/common.obligation"] {
+        <<external>>
+    }
+    class record_common__obligation_outcome["record/common.obligation_outcome"] {
+        <<external>>
+    }
+    class record_common__subject["record/common.subject"] {
+        <<external>>
+    }
+    record_manufacturing_check_result --> "1..*" record_common__subject : scope
+    record_manufacturing_check_result --> "0..*" record_common__obligation : expected
+    record_manufacturing_check_result --> "0..*" record_common__obligation_outcome : outcomes
+    record_manufacturing_check_result --> "0..*" record_common__finding : findings
 ```
 
 ### `record/manufacturing-evidence`
