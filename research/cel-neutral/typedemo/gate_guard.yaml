@@ -1,0 +1,39 @@
+# The typed demo every engine runs against generated/env/gate_guard.env.yaml
+# and generated/types.binpb. `accept` must type-check and evaluate to
+# `expect` on the activation; `reject` must fail the type check.
+scope: gate_guard
+# Activation: real records from the published schemas' examples and fixtures.
+activation:
+  decision: {schema: record/decision.schema.json, example: 1}
+  job: {schema: jobs/job.schema.json, example: 0}
+  part: {fixture: record/part.examples.json, valid: 0}
+accept:
+  - expr: >-
+      decision.status == "approved" && has(decision.approval)
+      && decision.approval.channel != "auto"
+    expect: true
+  - expr: job.status == "running" && job.progress.fraction > 0.25
+    expect: true
+  - expr: job.argv.exists(a, a == "--version")
+    expect: true
+  - expr: part.make_buy == "buy" && part.procurement.mode == "catalog"
+    expect: true
+  - expr: has(part.mass_target) && part.mass_target < 1.0
+    expect: true
+  - expr: decision.supersedes.all(d, d.startsWith("DR-"))
+    expect: true
+reject:
+  - expr: decision.approvel.channel == "chat"
+    why: wrong field (approvel)
+  - expr: job.exitcode == 0
+    why: wrong field (exitcode, the field is exitCode)
+  - expr: job.progress.fraction + "x" == "y"
+    why: wrong operand type (double + string)
+  - expr: part.mass_target > "1"
+    why: wrong operand type (double > string)
+  - expr: decision.status == 1
+    why: wrong operand type (string == int)
+  - expr: part.intent.route.size() > 0
+    why: omitted union field (intent isn't declared)
+  - expr: undeclared.x == 1
+    why: undeclared variable

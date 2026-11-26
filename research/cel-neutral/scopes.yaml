@@ -1,0 +1,40 @@
+# Activation scopes: the variables each rule list sees, each typed by one
+# node of a published schema. gen/celgen.py refuses a scope whose reachable
+# nodes aren't structural (one shape each), unless the node is in `omit`.
+# An omitted field isn't declared, so a rule that reads it fails the check.
+scopes:
+  # A gate guard: the gate decision, the job behind its evidence, the part.
+  gate_guard:
+    extensions: [strings, optional]
+    variables:
+      decision:
+        schema: record/decision.schema.json
+        pointer: /$defs/gate_decision
+      job:
+        schema: jobs/job.schema.json
+        pointer: /$defs/JobRecord
+      part:
+        schema: record/part.schema.json
+    omit:
+      # Both reach union-valued fields (facts, scales, tolerances).
+      - record/part.schema.json#/properties/intent
+      - record/part.schema.json#/properties/drawing
+
+  # Refused: the decision root is a oneOf of gate and design decisions.
+  refused_decision_root:
+    expect: refused
+    variables:
+      decision:
+        schema: record/decision.schema.json
+  # Refused: the job root is a oneOf of JobRecord and JobHandle.
+  refused_job_root:
+    expect: refused
+    variables:
+      job:
+        schema: jobs/job.schema.json
+  # Refused: a whole part reaches fact unions through intent.
+  refused_part_unscoped:
+    expect: refused
+    variables:
+      part:
+        schema: record/part.schema.json

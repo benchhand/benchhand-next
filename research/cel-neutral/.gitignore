@@ -1,0 +1,4 @@
+py/.venv/
+ts/node_modules/
+rust/target/
+go/bin/

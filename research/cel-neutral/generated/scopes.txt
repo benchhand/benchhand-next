@@ -1,0 +1,26 @@
+scope gate_guard: structural, 12 messages (expected structural)
+  omitted record/part.schema.json#/properties/drawing
+  omitted record/part.schema.json#/properties/intent
+scope refused_decision_root: refused, not structural (expected refused)
+  record/decision.schema.json#: oneOf with shape-bearing branches is a union
+scope refused_job_root: refused, not structural (expected refused)
+  jobs/job.schema.json#: oneOf with shape-bearing branches is a union
+scope refused_part_unscoped: refused, not structural (expected refused)
+  record/drawing.schema.json#/$defs/part_drawing/properties/coordinate_frame/properties/origin: oneOf with shape-bearing branches is a union
+  record/drawing.schema.json#/$defs/view/properties/through: oneOf with shape-bearing branches is a union
+  record/drawing.schema.json#/$defs/view/properties/scale: oneOf with shape-bearing branches is a union
+  record/drawing.schema.json#/$defs/dimension_request/properties/tolerance: oneOf with shape-bearing branches is a union
+  record/drawing.schema.json#/$defs/part_drawing/properties/edges: allOf with shape-bearing branches is a merge of shapes
+  record/drawing.schema.json#/$defs/part_drawing/properties/surface_texture: oneOf with shape-bearing branches is a union
+  record/drawing.schema.json#/$defs/sheet/properties/scale: oneOf with shape-bearing branches is a union
+  record/part.schema.json#/$defs/intent/properties/functions: oneOf with shape-bearing branches is a union
+  record/part.schema.json#/$defs/intent/properties/material_profile: oneOf with shape-bearing branches is a union
+  record/part.schema.json#/$defs/intent/properties/service: oneOf with shape-bearing branches is a union
+  record/part.schema.json#/$defs/component/properties/material_profile: oneOf with shape-bearing branches is a union
+  record/common.schema.json#/$defs/function_entry/properties/function: the field name is a CEL reserved word
+  record/part.schema.json#/$defs/intent/properties/critical_surfaces: oneOf with shape-bearing branches is a union
+  record/part.schema.json#/$defs/intent/properties/route: oneOf with shape-bearing branches is a union
+wrote proto/benchhand/contracts/jobs/job.proto
+wrote proto/benchhand/contracts/record/decision.proto
+wrote proto/benchhand/contracts/record/drawing.proto
+wrote proto/benchhand/contracts/record/part.proto
