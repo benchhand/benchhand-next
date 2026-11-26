@@ -113,6 +113,7 @@ reference-changes:
 # Check docs/architecture/reference-map.yaml, and with `--write` regenerate docs/architecture/function-map.md from it.
 # Offline and fast. Set BENCHHAND_REFERENCE_DIR to a read-only copy of the prototype at release.toml's
 # reference_commit to also check that every prototype script, skill, agent and harness module has an entry and
-# that no entry names a path that is gone.
+# that no entry names a path that is gone. A copy with a .git or a .reference-commit stamp must hold that commit.
+# With CI=true the copy is required; CI fetches it.
 reference-map *args:
     PYTHONPATH=tools/map uv run python -m reference_map {{args}}

@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import textwrap
 from pathlib import Path
 
 import pytest
-from mermaid_render import MERMAID_READY, MERMAID_SKIP_REASON, mermaid_blocks, render_markdown
+from mermaid_render import mermaid_blocks, needs_mermaid, render_markdown
 from reference_map.cli import MAP_FILE, OUTPUT_FILE, REFERENCE_ENV, REPO_ROOT, run
-from reference_map.coverage import check_coverage, check_homes, required_files
+from reference_map.coverage import STAMP_FILE, check_copy_commit, check_coverage, check_homes, required_files
 from reference_map.entries import MapError, load_map, pattern_regex
 from reference_map.render import render_function_map
-
-needs_mermaid = pytest.mark.skipif(not MERMAID_READY, reason=MERMAID_SKIP_REASON)
 
 MAP = """\
 reference_commit: abc1234
@@ -270,17 +269,68 @@ def test_each_area_is_a_flowchart_with_phases_on_the_edges_and_dropped_items_apa
     assert "| **all** | **4** | 1 | 1 | 0 | 1 | 1 |" in text
 
 
-def test_the_committed_map_is_valid_and_its_diagrams_are_current() -> None:
+def test_the_committed_map_is_valid_and_its_diagrams_are_current(monkeypatch: pytest.MonkeyPatch) -> None:
     """Without a reference copy this checks the file, ported homes and the committed diagrams."""
+    monkeypatch.delenv("CI", raising=False)
     report = run(REPO_ROOT, None, write=False)
     assert "coverage not checked" in report
 
 
-@pytest.mark.skipif(REFERENCE_ENV not in os.environ, reason=f"needs a prototype copy in ${REFERENCE_ENV}")
+def test_ci_refuses_to_skip_the_coverage_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CI", "true")
+    with pytest.raises(MapError, match=f"CI=true: set {REFERENCE_ENV}"):
+        run(REPO_ROOT, None, write=False)
+
+
 def test_every_prototype_script_and_skill_has_an_entry() -> None:
+    """Mandatory in CI, which fetches the pinned copy; skipped locally without one."""
+    if REFERENCE_ENV not in os.environ:
+        if os.environ.get("CI") == "true":
+            pytest.fail(f"CI=true needs a prototype copy in ${REFERENCE_ENV}")
+        pytest.skip(f"needs a prototype copy in ${REFERENCE_ENV}")
     assert f"coverage checked against {os.environ[REFERENCE_ENV]}" in run(
         REPO_ROOT, Path(os.environ[REFERENCE_ENV]), write=False
     )
+
+
+def test_a_stamped_copy_must_hold_the_pinned_commit(tmp_path: Path) -> None:
+    assert check_copy_commit(tmp_path, "abc") is False
+    (tmp_path / STAMP_FILE).write_text("def\n", encoding="utf-8")
+    with pytest.raises(MapError, match="holds def, not release.toml's reference_commit abc"):
+        check_copy_commit(tmp_path, "abc")
+    (tmp_path / STAMP_FILE).write_text("abc\n", encoding="utf-8")
+    assert check_copy_commit(tmp_path, "abc") is True
+
+
+def test_a_git_copy_is_verified_by_its_head(tmp_path: Path) -> None:
+    def git(*args: str) -> str:
+        done = subprocess.run(["git", "-C", str(tmp_path), *args], capture_output=True, text=True, check=True)
+        return done.stdout.strip()
+
+    git("init", "-q")
+    (tmp_path / "a.txt").write_text("a", encoding="utf-8")
+    git("add", "a.txt")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "a")
+    head = git("rev-parse", "HEAD")
+    assert check_copy_commit(tmp_path, head) is True
+    with pytest.raises(MapError, match=f"holds {head}"):
+        check_copy_commit(tmp_path, "0" * 40)
+
+
+def test_a_resource_file_matched_by_two_entries_fails(tmp_path: Path) -> None:
+    overlapping = MAP + "  - path: skills/cad-x/schemas/*.json\n    status: dropped\n    reason: r\n"
+    reference = load_map(_write_map(tmp_path, overlapping))
+    prototype = _tree(
+        tmp_path / "proto",
+        "skills/cad-x/SKILL.md",
+        "skills/cad-x/scripts/build.py",
+        "skills/cad-x/scripts/legacy.py",
+        "skills/cad-x/schemas/a.json",
+    )
+    with pytest.raises(MapError) as raised:
+        check_coverage(reference, [prototype])
+    both = "skills/cad-x/schemas/, skills/cad-x/schemas/*.json"
+    assert raised.value.problems == [f"skills/cad-x/schemas/a.json: matched by 2 entries ({both})"]
 
 
 @needs_mermaid

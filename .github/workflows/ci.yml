@@ -39,6 +39,25 @@ jobs:
             contracts/pnpm-lock.yaml
       - uses: extractions/setup-just@v3
       - run: uv sync --all-packages --locked
+      - name: Prototype at release.toml's reference_commit (ADR-0015)
+        run: |
+          pin() {
+            uv run python -c 'import sys, tomllib
+          print(tomllib.load(open("release.toml", "rb"))[sys.argv[1]])' "$1"
+          }
+          repo=$(pin reference_repo)
+          sha=$(pin reference_commit)
+          dir="$RUNNER_TEMP/prototype"
+          git init -q "$dir"
+          git -C "$dir" fetch -q --depth=1 "https://github.com/$repo.git" "$sha"
+          git -C "$dir" checkout -q --detach FETCH_HEAD
+          test "$(git -C "$dir" rev-parse HEAD)" = "$sha"
+          echo "BENCHHAND_REFERENCE_DIR=$dir" >> "$GITHUB_ENV"
+      - name: Chrome for mermaid-cli; the render tests fail without it in CI
+        run: |
+          chrome=$(command -v google-chrome)
+          "$chrome" --version
+          echo "PUPPETEER_EXECUTABLE_PATH=$chrome" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
         working-directory: ui
       - name: Contract tools pinned in contracts/package.json
@@ -46,6 +65,8 @@ jobs:
         working-directory: contracts
       - run: uv run ruff check . && uv run ruff format --check .
       - run: uv run pytest
+      - name: Function map against the pinned prototype, coverage required
+        run: just reference-map
       - name: Built wheels run outside the checkout
         run: uv run pytest -m wheel
       - name: TypeScript types, the generated contract types included

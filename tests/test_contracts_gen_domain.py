@@ -11,9 +11,7 @@ from contracts_gen.docs import write_docs
 from contracts_gen.domain import MAX_ENUM_VALUES, build_model, class_id, ref_counts
 from contracts_gen.domain_render import DOMAIN_MODEL_FILE, MAX_DIAGRAM_CLASSES, render_domain_model
 from contracts_gen.sources import DOCS_OUT, REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
-from mermaid_render import MERMAID_READY, MERMAID_SKIP_REASON, mermaid_blocks, render_markdown
-
-needs_mermaid = pytest.mark.skipif(not MERMAID_READY, reason=MERMAID_SKIP_REASON)
+from mermaid_render import mermaid_blocks, needs_mermaid, render_markdown
 
 
 def _contract(stem: str, schema: dict[str, Any]) -> Contract:

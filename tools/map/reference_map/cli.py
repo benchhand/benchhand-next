@@ -8,7 +8,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from .coverage import check_coverage, check_homes
+from .coverage import check_copy_commit, check_coverage, check_homes
 from .entries import MapError, load_map
 from .render import render_function_map, status_counts
 
@@ -18,6 +18,11 @@ OUTPUT_FILE = "docs/architecture/function-map.md"
 REFERENCE_ENV = "BENCHHAND_REFERENCE_DIR"
 REPO_REFERENCE = "reference"
 """The prototype's tests and fixtures as imported here; it also holds the agent sources the copy lacks."""
+
+
+def coverage_required() -> bool:
+    """CI must check coverage against a copy; locally the check may go without one."""
+    return os.environ.get("CI") == "true"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,8 +50,12 @@ def run(repo_root: Path, reference_dir: Path | None, write: bool) -> str:
     if reference.reference_commit != pinned:
         raise MapError([f"reference_commit {reference.reference_commit} is not release.toml's {pinned}"])
     check_homes(reference, repo_root)
+    verified = False
     if reference_dir is not None:
+        verified = check_copy_commit(reference_dir, pinned)
         check_coverage(reference, [reference_dir, repo_root / REPO_REFERENCE])
+    elif coverage_required():
+        raise MapError([f"CI=true: set {REFERENCE_ENV} to a copy of the prototype at {pinned}"])
     rendered = render_function_map(reference)
     output = repo_root / OUTPUT_FILE
     if write:
@@ -56,8 +65,9 @@ def run(repo_root: Path, reference_dir: Path | None, write: bool) -> str:
         raise MapError([f"{OUTPUT_FILE} is out of date; run `just reference-map --write`"])
     counts = status_counts(reference)
     by_status = ", ".join(f"{counts[status]} {status}" for status in sorted(counts))
+    commit = "its commit verified" if verified else "its commit not verified (no .git or stamp)"
     coverage = (
-        f"coverage checked against {reference_dir}"
+        f"coverage checked against {reference_dir}, {commit}"
         if reference_dir
         else f"coverage not checked (no reference copy; set {REFERENCE_ENV})"
     )
