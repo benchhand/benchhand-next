@@ -1,0 +1,30 @@
+{
+  "name": "benchhand-docs-site",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.0.0",
+  "engines": {
+    "node": "26.x"
+  },
+  "scripts": {
+    "sync": "node scripts/sync-docs.mjs && node scripts/planned-pages.mjs",
+    "dev": "pnpm sync && astro dev",
+    "build": "pnpm sync && astro build",
+    "preview": "astro preview",
+    "test": "node --test scripts/schema-urls.test.mjs"
+  },
+  "dependencies": {
+    "@astrojs/markdown-remark": "7.3.10",
+    "@astrojs/starlight": "0.43.2",
+    "astro": "7.4.13",
+    "astro-mermaid": "2.2.1",
+    "mermaid": "12.3.0",
+    "starlight-links-validator": "0.27.1"
+  },
+  "devDependencies": {
+    "mdast-util-from-markdown": "2.1.0",
+    "mdast-util-gfm": "3.1.0",
+    "micromark-extension-gfm": "3.0.0",
+    "unist-util-visit": "5.2.0"
+  }
+}

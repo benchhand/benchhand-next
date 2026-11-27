@@ -1,0 +1,28 @@
+---
+// Starlight's MarkdownContent, with the "Planned" aside on every page whose front matter sets
+// `phase`. The label lives here, not in each page's prose, and links to the plan's phase list.
+// scripts/planned-pages.mjs writes plan-phases.json from docs/design-plan.md before the build.
+import Default from "@astrojs/starlight/components/MarkdownContent.astro";
+import { Aside } from "@astrojs/starlight/components";
+
+import plan from "../generated/plan-phases.json";
+
+const { phase } = Astro.locals.starlightRoute.entry.data;
+const phases: Record<string, string> = plan.phases;
+const phaseTitle = phase === undefined ? undefined : phases[String(phase)];
+if (phase !== undefined && phaseTitle === undefined) {
+  throw new Error(`phase ${phase} is not a phase of docs/design-plan.md`);
+}
+---
+
+<Default>
+  {
+    phase !== undefined && (
+      <Aside type="note" title={`Planned: written in Phase ${phase}`}>
+        This page is an outline. It is written with{" "}
+        <a href={plan.stepsUrl}>Phase {phase} of the design plan</a>: {phaseTitle}.
+      </Aside>
+    )
+  }
+  <slot />
+</Default>

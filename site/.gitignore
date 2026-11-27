@@ -1,0 +1,13 @@
+# Written by scripts/sync-docs.mjs before each build; the sources live elsewhere in the repo.
+/src/content/docs/architecture/
+/src/content/docs/adr/
+/src/content/docs/reference/contracts/
+/src/content/docs/reference/python-api/
+/public/contracts/
+# Written by scripts/planned-pages.mjs.
+/src/content/docs/planned.md
+/src/generated/
+/.cache/
+.astro/
+dist/
+node_modules/
