@@ -16,3 +16,6 @@ contracts/tsp-output/
 
 # Local private-token patterns that `just issues` refuses in the issue register; never committed
 tools/issues/private-patterns.txt
+
+# The beads plugin's gate lock
+.beads.gate.lock
