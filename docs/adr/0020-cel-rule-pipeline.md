@@ -109,7 +109,7 @@ A rule list is a cel-policy file, `flow/*.celpolicy`. The profile is an allow-li
 
 The profile has no `variables`, no `aggregate` and no nested `rule`. Every other cel-policy field, `explanation` and `imports` included, is outside it. The compile step refuses an excluded feature before the policy compiler runs, in every profile. A feature joins the profile only when the CheckedExpr the compiler emits for it passes the supported-profile gate on cel-expr-python.
 
-The final choice keeps "no match means UNKNOWN". A dispatch list ends with `- output: '"unknown"'`. The rule-list schema reserves the value `unknown`, and the host records it as UNKNOWN coverage, never PASS. Every other list's final choice outputs an explicit default of the same type as its other outputs, so the compiler's output-type check still holds.
+The final choice keeps "no match means UNKNOWN". A dispatch list ends with `- output: '"unknown"'`. The rule-list schema reserves the value `unknown`, and the host records it as UNKNOWN coverage, never PASS. Every other list's final choice outputs an explicit default of the same type as its other outputs, so the compiler's output-type check still holds. How the lists that policy providers contribute combine with the flow's own is open for the owner (see "Open items").
 
 The policy compiler checks output-type assignability between the choices, a literal `false` condition, and a literally true choice before the last one. A condition that is always false without being the literal passes it. Assignability between choices doesn't check the list against its slot: a `dyn` output is assignable to anything, and all choices can agree on the wrong type. So the cel-go tool also checks the type of the compiled list's result against the slot type that the rule-list contract declares for the list's kind, and refuses a list whose result type differs.
 
@@ -204,7 +204,13 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
 
 ## Open items
 
-- **Merging rule lists.** Policy providers contribute rule lists, "merged in a defined order" (plan section 5). Each list compiles to its own CheckedExpr and ends with an unconditional choice, so an earlier list always answers. The merge has to happen in the source before the compile, or as a defined order of evaluating separate lists. Phase 2 decides which, with the policy contract.
+- **Composing policy providers' rule lists: open, for the owner.** Each list compiles to its own CheckedExpr and ends with an unconditional choice, so an evaluation order alone doesn't stop an earlier list's default from masking every later list. The Phase 1 contracts branch proposes a composition in `contracts/policy/contribution.tsp`, pending the owner's confirmation:
+  - per kind, the host evaluates the contributed lists in ascending order of provider name, then the flow's own list;
+  - for `checks_by_iteration`, `dispatch` and `fidelity`, the first list whose output isn't the kind's reserved no-match value gives the value. The no-match values are `[]`, `"unknown"` and `"none"`;
+  - for `rigor`, every list must give true;
+  - a contributed list ends with its kind's no-match value.
+
+  The last rule avoids masking: a contribution whose conditions don't hold returns the no-match value, and evaluation passes to the next list. Until the owner decides, the composition is undecided.
 - **Where a user's bundle lives.** It sits next to the sources it covers, but its path and file name in a project and in a provider package aren't chosen. Phase 2 picks them with the bundle contract.
 - **How a scope is declared.** It could be a marker in TypeSpec (Kubernetes adopt item 1) or a scope file beside the contracts, as in the research (`scopes.yaml`). Phase 2 picks.
 - **The first profile's extensions.** The research's gate-guard profile enabled `strings` only. The list is chosen with the first rule lists.
