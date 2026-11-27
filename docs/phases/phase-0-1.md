@@ -1,6 +1,6 @@
 # Phases 0 and 1: gate document
 
-Status: waiting for the owner's review. Written 2026-11-27 against `main` at `311a2a1f`. It replaces the 2026-11-25 version, written at `41598c2`, which is out of date: it listed migrate and evidence as not built. The test-project verification ran at `fb9cb2e`. The 36 commits since then add the envelope, flow and policy contracts and their generated files, tests and docs, and change no hand-written code under `packages/` (`git diff fb9cb2e 311a2a1f -- packages` touches only `benchhand_contracts/{models,schemas,examples}`). Phase 2 stays unmerged until the owner approves this (`docs/design-plan.md`, Steps).
+Status: Approved by the owner 2026-11-27. Written 2026-11-27 against `main` at `311a2a1f`. It replaces the 2026-11-25 version, written at `41598c2`, which is out of date: it listed migrate and evidence as not built. The test-project verification ran at `fb9cb2e`. The 36 commits since then add the envelope, flow and policy contracts and their generated files, tests and docs, and change no hand-written code under `packages/` (`git diff fb9cb2e 311a2a1f -- packages` touches only `benchhand_contracts/{models,schemas,examples}`). Phase 2 stayed unmerged until this approval (`docs/design-plan.md`, Steps).
 
 Verdict:
 
@@ -30,7 +30,7 @@ Criteria are the bullets of Phase 0 and Phase 1 in `docs/design-plan.md:539-550`
 |---|---|---|---|
 | 1.1 | Record contracts | met | 20 record contracts in `contracts/record/*.tsp`. With common (2), envelope (1), flow (2), policy contribution (1), jobs (1) and provider (2), 29 schemas are published under `packages/benchhand-contracts/src/benchhand_contracts/schemas/`. |
 | 1.2 | Provider protocol contract | met | As 0.4. |
-| 1.3 | Envelope, flow and policy contracts | met | Five contracts, each at version 0.1.0, on `main`. The next section lists them, their tests and their review history. Two things stay open for the owner and Phase 2: the merge order of providers' rule lists, and three gaps in the contracts' own scope. See [open items](#open-items-for-the-owner) 1 to 4. |
+| 1.3 | Envelope, flow and policy contracts | met | Five contracts, each at version 0.1.0, on `main`. The next section lists them, their tests and their review history. The owner decided the merge order of providers' rule lists and two gaps in the contracts' scope on 2026-11-27 ([Decided](#decided) 4 to 6). The out-of-domain rule is Phase 2 work ([What Phase 2 starts with](#what-phase-2-starts-with), item 5). |
 | 1.4 | Codegen with a CI drift check | met | `just contracts-check` exited 0 on `311a2a1f` (log 19): 30 TypeSpec files formatted, 30 schemas meta-validated, generated files up to date. `ci.yml:81-83` runs the check and the drift step. The breaking-change half is tested (`tests/test_contracts_gen_breaking.py`), but it was skipped on this run: "no release tag reachable from HEAD". It has not yet compared against a real release (no release tag exists). |
 | 1.5 | `benchhand-contracts` | met | Generated models and validators (`packages/benchhand-contracts/src/benchhand_contracts/validation.py:55`); the 2 wheel tests install it in a fresh venv and pass (log 12c). |
 | 1.6 | Record service: typed reads and writes | met | `packages/benchhand-core/src/benchhand_core/record/store.py:313` (`read_record`), `:330` (`load_record`), `:457` (`save_record`, which checks file identity and round trip before touching a file); 39 tests in `tests/record/test_record_store.py`. On the migrated copy: 26 parts and 45 decisions read, 0 read errors. |
@@ -105,10 +105,10 @@ The editor's "STOP" findings on `flow.yaml` are a false positive. It matched the
 
 Results on `main` at `311a2a1f`: `just check` exited 0 (log 19). The contract tests ran in the full suite with 0 skipped.
 
-Not decided, and not built:
+Not built:
 
-- The merge order of providers' rule lists is a proposal, in the contracts and in a test helper (`merged()` in `tests/rule_lists.py`). Open item 1.
-- The loader, the interpreter and the evaluator are Phase 2. Open items 2 to 4 name three gaps they inherit.
+- The merge of providers' rule lists exists only in a test helper (`merged()` in `tests/rule_lists.py`). The owner confirmed its composition ([Decided](#decided) 4), and Phase 2 builds it.
+- The loader, the interpreter and the evaluator are Phase 2. They inherit the explanation, the interval citation and the out-of-domain rule ([Decided](#decided) 5 and 6; [What Phase 2 starts with](#what-phase-2-starts-with), item 5).
 
 ## Decided
 
@@ -122,6 +122,10 @@ The owner decided these on 2026-11-27.
    - prek hooks and the CI scanners (gitleaks, osv-scanner, Trivy config, actionlint, zizmor, pinact) run, as `docs/tooling.md` describes.
 
    The `relicense` commit that `git log main` also finds is the prototype's (`2f6cef77`, in the imported history under `reference/`).
+4. **Composing providers' rule lists, as proposed.** The contributions in ascending provider name, then the flow's list, whose result is final. A list that gives its kind's reserved no-match value passes to the next list. Rigor is the union of every list's messages, each once, and no list can waive one. Recorded in ADR-0020 ("Open items", decided 2026-11-27), `docs/contract/policy.md` and `contracts/policy/contribution.tsp`.
+5. **`explanation` joins ADR-0020's restricted profile.** A choice's explanation is a CEL expression that gives a string. Every choice of a list has one, or none does, because cel-go's explanation copy drops a choice without one. The cel-go tool compiles the explanations as a second checked expression and refuses a result other than a string. Recorded in ADR-0020 ("The restricted cel-policy profile", amended 2026-11-27), `contracts/flow/rules.tsp` and `docs/contract/flow.md`. The fixture's dispatch list carries the prototype's "no handler for ..." text.
+6. **The engine supplies the interval-acceptance citation from the record.** `GateDecisionRequest` gets no new field. The fixture's `answer.cites` stays as a test stand-in. Recorded in `docs/contract/flow.md` ("Gate decisions") and in the `GateDecisionRequest` description in `contracts/flow/flow.tsp`.
+7. **A migrated decision without an approval scope needs confirmation at the next human gate.** It doesn't count as covering the whole stage. This is a Phase 2 requirement. Recorded in ADR-0019 ("Amendment, 2026-11-27") and `docs/contract/record-migration.md` (decided default 4).
 
 ## Verification on the test project
 
@@ -160,26 +164,20 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
 
 ## Open items for the owner
 
-1. **Composing policy providers' rule lists** (`docs/adr/0020-cel-rule-pipeline.md:207-213`; `docs/design-plan.md:162,648`). The contracts branch proposes the following, pending confirmation:
-   - per kind, evaluate the contributed lists in ascending provider name, then the flow's own list;
-   - for `checks_by_iteration`, `dispatch` and `fidelity`, a list that gives its kind's no-match value (`[]`, `"unknown"`, `"none"`) passes to the next list, and a contributed list ends with that value;
-   - `rigor` doesn't fall through: every list is evaluated, the result is the union of their messages, each once, in the order first given, and rigor holds only when the union is empty, so a contribution can add requirements but never waive one (`docs/contract/policy.md:30-32`).
-
-   The owner confirms or changes this composition and its order. It is still open in ADR-0020 (`docs/adr/0020-cel-rule-pipeline.md:207-213`) and in `docs/contract/policy.md`. Phase 2 builds the merge after it is decided.
-2. **`explanation` is not in ADR-0020's restricted profile.** Dispatch findings therefore lose their "no handler for ..." text, which the prototype's dispatch list carried. The route to get it back is an amendment of ADR-0020 that adds `explanation` to the profile, then a contract change. The contracts don't need it for anything else.
-3. **How the gate request cites an interval-acceptance decision.** `GateDecisionRequest` has `provisional`, the provisional decision, and no field for the decision that accepts unproved intervals. The fixture uses a test variable, `answer.cites` (`tests/fixtures/flow/prototype-412b5d9/flow.yaml`, at each staged gate). Either the request gets a field, or the engine supplies the citation. This is a Phase 2 choice.
-4. **The out-of-domain rule has no implementation yet.** A fidelity outside F0 to F3, or a dispatch handler that no handler has, is UNKNOWN with a finding that names the value, never a pass. The rule is in the contract text (`contracts/flow/rules.tsp`, `docs/contract/flow.md`) and in the test helper (`tests/rule_lists.py`). The Phase 2 evaluator implements it. A literal `"none"` in the flow's own fidelity list is refused by the Phase 2 loader, because no schema can express it.
-5. **53 `basis: inferred` entries in the reference map.** They are entries of `docs/architecture/reference-map.yaml` whose home the plan's behavioural reference map doesn't name (header, `:18`). They are not in the migrate output, which has no such notion. They cover 127 prototype files, which is the "about 130" (`inferred.py`, log 13). By status: 36 `planned`, 7 `partial`, 9 `dropped` and 1 `ported`. By phase: 8 in Phase 1, 15 in Phase 2, 5 in Phase 3, 13 in Phase 4, 1 each in Phases 5 and 6, and 10 with no phase. The owner confirms or corrects the homes. The 10 with no phase need a phase first.
-6. **Probe gaps.** Run the Codex / ChatGPT desktop app, and settle Kiro's tool exposure (`docs/client-support.md:15,17`). The 2026-11-25 document records both as paused at the owner's request.
-7. **Advance the pin.** 13 merged and 26 open prototype PRs follow `412b5d9`. The owner has decided that #331 to #341 are ported first (see Decided). Which of the other open PRs follow, and when `release.toml` `reference_commit` moves, stay open (ADR-0015, `just reference-changes`).
-8. **Scope of decisions that migrate leaves unscoped** (ADR-0019, line 31). Migrated decisions carry no approval scope. Phase 2 must treat them either as covering the whole stage or as needing confirmation at the next gate.
-9. **Shipped guideline sets** become a package asset when the guideline catalog is ported (`docs/design-plan.md:649`). Until then the caller names the directory.
-10. **No ledger of ported test cases.** Criterion 1.11 can't be checked mechanically. Adding a `tests` field to the reference map is a possible fix; the owner decides.
-11. **Gaps the architecture pages list.** Each is a plan gap, not a Phase 1 defect:
+1. **Composing policy providers' rule lists.** Decided 2026-11-27: as proposed. See [Decided](#decided) 4.
+2. **`explanation` in ADR-0020's restricted profile.** Decided 2026-11-27: added, on every choice of a list or on none. See [Decided](#decided) 5.
+3. **How the gate request cites an interval-acceptance decision.** Decided 2026-11-27: the engine supplies it from the record, and the request gets no field. See [Decided](#decided) 6.
+4. **53 `basis: inferred` entries in the reference map.** They are entries of `docs/architecture/reference-map.yaml` whose home the plan's behavioural reference map doesn't name (header, `:18`). They are not in the migrate output, which has no such notion. They cover 127 prototype files, which is the "about 130" (`inferred.py`, log 13). By status: 36 `planned`, 7 `partial`, 9 `dropped` and 1 `ported`. By phase: 8 in Phase 1, 15 in Phase 2, 5 in Phase 3, 13 in Phase 4, 1 each in Phases 5 and 6, and 10 with no phase. The owner confirms or corrects the homes. The 10 with no phase need a phase first.
+5. **Probe gaps.** Run the Codex / ChatGPT desktop app, and settle Kiro's tool exposure (`docs/client-support.md:15,17`). The 2026-11-25 document records both as paused at the owner's request.
+6. **Advance the pin.** 13 merged and 26 open prototype PRs follow `412b5d9`. The owner has decided that #331 to #341 are ported first (see Decided). Which of the other open PRs follow, and when `release.toml` `reference_commit` moves, stay open (ADR-0015, `just reference-changes`).
+7. **Scope of decisions that migrate leaves unscoped.** Decided 2026-11-27: a migrated decision needs confirmation at the next human gate. See [Decided](#decided) 7.
+8. **Shipped guideline sets** become a package asset when the guideline catalog is ported (`docs/design-plan.md:649`). Until then the caller names the directory.
+9. **No ledger of ported test cases.** Criterion 1.11 can't be checked mechanically. Adding a `tests` field to the reference map is a possible fix; the owner decides.
+10. **Gaps the architecture pages list.** Each is a plan gap, not a Phase 1 defect:
    - the middleware chain, the provider host, `viewer-ocp` and `policy-default` have no phase (`docs/architecture/containers.md:181`);
    - the envelope and the annotation set each appear in two phases (`docs/architecture/layers.md`, "Where the plan and the code differ");
    - a freeze without a digest, artifact placement and the migrate entry point are open (`docs/architecture/data-flow.md:344-351`).
-12. **Beads** `benchhand-fct` (drawing fixes, Phase 4) and `benchhand-3fc` (ignore rules for setup, release and validate) carry over from the 2026-11-25 document. I did not recheck them.
+11. **Beads** `benchhand-fct` (drawing fixes, Phase 4) and `benchhand-3fc` (ignore rules for setup, release and validate) carry over from the 2026-11-25 document. I did not recheck them.
 
 ## What Phase 2 starts with
 
@@ -189,9 +187,13 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
    - fits by explicit limits (#348, still open in the prototype).
 
    The annotation set and test-coupon evidence follow (plan Phase 2).
-3. The owner's answers to open items 1, 3 and 8, and to item 2 if the explanation text is wanted.
+3. What the owner decided on 2026-11-27 ([Decided](#decided) 4 to 7):
+   - the merge of providers' rule lists;
+   - explanations in the cel-go tool and the host;
+   - the interval citation that the engine supplies;
+   - the confirmation of scopeless migrated decisions at the next gate.
 4. Version snapshots, seal and verify. Evidence staleness for v10 to v18 depends on reading these snapshots, and the freeze and `--since-version` baselines use them.
-5. `flow.yaml` and its interpreter, the CEL pipeline of ADR-0020 and the rule lists, on the contracts of criterion 1.3. A literal `"none"` fidelity fails at load, and an out-of-domain result is recorded as UNKNOWN (open item 4). ADR-0020 leaves four choices to Phase 2: where a user's bundle lives, how a scope is declared, the first profile's extensions, and the enum lint (`docs/adr/0020-cel-rule-pipeline.md:214-217`).
+5. `flow.yaml` and its interpreter, the CEL pipeline of ADR-0020 and the rule lists, on the contracts of criterion 1.3. The out-of-domain rule has no implementation yet. The Phase 2 evaluator records a fidelity outside F0 to F3, or a dispatch handler id that no handler has, as UNKNOWN with a finding that names the value, never a pass. The Phase 2 flow loader rejects a literal `"none"` in the flow's own fidelity list, because no schema can express that. The rule is in `contracts/flow/rules.tsp` and `docs/contract/flow.md`, and `tests/rule_lists.py` models it. ADR-0020 leaves four choices to Phase 2: where a user's bundle lives, how a scope is declared, the first profile's extensions, and the enum lint (`docs/adr/0020-cel-rule-pipeline.md:214-217`).
 6. Decision records, the VOID cascade, scoped approvals (ADR-0019), and `flow/guides/*.md`.
 
 ## Raw logs
