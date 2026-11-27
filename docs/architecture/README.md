@@ -21,7 +21,7 @@ The generated pages come from their own generator. Don't edit them by hand.
 
 ## Legend
 
-Every hand-written page uses these styles. The status is relative to `main` at `71c1a54`; the overview's is relative to `518c2ae`. The overview draws the same styles in D2, with its own legend in each diagram.
+Every hand-written page uses these styles. The status is relative to `main` at `71c1a54`; the overview's is relative to `fb9cb2e`. The overview draws the same styles in D2, with its own legend in each diagram.
 
 ```mermaid
 flowchart LR

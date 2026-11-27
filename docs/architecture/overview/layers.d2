@@ -6,7 +6,7 @@ vars: {
   d2-legend: {
     main: "On main" {class: main}
     planned: "Planned, Phase N" {class: planned}
-    open: "Open: no phase, or a probe result missing" {class: open}
+    open: "Open: no phase, or a Phase 0 probe result missing" {class: open}
     external: "Outside benchhand" {class: external}
   }
 }
@@ -38,7 +38,7 @@ stack: "" {
       codex_cli: "Codex CLI" {class: external}
       codex_app: "Codex / ChatGPT desktop\nopen: Phase 0 probe not run" {class: open}
       opencode: "OpenCode" {class: external}
-      kiro: "Kiro CLI\nopen: the model lacks\nthe probe tools" {class: open}
+      kiro: "Kiro CLI\nopen: Phase 0 probe result,\nthe model lacks the probe tools" {class: open}
       pi: "Pi" {class: external}
     }
     cli: "benchhand CLI, packages/benchhand\non main: version, record migrate\nmcp, doctor, setup, policy, rules compile, debug call: Phase 3" {class: main}
@@ -105,7 +105,7 @@ stack: "" {
 
 contracts: "Contracts: the side band every layer depends on (ADR-0017)" {
   class: layer
-  tsp: "TypeSpec, contracts/*.tsp\nrecord: 18 documents, 2 libraries\njobs, provider protocol and manifest, common finding" {class: main}
+  tsp: "TypeSpec, contracts/*.tsp\n24 contracts: record, jobs, provider, common\n(the generated domain model)" {class: main}
   planned_contracts: "Envelope, flow, flow rules\nand policy contribution\nPhase 1 list, planned" {class: planned}
   schema: "Published JSON Schema 2020-12\nbenchhand_contracts/schemas" {class: main}
   pydantic: "Pydantic v2 models and validate\nbenchhand_contracts\nimported by benchhand-core,\nand by the CLI through it" {class: main}

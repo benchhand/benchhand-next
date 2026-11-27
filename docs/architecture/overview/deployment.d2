@@ -93,7 +93,7 @@ machine.native.mcp.jobs -> machine.project.dot: "writes run records" {class: on_
 machine.native.rules_compile -> machine.project: "writes a user's bundle beside its rule lists\nthe path is open (ADR-0020)\nPhase 3" {class: planned_call}
 
 machine.host -> machine.container.launcher: "spawns uvx benchhand@<ver> mcp --container\ninstall --container: Phase 6" {class: planned_call}
-machine.container.launcher -> machine.container.runtime: "run -i, pumps stdio, supervises" {class: planned_call}
+machine.container.launcher -> machine.container.runtime: "run -i, pumps stdio, supervises\nopen: no phase in Steps" {class: planned_call}
 machine.container.runtime -> machine.container.image: "runs\nPhase 7" {class: planned_call}
 machine.container.runtime -> ghcr: "pulls the pinned benchhand image\nPhase 7" {class: planned_call}
 machine.container.image -> machine.project: "mounts the whole project root\nat the same path\nPhase 7" {class: planned_call}
