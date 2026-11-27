@@ -87,12 +87,13 @@ open_questions:
     pointers:
       - contracts/envelope/envelope.tsp:105
       - docs/design-plan.md:341
-      - docs/contract/flow.md:53
+      - docs/contract/flow.md:54
+      - docs/contract/flow.md:56
     positions:
       - source: contracts/envelope/envelope.tsp:105
         says: after fast checks pass, the next action is the tool
           flow.record_provisional.
-      - source: docs/contract/flow.md:53
+      - source: docs/contract/flow.md:56
         says: GateDecisionRequest records a human-gate decision; the
           interpreter records the other VOIDs itself.
   - id: policy-resources
@@ -116,17 +117,6 @@ open_questions:
       - source: docs/adr/0018-baseline-and-no-forms.md:28
         says: readable content comes from a tool; a resource is an
           enhancement.
-  - id: policy-composition
-    blocking: true
-    owner: project-owner
-    decision_needed: 'How a policy provider''s rule lists compose with the
-      flow''s own (ADR-0020).'
-    origin: existing
-    question: How contributed policy rule lists compose with the flow's
-      own; the owner decides.
-    pointers:
-      - docs/adr/0020-cel-rule-pipeline.md:207
-      - docs/design-plan.md:648
   - id: tool-stage-check
     blocking: true
     owner: project-owner
@@ -229,36 +219,6 @@ open_questions:
       - docs/architecture/layers.md:155
       - docs/design-plan.md:568
       - docs/design-plan.md:585
-  - id: unscoped-decisions
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether a migrated decision without an approval
-      scope covers its whole stage or needs confirmation (ADR-0019).'
-    origin: existing
-    question: How a migrated decision without an approval scope is
-      treated, as covering the whole stage or as needing confirmation.
-    pointers:
-      - docs/adr/0019-scoped-reapproval.md:31
-  - id: interval-citation
-    blocking: true
-    owner: project-owner
-    decision_needed: 'How a gate request cites the decision that accepts
-      unproved intervals.'
-    origin: existing
-    question: How a gate request cites the decision that accepts unproved
-      intervals.
-    pointers:
-      - docs/phases/phase-0-1.md:170
-  - id: dispatch-explanation
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether the restricted CEL profile gains an
-      explanation, or dispatch findings drop the prototype''s text.'
-    origin: existing
-    question: ADR-0020's restricted profile has no `explanation`,
-      so dispatch findings lose the prototype's "no handler for" text.
-    pointers:
-      - docs/phases/phase-0-1.md:169
   - id: validate-surface
     blocking: true
     owner: project-owner
@@ -268,7 +228,7 @@ open_questions:
     question: Neither CLI list names validate or evidence; they arrive
       as record.* tools, which no source names one by one.
     pointers:
-      - docs/phases/phase-0-1.md:154
+      - docs/phases/phase-0-1.md:163
   - id: guideline-asset
     blocking: false
     origin: existing
@@ -276,15 +236,15 @@ open_questions:
       the guideline catalog is ported; until then the caller names
       the directory.
     pointers:
-      - docs/design-plan.md:649
+      - docs/design-plan.md:648
   - id: user-bundle-location
     blocking: false
     origin: existing
     question: Where a project's and a provider's rules bundle lives,
       and how a scope is declared; Phase 2 picks.
     pointers:
-      - docs/adr/0020-cel-rule-pipeline.md:214
-      - docs/adr/0020-cel-rule-pipeline.md:215
+      - docs/adr/0020-cel-rule-pipeline.md:235
+      - docs/adr/0020-cel-rule-pipeline.md:236
   - id: container-launcher-phase
     blocking: true
     owner: project-owner
@@ -498,7 +458,7 @@ capabilities:
       - docs/client-support.md
     note: The Codex / ChatGPT desktop app was never run, and Kiro
       lists the probe tools without passing them to the model
-      (docs/phases/phase-0-1.md:24).
+      (docs/phases/phase-0-1.md:7).
     owner:
       - tools/probe
     adrs:
@@ -784,12 +744,15 @@ capabilities:
       - skills/cad-record/scripts/fail_fast.py
     depends_on:
       - cel-rule-pipeline
-    open_questions:
-      - dispatch-explanation
     adrs:
       - 14
       - 20
     no_tool_reason: Data the flow engine and the check tools evaluate.
+    note: The owner admitted `explanation` on 2026-11-27, so dispatch
+      findings keep the prototype's "no handler for" text; every choice
+      of a list has one or none does, and its checked type is `string`
+      (docs/phases/phase-0-1.md:126,
+      docs/adr/0020-cel-rule-pipeline.md:113-120).
   - id: gate-policy
     title: Gate policy
     purpose: Each project sets a mode per gate in hw/policy.yaml (ask,
@@ -823,12 +786,17 @@ capabilities:
       - decision-records
       - rule-lists
     open_questions:
-      - policy-composition
       - policy-resources
     adrs:
       - 3
       - 6
       - 20
+    note: The owner decided the composition on 2026-11-27. Contributed
+      lists run in ascending provider name, then the flow's list, which
+      is final; a list that gives its kind's no-match value falls through;
+      rigor is the union of every list's messages, and no list waives
+      one (docs/phases/phase-0-1.md:125,
+      docs/adr/0020-cel-rule-pipeline.md:228-234).
   - id: decision-records
     title: Gate decisions and decision records
     purpose: Record who approved what, through which channel (app,
@@ -856,11 +824,14 @@ capabilities:
       - record-store
     open_questions:
       - provisional-recording
-      - interval-citation
     adrs:
       - 3
       - 18
       - 19
+    note: The engine supplies the citation of the interval-acceptance
+      decision from the record, and GateDecisionRequest has no field
+      for it; the owner decided this on 2026-11-27
+      (docs/phases/phase-0-1.md:132, docs/contract/flow.md:60).
   - id: scoped-reapproval
     title: Scoped approvals and changed-since-approval
     purpose: A human-gate approval records the items it covers with
@@ -884,10 +855,13 @@ capabilities:
     depends_on:
       - decision-records
       - evidence-assessment
-    open_questions:
-      - unscoped-decisions
     adrs:
       - 19
+    note: A migrated decision has no approval scope and needs confirmation
+      at the next human gate; it does not cover the whole stage. The
+      owner decided this on 2026-11-27, and the confirmation's mechanics
+      are a Phase 2 design question (docs/phases/phase-0-1.md:133,
+      docs/adr/0019-scoped-reapproval.md:33-36).
   - id: result-envelope
     title: Result envelope and next actions
     purpose: 'Every tool returns one envelope as structuredContent:
@@ -1527,7 +1501,7 @@ capabilities:
     source:
       kind: plan
       ref: docs/design-plan.md:580
-    note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:51);
+    note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:53);
       not on main.
     owner:
       - packages/benchhand-provider
@@ -1647,7 +1621,7 @@ capabilities:
     source:
       kind: plan
       ref: docs/design-plan.md:581
-    note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:52);
+    note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:54);
       not on main.
     owner:
       - providers/freecad
@@ -2208,8 +2182,10 @@ capabilities:
     no_tool_reason: The host uses it to place artifacts.
   - id: policy-provider
     title: Default policy provider
-    purpose: The policy provider kind (evaluate), whose default implementation
-      is named in the plan.
+    purpose: The policy provider kind (evaluate) contributes rule
+      lists and gate requirements in CEL, which the flow engine combines
+      with the flow's own (docs/design-plan.md:162). The plan names its
+      default implementation, policy-default, in its provider tree.
     layer: providers
     container: containers.md:policy
     phase: null
@@ -2228,7 +2204,6 @@ capabilities:
       - gate-policy
     open_questions:
       - no-phase
-      - policy-composition
     adrs:
       - 6
     no_tool_reason: The flow engine calls it.
@@ -2832,7 +2807,7 @@ tools:
       ref: the chat baseline of the human gate
     implied_by:
       - docs/design-plan.md:341
-      - docs/adr/0019-scoped-reapproval.md:29
+      - docs/adr/0019-scoped-reapproval.md:30
   - name: flow.impact
     capability: change-impact
     access: read

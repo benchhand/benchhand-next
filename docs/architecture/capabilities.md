@@ -23,7 +23,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
 | **all** | **77** | 6 | 5 | 60 | 6 | 0 | 65 | 12 |
 
-MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28. Doc corrections: 1.
+MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 24. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -980,9 +980,9 @@ Is there a record.migrate MCP tool, and in which phase? The envelope contract's 
 
 Who records a PROVISIONAL approval: a tool call, or the interpreter? The envelope example names a flow.record_provisional tool; the plan names only flow.record_decision, and the flow contract's gate request covers human-gate decisions. (catalogue)
 
-- Pointers: `contracts/envelope/envelope.tsp:105`, `docs/design-plan.md:341`, `docs/contract/flow.md:53`
+- Pointers: `contracts/envelope/envelope.tsp:105`, `docs/design-plan.md:341`, `docs/contract/flow.md:54`, `docs/contract/flow.md:56`
 - `contracts/envelope/envelope.tsp:105`: after fast checks pass, the next action is the tool flow.record_provisional.
-- `docs/contract/flow.md:53`: GateDecisionRequest records a human-gate decision; the interpreter records the other VOIDs itself.
+- `docs/contract/flow.md:56`: GateDecisionRequest records a human-gate decision; the interpreter records the other VOIDs itself.
 - Blocking: yes. Owner: project-owner. Decision needed: Whether a tool call or the interpreter records a PROVISIONAL approval, before the decision-records spec.
 - Cited by: [decision-records](#decision-records), `flow.record_provisional`
 
@@ -995,14 +995,6 @@ How does the agent read and change gate modes over MCP? D3 says the `policy.*` r
 - `docs/adr/0018-baseline-and-no-forms.md:28`: readable content comes from a tool; a resource is an enhancement.
 - Blocking: yes. Owner: project-owner. Decision needed: The tools that read and change gate modes over MCP, with the policy.* resources as an enhancement, or no MCP path at all.
 - Cited by: [gate-policy](#gate-policy), `policy.get`, `policy.set`
-
-### policy-composition
-
-How contributed policy rule lists compose with the flow's own; the owner decides. (existing)
-
-- Pointers: `docs/adr/0020-cel-rule-pipeline.md:207`, `docs/design-plan.md:648`
-- Blocking: yes. Owner: project-owner. Decision needed: How a policy provider's rule lists compose with the flow's own (ADR-0020).
-- Cited by: [gate-policy](#gate-policy), [policy-provider](#policy-provider)
 
 ### tool-stage-check
 
@@ -1084,35 +1076,11 @@ Phase 2 lists the annotation set as a record contract addition, and Phase 4 list
 - Blocking: yes. Owner: maintainer. Decision needed: Which phase publishes the annotation-set contract, Phase 2 or Phase 4, with the plan and layers.md made to agree.
 - Cited by: [annotation-set](#annotation-set), [documentation-set](#documentation-set)
 
-### unscoped-decisions
-
-How a migrated decision without an approval scope is treated, as covering the whole stage or as needing confirmation. (existing)
-
-- Pointers: `docs/adr/0019-scoped-reapproval.md:31`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether a migrated decision without an approval scope covers its whole stage or needs confirmation (ADR-0019).
-- Cited by: [scoped-reapproval](#scoped-reapproval)
-
-### interval-citation
-
-How a gate request cites the decision that accepts unproved intervals. (existing)
-
-- Pointers: `docs/phases/phase-0-1.md:170`
-- Blocking: yes. Owner: project-owner. Decision needed: How a gate request cites the decision that accepts unproved intervals.
-- Cited by: [decision-records](#decision-records)
-
-### dispatch-explanation
-
-ADR-0020's restricted profile has no `explanation`, so dispatch findings lose the prototype's "no handler for" text. (existing)
-
-- Pointers: `docs/phases/phase-0-1.md:169`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether the restricted CEL profile gains an explanation, or dispatch findings drop the prototype's text.
-- Cited by: [rule-lists](#rule-lists)
-
 ### validate-surface
 
 Neither CLI list names validate or evidence; they arrive as record.* tools, which no source names one by one. (existing)
 
-- Pointers: `docs/phases/phase-0-1.md:154`
+- Pointers: `docs/phases/phase-0-1.md:163`
 - Blocking: yes. Owner: project-owner. Decision needed: The record.* tools for validate and evidence, named one by one.
 - Cited by: [record-validate](#record-validate), [record-ops](#record-ops), `record.validate`
 
@@ -1120,7 +1088,7 @@ Neither CLI list names validate or evidence; they arrive as record.* tools, whic
 
 The shipped guideline sets become a package asset when the guideline catalog is ported; until then the caller names the directory. (existing)
 
-- Pointers: `docs/design-plan.md:649`
+- Pointers: `docs/design-plan.md:648`
 - Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [evidence-assessment](#evidence-assessment)
 
@@ -1128,7 +1096,7 @@ The shipped guideline sets become a package asset when the guideline catalog is 
 
 Where a project's and a provider's rules bundle lives, and how a scope is declared; Phase 2 picks. (existing)
 
-- Pointers: `docs/adr/0020-cel-rule-pipeline.md:214`, `docs/adr/0020-cel-rule-pipeline.md:215`
+- Pointers: `docs/adr/0020-cel-rule-pipeline.md:235`, `docs/adr/0020-cel-rule-pipeline.md:236`
 - Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [cel-rule-pipeline](#cel-rule-pipeline), `benchhand rules compile`
 
@@ -1260,7 +1228,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: –
 - ADRs: ADR-0016, ADR-0018
 - Evidence: `tools/probe/probe.py`, `docs/client-support.md`
-- Note: The Codex / ChatGPT desktop app was never run, and Kiro lists the probe tools without passing them to the model (docs/phases/phase-0-1.md:24).
+- Note: The Codex / ChatGPT desktop app was never run, and Kiro lists the probe tools without passing them to the model (docs/phases/phase-0-1.md:7).
 
 ### record-store
 
@@ -1387,9 +1355,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [cel-rule-pipeline](#cel-rule-pipeline)
 - ADRs: ADR-0014, ADR-0020
+- Note: The owner admitted `explanation` on 2026-11-27, so dispatch findings keep the prototype's "no handler for" text; every choice of a list has one or none does, and its checked type is `string` (docs/phases/phase-0-1.md:126, docs/adr/0020-cel-rule-pipeline.md:113-120).
 - Source: plan: `docs/design-plan.md:552`
 - Prototype: `skills/cad-design/scripts/process_checks/dispatch.py`, `skills/cad-record/scripts/fail_fast.py`
-- Open questions: [dispatch-explanation](#dispatch-explanation)
 
 ### gate-policy
 
@@ -1403,8 +1371,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: `benchhand policy get`, `benchhand policy set`
 - Depends on: [flow-engine](#flow-engine), [decision-records](#decision-records), [rule-lists](#rule-lists)
 - ADRs: ADR-0003, ADR-0006, ADR-0020
+- Note: The owner decided the composition on 2026-11-27. Contributed lists run in ascending provider name, then the flow's list, which is final; a list that gives its kind's no-match value falls through; rigor is the union of every list's messages, and no list waives one (docs/phases/phase-0-1.md:125, docs/adr/0020-cel-rule-pipeline.md:228-234).
 - Source: plan: `docs/design-plan.md:552`
-- Open questions: [policy-composition](#policy-composition), [policy-resources](#policy-resources)
+- Open questions: [policy-resources](#policy-resources)
 
 ### decision-records
 
@@ -1418,9 +1387,10 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [flow-engine](#flow-engine), [record-store](#record-store)
 - ADRs: ADR-0003, ADR-0018, ADR-0019
+- Note: The engine supplies the citation of the interval-acceptance decision from the record, and GateDecisionRequest has no field for it; the owner decided this on 2026-11-27 (docs/phases/phase-0-1.md:132, docs/contract/flow.md:60).
 - Source: plan: `docs/design-plan.md:562`
 - Prototype: `skills/cad-record/scripts/decision_records.py`
-- Open questions: [provisional-recording](#provisional-recording), [interval-citation](#interval-citation)
+- Open questions: [provisional-recording](#provisional-recording)
 
 ### scoped-reapproval
 
@@ -1434,8 +1404,8 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [decision-records](#decision-records), [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0019
+- Note: A migrated decision has no approval scope and needs confirmation at the next human gate; it does not cover the whole stage. The owner decided this on 2026-11-27, and the confirmation's mechanics are a Phase 2 design question (docs/phases/phase-0-1.md:133, docs/adr/0019-scoped-reapproval.md:33-36).
 - Source: plan: `docs/design-plan.md:563`
-- Open questions: [unscoped-decisions](#unscoped-decisions)
 
 ### result-envelope
 
@@ -1772,7 +1742,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [provider-protocol-contract](#provider-protocol-contract), [contract-validation](#contract-validation)
 - ADRs: ADR-0006, ADR-0013
-- Note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:51); not on main.
+- Note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:53); not on main.
 - Source: plan: `docs/design-plan.md:580`
 - Prototype: `skills/cad-model/scripts/cadmodel/runner.py`
 
@@ -1832,7 +1802,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: `benchhand freecad probe`
 - Depends on: [provider-runtime](#provider-runtime)
 - ADRs: ADR-0005, ADR-0006
-- Note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:52); not on main.
+- Note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:54); not on main.
 - Source: plan: `docs/design-plan.md:581`
 - Prototype: `skills/cad-drawings/scripts/freecad_runtime.py`, `skills/cad-analysis/scripts/freecad_lookup.py`
 
@@ -2096,7 +2066,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 ### policy-provider
 
-**Default policy provider.** The policy provider kind (evaluate), whose default implementation is named in the plan.
+**Default policy provider.** The policy provider kind (evaluate) contributes rule lists and gate requirements in CEL, which the flow engine combines with the flow's own (docs/design-plan.md:162). The plan names its default implementation, policy-default, in its provider tree.
 
 - Layer and container: providers, `containers.md:policy`
 - Phase and status: no phase, planned, deferred
@@ -2107,7 +2077,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [provider-host](#provider-host), [gate-policy](#gate-policy)
 - ADRs: ADR-0006
 - Source: plan: `docs/design-plan.md:162`
-- Open questions: [no-phase](#no-phase), [policy-composition](#policy-composition)
+- Open questions: [no-phase](#no-phase)
 
 ### preview-host
 
