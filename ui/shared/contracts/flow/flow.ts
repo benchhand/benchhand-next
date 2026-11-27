@@ -25,18 +25,19 @@ export type CelExpressions1 = [string, ...string[]];
 export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | "part";
 
 /**
- * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check
+ * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
  */
 export interface BenchhandFlowDefinitionFlowYamlProvisional {
   flow_version: 1;
+  stages: FlowStages;
   /**
-   * Every stage, in flow order
-   *
    * @minItems 1
    */
-  stages: [FlowStage, ...FlowStage[]];
-  gates: FlowGate[];
-  edges: FlowEdge[];
+  gates: [FlowGate, ...FlowGate[]];
+  /**
+   * @minItems 1
+   */
+  edges: [FlowEdge, ...FlowEdge[]];
   /**
    * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
@@ -46,24 +47,25 @@ export interface BenchhandFlowDefinitionFlowYamlProvisional {
    */
   reapproval_scope?: string;
 }
+/**
+ * Every stage of the record's stage enum (record/common.schema.json#/$defs/stage), by its id, each once. The order of the stages is the enum's, and the graph is the edges; the order of the keys means nothing
+ */
+export interface FlowStages {
+  ground: FlowStage;
+  intent: FlowStage;
+  specify: FlowStage;
+  concept: FlowStage;
+  layout: FlowStage;
+  parts: FlowStage;
+  detail: FlowStage;
+  bom: FlowStage;
+  analysis: FlowStage;
+  critique: FlowStage;
+  reconcile: FlowStage;
+  design_freeze: FlowStage;
+  release: FlowStage;
+}
 export interface FlowStage {
-  /**
-   * A flow stage, in flow order
-   */
-  id:
-    | "ground"
-    | "intent"
-    | "specify"
-    | "concept"
-    | "layout"
-    | "parts"
-    | "detail"
-    | "bom"
-    | "analysis"
-    | "critique"
-    | "reconcile"
-    | "design_freeze"
-    | "release";
   guides: FlowGuides;
 }
 /**
@@ -82,7 +84,7 @@ export interface FlowSingleHumanGate {
    */
   id: string;
   /**
-   * A flow stage, in flow order
+   * The stage the gate closes
    */
   stage:
     | "ground"
@@ -112,7 +114,7 @@ export interface FlowStagedGate {
    */
   id: string;
   /**
-   * A flow stage, in flow order
+   * The stage the gate closes
    */
   stage:
     | "ground"

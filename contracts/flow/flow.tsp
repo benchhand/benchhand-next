@@ -10,7 +10,7 @@ using Common.Cel;
 @baseUri("https://benchhand.github.io/benchhand/contracts/flow/flow/")
 namespace Flow.Flow;
 
-/** Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check */
+/** Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check */
 @summary("benchhand flow definition (flow.yaml), provisional")
 @id("https://benchhand.github.io/benchhand/contracts/flow/flow.schema.json")
 @extension("x-version", "0.1.0")
@@ -18,11 +18,12 @@ namespace Flow.Flow;
 model Flow {
   flow_version: 1;
 
-  /** Every stage, in flow order */
-  @minItems(1)
-  stages: FlowStage[];
+  stages: FlowStages;
 
+  @minItems(1)
   gates: FlowGate[];
+
+  @minItems(1)
   edges: FlowEdge[];
 
   /** Selects the stages a VOID reopens besides the voided stage, evaluated for each stage after it */
@@ -33,8 +34,24 @@ model Flow {
   reapproval_scope?: CelExpression;
 }
 
+/** Every stage of the record's stage enum (record/common.schema.json#/$defs/stage), by its id, each once. The order of the stages is the enum's, and the graph is the edges; the order of the keys means nothing */
+model FlowStages {
+  ground: FlowStage;
+  intent: FlowStage;
+  specify: FlowStage;
+  concept: FlowStage;
+  layout: FlowStage;
+  parts: FlowStage;
+  detail: FlowStage;
+  bom: FlowStage;
+  analysis: FlowStage;
+  critique: FlowStage;
+  reconcile: FlowStage;
+  design_freeze: FlowStage;
+  release: FlowStage;
+}
+
 model FlowStage {
-  id: Records.Common.stage;
   guides: FlowGuides;
 }
 
@@ -180,19 +197,26 @@ model ApprovedItemState {
   Flow,
   #{
     flow_version: 1,
-    stages: #[
-      #{
-        id: Records.Common.stage.layout,
-        guides: #{ lead: "guides/layout.md" },
-      },
-      #{
-        id: Records.Common.stage.parts,
+    stages: #{
+      ground: #{ guides: #{ lead: "guides/ground.md" } },
+      intent: #{ guides: #{ lead: "guides/intent.md" } },
+      specify: #{ guides: #{ lead: "guides/specify.md" } },
+      concept: #{ guides: #{ lead: "guides/concept.md" } },
+      layout: #{ guides: #{ lead: "guides/layout.md" } },
+      parts: #{
         guides: #{
           lead: "guides/parts.md",
           `cad-part-designer`: "guides/parts.md#part-designer",
         },
-      }
-    ],
+      },
+      detail: #{ guides: #{ lead: "guides/detail.md" } },
+      bom: #{ guides: #{ lead: "guides/bom.md" } },
+      analysis: #{ guides: #{ lead: "guides/analysis.md" } },
+      critique: #{ guides: #{ lead: "guides/critique.md" } },
+      reconcile: #{ guides: #{ lead: "guides/reconcile.md" } },
+      design_freeze: #{ guides: #{ lead: "guides/design-freeze.md" } },
+      release: #{ guides: #{ lead: "guides/release.md" } },
+    },
     gates: #[
       #{
         id: "layout_freeze",

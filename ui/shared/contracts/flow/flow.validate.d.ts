@@ -4,6 +4,7 @@
 import type { ValidateFunction } from "ajv";
 
 export declare const validate: ValidateFunction;
+export declare const validateFlowStages: ValidateFunction;
 export declare const validateFlowStage: ValidateFunction;
 export declare const validateFlowGuides: ValidateFunction;
 export declare const validateFlowGuideFragment: ValidateFunction;

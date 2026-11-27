@@ -6,21 +6,74 @@
       "valid": [
         {
           "flow_version": 1,
-          "stages": [
-            {
-              "id": "layout",
+          "stages": {
+            "ground": {
+              "guides": {
+                "lead": "guides/ground.md"
+              }
+            },
+            "intent": {
+              "guides": {
+                "lead": "guides/intent.md"
+              }
+            },
+            "specify": {
+              "guides": {
+                "lead": "guides/specify.md"
+              }
+            },
+            "concept": {
+              "guides": {
+                "lead": "guides/concept.md"
+              }
+            },
+            "layout": {
               "guides": {
                 "lead": "guides/layout.md"
               }
             },
-            {
-              "id": "parts",
+            "parts": {
               "guides": {
                 "lead": "guides/parts.md",
                 "cad-part-designer": "guides/parts.md#part-designer"
               }
+            },
+            "detail": {
+              "guides": {
+                "lead": "guides/detail.md"
+              }
+            },
+            "bom": {
+              "guides": {
+                "lead": "guides/bom.md"
+              }
+            },
+            "analysis": {
+              "guides": {
+                "lead": "guides/analysis.md"
+              }
+            },
+            "critique": {
+              "guides": {
+                "lead": "guides/critique.md"
+              }
+            },
+            "reconcile": {
+              "guides": {
+                "lead": "guides/reconcile.md"
+              }
+            },
+            "design_freeze": {
+              "guides": {
+                "lead": "guides/design-freeze.md"
+              }
+            },
+            "release": {
+              "guides": {
+                "lead": "guides/release.md"
+              }
             }
-          ],
+          },
           "gates": [
             {
               "id": "layout_freeze",
@@ -55,21 +108,74 @@
           "mutation": "remove-property",
           "pointer": "/flow_version",
           "instance": {
-            "stages": [
-              {
-                "id": "layout",
+            "stages": {
+              "ground": {
+                "guides": {
+                  "lead": "guides/ground.md"
+                }
+              },
+              "intent": {
+                "guides": {
+                  "lead": "guides/intent.md"
+                }
+              },
+              "specify": {
+                "guides": {
+                  "lead": "guides/specify.md"
+                }
+              },
+              "concept": {
+                "guides": {
+                  "lead": "guides/concept.md"
+                }
+              },
+              "layout": {
                 "guides": {
                   "lead": "guides/layout.md"
                 }
               },
-              {
-                "id": "parts",
+              "parts": {
                 "guides": {
                   "lead": "guides/parts.md",
                   "cad-part-designer": "guides/parts.md#part-designer"
                 }
+              },
+              "detail": {
+                "guides": {
+                  "lead": "guides/detail.md"
+                }
+              },
+              "bom": {
+                "guides": {
+                  "lead": "guides/bom.md"
+                }
+              },
+              "analysis": {
+                "guides": {
+                  "lead": "guides/analysis.md"
+                }
+              },
+              "critique": {
+                "guides": {
+                  "lead": "guides/critique.md"
+                }
+              },
+              "reconcile": {
+                "guides": {
+                  "lead": "guides/reconcile.md"
+                }
+              },
+              "design_freeze": {
+                "guides": {
+                  "lead": "guides/design-freeze.md"
+                }
+              },
+              "release": {
+                "guides": {
+                  "lead": "guides/release.md"
+                }
               }
-            ],
+            },
             "gates": [
               {
                 "id": "layout_freeze",
@@ -104,21 +210,74 @@
           "pointer": "/x-conformance-unknown",
           "instance": {
             "flow_version": 1,
-            "stages": [
-              {
-                "id": "layout",
+            "stages": {
+              "ground": {
+                "guides": {
+                  "lead": "guides/ground.md"
+                }
+              },
+              "intent": {
+                "guides": {
+                  "lead": "guides/intent.md"
+                }
+              },
+              "specify": {
+                "guides": {
+                  "lead": "guides/specify.md"
+                }
+              },
+              "concept": {
+                "guides": {
+                  "lead": "guides/concept.md"
+                }
+              },
+              "layout": {
                 "guides": {
                   "lead": "guides/layout.md"
                 }
               },
-              {
-                "id": "parts",
+              "parts": {
                 "guides": {
                   "lead": "guides/parts.md",
                   "cad-part-designer": "guides/parts.md#part-designer"
                 }
+              },
+              "detail": {
+                "guides": {
+                  "lead": "guides/detail.md"
+                }
+              },
+              "bom": {
+                "guides": {
+                  "lead": "guides/bom.md"
+                }
+              },
+              "analysis": {
+                "guides": {
+                  "lead": "guides/analysis.md"
+                }
+              },
+              "critique": {
+                "guides": {
+                  "lead": "guides/critique.md"
+                }
+              },
+              "reconcile": {
+                "guides": {
+                  "lead": "guides/reconcile.md"
+                }
+              },
+              "design_freeze": {
+                "guides": {
+                  "lead": "guides/design-freeze.md"
+                }
+              },
+              "release": {
+                "guides": {
+                  "lead": "guides/release.md"
+                }
               }
-            ],
+            },
             "gates": [
               {
                 "id": "layout_freeze",
@@ -154,21 +313,74 @@
           "pointer": "/flow_version",
           "instance": {
             "flow_version": "not-a-number",
-            "stages": [
-              {
-                "id": "layout",
+            "stages": {
+              "ground": {
+                "guides": {
+                  "lead": "guides/ground.md"
+                }
+              },
+              "intent": {
+                "guides": {
+                  "lead": "guides/intent.md"
+                }
+              },
+              "specify": {
+                "guides": {
+                  "lead": "guides/specify.md"
+                }
+              },
+              "concept": {
+                "guides": {
+                  "lead": "guides/concept.md"
+                }
+              },
+              "layout": {
                 "guides": {
                   "lead": "guides/layout.md"
                 }
               },
-              {
-                "id": "parts",
+              "parts": {
                 "guides": {
                   "lead": "guides/parts.md",
                   "cad-part-designer": "guides/parts.md#part-designer"
                 }
+              },
+              "detail": {
+                "guides": {
+                  "lead": "guides/detail.md"
+                }
+              },
+              "bom": {
+                "guides": {
+                  "lead": "guides/bom.md"
+                }
+              },
+              "analysis": {
+                "guides": {
+                  "lead": "guides/analysis.md"
+                }
+              },
+              "critique": {
+                "guides": {
+                  "lead": "guides/critique.md"
+                }
+              },
+              "reconcile": {
+                "guides": {
+                  "lead": "guides/reconcile.md"
+                }
+              },
+              "design_freeze": {
+                "guides": {
+                  "lead": "guides/design-freeze.md"
+                }
+              },
+              "release": {
+                "guides": {
+                  "lead": "guides/release.md"
+                }
               }
-            ],
+            },
             "gates": [
               {
                 "id": "layout_freeze",

@@ -232,7 +232,6 @@ class FlowStage(ContractModel):
         extra="forbid",
         populate_by_name=True,
     )
-    id: common_schema.Stage
     guides: FlowGuides
 
 
@@ -248,9 +247,33 @@ class ApprovalScope(ContractModel):
     items: Annotated[list[ApprovedItem], Field(min_length=1)]
 
 
+class FlowStages(ContractModel):
+    """
+    Every stage of the record's stage enum (record/common.schema.json#/$defs/stage), by its id, each once. The order of the stages is the enum's, and the graph is the edges; the order of the keys means nothing
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    ground: FlowStage
+    intent: FlowStage
+    specify: FlowStage
+    concept: FlowStage
+    layout: FlowStage
+    parts: FlowStage
+    detail: FlowStage
+    bom: FlowStage
+    analysis: FlowStage
+    critique: FlowStage
+    reconcile: FlowStage
+    design_freeze: FlowStage
+    release: FlowStage
+
+
 class BenchhandFlowDefinitionFlowYamlProvisional(ContractModel):
     """
-    Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). The schema checks the shape only; the flow interpreter compiles and type-checks every expression when it loads the file. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check
+    Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
     """
 
     model_config = ConfigDict(
@@ -258,12 +281,12 @@ class BenchhandFlowDefinitionFlowYamlProvisional(ContractModel):
         populate_by_name=True,
     )
     flow_version: Literal[1]
-    stages: Annotated[list[FlowStage], Field(min_length=1)]
-    """
-    Every stage, in flow order
-    """
-    gates: list[Annotated[FlowSingleHumanGate | FlowStagedGate, Field(discriminator="kind")]]
-    edges: list[FlowEdge]
+    stages: FlowStages
+    gates: Annotated[
+        list[Annotated[FlowSingleHumanGate | FlowStagedGate, Field(discriminator="kind")]],
+        Field(min_length=1),
+    ]
+    edges: Annotated[list[FlowEdge], Field(min_length=1)]
     void_scope: Annotated[
         str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
     ]

@@ -9,17 +9,34 @@ direction: right
     label: "flow"
     shape: sql_table
     "flow_version": "const 1" { constraint: "req" }
-    "stages": "FlowStage[1..*]" { constraint: "req" }
-    "gates": "FlowGate[]" { constraint: "req" }
-    "edges": "FlowEdge[]" { constraint: "req" }
+    "stages": "FlowStages" { constraint: "req" }
+    "gates": "FlowGate[1..*]" { constraint: "req" }
+    "edges": "FlowEdge[1..*]" { constraint: "req" }
     "void_scope": "CelExpression" { constraint: "req" }
     "reapproval_scope": "CelExpression"
+  }
+  "flow_flow__FlowStages": {
+    class: owned
+    label: "FlowStages"
+    shape: sql_table
+    "ground": "FlowStage" { constraint: "req" }
+    "intent": "FlowStage" { constraint: "req" }
+    "specify": "FlowStage" { constraint: "req" }
+    "concept": "FlowStage" { constraint: "req" }
+    "layout": "FlowStage" { constraint: "req" }
+    "parts": "FlowStage" { constraint: "req" }
+    "detail": "FlowStage" { constraint: "req" }
+    "bom": "FlowStage" { constraint: "req" }
+    "analysis": "FlowStage" { constraint: "req" }
+    "critique": "FlowStage" { constraint: "req" }
+    "reconcile": "FlowStage" { constraint: "req" }
+    "design_freeze": "FlowStage" { constraint: "req" }
+    "release": "FlowStage" { constraint: "req" }
   }
   "flow_flow__FlowStage": {
     class: owned
     label: "FlowStage"
     shape: sql_table
-    "id": "stage" { constraint: "req" }
     "guides": "FlowGuides" { constraint: "req" }
   }
   "flow_flow__FlowGuides": {
@@ -81,8 +98,9 @@ direction: right
 "aggregate__flow_flow"."flow_flow__FlowSingleHumanGate" -> "aggregate__flow_flow"."flow_flow__FlowGate": { class: inheritance }
 "aggregate__flow_flow"."flow_flow__FlowStagedGate" -> "aggregate__flow_flow"."flow_flow__FlowGate": { class: inheritance }
 "aggregate__flow_flow"."flow_flow__FlowStage"."guides" -> "aggregate__flow_flow"."flow_flow__FlowGuides": "guides [1]" { class: composition }
-"aggregate__flow_flow"."flow_flow"."stages" -> "aggregate__flow_flow"."flow_flow__FlowStage": "stages [1..*]" { class: composition }
+"aggregate__flow_flow"."flow_flow__FlowStages" -> "aggregate__flow_flow"."flow_flow__FlowStage": "ground, intent, specify, concept, layout, parts, detail, bom, analysis, critique, reconcile, design_freeze, release [1]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."stages" -> "aggregate__flow_flow"."flow_flow__FlowStages": "stages [1]" { class: composition }
 "aggregate__flow_flow"."flow_flow__FlowSingleHumanGate"."requires" -> "aggregate__flow_flow"."flow_flow__FlowSingleHumanGate__requires": "requires [1]" { class: composition }
 "aggregate__flow_flow"."flow_flow__FlowStagedGate"."requires" -> "aggregate__flow_flow"."flow_flow__FlowStagedGate__requires": "requires [1]" { class: composition }
-"aggregate__flow_flow"."flow_flow"."gates" -> "aggregate__flow_flow"."flow_flow__FlowGate": "gates [0..*]" { class: composition }
-"aggregate__flow_flow"."flow_flow"."edges" -> "aggregate__flow_flow"."flow_flow__FlowEdge": "edges [0..*]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."gates" -> "aggregate__flow_flow"."flow_flow__FlowGate": "gates [1..*]" { class: composition }
+"aggregate__flow_flow"."flow_flow"."edges" -> "aggregate__flow_flow"."flow_flow__FlowEdge": "edges [1..*]" { class: composition }

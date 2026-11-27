@@ -9,47 +9,47 @@
 flow_version: 1
 
 stages:
-  - id: ground
+  ground:
     guides: {lead: guides/ground.md}
-  - id: intent
+  intent:
     guides: {lead: guides/intent.md}
-  - id: specify
+  specify:
     guides: {lead: guides/specify.md}
-  - id: concept
+  concept:
     guides:
       lead: guides/concept.md
       cad-concept-designer: guides/concept.md#variant-unit
-  - id: layout
+  layout:
     guides: {lead: guides/layout.md}
-  - id: parts
+  parts:
     guides:
       lead: guides/parts.md
       cad-part-designer: guides/parts.md#part-unit
       cad-sourcing-researcher: guides/parts.md#sourcing-unit
       cad-mech-reviewer: guides/parts.md#light-review
       cad-dfm-reviewer: guides/parts.md#light-review
-  - id: detail
+  detail:
     guides:
       lead: guides/detail.md
       cad-part-designer: guides/detail.md#detail-unit
-  - id: bom
+  bom:
     guides:
       lead: guides/bom.md
       cad-clerk: guides/bom.md#clerk-chore
-  - id: analysis
+  analysis:
     guides:
       lead: guides/analysis.md
       cad-analyst: guides/analysis.md#analysis-case
-  - id: critique
+  critique:
     guides:
       lead: guides/critique.md
       cad-mech-reviewer: guides/critique.md#mechanical-review
       cad-dfm-reviewer: guides/critique.md#dfm-review
-  - id: reconcile
+  reconcile:
     guides: {lead: guides/reconcile.md}
-  - id: design_freeze
+  design_freeze:
     guides: {lead: guides/design-freeze.md}
-  - id: release
+  release:
     guides: {lead: guides/release.md}
 
 gates:

@@ -6,13 +6,15 @@ Status: provisional, version `0.1.0`. Phase 2 writes `flow/flow.yaml`, the `flow
 
 ## Stages, gates and edges
 
-- `stages` lists every stage of the record's stage enum, in flow order. Each stage names a guide fragment for each role. `lead` is required, and any other key is an agent profile such as `cad-part-designer`. `flow.guide` returns the role's own fragment, or else the lead's. A fragment is a Markdown file under `guides/`, with an optional heading anchor.
+- `stages` has an entry for every stage of the record's stage enum, by its id, and the schema refuses a flow without one. Each stage names a guide fragment for each role. `lead` is required, and any other key is an agent profile such as `cad-part-designer`. `flow.guide` returns the role's own fragment, or else the lead's. A fragment is a Markdown file under `guides/`, with an optional heading anchor.
 - `gates` lists the gates. The `kind` of a gate sets its steps:
   - `single-human`: the user approves in one step, and the edge advances then. Its `requires` has one list, `human`.
   - `provisional+full+human`: the gate approves a built version in three steps. The provisional gate follows the fast checks, and the edge advances there. The full check then runs on the same version, and the human gate opens after it. Its `requires` has the lists `provisional`, `full` and `human`. The `full` list says when the full check counts as done.
 - Every expression in a `requires` list must hold.
 - `edges` are the transitions. An edge can pass through a gate, and its `guard` must hold as well.
 - `void_scope` selects the later stages that a VOID reopens, besides the voided stage.
+
+The schema checks one file's shape: every stage, at least one gate and at least one edge. The flow loader checks the references within the file when it loads it. It refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and an expression that doesn't compile or type-check. The schema's example has every stage but only the LAYOUT freeze gate and its edge: it shows the shape, not a working flow.
 
 ## Rule lists
 

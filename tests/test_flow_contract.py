@@ -102,7 +102,7 @@ def test_a_dispatch_rule_names_at_least_one_handler() -> None:
 def test_the_prototype_flow_has_every_stage_and_its_gates() -> None:
     flow = _prototype_flow()
     kinds = {gate["id"]: gate["kind"] for gate in flow["gates"]}
-    assert [stage["id"] for stage in flow["stages"]] == [
+    assert list(flow["stages"]) == [
         *("ground", "intent", "specify", "concept", "layout", "parts", "detail"),
         *("bom", "analysis", "critique", "reconcile", "design_freeze", "release"),
     ]
@@ -129,6 +129,28 @@ def test_a_stage_outside_the_record_enum_is_refused() -> None:
     flow = _prototype_flow()
     flow["edges"][0]["to"] = "polish"
     assert [violation.pointer for violation in violations(FLOW_ID, flow)] == ["/edges/0/to"]
+
+
+def test_a_stage_key_outside_the_record_enum_is_refused() -> None:
+    flow = _prototype_flow()
+    flow["stages"]["polish"] = {"guides": {"lead": "guides/polish.md"}}
+    assert [violation.pointer for violation in violations(FLOW_ID, flow)] == ["/stages"]
+
+
+def test_a_flow_without_one_of_the_record_stages_is_refused() -> None:
+    flow = _prototype_flow()
+    del flow["stages"]["bom"]
+    assert [violation.pointer for violation in violations(FLOW_ID, flow)] == ["/stages"]
+
+
+def test_the_flow_lists_every_stage_of_the_record_enum() -> None:
+    stage_enum = json.loads((files("benchhand_contracts") / "schemas/record/common.schema.json").read_text())
+    assert _schema()["$defs"]["FlowStages"]["required"] == stage_enum["$defs"]["stage"]["enum"]
+
+
+@pytest.mark.parametrize("part", ["gates", "edges"])
+def test_a_flow_without_gates_or_edges_is_refused(part: str) -> None:
+    assert violations(FLOW_ID, {**_prototype_flow(), part: []})
 
 
 def test_a_gate_decision_through_a_form_is_refused() -> None:
