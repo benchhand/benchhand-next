@@ -177,7 +177,7 @@ class FlowGuides(ContractModel):
 
 class GateDecisionRequest(ContractModel):
     """
-    What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and a quote has at least one character that isn't whitespace: an empty answer is no answer. form is refused: form elicitation is not used (ADR-0018)
+    What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and each has at least one character that isn't whitespace (NonblankText): an empty answer is no answer, and a blank name is nobody. form is refused: form elicitation is not used (ADR-0018)
     """
 
     model_config = ConfigDict(
@@ -194,16 +194,13 @@ class GateDecisionRequest(ContractModel):
     The built version the decision is on
     """
     channel: decision_schema.Channel
-    by: Annotated[str | None, Field(min_length=1)] = None
-    quote: Annotated[
-        str | None,
-        Field(
-            min_length=1,
-            pattern="[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]",
-        ),
-    ] = None
+    by: Annotated[str | None, Field(min_length=1, pattern="[^\\s\\u001c-\\u001f\\u0085]")] = None
     """
-    The user's words, quoted. At least one character isn't whitespace
+    Who decided
+    """
+    quote: Annotated[str | None, Field(min_length=1, pattern="[^\\s\\u001c-\\u001f\\u0085]")] = None
+    """
+    The user's words, quoted
     """
     provisional: Annotated[str | None, Field(pattern="^DR-[0-9]{3}$")] = None
     """

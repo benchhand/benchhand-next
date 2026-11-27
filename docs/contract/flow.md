@@ -54,7 +54,7 @@ The flow's list is evaluated last, and its result is final, so a flow's `[]` or 
 
 - `status` is `approved`, or `void` for a change the user names at the human gate. A `void` needs a human channel, `app` or `chat`, and cites the provisional decision it withdraws. The interpreter records the other VOIDs itself, after a failing full check or a MAJOR light-review finding, without this request.
 - `channel` uses the decision record's channel values. A request refuses `form`, because v1 doesn't use form elicitation (ADR-0018). The record contract still accepts `form`.
-- Every channel except `auto` names who decided (`by`) and quotes their words (`quote`). A quote has at least one character that isn't whitespace, because an empty answer is no answer (plan section 11). An `auto` decision quotes nobody.
+- Every channel except `auto` names who decided (`by`) and quotes their words (`quote`). Both have at least one character that isn't whitespace, `NonblankText`, because an empty answer is no answer (plan section 11) and a blank name is nobody. Whitespace there is every character of the ECMAScript whitespace class, U+0085 NEXT LINE, and U+001C to U+001F, so every Unicode `White_Space` character and every `Zs` character counts. An `auto` decision quotes nobody.
 - `provisional` cites the provisional decision of a `provisional+full+human` gate.
 
 ## Approval scope

@@ -23,6 +23,10 @@ export type CelExpressions = [string, ...string[]];
  */
 export type CelExpressions1 = [string, ...string[]];
 export type GateDecisionStatus = "approved" | "void";
+/**
+ * Text with at least one character that isn't whitespace. Whitespace is ECMAScript's whitespace class (Unicode's White_Space but U+0085 NEXT LINE, so every Zs character, and U+FEFF), U+0085 itself, and U+001C to U+001F, which Python's str.isspace also counts
+ */
+export type NonblankText = string;
 export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | "part";
 export type ApprovedItemStatus = "approved" | "changed_since_approval";
 
@@ -220,9 +224,12 @@ export interface GateDecisionRequest {
    */
   version?: string;
   channel: "app" | "form" | "chat" | "auto";
+  /**
+   * Who decided
+   */
   by?: string;
   /**
-   * The user's words, quoted. At least one character isn't whitespace
+   * The user's words, quoted
    */
   quote?: string;
   /**

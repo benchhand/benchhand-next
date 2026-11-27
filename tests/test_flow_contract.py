@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+import unicodedata
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -301,11 +302,31 @@ def test_a_void_through_channel_auto_is_refused() -> None:
     assert violations(REQUEST_ID, void)
 
 
-@pytest.mark.parametrize("quote", [" ", "\t\n", "\u00a0\u3000"])
-def test_a_quote_of_only_whitespace_is_no_answer(quote: str) -> None:
-    assert [violation.pointer for violation in violations(REQUEST_ID, {**_request(), "quote": quote})] == [
-        "/quote"
+# Every character the gate request counts as whitespace: Python's str.isspace (Unicode White_Space and U+001C to
+# U+001F), ECMAScript's \s (which adds U+FEFF and leaves out U+0085) and every Zs character.
+WHITESPACE = sorted(
+    {chr(code) for code in range(0x10000) if chr(code).isspace() or unicodedata.category(chr(code)) == "Zs"}
+    | set("\t\n\v\f\r \u00a0\u1680\u2028\u2029\u202f\u205f\u3000\ufeff")
+    | {chr(code) for code in range(0x2000, 0x200B)}
+)
+
+
+@pytest.mark.parametrize("field", ["by", "quote"])
+@pytest.mark.parametrize("blank", [" ", "\u0085", "\t\n", "\u00a0\u3000", "\ufeff", *WHITESPACE], ids=ascii)
+def test_a_name_or_quote_of_only_whitespace_is_no_answer(field: str, blank: str) -> None:
+    assert [violation.pointer for violation in violations(REQUEST_ID, {**_request(), field: blank})] == [
+        f"/{field}"
     ]
+
+
+def test_by_and_quote_share_the_one_nonblank_text() -> None:
+    properties = _schema()["$defs"]["GateDecisionRequest"]["properties"]
+    assert properties["by"]["$ref"] == properties["quote"]["$ref"] == "#/$defs/NonblankText"
+
+
+@pytest.mark.parametrize("field", ["by", "quote"])
+def test_a_name_or_quote_with_one_visible_character_is_an_answer(field: str) -> None:
+    assert violations(REQUEST_ID, {**_request(), field: "\u0085\u3000y "}) == []
 
 
 # The prototype's check sets per iteration (skills/cad-flow/references/flow.md, "Checks by iteration"),

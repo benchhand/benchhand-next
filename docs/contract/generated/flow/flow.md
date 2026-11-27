@@ -256,7 +256,7 @@ No other properties are allowed.
 
 ### `GateDecisionRequest`
 
-What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and a quote has at least one character that isn't whitespace: an empty answer is no answer. form is refused: form elicitation is not used (ADR-0018)
+What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and each has at least one character that isn't whitespace (NonblankText): an empty answer is no answer, and a blank name is nobody. form is refused: form elicitation is not used (ADR-0018)
 
 Type: object
 
@@ -266,8 +266,8 @@ Type: object
 | `status` | [`GateDecisionStatus`](#gatedecisionstatus) | yes |  |
 | `version` | [`version`](../record/common.md#version) | no | The built version the decision is on |
 | `channel` | [`channel`](../record/decision.md#channel) | yes | `not: {"const": "form"}` |
-| `by` | [`text`](../record/common.md#text) | no |  |
-| `quote` | [`text`](../record/common.md#text) | no | The user's words, quoted. At least one character isn't whitespace `pattern: "[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]"` |
+| `by` | [`NonblankText`](#nonblanktext) | no | Who decided |
+| `quote` | [`NonblankText`](#nonblanktext) | no | The user's words, quoted |
 | `provisional` | [`decision`](../record/common.md#decision) | no |  |
 
 No other properties are allowed.
@@ -363,6 +363,14 @@ Example:
   "provisional": "DR-012"
 }
 ```
+
+### `NonblankText`
+
+Text with at least one character that isn't whitespace. Whitespace is ECMAScript's whitespace class (Unicode's White_Space but U+0085 NEXT LINE, so every Zs character, and U+FEFF), U+0085 itself, and U+001C to U+001F, which Python's str.isspace also counts
+
+Type: string
+
+Constraints: `minLength: 1`, `pattern: "[^\\s\\u001c-\\u001f\\u0085]"`
 
 ### `ApprovalScope`
 

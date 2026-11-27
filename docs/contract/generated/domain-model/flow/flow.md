@@ -166,7 +166,7 @@ Provisional (ADR-0019): one approved item
 
 In diagram 2.
 
-What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and a quote has at least one character that isn't whitespace: an empty answer is no answer. form is refused: form elicitation is not used (ADR-0018)
+What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and each has at least one character that isn't whitespace (NonblankText): an empty answer is no answer, and a blank name is nobody. form is refused: form elicitation is not used (ADR-0018)
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -174,8 +174,8 @@ What the flow engine takes to record a human-gate decision, from the gate card (
 | `status` | `GateDecisionStatus = approved\|void` | yes |  |
 | `version` | `version` | no | The built version the decision is on |
 | `channel` | `channel = app\|form\|chat\|auto` | yes |  |
-| `by` | `text` | no |  |
-| `quote` | `text` | no | The user's words, quoted. At least one character isn't whitespace |
+| `by` | `NonblankText` | no | Who decided |
+| `quote` | `NonblankText` | no | The user's words, quoted |
 | `provisional` | `decision` | no |  |
 
 ### `ApprovedItemState`

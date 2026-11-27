@@ -115,7 +115,7 @@ model FlowEdge {
   guard?: CelExpression;
 }
 
-/** What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and a quote has at least one character that isn't whitespace: an empty answer is no answer. form is refused: form elicitation is not used (ADR-0018) */
+/** What the flow engine takes to record a human-gate decision, from the gate card (app) or from the user's reply in chat. status approved passes the gate. status void withdraws the gate's provisional approval because of a change the user named at the human gate, so it needs a human channel (app or chat) and cites that provisional decision; the VOID the interpreter records itself, after a failing full check or a MAJOR light-review finding, doesn't go through this request. provisional cites the provisional decision of a provisional+full+human gate. Every channel but auto names who decided and quotes their words, and each has at least one character that isn't whitespace (NonblankText): an empty answer is no answer, and a blank name is nobody. form is refused: form elicitation is not used (ADR-0018) */
 @extension(
   "allOf",
   #[
@@ -143,14 +143,18 @@ model GateDecisionRequest {
   @extension("not", #{ `const`: "form" })
   channel: Records.Decision.approval_channel;
 
-  by?: Records.Common.text;
+  /** Who decided */
+  by?: NonblankText;
 
-  /** The user's words, quoted. At least one character isn't whitespace */
-  @pattern("[^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]")
-  quote?: Records.Common.text;
+  /** The user's words, quoted */
+  quote?: NonblankText;
 
   provisional?: Records.Common.decision;
 }
+
+/** Text with at least one character that isn't whitespace. Whitespace is ECMAScript's whitespace class (Unicode's White_Space but U+0085 NEXT LINE, so every Zs character, and U+FEFF), U+0085 itself, and U+001C to U+001F, which Python's str.isspace also counts */
+@pattern("[^\\s\\u001c-\\u001f\\u0085]")
+scalar NonblankText extends Records.Common.text;
 
 /** Provisional (ADR-0019, owned by Phase 2): the items a human-gate approval covers, each with its fingerprint at approval time, computed the way the evidence service fingerprints its inputs. The decision contract refers to it once Phase 2 adds it there */
 @extension("x-status", "provisional")

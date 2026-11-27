@@ -27,8 +27,8 @@ direction: right
   "status": "GateDecisionStatus = approved|void" { constraint: "req" }
   "version": "version"
   "channel": "channel = app|form|chat|auto" { constraint: "req" }
-  "by": "text"
-  "quote": "text"
+  "by": "NonblankText"
+  "quote": "NonblankText"
   "provisional": "decision"
 }
 "flow_flow__ApprovedItemState": {

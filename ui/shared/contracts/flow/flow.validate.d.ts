@@ -13,6 +13,7 @@ export declare const validateFlowSingleHumanGate: ValidateFunction;
 export declare const validateFlowStagedGate: ValidateFunction;
 export declare const validateFlowEdge: ValidateFunction;
 export declare const validateGateDecisionRequest: ValidateFunction;
+export declare const validateNonblankText: ValidateFunction;
 export declare const validateApprovalScope: ValidateFunction;
 export declare const validateApprovedItem: ValidateFunction;
 export declare const validateGateDecisionStatus: ValidateFunction;
