@@ -2,19 +2,73 @@
 
 default: check
 
-# Lint, type-check and test everything, and check the generated contract code.
-check: lint typecheck test test-wheel contracts-check reference-map
+# Lint, type-check and test everything, and check the generated contract code. The git hooks
+# (.pre-commit-config.yaml) call the same recipes. `audit`, `secrets-history` and `lint-workflows-online`
+# need the network and run in CI.
+check: lint spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map
 
 lint:
     uv run ruff check .
     uv run ruff format --check .
 
-# Type-check the TypeScript in ui/, the generated contract types included.
-typecheck:
+# Spelling in source, docs and config (_typos.toml lists what is left out and why).
+spell:
+    typos --force-exclude
+
+# TOML formatting (.taplo.toml).
+lint-toml:
+    taplo fmt --check
+
+# Workflow syntax, security and action pins, offline: the hook's check. A pin is checked for being a full
+# SHA; `lint-workflows-online` also checks that it matches its version comment and runs zizmor's online audits.
+lint-workflows:
+    actionlint
+    zizmor --offline --min-severity medium .github
+    pinact run --fix=false --no-api
+
+# CI only: needs GITHUB_TOKEN (the rate limit without one is too low for the pin check).
+lint-workflows-online:
+    zizmor --min-severity medium .github
+    pinact run --check --verify-comment
+
+# Code that nothing uses, at the confidence and with the whitelist set in pyproject.toml ([tool.vulture]).
+dead-code:
+    uv run vulture
+
+# Secrets in the staged changes: the pre-commit hook's check. Offline.
+secrets:
+    gitleaks git --pre-commit --staged --redact --no-banner
+
+# Secrets anywhere in the history: CI, and on demand. Offline.
+secrets-history:
+    gitleaks git --redact --no-banner
+
+# Known vulnerabilities in the locked dependencies. Queries osv.dev, so it fails on a new advisory against a
+# dependency that did not change: CI runs it on a schedule as well as on lockfile changes.
+audit:
+    osv-scanner scan source --lockfile uv.lock --lockfile ui/pnpm-lock.yaml --lockfile contracts/pnpm-lock.yaml
+
+# Type-check the Python (pyright, [tool.pyright]) and the TypeScript in ui/, the generated contract types included.
+typecheck: typecheck-python typecheck-ui
+
+typecheck-python:
+    uv run pyright
+
+typecheck-ui:
     pnpm --dir ui typecheck
 
 test:
     uv run pytest
+
+# The unit and API tests under packages/, in parallel: the pre-push hook's subset. `test` also runs tests/, the
+# contract, diagram and function-map tests, which regenerate and render and take several minutes.
+test-fast:
+    uv run pytest packages -n auto
+
+# The tests, with line coverage of packages/ and tools/ ([tool.coverage]). A report, not a gate: there is no
+# threshold. CI puts the table in the job summary.
+test-coverage:
+    uv run pytest --cov --cov-report=term-missing:skip-covered --cov-report=xml
 
 # The tests that build a wheel and install it in a fresh venv (docs/testing.md).
 test-wheel:
@@ -29,14 +83,38 @@ bin := "contracts/node_modules/.bin"
 
 # Regenerate the published schemas from contracts/*.tsp, then the models, types, validators, fixtures and
 # reference docs from those (ADR-0017). A TypeSpec warning fails the compile.
-contracts:
+contracts: contracts-toolchain contracts-d2
     PYTHONPATH=tools/gen uv run python -m contracts_gen generate
 
 # Fail on unformatted TypeSpec, a schema that fails meta-validation or lint, generated files that differ
 # from a fresh run, and a breaking change without a major bump.
-contracts-check: contracts-format contracts-lint
+contracts-check: contracts-validate contracts-d2
     PYTHONPATH=tools/gen uv run python -m contracts_gen check
     PYTHONPATH=tools/gen uv run python -m contracts_gen breaking
+
+# The contract errors that need no regeneration: unformatted TypeSpec, a TypeSpec warning, a schema that fails
+# meta-validation or lint. The pre-commit hook runs this; drift (a full regeneration) is `contracts-drift`.
+contracts-validate: contracts-toolchain contracts-format contracts-lint
+
+# Fail with the install command when the TypeSpec toolchain isn't installed; a skipped check passes silently.
+contracts-toolchain:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for tool in tsp jsonschema; do
+        if [ ! -x "{{bin}}/$tool" ]; then
+            echo "contracts: {{bin}}/$tool is missing; run \`pnpm --dir contracts install --frozen-lockfile\`" >&2
+            exit 1
+        fi
+    done
+
+# Fail with the install command when D2 (pinned in mise.toml) isn't on PATH; the generators lay out diagrams with it.
+contracts-d2:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v d2 > /dev/null; then
+        echo "contracts: d2 is not on PATH; run \`mise install\` (mise.toml pins it)" >&2
+        exit 1
+    fi
 
 contracts-format:
     cd contracts && ../{{bin}}/tsp format --check "**/*.tsp"
@@ -117,3 +195,14 @@ reference-changes:
 # With CI=true the copy is required; CI fetches it.
 reference-map *args:
     PYTHONPATH=tools/map uv run python -m reference_map {{args}}
+
+# Install the git hooks (.pre-commit-config.yaml) for pre-commit and pre-push. Run `mise install` first: the
+# hooks call the tools pinned in mise.toml. Git keeps hooks per clone, so every worktree of it shares them.
+hooks-install:
+    prek install --install-hooks --hook-type pre-commit --hook-type pre-push
+
+# Run every hook on every file, as CI does, except two: `gitleaks` scans the staged changes, which a CI
+# checkout has none of (`secrets-history` covers it there), and `tests` is the `check` job's `test-coverage`.
+hooks:
+    SKIP=gitleaks prek run --all-files --stage pre-commit
+    SKIP=tests prek run --all-files --stage pre-push

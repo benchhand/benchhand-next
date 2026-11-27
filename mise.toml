@@ -1,5 +1,21 @@
-# Tools the generators run. CI installs them the same way (jdx/mise-action); `mise install` does it locally.
+# Tools the generators, the hooks and the CI checks run. CI installs them the same way (jdx/mise-action);
+# `mise install` does it locally. Every version is exact; mise.lock holds the checksum of each release asset.
+[settings]
+lockfile = true
+
 [tools]
 # The domain-model diagrams are laid out by D2, and its layout is part of the committed SVGs. The generator
 # refuses any other version (tools/gen/contracts_gen/domain_d2.py, D2_VERSION).
 d2 = "0.9.0"
+# Git hooks (.pre-commit-config.yaml); `just hooks-install` installs them.
+prek = "0.5.11"
+# Spelling (_typos.toml), TOML formatting (.taplo.toml) and secrets (.gitleaks.toml) in the hooks.
+typos = "1.52.2"
+taplo = "0.10.0"
+gitleaks = "8.30.1"
+# Workflow checks: syntax, security audit and full-SHA action pins.
+actionlint = "1.7.12"
+zizmor = "1.33.1"
+pinact = "5.0.2"
+# Known vulnerabilities in uv.lock and both pnpm lockfiles.
+osv-scanner = "2.7.1"

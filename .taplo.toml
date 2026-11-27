@@ -1,0 +1,6 @@
+# Only the TOML this repo owns: the prototype under reference/ is frozen and research/ is recorded output.
+include = ["*.toml", "packages/*/*.toml"]
+exclude = ["mise.local.toml"]
+
+[formatting]
+column_width = 110

@@ -1,0 +1,30 @@
+[files]
+extend-exclude = [
+  # The prototype, kept verbatim as a behavioural oracle.
+  "reference/",
+  # Written by tools/gen from contracts/*.tsp; a fix belongs in the source.
+  "packages/benchhand-contracts/src/benchhand_contracts/schemas/",
+  "packages/benchhand-contracts/src/benchhand_contracts/models/",
+  "packages/benchhand-contracts/src/benchhand_contracts/examples/",
+  "ui/shared/contracts/",
+  "docs/contract/generated/",
+  "docs/**/*.svg",
+  # Lockfiles and recorded agent transcripts.
+  "uv.lock",
+  "mise.lock",
+  "**/pnpm-lock.yaml",
+  "tools/probe/runs/",
+  # Recorded experiment output; its inputs misspell field names on purpose to see how each evaluator fails.
+  "research/",
+  "tools/equiv/results/",
+]
+
+[default.extend-words]
+# PN is a part number, PN-prefixed ids and `pn` as its short name.
+PN = "PN"
+Pn = "Pn"
+pn = "pn"
+# `ded` is a process code in contracts/record/product.tsp.
+ded = "ded"
+# docs/adr/0020-cel-rule-pipeline.md misspells the enum value on purpose: the checker accepts it.
+aproved = "aproved"

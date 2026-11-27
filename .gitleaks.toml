@@ -1,0 +1,11 @@
+[extend]
+useDefault = true
+
+# Both are false positives of the generic-api-key rule, found by a scan of the whole history.
+[[allowlists]]
+description = "Generated, minified validators: a long identifier beside the word `key` reads as an API key."
+paths = ['''^ui/shared/contracts/''']
+
+[[allowlists]]
+description = "The prototype's fixtures hold sha256 part keys, which are content hashes."
+paths = ['''^reference/skills/cad-model/tests/fixtures/part_keys_main\.json$''']
