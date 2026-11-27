@@ -70,12 +70,6 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: contracts
       - run: uv run ruff check . && uv run ruff format --check .
-      - name: d2 0.9.0; the diagram tests fail without it in CI
-        uses: jdx/mise-action@v5
-        with:
-          mise_toml: |
-            [tools]
-            d2 = "0.9.0"
       - run: uv run pytest
       - name: Function map against the pinned prototype, coverage required
         run: just reference-map
