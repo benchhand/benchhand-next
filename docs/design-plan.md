@@ -575,6 +575,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - The chat fallbacks of the interaction layer.
   - The `benchhand` CLI: `mcp`, `doctor`, `setup`, `policy`, `rules compile` and `debug call`.
   - The `benchhand-celcheck` platform wheels, built in CI from `tools/celcheck/`, which `rules compile` runs (ADR-0020).
+  - An install smoke test for `rules compile`: on each supported target, install `benchhand` from the built wheels into a fresh environment and compile a sample project's rule lists with the installed `benchhand-celcheck` binary, then load the bundle. The same test runs in the container image.
 - [ ] **Phase 4: providers.**
   - `benchhand-provider` runtime and conformance kit.
   - Providers: kernel-cadquery and kernel-build123d, freecad (managed install and compatibility probe), solver-calculix, collision-fcl, render-chromium, checks-process (CEL dispatch) and store-fs.
@@ -635,7 +636,8 @@ Every phase ends at a review gate. When a phase's work is done:
   - generate the config with `benchhand install`;
   - start it cold with `uvx`, which must stay within the configured startup timeout;
   - `env.doctor` reports green;
-  - one `model.build`, one `preview.serve` and one gate.
+  - one `model.build`, one `preview.serve` and one gate;
+  - one `benchhand rules compile` from the installed `benchhand-celcheck` wheel, whose bundle the host then loads.
 
   The container launcher gets the same check: no runtime gives the error server, and with a runtime the image is pulled and the paths round-trip through the mount. A manual pass in the real hosts happens before each release.
 - **Preview host.** No orphaned processes after the session is killed (`process_lifecycle` identity tests). The Host-header and DNS-rebinding tests from `serve.py` pass.

@@ -182,7 +182,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
 - benchhand stays Python at runtime. Go joins the CI toolchain, and the tool's binary ships in a wheel. The host doesn't run Go when it loads a flow.
 - A rule-list edit takes effect only after a compile step.
 - A contract change that alters a scope changes its profile digest, which makes every bundle in that profile stale. CI recompiles benchhand's own. A project or a policy provider runs `benchhand rules compile` after a benchhand upgrade, and the refusal names that command.
-- The release builds a wheel matrix for `benchhand-celcheck`, and every install carries the binary, also when a project has no rules of its own.
+- The release builds a wheel matrix for `benchhand-celcheck`, and every install carries the binary, also when a project has no rules of its own. An install smoke test runs `benchhand rules compile` from the installed wheel on each supported target and in the container image (plan, Phase 3).
 - Rule lists can't use `variables`, `aggregate`, nested rules or explanations. A sub-expression that several conditions share is repeated in each.
 - The checker doesn't check enum values. `decision.status == "aproved"` passes the check and is always false.
 - Cost has no bound. cel-go's static estimate in CI is an estimate: the `strings` extension at version 4 has no cost model, and the input limits the estimate assumes aren't validated. cel-expr-python has no cost API, and whether it can interrupt an evaluation is unverified.
