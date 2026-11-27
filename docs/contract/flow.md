@@ -14,7 +14,7 @@ Status: provisional, version `0.1.0`. Phase 2 writes `flow/flow.yaml`, the `flow
 - `edges` are the transitions. An edge can pass through a gate, and its `guard` must hold as well.
 - `void_scope` selects the later stages that a VOID reopens, besides the voided stage.
 
-The schema checks one file's shape: every stage, at least one gate and at least one edge. The flow loader checks the references within the file when it loads it. It refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, a standalone expression that doesn't compile or type-check, and a fidelity rule list with an output that is the literal `"none"`. The schema's example has every stage but only the LAYOUT freeze gate and its edge: it shows the shape, not a working flow.
+The schema checks one file's shape: every stage, at least one gate and at least one edge. The flow loader checks the references within the file when it loads it. It refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a standalone expression that doesn't compile or type-check. It also refuses a fidelity rule list with an output that is the literal `"none"`. The schema's example has every stage but only the LAYOUT freeze gate and its edge: it shows the shape, not a working flow.
 
 ## Rule lists
 
