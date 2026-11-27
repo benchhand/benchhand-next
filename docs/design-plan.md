@@ -549,7 +549,13 @@ Every phase ends at a review gate. When a phase's work is done:
   - Port the record test cases from `cad-agent` as acceptance fixtures.
   - Add the job service, built on the kept process-identity rules.
 - [ ] **Phase 2: flow engine.**
-  - `flow.yaml` plus the interpreter, CEL guards and policy (`hw/policy.yaml`), and the CEL rule lists for checks-by-iteration, fidelity and dispatch.
+  - `flow.yaml` plus the interpreter, CEL guards and policy (`hw/policy.yaml`), and the cel-policy rule lists for checks-by-iteration, fidelity and dispatch.
+  - The CEL pipeline (ADR-0020):
+    - the scope definitions, and the `contracts_gen` targets: the structural-scope check, the FileDescriptorSet, the environment profile manifest with its JCS digest, and the env YAML, all under the drift check;
+    - the profile-manifest and rules-bundle contracts in `contracts/`;
+    - the pinned cel-go tool in `tools/celcheck/`, and the CI step that compiles `flow/*.celpolicy` into the rules bundle and fails on a stale entry;
+    - the host's adapter over `cel-expr-python`, its bundle verification and its refusal of a missing or stale entry;
+    - the supported-profile gate in CI, per engine role.
   - Version snapshots, seal and verify, used by the freeze and `--since-version` baselines. They honour the project ignore rules (bead `benchhand-3fc`).
   - Decision records, VOID cascade, the result envelope and `next_actions`.
   - Scoped approvals (ADR-0019): the approval scope in the decision contract, `changed_since_approval`, and the gate packet's changed-since-approval section.
@@ -565,7 +571,8 @@ Every phase ends at a review gate. When a phase's work is done:
   - Tools: `flow.guide`, `flow.*`, `project.*`, `record.*`, `env.doctor` and `jobs.*`.
   - Resources (record, schemas, accepted values, guides) and prompts.
   - The chat fallbacks of the interaction layer.
-  - The `benchhand` CLI: `mcp`, `doctor`, `setup`, `policy` and `debug call`.
+  - The `benchhand` CLI: `mcp`, `doctor`, `setup`, `policy`, `rules compile` and `debug call`.
+  - The `benchhand-celcheck` platform wheels, built in CI from `tools/celcheck/`, which `rules compile` runs (ADR-0020).
 - [ ] **Phase 4: providers.**
   - `benchhand-provider` runtime and conformance kit.
   - Providers: kernel-cadquery and kernel-build123d, freecad (managed install and compatibility probe), solver-calculix, collision-fcl, render-chromium, checks-process (CEL dispatch) and store-fs.
@@ -591,7 +598,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - Skills-over-MCP serving.
   - `install --container`.
 - [ ] **Phase 7: packaging and release.**
-  - PyPI `benchhand`, the OCI image (GHCR), the Claude Code plugin and marketplace, the Claude Desktop `.mcpb`, the Codex plugin and the Pi package.
+  - PyPI `benchhand` and `benchhand-celcheck`, the OCI image (GHCR), the Claude Code plugin and marketplace, the Claude Desktop `.mcpb`, the Codex plugin and the Pi package.
   - Docs: README, walkthrough and client support.
   - Golden parity with the current repo, then the repo swap (section 2).
 
