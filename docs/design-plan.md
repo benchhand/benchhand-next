@@ -547,7 +547,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - Build `benchhand-contracts` and the record service against it: typed reads and writes, validate, migrate and evidence. Versioning (snapshot, seal, verify) moves to Phase 2 with the freeze, and release packaging to Phase 4 with the outputs it packages (owner decision, 2026-11-25).
   - The prototype is still changing. Migrate and evidence port its behaviour as of `release.toml` `reference_commit`, and stay extendable. Every prototype change that merges later is ported by its own reviewed step (ADR-0015, `just reference-changes`): a contract change, a new migrate rule with a fixture, and an evidence rule if it applies. The migrate rules are a table, one row per prototype change, so a new row needs no restructuring.
   - Port the record test cases from `cad-agent` as acceptance fixtures.
-  - Add the job service, built on the kept process-identity rules.
+  - Add the job service, built on the kept process-identity rules. [ADR-0023](adr/0023-storage-layout.md) replaces its per-job JSON store with in-memory jobs and the `jobs` table of `.benchhand/state.sqlite` (bead `bhn-5qa`).
 - [ ] **Phase 2: flow engine.**
   - `flow.yaml` plus the interpreter, CEL guards and policy (`hw/policy.yaml`), and the cel-policy rule lists for checks-by-iteration, fidelity and dispatch.
   - The CEL pipeline (ADR-0020):
@@ -558,7 +558,7 @@ Every phase ends at a review gate. When a phase's work is done:
     - the host's adapter over `cel-expr-python`, its bundle verification and its refusal of a missing or stale entry;
     - refusal fixtures for the cel-go tool and the host: a descriptor set whose bytes don't match the manifest's SHA-256 is refused before an environment is built;
     - the supported-profile gate in CI, per engine role.
-  - Version snapshots, seal and verify, used by the freeze and `--since-version` baselines. They honour the project ignore rules (bead `benchhand-3fc`).
+  - Version snapshots, seal and verify, used by the freeze and `--since-version` baselines. They honour the project ignore rules (bead `benchhand-3fc`). They seal under `.benchhand/sealed/versions/<V>/`, with the binaries in the object store, and land with the managed ignores and the state database ([Project storage layout](#project-storage-layout-2026-11-27)).
   - Decision records, VOID cascade, the result envelope and `next_actions`.
   - Scoped approvals (ADR-0019): the approval scope in the decision contract, `changed_since_approval`, and the gate packet's changed-since-approval section.
   - Cut `flow/guides/*.md` from the current SKILL.md and `flow.md` prose.
@@ -580,7 +580,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - `benchhand-provider` runtime and conformance kit.
   - Providers: kernel-cadquery and kernel-build123d, freecad (managed install and compatibility probe), solver-calculix, collision-fcl, render-chromium, checks-process (CEL dispatch) and store-fs.
   - `benchhand-sdk`.
-  - The output, inspect, generator, calculator, motion, drawing, analysis, BOM and release tools. Release packaging (`hw/releases/<REV>/`, refusal checks and the acceptance digest against the freeze) is built here.
+  - The output, inspect, generator, calculator, motion, drawing, analysis, BOM and release tools. Release packaging (`releases/<REV>/` at the project root, ADR-0023; refusal checks and the acceptance digest against the freeze) is built here.
   - The documentation set (section 12a):
     - the annotation-set contract;
     - surface finish, weld symbols and notes on part drawings;
@@ -649,7 +649,7 @@ Every phase ends at a review gate. When a phase's work is done:
 
 ## CAD-libraries decisions (2026-11-27)
 
-The owner decided the questions of the CAD-libraries study on 2026-11-27. The [decision record](design/cad-libraries-2026-11-27.md) has one row per decision, D-1 to D-47. D-37, the project storage layout, is still open (bead `bhn-7pg`). This section lists what changes the plan.
+The owner decided the questions of the CAD-libraries study on 2026-11-27. The [decision record](design/cad-libraries-2026-11-27.md) has one row per decision, D-1 to D-47. D-37, the project storage layout, is decided in [ADR-0023](adr/0023-storage-layout.md), summarised under [Project storage layout](#project-storage-layout-2026-11-27). This section lists what changes the plan.
 
 **Kernels and the SDK.**
 - build123d becomes the default kernel for new parts once a build123d example part and a contract test exist. A record may mix kernels (D-2).
@@ -678,7 +678,7 @@ The owner decided the questions of the CAD-libraries study on 2026-11-27. The [d
 - Typst compiles them. The Typst PyPI wheel is the only distribution, for users, development, CI and the golden files, pinned in `uv.lock`. Users need no separate binary and no mise. A wheel upgrade regenerates the golden files.
 - The release profile is PDF/A-3a plus PDF/UA-1, with the input JSON attached. A drawing set holds its drawings as SVG sheets with a vendored Osifont, once the font file itself is checked. The release gates are that the set compiles and that veraPDF validates the golden files.
 - Text is set in Atkinson Hyperlegible, with Noto Sans Symbols 2 as the fallback, both vendored under the OFL. The build fails on a missing glyph. Diagram annotations are drawn as SVG before Typst runs.
-- A project may override the templates in `hw/templates/`, and the overrides are hashed into the recipe. That path may move with D-37.
+- A project may override the templates in `design/templates/` (`hw/templates/` until bead `bhn-aef`), and the overrides are hashed into the recipe. A generated docset is sealed under `.benchhand/sealed/docsets/<V>/<S>/`, outside the acceptance digest and inside the release manifest (D-37, ADR-0023).
 - Safety sections come from the hazards contract ([ADR-0022](adr/0022-hazards-risk-assessment.md)), with a signal-word panel and no ISO 7010 symbols by default. A release blocks on a safety UNKNOWN only where the service class is `safety_critical`.
 
 **Work by phase.**
@@ -697,3 +697,37 @@ The owner decided the questions of the CAD-libraries study on 2026-11-27. The [d
   - the product documents.
 - **Phase 5:** the three.js viewer and its contracts.
 - **After Phase 4:** the hazards contract (ADR-0022).
+
+## Project storage layout (2026-11-27)
+
+The owner decided the project storage layout on 2026-11-27, which also decides D-37. [ADR-0023](adr/0023-storage-layout.md) records it, with the study's measurements. The code still uses `hw/` until bead `bhn-aef` renames it, and the per-job JSON store until bead `bhn-5qa` replaces it.
+
+```text
+<project>/
+├── design/                  authored and reviewed: the record, each part's rev, decisions, templates, notes; text in git
+├── releases/<REV>/          deliverables, sealed by manifest.json, which names the source vN
+└── .benchhand/              machine data, never edited by hand
+    ├── .gitignore  .gitattributes   managed by benchhand
+    ├── sealed/{versions,checks,analysis,motion,drawings,renders,captures,concept,docsets}/
+    ├── objects/sha256/      content-addressed binaries, hard-linked into sealed/
+    ├── state.sqlite         the state database, WAL; BENCHHAND_STATE_DIR moves it
+    ├── work/<unit>/         parallel work units
+    ├── logs/
+    └── migrate-backups/
+```
+
+- **Git.** The managed `.benchhand/.gitignore` ignores everything, then un-ignores the sealed text (`*.json`, `*.yaml`, `*.csv`, `*.md`). The sealed binaries are ignored, in git LFS or in plain git, as the project's storage choice says. The sealed folders are `linguist-generated -diff`. No rule matches `design/`, and the user's top-level `.gitignore` stays as the user wrote it.
+- **The state database** holds the tables `facts`, `jobs`, `search`, `renders`, `objects_index`, `preview`, `work_units` and `leases`. Each table is derivable or disposable, so deleting the file costs time, never correctness. Logs, the object store's bytes and everything sealed or reviewed stay files.
+- **Jobs** live in memory and end with the session. The `jobs` table journals them under a UNIQUE idempotency key, so a restart answers `interrupted` with the re-run call. Long jobs checkpoint into `facts`, and a start removes stale `.partial-<PID>` staging folders.
+- **Versions** are sealed on the main line only, and a label collision at a merge is refused. The prototype's sealed history is read where it lies under `hw/`, with the `record-migration` flag on.
+- **D-37.** A docset is sealed under `.benchhand/sealed/docsets/<V>/<S>/`: its manifest, recipe, UNKNOWN list and input JSON in git, its PDFs and PNGs in the object store. It stays outside the acceptance digest, and the release manifest covers it.
+
+**Work by phase.**
+- **Phase 2,** before the `version-snapshots` spec and the first v3 seal:
+  - the `hw/` to `design/` rename (bead `bhn-aef`);
+  - version snapshots under `.benchhand/sealed/versions/<V>/`, the object store, and the evidence reader's sealed paths;
+  - the managed ignores;
+  - `state.sqlite` with the `jobs`, `objects_index` and `leases` tables, and the job journal (bead `bhn-5qa`).
+- **Phase 4:** the `facts` table with the fact cache, the `renders` table with render output, the STEP `FILE_NAME` timestamp fixed in kernel export, docsets, and release packaging into `releases/<REV>/`.
+- **Phase 5:** the `preview` table with the preview host.
+- The `search` table lands with `standards.search`, `parts.search` and `docs.get`, and `work_units` with the scratch workspaces.
