@@ -420,7 +420,11 @@ capabilities:
       resources:
         - record
       phase: 3
-      source: docs/design-plan.md:574
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:574
+      baseline:
+        - record.read
     prototype:
       - skills/cad-record/layout.json
       - skills/cad-record/scripts/yaml_loader.py
@@ -673,7 +677,11 @@ capabilities:
       resources:
         - policy.*
       phase: 3
-      source: docs/design-plan.md:11
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:11
+      baseline:
+        - policy.get
     depends_on:
       - flow-engine
       - decision-records
@@ -795,7 +803,11 @@ capabilities:
       prompts:
         - /benchhand:stage
       phase: 3
-      source: docs/design-plan.md:320
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:320
+      baseline:
+        - flow.guide
     prototype:
       - skills/cad-flow/SKILL.md
       - skills/cad-analysis/SKILL.md
@@ -1200,7 +1212,13 @@ capabilities:
         - schemas
         - accepted values
       phase: 3
-      source: docs/design-plan.md:574
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:574
+      baseline:
+        - record.read
+      baseline_missing: no tool returns the published schemas or the
+        accepted values.
     depends_on:
       - record-store
       - mcp-server
@@ -1526,7 +1544,12 @@ capabilities:
       resources:
         - sdk://describe
       phase: 4
-      source: docs/design-plan.md:366
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:366
+      baseline: []
+      baseline_missing: no tool returns the SDK signatures that sdk://describe
+        lists.
     prototype:
       - skills/cad-model/scripts/cadmodel/safe.py
       - skills/cad-model/scripts/cadmodel/holes.py
@@ -1948,7 +1971,12 @@ capabilities:
       apps:
         - ui://benchhand/viewer
       phase: 5
-      source: docs/design-plan.md:342
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:342
+      baseline:
+        - viewer.show
+        - preview.serve
     prototype:
       - skills/cad-viewer/scripts/viewer.py
       - skills/cad-viewer/scripts/cadviewer/__init__.py
@@ -2064,7 +2092,13 @@ capabilities:
         - gate card
         - ui://benchhand/viewer
       phase: 5
-      source: docs/design-plan.md:597
+      sources:
+        - kind: plan
+          ref: docs/design-plan.md:597
+      baseline:
+        - flow.gate_packet
+        - flow.record_decision
+        - viewer.show
     depends_on:
       - interaction-chat-fallbacks
       - preview-host
@@ -2248,7 +2282,11 @@ capabilities:
       resources:
         - docs://
       phase: 3
-      source: docs/adr/0018-baseline-and-no-forms.md:28
+      sources:
+        - kind: study
+          ref: lane8-agentcad.md section 6, item 5
+      baseline:
+        - docs.get
     depends_on:
       - guide-service
       - part-sdk

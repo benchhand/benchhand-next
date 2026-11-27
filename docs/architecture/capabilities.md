@@ -517,18 +517,18 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 
 ## MCP resources, prompts and Apps
 
-Each is an enhancement over a tool that returns the same content (ADR-0018).
+ADR-0018 makes a tool the baseline for readable content: each resource, prompt and App is an enhancement over a tool that returns the same content. *Baseline* names those tools, and **missing** says what no tool returns yet. An App form is an MCP App, not MCP form elicitation, which ADR-0018 drops.
 
-| Capability | Resources | Prompts | Apps | Phase | Source |
-|---|---|---|---|---|---|
-| [record-store](#record-store) | `record` | – | – | P3 | `docs/design-plan.md:574` |
-| [gate-policy](#gate-policy) | `policy.*` | – | – | P3 | `docs/design-plan.md:11` |
-| [guide-service](#guide-service) | `guide://stage/<stage>` | `/benchhand:stage` | – | P3 | `docs/design-plan.md:320` |
-| [record-ops](#record-ops) | `record`, `schemas`, `accepted values` | – | – | P3 | `docs/design-plan.md:574` |
-| [part-sdk](#part-sdk) | `sdk://describe` | – | – | P4 | `docs/design-plan.md:366` |
-| [viewer](#viewer) | – | – | `ui://benchhand/viewer` | P5 | `docs/design-plan.md:342` |
-| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer` | P5 | `docs/design-plan.md:597` |
-| [docs-index](#docs-index) | `docs://` | – | – | P3 | `docs/adr/0018-baseline-and-no-forms.md:28` |
+| Capability | Resources | Prompts | Apps | Baseline | Phase | Sources |
+|---|---|---|---|---|---|---|
+| [record-store](#record-store) | `record` | – | – | `record.read` | P3 | plan: `docs/design-plan.md:574` |
+| [gate-policy](#gate-policy) | `policy.*` | – | – | `policy.get` | P3 | plan: `docs/design-plan.md:11` |
+| [guide-service](#guide-service) | `guide://stage/<stage>` | `/benchhand:stage` | – | `flow.guide` | P3 | plan: `docs/design-plan.md:320` |
+| [record-ops](#record-ops) | `record`, `schemas`, `accepted values` | – | – | `record.read`; **missing:** no tool returns the published schemas or the accepted values. | P3 | plan: `docs/design-plan.md:574` |
+| [part-sdk](#part-sdk) | `sdk://describe` | – | – | **missing:** no tool returns the SDK signatures that sdk://describe lists. | P4 | plan: `docs/design-plan.md:366` |
+| [viewer](#viewer) | – | – | `ui://benchhand/viewer` | `viewer.show`, `preview.serve` | P5 | plan: `docs/design-plan.md:342` |
+| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer` | `flow.gate_packet`, `flow.record_decision`, `viewer.show` | P5 | plan: `docs/design-plan.md:597` |
+| [docs-index](#docs-index) | `docs://` | – | – | `docs.get` | P3 | study: `lane8-agentcad.md section 6, item 5` |
 
 ## CLI commands
 
@@ -687,6 +687,11 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [container-launcher](#container-launcher): A launcher mode of the CLI.
 - [distribution](#distribution): Release engineering.
 - [golden-parity](#golden-parity): A test that drives the other tools.
+
+### MCP surfaces with a missing baseline (2)
+
+- [record-ops](#record-ops): no tool returns the published schemas or the accepted values.
+- [part-sdk](#part-sdk): no tool returns the SDK signatures that sdk://describe lists.
 
 ### Tools with no contract (105)
 

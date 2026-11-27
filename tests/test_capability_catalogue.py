@@ -119,6 +119,30 @@ def _problems(data: dict[str, Any]) -> list[str]:
     return check_catalogue(Catalogue(data), REPO_ROOT)
 
 
+def _surface(**fields: Any) -> dict[str, Any]:
+    """An MCP surface of the jobs capability, named on the plan's long-jobs line."""
+    surface = {
+        "resources": ["jobs://"],
+        "phase": 3,
+        "sources": [{"kind": "plan", "ref": "docs/design-plan.md:345"}],
+    }
+    return {**surface, "baseline": ["jobs.status"], **fields}
+
+
+def test_an_mcp_surface_without_a_baseline_tool_must_say_so_and_is_a_gap(tmp_path: Path) -> None:
+    data = _catalogue()
+    data["capabilities"][0]["mcp"] = _surface(baseline=[])
+    path = tmp_path / "capabilities.yaml"
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    with pytest.raises(CatalogueError) as raised:
+        load_catalogue(path)
+    assert "/capabilities/0/mcp: 'baseline_missing' is a required property" in raised.value.problems[0]
+    data["capabilities"][0]["mcp"]["baseline_missing"] = "no tool lists the job resources."
+    text = render_page(Catalogue(data))
+    assert "| `jobs://` | – | – | **missing:** no tool lists the job resources. | P3 |" in text
+    assert "### MCP surfaces with a missing baseline (1)\n\n- [jobs](#jobs): no tool lists" in text
+
+
 def test_a_catalogue_whose_references_resolve_has_no_problems() -> None:
     assert _problems(_catalogue()) == []
 
@@ -134,6 +158,10 @@ def test_a_catalogue_whose_references_resolve_has_no_problems() -> None:
         (lambda d: d["tools"][0]["replaces"].append("gone.py"), "replaces the prototype command gone.py"),
         (lambda d: d["capabilities"][1].pop("open_questions"), "open question q is cited by nothing"),
         (lambda d: d["capabilities"][0].update(depends_on=["build"]), "cycle: jobs -> build -> jobs"),
+        (
+            lambda d: d["capabilities"][0].update(mcp=_surface(baseline=["jobs.list"])),
+            "capability jobs names the baseline tool jobs.list",
+        ),
         (lambda d: d["tools"].append(copy.deepcopy(d["tools"][1])), "tool jobs.status is listed 2 times"),
         (
             lambda d: d["capabilities"][0].update(no_tool_reason="x"),

@@ -69,6 +69,8 @@ def _references(catalogue: Catalogue) -> Iterator[str]:
             yield from _missing(where, "cites the open question", name, questions)
         for name in item.get("mcp", []) if isinstance(item.get("mcp"), list) else []:
             yield from _missing(where, "names the MCP tool", name, tools)
+        for name in item["mcp"]["baseline"] if isinstance(item.get("mcp"), dict) else []:
+            yield from _missing(where, "names the baseline tool", name, tools)
         for name in item.get("replaces", []):
             yield from _missing(where, "replaces the prototype command", name, commands)
     cited = {name for _, item in _all_items(catalogue) for name in item.get("open_questions", [])}
@@ -214,7 +216,7 @@ def _item_pointers(item: dict[str, Any]) -> Iterable[str]:
     yield from item.get("evidence", [])
     yield from item.get("implied_by", [])
     if isinstance(item.get("mcp"), dict):
-        yield item["mcp"]["source"]
+        yield from (source["ref"] for source in item["mcp"]["sources"] if source["kind"] in REPO_SOURCES)
     if "id" in item and item.get("source", {}).get("kind") in REPO_SOURCES:
         yield item["source"]["ref"]
 

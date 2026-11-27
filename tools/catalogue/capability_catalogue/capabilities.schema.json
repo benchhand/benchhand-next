@@ -178,7 +178,7 @@
       }
     },
     "McpSurface": {
-      "description": "The MCP resources, prompts and Apps a capability serves, as the sources name them. ADR-0018: each is an enhancement over a tool that returns the same content.",
+      "description": "The MCP resources, prompts and Apps a capability serves, as the sources name them. ADR-0018 makes a tool the baseline for readable content: each is an enhancement over a tool that returns the same content.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -203,14 +203,43 @@
         "phase": {
           "$ref": "#/$defs/Phase"
         },
-        "source": {
-          "$ref": "#/$defs/Pointer"
+        "sources": {
+          "description": "Where the resources, prompts and Apps are named; a study or catalogue source for a proposed one.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Source"
+          }
+        },
+        "baseline": {
+          "description": "The tools that return the same content, the ADR-0018 baseline.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ToolName"
+          }
+        },
+        "baseline_missing": {
+          "description": "What none of the baseline tools returns: a missing baseline, and a gap.",
+          "$ref": "#/$defs/Text"
         }
       },
       "required": [
         "phase",
-        "source"
-      ]
+        "sources",
+        "baseline"
+      ],
+      "if": {
+        "properties": {
+          "baseline": {
+            "maxItems": 0
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "baseline_missing"
+        ]
+      }
     },
     "Capability": {
       "type": "object",

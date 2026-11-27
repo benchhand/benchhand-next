@@ -201,10 +201,12 @@ def _mcp_surface(catalogue: Catalogue) -> list[str]:
     lines = [
         "## MCP resources, prompts and Apps",
         "",
-        "Each is an enhancement over a tool that returns the same content (ADR-0018).",
+        "ADR-0018 makes a tool the baseline for readable content: each resource, prompt and App is an "
+        "enhancement over a tool that returns the same content. *Baseline* names those tools, and **missing** "
+        "says what no tool returns yet. An App form is an MCP App, not MCP form elicitation, which ADR-0018 drops.",
         "",
-        "| Capability | Resources | Prompts | Apps | Phase | Source |",
-        "|---|---|---|---|---|---|",
+        "| Capability | Resources | Prompts | Apps | Baseline | Phase | Sources |",
+        "|---|---|---|---|---|---|---|",
     ]
     for item in catalogue.capabilities:
         surface = item.get("mcp")
@@ -212,9 +214,16 @@ def _mcp_surface(catalogue: Catalogue) -> list[str]:
             lines.append(
                 f"| {_link(item['id'])} | {_codes(surface.get('resources', []))} "
                 f"| {_codes(surface.get('prompts', []))} | {_codes(surface.get('apps', []))} "
-                f"| {phase_label(surface['phase'])} | {_code(surface['source'])} |"
+                f"| {_cell(_baseline(surface))} | {phase_label(surface['phase'])} "
+                f"| {_cell('; '.join(_source(source) for source in surface['sources']))} |"
             )
     return lines
+
+
+def _baseline(surface: dict[str, Any]) -> str:
+    missing = f"**missing:** {surface['baseline_missing']}" if "baseline_missing" in surface else ""
+    tools = ", ".join(_code(name) for name in surface["baseline"])
+    return "; ".join(part for part in (tools, missing) if part)
 
 
 def _cli_table(catalogue: Catalogue) -> list[str]:
@@ -282,6 +291,14 @@ def _gap_lists(catalogue: Catalogue) -> Iterator[tuple[str, list[str]]]:
     yield (
         "Capabilities with no MCP tool by design",
         [f"- {_link(item['id'])}: {item['no_tool_reason']}" for item in toolless if "no_tool_reason" in item],
+    )
+    yield (
+        "MCP surfaces with a missing baseline",
+        [
+            f"- {_link(item['id'])}: {item['mcp']['baseline_missing']}"
+            for item in catalogue.capabilities
+            if "baseline_missing" in item.get("mcp", {})
+        ],
     )
     yield (
         "Tools with no contract",
