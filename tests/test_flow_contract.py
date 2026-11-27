@@ -367,34 +367,44 @@ CHECKS_BY_ITERATION = [
     ),
     *(
         (
-            f"full, {stage}",
+            f"full, {stage}, {assembly}",
             "full",
             stage,
-            {},
-            ["validate", "static.all_pairs", "form_check.due", "motion.default_render", "bom.reconcile"]
-            + ["fits.stackup", "sweep.full", *extra, "evidence.check", "recheck.stamp"],
+            overrides,
+            ["validate", "static.all_pairs", "form_check.due", *motion, "bom.reconcile", "fits.stackup"]
+            + [*sweep, *extra, "evidence.check", "recheck.stamp"],
         )
         for stage, extra in [
             ("layout", []),
             ("parts", ["sourcing.selection"]),
             ("detail", ["drawings.all"]),
             ("analysis", ["fea.all_cases"]),
+            ("reconcile", ["fea.stale_cases"]),
+        ]
+        # evidence.py _not_applicable: no motion render or sweep without an independent movable joint.
+        for assembly, overrides, motion, sweep in [
+            ("fixed joints only", {}, [], []),
+            (
+                "a movable joint",
+                JOINT,
+                ["motion.default_render"],
+                [] if stage == "reconcile" else ["sweep.full"],
+            ),
         ]
     ),
     (
-        "full, reconcile",
-        "full",
-        "reconcile",
-        {},
-        ["validate", "static.all_pairs", "form_check.due", "motion.default_render", "bom.reconcile"]
-        + ["fits.stackup", "fea.stale_cases", "evidence.check", "recheck.stamp"],
+        "design freeze, a stale sweep, a movable joint",
+        "design_freeze",
+        "design_freeze",
+        {"stale": [{"family": "sweep"}], **JOINT},
+        ["validate", "bom.reconcile", "fits.stackup", "evidence.check", "recheck.stamp", "sweep.full"],
     ),
     (
-        "design freeze, a stale sweep",
+        "design freeze, a stale sweep, fixed joints only",
         "design_freeze",
         "design_freeze",
         {"stale": [{"family": "sweep"}]},
-        ["validate", "bom.reconcile", "fits.stackup", "evidence.check", "recheck.stamp", "sweep.full"],
+        ["validate", "bom.reconcile", "fits.stackup", "evidence.check", "recheck.stamp"],
     ),
     (
         "design freeze, stale drawings and FEA",
