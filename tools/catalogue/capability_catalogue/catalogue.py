@@ -53,6 +53,10 @@ class Catalogue:
     def open_questions(self) -> list[dict[str, Any]]:
         return self.data["open_questions"]
 
+    @property
+    def doc_corrections(self) -> list[dict[str, Any]]:
+        return self.data["doc_corrections"]
+
     def capability(self, capability_id: str) -> dict[str, Any]:
         return next(item for item in self.capabilities if item["id"] == capability_id)
 

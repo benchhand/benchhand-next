@@ -28,6 +28,7 @@ def _catalogue() -> dict[str, Any]:
     """A small catalogue whose every reference resolves in this repository."""
     return {
         "contract_base": BASE,
+        "doc_corrections": [],
         "open_questions": [
             {"id": "q", "question": "Which?", "origin": "existing", "pointers": ["docs/design-plan.md:9"]}
         ],
@@ -205,6 +206,17 @@ def test_a_name_that_does_not_resolve_is_reported(change: Any, message: str) -> 
             f"and the schema's $id is {BASE}jobs/job.schema.json",
         ),
         (lambda d: d["capabilities"][0].update(adrs=[999]), "there is no ADR-0999"),
+        (
+            lambda d: d["doc_corrections"].append(
+                {
+                    "pointer": "docs/gone.md:3",
+                    "says": "x.",
+                    "correction": "y.",
+                    "settled_by": ["docs/design-plan.md:9"],
+                }
+            ),
+            "doc correction of docs/gone.md:3: docs/gone.md:3: no file docs/gone.md",
+        ),
         (lambda d: d["capabilities"][0].update(container="containers.md:nothing"), "draws no node nothing"),
         (
             lambda d: d["capabilities"][0].update(owner=["packages/gone"]),

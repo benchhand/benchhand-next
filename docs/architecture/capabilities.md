@@ -22,7 +22,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 |
 | **all** | **77** | 6 | 5 | 60 | 6 | 0 |
 
-MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28.
+MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 27. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -868,15 +868,6 @@ Who records a PROVISIONAL approval: a tool call, or the interpreter? The envelop
 - `docs/contract/flow.md:53`: GateDecisionRequest records a human-gate decision; the interpreter records the other VOIDs itself.
 - Cited by: [decision-records](#decision-records), `flow.record_provisional`
 
-### long-call-threshold
-
-The long-call threshold after which a tool returns a job handle; Phase 3 settles it. (existing)
-
-- Pointers: `docs/contract/envelope.md:37`, `docs/design-plan.md:353`
-- `docs/contract/envelope.md:37`: the envelope page cites plan section 11 as about 50 s and ADR-0018 as about 30 s.
-- `docs/design-plan.md:353`: plan section 11 now says about 30 s, citing ADR-0018.
-- Cited by: [job-service](#job-service), [result-envelope](#result-envelope), `model.build`
-
 ### policy-resources
 
 How does the agent read and change gate modes over MCP? D3 says the `policy.*` resources change them, but an MCP resource is read-only, and ADR-0018 makes a tool the baseline for readable content. No policy tool is named. (catalogue)
@@ -1053,6 +1044,12 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Pointers: `docs/design-plan.md:249`, `docs/design-plan.md:258`
 - Cited by: [setup](#setup), `benchhand setup`
 
+## Doc corrections
+
+Settled questions whose old wording is still in a page. The fix belongs in that page.
+
+- `docs/contract/envelope.md:37` says the design documents give two long-call thresholds, about 50 s in plan section 11 and about 30 s in ADR-0018, and Phase 3 settles it. It should say: the threshold is about 30 s; plan section 11 and the provider protocol follow ADR-0018 since 2026-11-26. Settled by `docs/design-plan.md:353`, `docs/adr/0018-baseline-and-no-forms.md:27`, `docs/adr/0018-baseline-and-no-forms.md:36`, `docs/architecture/data-flow.md:347`.
+
 ## Capability details
 
 ### contracts-pipeline
@@ -1194,7 +1191,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Evidence: `packages/benchhand-core/src/benchhand_core/jobs/service.py:119`, `packages/benchhand-core/src/benchhand_core/jobs/supervisor.py`
 - Note: The scoped run claims and the stray-run report of the prototype's process_lifecycle.py are left to Phase 4, with the tools that run those jobs.
 - Prototype: `skills/cad-flow/scripts/process_lifecycle.py`
-- Open questions: [cancel-tool](#cancel-tool), [provider-job](#provider-job), [long-call-threshold](#long-call-threshold)
+- Open questions: [cancel-tool](#cancel-tool), [provider-job](#provider-job)
 
 ### flow-engine
 
@@ -1299,7 +1296,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Evidence: `contracts/envelope/envelope.tsp`, `docs/contract/envelope.md`
 - Note: The contract is on main at 0.1.0, provisional. Phase 2 builds next_actions in the flow engine, and Phase 3 the tools that return the envelope.
 - Prototype: `skills/cad-record/scripts/emit.py`
-- Open questions: [envelope-phase](#envelope-phase), [long-call-threshold](#long-call-threshold)
+- Open questions: [envelope-phase](#envelope-phase)
 
 ### guide-service
 

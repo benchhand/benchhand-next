@@ -19,6 +19,19 @@
 # - Where sources disagree, both are recorded in an open question.
 contract_base: https://benchhand.github.io/benchhand/contracts/
 
+doc_corrections:
+  - pointer: docs/contract/envelope.md:37
+    says: the design documents give two long-call thresholds, about
+      50 s in plan section 11 and about 30 s in ADR-0018, and Phase
+      3 settles it.
+    correction: the threshold is about 30 s; plan section 11 and the
+      provider protocol follow ADR-0018 since 2026-11-26.
+    settled_by:
+      - docs/design-plan.md:353
+      - docs/adr/0018-baseline-and-no-forms.md:27
+      - docs/adr/0018-baseline-and-no-forms.md:36
+      - docs/architecture/data-flow.md:347
+
 open_questions:
   - id: cli-command-list
     origin: catalogue
@@ -69,19 +82,6 @@ open_questions:
       - source: docs/contract/flow.md:53
         says: GateDecisionRequest records a human-gate decision; the
           interpreter records the other VOIDs itself.
-  - id: long-call-threshold
-    origin: existing
-    question: The long-call threshold after which a tool returns a
-      job handle; Phase 3 settles it.
-    pointers:
-      - docs/contract/envelope.md:37
-      - docs/design-plan.md:353
-    positions:
-      - source: docs/contract/envelope.md:37
-        says: the envelope page cites plan section 11 as about 50
-          s and ADR-0018 as about 30 s.
-      - source: docs/design-plan.md:353
-        says: plan section 11 now says about 30 s, citing ADR-0018.
   - id: policy-resources
     origin: catalogue
     question: How does the agent read and change gate modes over MCP?
@@ -564,7 +564,6 @@ capabilities:
     open_questions:
       - cancel-tool
       - provider-job
-      - long-call-threshold
     adrs:
       - 4
       - 18
@@ -775,7 +774,6 @@ capabilities:
       - flow-engine
     open_questions:
       - envelope-phase
-      - long-call-threshold
     adrs:
       - 11
       - 17
@@ -2987,7 +2985,6 @@ tools:
       - cad_model.py run
     open_questions:
       - tool-stage-check
-      - long-call-threshold
   - name: model.export
     capability: model-export
     access: write

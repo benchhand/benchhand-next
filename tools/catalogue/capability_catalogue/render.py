@@ -42,6 +42,7 @@ def render_page(catalogue: Catalogue) -> str:
         _prototype_table(catalogue),
         _gaps(catalogue),
         _open_questions(catalogue),
+        _doc_corrections(catalogue),
         _capability_details(catalogue),
     )
     lines = ["# Capability catalogue", "", GENERATED_NOTICE, ""]
@@ -105,7 +106,8 @@ def _introduction(catalogue: Catalogue) -> list[str]:
         f"MCP tools: {len(catalogue.tools)} ({_counted(tools)}). "
         f"CLI commands: {len(catalogue.cli)} ({_counted(commands)}). "
         f"Prototype commands: {len(catalogue.prototype_commands)}. "
-        f"Open questions: {len(catalogue.open_questions)}.",
+        f"Open questions: {len(catalogue.open_questions)}. "
+        f"Doc corrections: {len(catalogue.doc_corrections)}.",
     ]
 
 
@@ -379,6 +381,21 @@ def _open_questions(catalogue: Catalogue) -> list[str]:
             "",
         ]
     return lines[:-1]
+
+
+def _doc_corrections(catalogue: Catalogue) -> list[str]:
+    lines = [
+        "## Doc corrections",
+        "",
+        "Settled questions whose old wording is still in a page. The fix belongs in that page.",
+        "",
+    ]
+    for correction in catalogue.doc_corrections:
+        lines += [
+            f"- {_code(correction['pointer'])} says {correction['says']} It should say: {correction['correction']} "
+            f"Settled by {_codes(correction['settled_by'])}.",
+        ]
+    return lines if catalogue.doc_corrections else [*lines, "None."]
 
 
 def _citers(catalogue: Catalogue) -> Iterator[tuple[str, dict[str, Any]]]:

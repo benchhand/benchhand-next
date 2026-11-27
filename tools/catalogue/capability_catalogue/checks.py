@@ -204,6 +204,9 @@ def _pointers(catalogue: Catalogue, repo_root: Path) -> Iterator[str]:
 
 
 def _all_pointers(catalogue: Catalogue) -> Iterator[tuple[str, str]]:
+    for correction in catalogue.doc_corrections:
+        where = f"doc correction of {correction['pointer']}"
+        yield from ((where, pointer) for pointer in [correction["pointer"], *correction["settled_by"]])
     for question in catalogue.open_questions:
         where = f"open question {question['id']}"
         yield from ((where, pointer) for pointer in question["pointers"])
