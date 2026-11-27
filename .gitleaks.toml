@@ -1,11 +1,14 @@
 [extend]
 useDefault = true
 
-# Both are false positives of the generic-api-key rule, found by a scan of the whole history.
+# Both are false positives of the generic-api-key rule, found by a scan of the whole history. Each allowlist
+# applies to that rule only, so any other rule still fires on these paths.
 [[allowlists]]
 description = "Generated, minified validators: a long identifier beside the word `key` reads as an API key."
+targetRules = ["generic-api-key"]
 paths = ['''^ui/shared/contracts/''']
 
 [[allowlists]]
 description = "The prototype's fixtures hold sha256 part keys, which are content hashes."
+targetRules = ["generic-api-key"]
 paths = ['''^reference/skills/cad-model/tests/fixtures/part_keys_main\.json$''']

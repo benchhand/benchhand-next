@@ -52,7 +52,8 @@ secrets-history:
     gitleaks git --redact --no-banner
 
 # Known vulnerabilities in the locked dependencies. Queries osv.dev, so it fails on a new advisory against a
-# dependency that did not change: CI runs it on a schedule as well as on lockfile changes.
+# dependency that did not change: CI runs it on a schedule as well as on lockfile changes. It audits the three
+# product and workspace lockfiles only, not the tools pinned in mise.toml or the reuse install.
 audit:
     osv-scanner scan source --lockfile uv.lock --lockfile ui/pnpm-lock.yaml --lockfile contracts/pnpm-lock.yaml
 
