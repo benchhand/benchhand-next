@@ -15,10 +15,12 @@ version give the same SVG bytes, so the SVGs are committed and checked for drift
 
 from __future__ import annotations
 
+import os
 import posixpath
 import re
 import subprocess
 from collections import Counter, deque
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,6 +30,8 @@ D2_VERSION = "0.9.0"
 D2_LAYOUT = "elk"
 D2_PAD = 40
 RENDER_TIMEOUT_SECONDS = 300
+RENDER_VARIABLES = ("SCALE",)
+"""Variables outside the ``D2_`` prefix that change a render."""
 D2_COMMAND = "d2"
 CLASSES_FILE = "classes.d2"
 OVERVIEW_FILE = "overview"
@@ -93,11 +97,25 @@ def check_d2_version(output: str | None = None) -> None:
         raise D2VersionError(f"D2 {found} is installed, and the diagrams are pinned to D2 {D2_VERSION}")
 
 
+def render_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
+    """The environment D2 renders in: ``environ`` without the variables that change a render.
+
+    D2 reads each flag from a ``D2_*`` variable (theme, sketch, fonts, layout, padding, bundling) and the
+    scale from ``SCALE``; a developer's own setting must not reach the committed SVGs.
+    """
+    source = os.environ if environ is None else environ
+    return {
+        name: value
+        for name, value in source.items()
+        if not name.startswith("D2_") and name not in RENDER_VARIABLES
+    }
+
+
 def render_d2(source: Path, target: Path) -> bytes:
     """Lay ``source`` out with ELK into ``target``; return the SVG."""
     command = [D2_COMMAND, "--layout", D2_LAYOUT, "--pad", str(D2_PAD), str(source), str(target)]
     result = subprocess.run(
-        command, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS, check=False
+        command, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS, check=False, env=render_env()
     )
     if result.returncode:
         raise RuntimeError(f"d2 failed on {source}:\n{result.stderr}")

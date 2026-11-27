@@ -26,6 +26,7 @@ from contracts_gen.domain_d2 import (
     plan_diagrams,
     render_d2,
     render_diagram,
+    render_env,
     render_overview,
     stubs_of,
 )
@@ -368,3 +369,17 @@ def test_a_type_too_long_for_one_table_line_is_cut_with_an_ellipsis() -> None:
     assert len(cell) == MAX_TYPE_CHARS
     assert cell.endswith("…")
     assert '"short": "string"' in source
+
+
+def test_the_render_environment_drops_every_variable_that_changes_a_render() -> None:
+    environ = {
+        "PATH": "/bin",
+        "HOME": "/home/x",
+        "D2_THEME": "200",
+        "D2_SKETCH": "true",
+        "D2_FONT_REGULAR": "/x.ttf",
+        "D2_LAYOUT": "dagre",
+        "D2_PAD": "0",
+        "SCALE": "0.5",
+    }
+    assert render_env(environ) == {"PATH": "/bin", "HOME": "/home/x"}
