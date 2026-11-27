@@ -3,11 +3,7 @@ name = "cel-neutral-py"
 version = "0.0.0"
 license = "MPL-2.0"
 requires-python = ">=3.12,<3.14"
-dependencies = [
-  "cel-expr-python==0.1.4",
-  "protobuf",
-  "pyyaml",
-]
+dependencies = ["cel-expr-python==0.1.4", "protobuf", "pyyaml"]
 
 [tool.uv]
 package = false
