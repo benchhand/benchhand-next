@@ -23,6 +23,11 @@
   --bh-diagram-paper: #ffffff;
 }
 
+/* Starlight's "note" asides and the default badge use the blue hue; align it with the accent. */
+:root {
+  --sl-hue-blue: 199;
+}
+
 :root[data-theme="light"] {
   --sl-color-white: #11161c;
   --sl-color-gray-1: #1b232c;
@@ -70,11 +75,7 @@
   padding: 0.5rem;
   border: 1px solid var(--sl-color-hairline-light);
   border-radius: 0.5rem;
-  background: var(--bh-diagram-paper, #fff);
-}
-:root[data-theme="light"] .sl-markdown-content img[src*=".svg"],
-:root[data-theme="light"] .bh-figure img {
-  background: #fff;
+  background: var(--bh-diagram-paper);
 }
 
 /* Mermaid diagrams follow the active theme (astro-mermaid autoTheme); give them the same frame. */
@@ -99,6 +100,11 @@
 }
 .sl-markdown-content .bh-grid {
   margin-top: 1.25rem;
+}
+/* Starlight spaces Markdown siblings with margin-top; grid items use the gap instead. */
+.sl-markdown-content .bh-grid > *,
+.sl-markdown-content .bh-split > * {
+  margin-top: 0;
 }
 
 .bh-figure {
@@ -125,9 +131,14 @@
 }
 .sl-markdown-content .bh-split > section {
   margin-top: 0;
-  padding: 1.25rem 1.5rem 1.5rem;
+  padding: 1rem 1rem 1.25rem;
   border: 1px solid var(--sl-color-hairline-light);
   border-radius: 0.5rem;
+}
+@media (min-width: 50rem) {
+  .sl-markdown-content .bh-split > section {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
 }
 .sl-markdown-content .bh-split > section > :first-child {
   margin-top: 0;
