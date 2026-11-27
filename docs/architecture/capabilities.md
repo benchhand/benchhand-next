@@ -14,14 +14,14 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 |---|---|---|---|---|---|---|---|---|
 | P0 | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 0 |
 | P1 | 7 | 5 | 2 | 0 | 0 | 0 | 7 | 0 |
-| P2 | 15 | 0 | 1 | 14 | 0 | 0 | 15 | 0 |
+| P2 | 20 | 0 | 1 | 19 | 0 | 0 | 20 | 0 |
 | P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
-| P4 | 27 | 0 | 0 | 21 | 6 | 0 | 21 | 6 |
-| P5 | 8 | 0 | 0 | 7 | 1 | 0 | 7 | 1 |
+| P4 | 29 | 0 | 0 | 23 | 6 | 0 | 23 | 6 |
+| P5 | 9 | 0 | 0 | 7 | 1 | 1 | 7 | 2 |
 | P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
-| no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
-| **all** | **80** | 6 | 5 | 60 | 9 | 0 | 65 | 15 |
+| no phase | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 7 |
+| **all** | **89** | 6 | 5 | 68 | 9 | 1 | 72 | 17 |
 
 MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28. Doc corrections: 1.
 
@@ -65,6 +65,11 @@ MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands:
 | [existing-equipment](#existing-equipment) | Existing equipment and occurrence roles | core | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
 | [assembly-steps-and-coupons](#assembly-steps-and-coupons) | Assembly steps and joint evidence | core | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 1 | 0 |
 | [annotation-set](#annotation-set) | Annotation set | contracts | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
+| [freecad-environment-pins](#freecad-environment-pins) | FreeCAD addon pins and Python lock | contracts | `containers.md:freecadProvider` | planned | baseline | `contracts`, `providers/freecad` | 0 | 0 |
+| [purchased-part-fidelity](#purchased-part-fidelity) | Bought-part fidelity levels | contracts | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
+| [supplier-calibration](#supplier-calibration) | Supplier data as calibration | contracts | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
+| [product-identity](#product-identity) | Product identity fields | contracts | `containers.md:record` | planned | baseline | `contracts` | 0 | 0 |
+| [decision-manifest-hash](#decision-manifest-hash) | The manifest hash of an approval | contracts | `containers.md:record` | planned | baseline | `contracts` | 0 | 0 |
 
 ### P3
 
@@ -107,6 +112,8 @@ MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands:
 | [release-packaging](#release-packaging) | Release packaging | core | `containers.md:release` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
 | [documentation-set](#documentation-set) | Documentation set | providers | `containers.md:freecadProvider` | planned | baseline | `providers/freecad`, `providers/render-chromium`, `packages/benchhand-core` | 0 | 0 |
 | [store-provider](#store-provider) | Artifact store provider | providers | `containers.md:store` | planned | baseline | `providers/store-fs` | 0 | 0 |
+| [part-source-provider](#part-source-provider) | Part sources | providers | `containers.md:providers` | planned | baseline | `contracts`, `providers/freecad` | 0 | 0 |
+| [sheet-metal-unfold](#sheet-metal-unfold) | Sheet-metal unfold | providers | `containers.md:freecadProvider` | planned | baseline | `providers/freecad`, `providers/checks-process` | 0 | 0 |
 | [standards-parts-data](#standards-parts-data) | Standards and parts data | core | `containers.md:domain` | proposed | deferred | `packages/benchhand-core` | 5 | 2 |
 | [step-import](#step-import) | Supplier STEP import | core | `containers.md:recordOps` | proposed | deferred | `packages/benchhand-core` | 1 | 0 |
 | [product-docs](#product-docs) | Product documents (Typst) | providers | `containers.md:providers` | proposed | deferred | `packages/benchhand-core`, `providers/docs-typst` | 4 | 4 |
@@ -119,12 +126,13 @@ MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands:
 | Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
 |---|---|---|---|---|---|---|---|---|
 | [preview-host](#preview-host) | Preview host | preview-host | `containers.md:preview` | planned | baseline | `packages/benchhand` | 3 | 1 |
-| [viewer](#viewer) | Viewer | ui | `containers.md:ui` | planned | baseline | `ui/viewer`, `providers/viewer-ocp` | 8 | 1 |
-| [concept-scene](#concept-scene) | Concept scenes | ui | `containers.md:ui` | planned | baseline | `ui/concept`, `providers/viewer-ocp` | 4 | 0 |
+| [viewer](#viewer) | Viewer | ui | `containers.md:ui` | planned | baseline | `ui/viewer`, `packages/benchhand` | 8 | 1 |
+| [concept-scene](#concept-scene) | Concept scenes | ui | `containers.md:ui` | planned | baseline | `ui/concept`, `packages/benchhand` | 4 | 0 |
 | [draft-preview](#draft-preview) | Draft preview | preview-host | `containers.md:preview` | planned | baseline | `packages/benchhand` | 2 | 0 |
 | [layout-skeleton](#layout-skeleton) | Layout skeleton from the concept | core | `containers.md:recordOps` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
 | [flow-view](#flow-view) | Flow view | ui | `containers.md:ui` | planned | baseline | `ui/flow-view` | 0 | 0 |
 | [rich-interactions](#rich-interactions) | Apps, image results and tasks | interaction | `containers.md:interaction` | planned | baseline | `packages/benchhand`, `ui/gate-card` | 0 | 0 |
+| [viewer-ocp](#viewer-ocp) | The viewer-ocp provider | providers | `containers.md:providers` | dropped | deferred | `providers/viewer-ocp` | 0 | 0 |
 | [live-project-viewer](#live-project-viewer) | Live project viewer | ui | `containers.md:ui` | proposed | deferred | `ui/viewer`, `packages/benchhand` | 2 | 0 |
 
 ### P6
@@ -151,6 +159,7 @@ MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands:
 | [provider-host](#provider-host) | Provider host | core | `containers.md:providerHost` | planned | deferred | `packages/benchhand-core` | 0 | 0 |
 | [policy-provider](#policy-provider) | Default policy provider | providers | `containers.md:policy` | planned | deferred | `providers/policy-default` | 0 | 0 |
 | [container-launcher](#container-launcher) | Container launcher | distribution | `layers.md:containerDir` | planned | deferred | `packages/benchhand`, `container` | 0 | 2 |
+| [hazards-risk-assessment](#hazards-risk-assessment) | Hazards and risk assessment | contracts | `containers.md:record` | planned | deferred | `contracts`, `packages/benchhand-core` | 0 | 0 |
 
 ## Dependency graph
 
@@ -187,6 +196,11 @@ flowchart LR
     existing_equipment["Existing equipment and occurrence roles<br/>P2, planned"]:::planned
     assembly_steps_and_coupons["Assembly steps and joint evidence<br/>P2, planned"]:::planned
     annotation_set["Annotation set<br/>P2, planned"]:::planned
+    freecad_environment_pins["FreeCAD addon pins and Python lock<br/>P2, planned"]:::planned
+    purchased_part_fidelity["Bought-part fidelity levels<br/>P2, planned"]:::planned
+    supplier_calibration["Supplier data as calibration<br/>P2, planned"]:::planned
+    product_identity["Product identity fields<br/>P2, planned"]:::planned
+    decision_manifest_hash["The manifest hash of an approval<br/>P2, planned"]:::planned
   end
   subgraph phase_P3["P3"]
     mcp_server["MCP server<br/>P3, planned"]:::planned
@@ -223,6 +237,8 @@ flowchart LR
     release_packaging["Release packaging<br/>P4, planned"]:::planned
     documentation_set["Documentation set<br/>P4, planned"]:::planned
     store_provider["Artifact store provider<br/>P4, planned"]:::planned
+    part_source_provider["Part sources<br/>P4, planned"]:::planned
+    sheet_metal_unfold["Sheet-metal unfold<br/>P4, planned"]:::planned
     standards_parts_data["Standards and parts data<br/>P4, proposed"]:::proposed
     step_import["Supplier STEP import<br/>P4, proposed"]:::proposed
     product_docs["Product documents (Typst)<br/>P4, proposed"]:::proposed
@@ -238,6 +254,7 @@ flowchart LR
     layout_skeleton["Layout skeleton from the concept<br/>P5, planned"]:::planned
     flow_view["Flow view<br/>P5, planned"]:::planned
     rich_interactions["Apps, image results and tasks<br/>P5, planned"]:::planned
+    viewer_ocp["The viewer-ocp provider<br/>P5, dropped"]:::dropped
     live_project_viewer["Live project viewer<br/>P5, proposed"]:::proposed
   end
   subgraph phase_P6["P6"]
@@ -255,6 +272,7 @@ flowchart LR
     provider_host["Provider host<br/>no phase, planned"]:::open
     policy_provider["Default policy provider<br/>no phase, planned"]:::open
     container_launcher["Container launcher<br/>no phase, planned"]:::open
+    hazards_risk_assessment["Hazards and risk assessment<br/>no phase, planned"]:::open
   end
   contract_validation --> contracts_pipeline
   provider_protocol_contract --> contracts_pipeline
@@ -361,6 +379,7 @@ flowchart LR
   preview_host -.-> job_service
   viewer -.-> preview_host
   viewer -.-> model_build
+  viewer -.-> model_inspect
   viewer -.-> annotation_set
   concept_scene -.-> preview_host
   draft_preview -.-> model_build
@@ -387,6 +406,22 @@ flowchart LR
   golden_parity -.-> bom
   golden_parity -.-> release_packaging
   golden_parity -.-> interaction_chat_fallbacks
+  part_source_provider -.->|proposed| standards_parts_data
+  part_source_provider -.-> freecad_environment_pins
+  sheet_metal_unfold -.-> freecad_runtime
+  sheet_metal_unfold -.-> freecad_environment_pins
+  sheet_metal_unfold -.-> supplier_calibration
+  sheet_metal_unfold -.-> process_checks
+  freecad_environment_pins -.-> provider_environments
+  purchased_part_fidelity -.-> record_validate
+  purchased_part_fidelity -.-> rule_lists
+  supplier_calibration -.-> evidence_assessment
+  supplier_calibration -.-> machine_profile
+  product_identity -.-> record_store
+  decision_manifest_hash -.-> decision_records
+  decision_manifest_hash -.-> scoped_reapproval
+  hazards_risk_assessment -.->|proposed| product_docs
+  hazards_risk_assessment -.->|no phase| release_packaging
   bounded_results -.->|proposed| result_envelope
   bounded_results -.->|proposed| job_service
   docs_index -.->|proposed| guide_service
@@ -671,15 +706,24 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 
 *Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped. *Pending decisions* are tools that exist only if an open question is answered yes, so they have no contract to write yet.
 
-### Missing interfaces (113)
+### Missing interfaces (122)
 
-#### Capabilities with no MCP tool (6)
+#### Capabilities with no MCP tool (15)
 
 - [scoped-reapproval](#scoped-reapproval) (P2, planned)
 - [annotation-set](#annotation-set) (P2, planned)
 - [part-sdk](#part-sdk) (P4, planned)
 - [generators](#generators) (P4, planned)
 - [documentation-set](#documentation-set) (P4, planned)
+- [part-source-provider](#part-source-provider) (P4, planned)
+- [sheet-metal-unfold](#sheet-metal-unfold) (P4, planned)
+- [freecad-environment-pins](#freecad-environment-pins) (P2, planned)
+- [purchased-part-fidelity](#purchased-part-fidelity) (P2, planned)
+- [supplier-calibration](#supplier-calibration) (P2, planned)
+- [product-identity](#product-identity) (P2, planned)
+- [decision-manifest-hash](#decision-manifest-hash) (P2, planned)
+- [hazards-risk-assessment](#hazards-risk-assessment) (no phase, planned)
+- [viewer-ocp](#viewer-ocp) (P5, dropped)
 - [bounded-results](#bounded-results) (P3, proposed)
 
 #### MCP surfaces with a missing baseline (2)
@@ -963,7 +1007,7 @@ None.
 
 - `record.migrate` ([record-migrate](#record-migrate)): [record-migrate-tool](#record-migrate-tool)
 
-### Dependencies on a later phase (14)
+### Dependencies on a later phase (16)
 
 - [provider-protocol-contract](#provider-protocol-contract) (P0) depends on [contracts-pipeline](#contracts-pipeline) (P1)
 - [env-doctor](#env-doctor) (P3) depends on [provider-environments](#provider-environments) (P4)
@@ -975,6 +1019,8 @@ None.
 - [render-output](#render-output) (P4) depends on [provider-host](#provider-host) (no phase)
 - [store-provider](#store-provider) (P4) depends on [provider-host](#provider-host) (no phase)
 - [distribution](#distribution) (P7) depends on [container-launcher](#container-launcher) (no phase)
+- [freecad-environment-pins](#freecad-environment-pins) (P2) depends on [provider-environments](#provider-environments) (P4)
+- [supplier-calibration](#supplier-calibration) (P2) depends on [machine-profile](#machine-profile) (P3)
 - [docs-index](#docs-index) (P3) depends on [part-sdk](#part-sdk) (P4)
 - [fact-cache](#fact-cache) (P4) depends on [middleware-chain](#middleware-chain) (no phase)
 - [fact-cache](#fact-cache) (P4) depends on [provider-host](#provider-host) (no phase)
@@ -1033,10 +1079,10 @@ The plan names jobs.start, jobs.status and jobs.result, and no cancel tool, alth
 
 ### no-phase
 
-The plan names the middleware chain, the provider host, viewer-ocp, policy-default and the recheck and work modules, and no phase of its Steps delivers them. (existing)
+The plan names the middleware chain, the provider host, policy-default and the recheck and work modules, and no phase of its Steps delivers them. (existing)
 
-- Pointers: `docs/architecture/containers.md:179`
-- Blocking: yes. Owner: project-owner. Decision needed: The phase that delivers each of the middleware chain, the provider host, viewer-ocp, policy-default and the recheck and work modules.
+- Pointers: `docs/architecture/containers.md:178`
+- Blocking: yes. Owner: project-owner. Decision needed: The phase that delivers each of the middleware chain, the provider host, policy-default and the recheck and work modules.
 - Cited by: [middleware-chain](#middleware-chain), [design-recheck](#design-recheck), [scratch-workspaces](#scratch-workspaces), [provider-host](#provider-host), [policy-provider](#policy-provider), [fact-cache](#fact-cache), `recheck.stamp`, `recheck.verify`, `recheck.diff`, `work.init`, `work.build`, `work.deliver`
 
 ### artifact-placement
@@ -1137,16 +1183,6 @@ Is the structured .FCStd export a cad-app hook? Phase 4 names `cad-app` `documen
 - Blocking: yes. Owner: project-owner. Decision needed: Whether the structured .FCStd export is a cad-app hook, and if so the provider protocol change.
 - Cited by: [documentation-set](#documentation-set)
 
-### viewer-provider-phase
-
-Which phase builds viewer-ocp? The reference map homes the prototype viewer there in Phase 5; the containers page says no phase of the Steps delivers it. (catalogue)
-
-- Pointers: `docs/architecture/reference-map.yaml:1058`, `docs/architecture/containers.md:179`
-- `docs/architecture/reference-map.yaml:1058`: skills/cad-viewer/scripts/viewer.py goes to providers/viewer-ocp/ and ui/viewer/ in Phase 5.
-- `docs/architecture/containers.md:179`: viewer-ocp has no phase in the Steps.
-- Blocking: yes. Owner: maintainer. Decision needed: The phase of viewer-ocp, with the reference map and the containers page made to agree.
-- Cited by: [viewer](#viewer)
-
 ### new-project
 
 What creates a new project's hw/? The reference map homes the prototype's project template in the CLI package (Phase 3), and neither the CLI list nor any tool names a command that creates a project. (catalogue)
@@ -1159,11 +1195,19 @@ What creates a new project's hw/? The reference map homes the prototype's projec
 
 ### read-only-cli
 
-Does the CLI get read-only adapters over the MCP tools' core (inspect, measure, parts, diff, view, docs, standards, docset)? The CAD-libraries study (lane 8 section 3) proposes it as an ADR-0001 amendment for the owner; ADR-0001 keeps the CLI to launching and administration. (catalogue)
+Which read-only CLI adapters over the MCP tools' core does the CLI carry (inspect, measure, parts, diff, view, docs, standards, docset)? The owner accepted the ADR-0001 amendment on 2026-11-27 (CAD-libraries decision D-28), which allows read-only subcommands such as docset and inspect and leaves the list to the cli-app spec. (catalogue)
 
-- Pointers: `docs/adr/0001-mcp-only-interface.md:11`, `docs/client-support.md:15`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether to accept the ADR-0001 amendment for read-only CLI adapters.
+- Pointers: `docs/adr/0001-mcp-only-interface.md:23`, `docs/client-support.md:15`
+- Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [cli-app](#cli-app), [standards-parts-data](#standards-parts-data), [product-docs](#product-docs), `benchhand inspect`, `benchhand measure`, `benchhand parts list`, `benchhand parts show`, `benchhand diff`, `benchhand view`, `benchhand docs`, `benchhand standards search`, `benchhand standards show`, `benchhand docset list`, `benchhand docset show`, `benchhand docset unknowns`, `benchhand docset preview`
+
+### hazards-phase
+
+Which phase builds the hazards and risk-assessment contract? ADR-0022 places it after Phase 4, and no phase of the Steps names it. (existing)
+
+- Pointers: `docs/adr/0022-hazards-risk-assessment.md:11`, `docs/design-plan.md:699`
+- Blocking: no; the spec that cites it decides it or works around it.
+- Cited by: [hazards-risk-assessment](#hazards-risk-assessment)
 
 ### bounded-results
 
@@ -2016,6 +2060,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [freecad-runtime](#freecad-runtime), [job-service](#job-service), [model-build](#model-build)
 - ADRs: ADR-0006, ADR-0007
+- Note: CAD-libraries decision D-18: solver-calculix runs gmsh and CalculiX directly as subprocesses, with its own deck writer and result parser, not through FreeCAD FEM. Whether cad-app/fem stays in the protocol is a later contract decision.
 - Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-analysis/scripts/fea_static.py`, `skills/cad-analysis/scripts/stop_reaction.py`, `skills/cad-analysis/scripts/ccx_failure.py`, `skills/cad-analysis/scripts/fea_conditions.py`, `skills/cad-analysis/scripts/fea_linearise.py`, `skills/cad-analysis/scripts/fea_modes.py`, `skills/cad-analysis/scripts/fea_near_support.py`, `skills/cad-analysis/scripts/fea_part_selection.py`, `skills/cad-analysis/scripts/fea_reaction.py`, `skills/cad-analysis/scripts/fea_stress.py`, `skills/cad-analysis/scripts/fea_stress_study.py`, `skills/cad-analysis/scripts/mesh_quality.py`, `skills/cad-analysis/scripts/stop_extrema.py`, `skills/cad-analysis/scripts/stop_statics.py`, `skills/cad-flow/scripts/fea_solvers.py`, `skills/cad-flow/scripts/fea_solvers_job.py`
 
@@ -2163,15 +2208,15 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 - Layer and container: ui, `containers.md:ui`
 - Phase and status: P5, planned, baseline
-- Owner: `ui/viewer`, `providers/viewer-ocp`
+- Owner: `ui/viewer`, `packages/benchhand`
 - Contracts: `provider/protocol.schema.json#/$defs/ViewerShowParams`, `provider/protocol.schema.json#/$defs/ViewerCompareParams`, `provider/protocol.schema.json#/$defs/ViewerCaptureParams`
 - MCP tools: `viewer.show`, `viewer.compare`, `viewer.capture`, `viewer.camera`, `viewer.mode`, `viewer.parts`, `viewer.animate`, `viewer.studio`
 - CLI: `benchhand view`
-- Depends on: [preview-host](#preview-host), [model-build](#model-build), [annotation-set](#annotation-set)
+- Depends on: [preview-host](#preview-host), [model-build](#model-build), [model-inspect](#model-inspect), [annotation-set](#annotation-set)
 - ADRs: ADR-0004, ADR-0007, ADR-0008
+- Note: CAD-libraries decision D-21: benchhand's own three.js viewer, with no viewer provider. STEP is parsed on the server only; the viewer reads the kernel's per-face GLB plus an edge layer, its measurements are mesh based and labelled, and exact values come from a kernel call (model-inspect). WCAG 2.2 AA. The ViewerPick and payload contracts are drafted in Phase 5. The protocol's viewer hook contracts listed here stay until a contract decision removes them.
 - Source: plan: `docs/design-plan.md:595`
 - Prototype: `skills/cad-viewer/scripts/viewer.py`, `skills/cad-viewer/scripts/cadviewer/__init__.py`, `skills/cad-viewer/scripts/cadviewer/capture.py`, `skills/cad-viewer/scripts/cadviewer/motion.py`, `skills/cad-viewer/scripts/cadviewer/record.py`, `skills/cad-viewer/assets/`
-- Open questions: [viewer-provider-phase](#viewer-provider-phase)
 
 ### concept-scene
 
@@ -2179,7 +2224,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 - Layer and container: ui, `containers.md:ui`
 - Phase and status: P5, planned, baseline
-- Owner: `ui/concept`, `providers/viewer-ocp`
+- Owner: `ui/concept`, `packages/benchhand`
 - Contracts: –
 - MCP tools: `concept.add_variant`, `concept.set_primitive`, `concept.snapshot`, `concept.check`
 - CLI: –
@@ -2318,6 +2363,140 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0015, ADR-0018
 - Source: plan: `docs/design-plan.md:606`
 - Prototype: `examples/lamp-arm/`
+
+### part-source-provider
+
+**Part sources.** A part-source provider kind for standards-parts data and for part generators run out of process, such as FreeCAD Fasteners and FCGear. A generated STEP is frozen with its provenance: the addon and its commit, the FreeCAD version, the call, its parameters and the sha256. CC-BY-SA data ships as a separate package beside the MPL core.
+
+- Layer and container: providers, `containers.md:providers`
+- Phase and status: P4, planned, baseline
+- Owner: `contracts`, `providers/freecad`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [standards-parts-data](#standards-parts-data), [freecad-environment-pins](#freecad-environment-pins)
+- ADRs: ADR-0006, ADR-0013
+- Source: plan: `docs/design-plan.md:666`
+- Contracts not yet published: the part-source hook kind and its hooks (provider protocol)
+
+### sheet-metal-unfold
+
+**Sheet-metal unfold.** Unfold a sheet-metal part with the SheetMetal addon through cad-app/unfold into a flat STEP, a DXF and a bend table, with K-factors per thickness from the supplier capability profile, and compare them with the manufacturing build. A trial behind process.sheet_forming.*.
+
+- Layer and container: providers, `containers.md:freecadProvider`
+- Phase and status: P4, planned, baseline
+- Owner: `providers/freecad`, `providers/checks-process`
+- Contracts: `provider/protocol.schema.json#/$defs/CadAppUnfoldParams`, `provider/protocol.schema.json#/$defs/CadAppUnfoldResult`
+- MCP tools: –
+- CLI: –
+- Depends on: [freecad-runtime](#freecad-runtime), [freecad-environment-pins](#freecad-environment-pins), [supplier-calibration](#supplier-calibration), [process-checks](#process-checks)
+- ADRs: ADR-0006, ADR-0013
+- Source: plan: `docs/design-plan.md:665`
+
+### freecad-environment-pins
+
+**FreeCAD addon pins and Python lock.** The provider manifest's environment.freecad gains addons: [{url, commit}] and a hashed lock of pure-Python dependencies, so addon generators and the SheetMetal unfolder (which needs networkx) run pinned.
+
+- Layer and container: contracts, `containers.md:freecadProvider`
+- Phase and status: P2, planned, baseline
+- Owner: `contracts`, `providers/freecad`
+- Contracts: `provider/manifest.schema.json`
+- MCP tools: –
+- CLI: –
+- Depends on: [provider-environments](#provider-environments)
+- ADRs: ADR-0005, ADR-0013
+- Source: plan: `docs/design-plan.md:690`
+- Contracts not yet published: environment.freecad addons and the Python lock (provider manifest)
+
+### purchased-part-fidelity
+
+**Bought-part fidelity levels.** The F3 levels of a bought part. F3-envelope records its dimension source (datasheet, measurement or customer) and gives a gate warning, never a block. F3-as-bought needs a supplier STEP or a generated STEP the maker verified. At release, the BOM and the release notes list every envelope-only part.
+
+- Layer and container: contracts, `containers.md:record`
+- Phase and status: P2, planned, baseline
+- Owner: `contracts`, `packages/benchhand-core`
+- Contracts: `record/part.schema.json`
+- MCP tools: –
+- CLI: –
+- Depends on: [record-validate](#record-validate), [rule-lists](#rule-lists)
+- ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:686`
+- Contracts not yet published: the F3 levels and the dimension source (record part)
+
+### supplier-calibration
+
+**Supplier data as calibration.** A supplier's published specification counts as calibration, as source.kind: supplier. It can turn UNKNOWN into pass or fail, and the record shows that the figure is supplier data.
+
+- Layer and container: contracts, `containers.md:record`
+- Phase and status: P2, planned, baseline
+- Owner: `contracts`, `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [evidence-assessment](#evidence-assessment), [machine-profile](#machine-profile)
+- ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:687`
+- Contracts not yet published: the supplier calibration source kind (record)
+
+### product-identity
+
+**Product identity fields.** The product's title, manufacturer or author, contact and licensor, read by the manual, the datasheet and the build guide.
+
+- Layer and container: contracts, `containers.md:record`
+- Phase and status: P2, planned, baseline
+- Owner: `contracts`
+- Contracts: `record/product.schema.json`
+- MCP tools: –
+- CLI: –
+- Depends on: [record-store](#record-store)
+- ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:688`
+- Contracts not yet published: the identity fields (record product)
+
+### decision-manifest-hash
+
+**The manifest hash of an approval.** An optional manifest_sha256 on a decision, beside its ADR-0019 approval scope, naming the sealed manifest the approval saw.
+
+- Layer and container: contracts, `containers.md:record`
+- Phase and status: P2, planned, baseline
+- Owner: `contracts`
+- Contracts: `record/decision.schema.json`
+- MCP tools: –
+- CLI: –
+- Depends on: [decision-records](#decision-records), [scoped-reapproval](#scoped-reapproval)
+- ADRs: ADR-0019
+- Source: plan: `docs/design-plan.md:689`
+- Contracts not yet published: manifest_sha256 beside the approval scope (record decision)
+
+### hazards-risk-assessment
+
+**Hazards and risk assessment.** A record contract for hazards and their risk assessment, which fills the safety sections of the product documents. A release blocks on a safety UNKNOWN only where the service class is safety_critical.
+
+- Layer and container: contracts, `containers.md:record`
+- Phase and status: no phase, planned, deferred
+- Owner: `contracts`, `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [product-docs](#product-docs), [release-packaging](#release-packaging)
+- ADRs: ADR-0022
+- Source: adr: `docs/adr/0022-hazards-risk-assessment.md:11`
+- Contracts not yet published: the hazards and risk-assessment contract (ADR-0022)
+- Open questions: [hazards-phase](#hazards-phase)
+
+### viewer-ocp
+
+**The viewer-ocp provider.** A viewer provider that hosted the prototype's ocp_viewer servers. It is not carried over; benchhand's own viewer reads the kernel's per-face GLB (see viewer).
+
+- Layer and container: providers, `containers.md:providers`
+- Phase and status: P5, dropped, deferred
+- Owner: `providers/viewer-ocp`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: –
+- ADRs: ADR-0006
+- Source: design: `docs/design/cad-libraries-2026-11-27.md:51`
 
 ### bounded-results
 

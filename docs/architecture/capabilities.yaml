@@ -120,14 +120,14 @@ open_questions:
     blocking: true
     owner: project-owner
     decision_needed: 'The phase that delivers each of the middleware
-      chain, the provider host, viewer-ocp, policy-default and the recheck
+      chain, the provider host, policy-default and the recheck
       and work modules.'
     origin: existing
     question: The plan names the middleware chain, the provider host,
-      viewer-ocp, policy-default and the recheck and work modules,
+      policy-default and the recheck and work modules,
       and no phase of its Steps delivers them.
     pointers:
-      - docs/architecture/containers.md:179
+      - docs/architecture/containers.md:178
   - id: artifact-placement
     blocking: true
     owner: project-owner
@@ -253,24 +253,6 @@ open_questions:
       - source: docs/contract/provider-protocol.md:77
         says: the cad-app hooks are cad-app/drawing, cad-app/assembly
           and cad-app/fem.
-  - id: viewer-provider-phase
-    blocking: true
-    owner: maintainer
-    decision_needed: 'The phase of viewer-ocp, with the reference map and
-      the containers page made to agree.'
-    origin: catalogue
-    question: Which phase builds viewer-ocp? The reference map homes
-      the prototype viewer there in Phase 5; the containers page says
-      no phase of the Steps delivers it.
-    pointers:
-      - docs/architecture/reference-map.yaml:1058
-      - docs/architecture/containers.md:179
-    positions:
-      - source: docs/architecture/reference-map.yaml:1058
-        says: skills/cad-viewer/scripts/viewer.py goes to providers/viewer-ocp/
-          and ui/viewer/ in Phase 5.
-      - source: docs/architecture/containers.md:179
-        says: viewer-ocp has no phase in the Steps.
   - id: new-project
     blocking: true
     owner: project-owner
@@ -292,19 +274,26 @@ open_questions:
         says: the CLI subcommands are mcp, serve, install, doctor,
           setup, policy, rules compile and debug call.
   - id: read-only-cli
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether to accept the ADR-0001 amendment for
-      read-only CLI adapters.'
+    blocking: false
     origin: catalogue
-    question: Does the CLI get read-only adapters over the MCP tools'
-      core (inspect, measure, parts, diff, view, docs, standards,
-      docset)? The CAD-libraries study (lane 8 section 3) proposes
-      it as an ADR-0001 amendment for the owner; ADR-0001 keeps the
-      CLI to launching and administration.
+    question: Which read-only CLI adapters over the MCP tools' core does
+      the CLI carry (inspect, measure, parts, diff, view, docs, standards,
+      docset)? The owner accepted the ADR-0001 amendment on 2026-11-27
+      (CAD-libraries decision D-28), which allows read-only subcommands
+      such as docset and inspect and leaves the list to the cli-app
+      spec.
     pointers:
-      - docs/adr/0001-mcp-only-interface.md:11
+      - docs/adr/0001-mcp-only-interface.md:23
       - docs/client-support.md:15
+  - id: hazards-phase
+    blocking: false
+    origin: existing
+    question: Which phase builds the hazards and risk-assessment contract?
+      ADR-0022 places it after Phase 4, and no phase of the Steps
+      names it.
+    pointers:
+      - docs/adr/0022-hazards-risk-assessment.md:11
+      - docs/design-plan.md:699
   - id: bounded-results
     blocking: true
     owner: project-owner
@@ -2008,6 +1997,10 @@ capabilities:
     adrs:
       - 6
       - 7
+    note: 'CAD-libraries decision D-18: solver-calculix runs gmsh and
+      CalculiX directly as subprocesses, with its own deck writer and
+      result parser, not through FreeCAD FEM. Whether cad-app/fem stays
+      in the protocol is a later contract decision.'
   - id: motion-analysis
     title: Motion, sweeps and access
     purpose: Pose an assembly at joint values; plan, check and render
@@ -2315,7 +2308,7 @@ capabilities:
       ref: docs/design-plan.md:595
     owner:
       - ui/viewer
-      - providers/viewer-ocp
+      - packages/benchhand
     contracts:
       - provider/protocol.schema.json#/$defs/ViewerShowParams
       - provider/protocol.schema.json#/$defs/ViewerCompareParams
@@ -2340,13 +2333,20 @@ capabilities:
     depends_on:
       - preview-host
       - model-build
+      - model-inspect
       - annotation-set
-    open_questions:
-      - viewer-provider-phase
     adrs:
       - 4
       - 7
       - 8
+    note: 'CAD-libraries decision D-21: benchhand''s own three.js viewer,
+      with no viewer provider. STEP is parsed on the server only; the
+      viewer reads the kernel''s per-face GLB plus an edge layer, its
+      measurements are mesh based and labelled, and exact values come
+      from a kernel call (model-inspect). WCAG 2.2 AA. The ViewerPick
+      and payload contracts are drafted in Phase 5. The protocol''s
+      viewer hook contracts listed here stay until a contract decision
+      removes them.'
   - id: concept-scene
     title: Concept scenes
     purpose: Edit a concept scene with tools (add a variant, set a
@@ -2362,7 +2362,7 @@ capabilities:
       ref: docs/design-plan.md:595
     owner:
       - ui/concept
-      - providers/viewer-ocp
+      - packages/benchhand
     prototype:
       - skills/cad-concept/scripts/concept.py
       - skills/cad-concept/assets/
@@ -2638,6 +2638,228 @@ capabilities:
       - 18
     no_tool_reason: A test that drives the other tools.
 
+  # Planned by the owner's CAD-libraries decisions of 2026-11-27
+  # (docs/design/cad-libraries-2026-11-27.md).
+  - id: part-source-provider
+    title: Part sources
+    purpose: 'A part-source provider kind for standards-parts data and
+      for part generators run out of process, such as FreeCAD Fasteners
+      and FCGear. A generated STEP is frozen with its provenance: the
+      addon and its commit, the FreeCAD version, the call, its parameters
+      and the sha256. CC-BY-SA data ships as a separate package beside
+      the MPL core.'
+    layer: providers
+    container: containers.md:providers
+    phase: 4
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:666
+    owner:
+      - contracts
+      - providers/freecad
+    contracts_planned:
+      - the part-source hook kind and its hooks (provider protocol)
+    depends_on:
+      - standards-parts-data
+      - freecad-environment-pins
+    adrs:
+      - 6
+      - 13
+  - id: sheet-metal-unfold
+    title: Sheet-metal unfold
+    purpose: Unfold a sheet-metal part with the SheetMetal addon through
+      cad-app/unfold into a flat STEP, a DXF and a bend table, with
+      K-factors per thickness from the supplier capability profile,
+      and compare them with the manufacturing build. A trial behind
+      process.sheet_forming.*.
+    layer: providers
+    container: containers.md:freecadProvider
+    phase: 4
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:665
+    owner:
+      - providers/freecad
+      - providers/checks-process
+    contracts:
+      - provider/protocol.schema.json#/$defs/CadAppUnfoldParams
+      - provider/protocol.schema.json#/$defs/CadAppUnfoldResult
+    depends_on:
+      - freecad-runtime
+      - freecad-environment-pins
+      - supplier-calibration
+      - process-checks
+    adrs:
+      - 6
+      - 13
+  - id: freecad-environment-pins
+    title: FreeCAD addon pins and Python lock
+    purpose: 'The provider manifest''s environment.freecad gains addons:
+      [{url, commit}] and a hashed lock of pure-Python dependencies,
+      so addon generators and the SheetMetal unfolder (which needs networkx)
+      run pinned.'
+    layer: contracts
+    container: containers.md:freecadProvider
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:690
+    owner:
+      - contracts
+      - providers/freecad
+    contracts:
+      - provider/manifest.schema.json
+    contracts_planned:
+      - environment.freecad addons and the Python lock (provider manifest)
+    depends_on:
+      - provider-environments
+    adrs:
+      - 5
+      - 13
+  - id: purchased-part-fidelity
+    title: Bought-part fidelity levels
+    purpose: 'The F3 levels of a bought part. F3-envelope records its
+      dimension source (datasheet, measurement or customer) and gives
+      a gate warning, never a block. F3-as-bought needs a supplier STEP
+      or a generated STEP the maker verified. At release, the BOM and
+      the release notes list every envelope-only part.'
+    layer: contracts
+    container: containers.md:record
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:686
+    owner:
+      - contracts
+      - packages/benchhand-core
+    contracts:
+      - record/part.schema.json
+    contracts_planned:
+      - the F3 levels and the dimension source (record part)
+    depends_on:
+      - record-validate
+      - rule-lists
+    adrs:
+      - 17
+  - id: supplier-calibration
+    title: Supplier data as calibration
+    purpose: 'A supplier''s published specification counts as calibration,
+      as source.kind: supplier. It can turn UNKNOWN into pass or fail,
+      and the record shows that the figure is supplier data.'
+    layer: contracts
+    container: containers.md:record
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:687
+    owner:
+      - contracts
+      - packages/benchhand-core
+    contracts_planned:
+      - the supplier calibration source kind (record)
+    depends_on:
+      - evidence-assessment
+      - machine-profile
+    adrs:
+      - 17
+  - id: product-identity
+    title: Product identity fields
+    purpose: The product's title, manufacturer or author, contact and
+      licensor, read by the manual, the datasheet and the build guide.
+    layer: contracts
+    container: containers.md:record
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:688
+    owner:
+      - contracts
+    contracts:
+      - record/product.schema.json
+    contracts_planned:
+      - the identity fields (record product)
+    depends_on:
+      - record-store
+    adrs:
+      - 17
+  - id: decision-manifest-hash
+    title: The manifest hash of an approval
+    purpose: An optional manifest_sha256 on a decision, beside its ADR-0019
+      approval scope, naming the sealed manifest the approval saw.
+    layer: contracts
+    container: containers.md:record
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:689
+    owner:
+      - contracts
+    contracts:
+      - record/decision.schema.json
+    contracts_planned:
+      - manifest_sha256 beside the approval scope (record decision)
+    depends_on:
+      - decision-records
+      - scoped-reapproval
+    adrs:
+      - 19
+  - id: hazards-risk-assessment
+    title: Hazards and risk assessment
+    purpose: A record contract for hazards and their risk assessment,
+      which fills the safety sections of the product documents. A release
+      blocks on a safety UNKNOWN only where the service class is
+      safety_critical.
+    layer: contracts
+    container: containers.md:record
+    phase: null
+    status: planned
+    scope: deferred
+    source:
+      kind: adr
+      ref: docs/adr/0022-hazards-risk-assessment.md:11
+    owner:
+      - contracts
+      - packages/benchhand-core
+    contracts_planned:
+      - the hazards and risk-assessment contract (ADR-0022)
+    depends_on:
+      - product-docs
+      - release-packaging
+    open_questions:
+      - hazards-phase
+    adrs:
+      - 22
+  - id: viewer-ocp
+    title: The viewer-ocp provider
+    purpose: A viewer provider that hosted the prototype's ocp_viewer
+      servers. It is not carried over; benchhand's own viewer reads
+      the kernel's per-face GLB (see viewer).
+    layer: providers
+    container: containers.md:providers
+    phase: 5
+    status: dropped
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/cad-libraries-2026-11-27.md:51
+    owner:
+      - providers/viewer-ocp
+    adrs:
+      - 6
   # Proposed by the CAD-libraries study (lanes 8 and 8b); not in the plan.
   - id: bounded-results
     title: Bounded results with a retrieve handle
