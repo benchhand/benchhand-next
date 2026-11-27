@@ -162,9 +162,8 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
 
 1. **Composing policy providers' rule lists** (`docs/adr/0020-cel-rule-pipeline.md:207-213`; `docs/design-plan.md:162,648`). The contracts branch proposes the following, pending confirmation:
    - per kind, evaluate the contributed lists in ascending provider name, then the flow's own list;
-   - for `checks_by_iteration`, `dispatch` and `fidelity`, the first list whose output is not the kind's no-match value (`[]`, `"unknown"`, `"none"`) wins;
-   - for `rigor`, every list must give true;
-   - a contributed list ends with its kind's no-match value.
+   - for `checks_by_iteration`, `dispatch` and `fidelity`, a list that gives its kind's no-match value (`[]`, `"unknown"`, `"none"`) passes to the next list, and a contributed list ends with that value;
+   - `rigor` doesn't fall through: every list is evaluated, the result is the union of their messages, each once, in the order first given, and rigor holds only when the union is empty, so a contribution can add requirements but never waive one (`docs/contract/policy.md:30-32`).
 
    The owner confirms or changes this composition and its order. It is still open in ADR-0020 (`docs/adr/0020-cel-rule-pipeline.md:207-213`) and in `docs/contract/policy.md`. Phase 2 builds the merge after it is decided.
 2. **`explanation` is not in ADR-0020's restricted profile.** Dispatch findings therefore lose their "no handler for ..." text, which the prototype's dispatch list carried. The route to get it back is an amendment of ADR-0020 that adds `explanation` to the profile, then a contract change. The contracts don't need it for anything else.
