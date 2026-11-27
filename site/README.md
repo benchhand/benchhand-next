@@ -41,6 +41,17 @@ Every schema's `$id` is `https://benchhand.github.io/benchhand/contracts/<name>`
 The `$id`s don't resolve until the site is published at `https://benchhand.github.io/benchhand/`, or at a domain that redirects to that address.
 Until then they identify the schemas without locating them. The JSON Schemas page lists where this site serves each one.
 
+## Workflows
+
+- `docs-site` runs on pull requests that touch the site, `docs/`, `contracts/`, the generator or the published schemas. It runs `just contracts-drift` and fails when the committed generated files differ from a fresh run, then builds the site with the links validator and runs `pnpm test`. A run by hand also deploys to Pages.
+- `release-docs` runs when a release is published and when a `v*` tag is pushed. It runs `just contracts-drift` on the tagged commit, regenerates the generated docs, builds the site, deploys it to Pages, and attaches `benchhand-schemas-<tag>.tar.gz` and `SHA256SUMS` to the release. The two triggers can fire for one release; the runs queue, and the second leaves the same result. A tag push with no release yet skips the attachment, and the release run adds it.
+
+The `github-pages` environment allows only the default branch by default. Add the tag pattern `v*` under Settings, Environments, `github-pages`, Deployment branches and tags, or the release run's deploy job is refused.
+
+The versions of the tools in these workflows are pinned. `just` and D2 come from the versions in the workflow and `mise.toml`; keep them in step with `ci.yml`.
+
+The site shows the latest build only. `VERSIONING.md` covers publishing a version for each release.
+
 ## What is hand-written and what is synced
 
 Hand-written pages are the Markdown files that git tracks under `src/content/docs/`.

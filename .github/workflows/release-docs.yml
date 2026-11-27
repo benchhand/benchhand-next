@@ -1,0 +1,140 @@
+# Each action is pinned to a full SHA with its version as a comment,
+# which zizmor and Dependabot read; those lines exceed 80 columns.
+# yamllint disable rule:line-length
+#
+# On a release, check that the committed contracts are what `just contracts` generates, rebuild
+# the docs site from the tagged commit and deploy it to GitHub Pages, and attach the published
+# schemas to the release. Tags are `v*` (tools/gen/contracts_gen/breaking.py, RELEASE_TAG_PATTERN);
+# release.toml names the repository and carries no version.
+#
+# A tag push and a published release for the same tag both start this workflow. The runs queue
+# on the tag, and the second finds the release or the site already as the first left it:
+# the tag run has no release to attach to yet, and the release run uploads with --clobber.
+#
+# The `github-pages` environment must allow deployments from `v*` tags (Settings, Environments,
+# github-pages, Deployment branches and tags); by default it allows only the default branch.
+name: release-docs
+on:
+  release:
+    types: [published]
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-docs-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Where the site is published, from the repository variable DOCS_URL. Unset, it is
+  # https://<owner>.github.io/<name>/ from release.toml (site/site-url.mjs).
+  DOCS_URL: ${{ vars.DOCS_URL }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: site/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: site/package.json
+          package-manager-cache: false
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: 1.59.0
+      - name: D2 as pinned in mise.toml, for the domain diagrams
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.6
+          install_args: d2
+          cache: false
+      - run: uv sync --all-packages --locked
+      - name: Contract tools pinned in contracts/package.json
+        run: pnpm install --frozen-lockfile
+        working-directory: contracts
+      - name: Types toolchain pinned in ui/package.json
+        run: pnpm install --frozen-lockfile
+        working-directory: ui
+      # Regenerates the schemas, models, types, fixtures and docs/contract/generated, and fails
+      # when any of them differs from the tagged commit.
+      - name: Contracts match the tagged commit
+        run: just contracts-drift
+      - run: pnpm install --frozen-lockfile
+        working-directory: site
+      # The sync regenerates the Python API pages, the planned-pages list and the copies of
+      # docs/ and the schemas; the build then fails on a broken link.
+      - name: Regenerate the generated docs and build the site
+        run: pnpm build
+        working-directory: site
+      - name: Each schema's $id maps to a file the build serves
+        run: pnpm test
+        working-directory: site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  schemas:
+    # The build job has checked that the committed schemas are the generated ones, so this job
+    # packs them from its own checkout of the same commit.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Pack the published schemas with a SHA256SUMS
+        run: |
+          set -euo pipefail
+          mkdir release-assets
+          tarball="benchhand-schemas-${TAG}.tar.gz"
+          # The archive lays the schemas out as the site serves them, under contracts/.
+          # Sorted names, a fixed time and no owner make the bytes the same on every run.
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
+            --transform 's,^schemas,contracts,' \
+            -C packages/benchhand-contracts/src/benchhand_contracts \
+            -cf - schemas | gzip -n > "release-assets/${tarball}"
+          (cd release-assets && sha256sum "${tarball}" > SHA256SUMS && sha256sum --check SHA256SUMS)
+          tar -tzf "release-assets/${tarball}" | wc -l
+      - name: Attach them to the release, when it exists
+        run: |
+          set -euo pipefail
+          if gh release view "${TAG}" > /dev/null 2>&1; then
+            gh release upload "${TAG}" release-assets/* --clobber
+          else
+            echo "No release for ${TAG} yet; the run for its published release attaches the schemas."
+          fi

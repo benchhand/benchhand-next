@@ -9,6 +9,9 @@ on:
       - "docs/**"
       # The published schemas and the Python API source feed the site too.
       - "packages/benchhand-contracts/**"
+      # The generated contract docs and the drift check read the sources and the generator.
+      - "contracts/**"
+      - "tools/gen/**"
       - "release.toml"
       - ".github/workflows/docs-site.yml"
   # Deploys run by hand until the owner enables GitHub Pages for the repository.
@@ -42,8 +45,28 @@ jobs:
           node-version-file: site/package.json
           cache: pnpm
           cache-dependency-path: site/pnpm-lock.yaml
-      - name: uv, for griffe in the Python API step
+      - name: uv, for griffe in the Python API step and the contracts generator
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: 1.59.0
+      - name: D2 as pinned in mise.toml, for the domain diagrams
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: 2026.11.6
+          install_args: d2
+          cache: false
+      - run: uv sync --all-packages --locked
+      - name: Contract tools pinned in contracts/package.json
+        run: pnpm install --frozen-lockfile
+        working-directory: contracts
+      - name: Types toolchain pinned in ui/package.json
+        run: pnpm install --frozen-lockfile
+        working-directory: ui
+      # Regenerates the schemas, models, types, fixtures and docs/contract/generated, and fails
+      # when any of them differs from the commit, so the site never builds from stale generated docs.
+      - name: Contracts match the commit
+        run: just contracts-drift
       - run: pnpm install --frozen-lockfile
         working-directory: site
       - name: Sync the docs and schemas, build, and validate the links
