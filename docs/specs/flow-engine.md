@@ -9,7 +9,6 @@ capabilities:
 questions:
   - tool-stage-check
   - freeze-digest
-  - storage-layout-adr
   - key-gate-auto
   - policy-resources
   - envelope-phase
@@ -123,7 +122,7 @@ blocks:
     title: The design freeze
     size: M
     requirements: [REQ-24]
-    depends_on: [FE-5, capability:version-snapshots, question:freeze-digest, question:storage-layout-adr]
+    depends_on: [FE-5, capability:version-snapshots, question:freeze-digest]
   - id: FE-13
     title: The flow end to end through the services
     size: M
@@ -239,7 +238,6 @@ The prototype's `emit.py` output modes (`--json`, `CAD_OUTPUT`, a terminal again
 |---|---|---|
 | [`tool-stage-check`](../architecture/capabilities.md#tool-stage-check) | yes | FE-11 |
 | [`freeze-digest`](../architecture/capabilities.md#freeze-digest) | yes | FE-12 |
-| [`storage-layout-adr`](../architecture/capabilities.md#storage-layout-adr) | yes | FE-12: the freeze writes into the record's layout, which the ADR renames from `hw/` to `design/` |
 | [`key-gate-auto`](../architecture/capabilities.md#key-gate-auto) | yes | FE-9 |
 | [`policy-resources`](../architecture/capabilities.md#policy-resources) | yes | no Phase 2 block: it decides the Phase 3 MCP path to the policy |
 | [`envelope-phase`](../architecture/capabilities.md#envelope-phase) | no | FE-3 builds the envelope in Phase 2 and leaves the tools to Phase 3 |
@@ -358,7 +356,7 @@ Size S. After FE-4. Waits on `tool-stage-check`.
 
 ### FE-12: The design freeze
 
-Size M. After FE-5. Needs `version-snapshots`, and waits on `freeze-digest` and on `storage-layout-adr`, which places the record's folders under `design/`.
+Size M. After FE-5. Needs `version-snapshots`, and waits on `freeze-digest`. The freeze records `flow.frozen` on a version sealed under `.benchhand/sealed/versions/<V>/`, as [ADR-0023](../adr/0023-storage-layout.md) places it; the code writes `hw/` until bead `bhn-aef` renames the record folder to `design/`.
 
 **Scope.** On the design-freeze approval, record `flow.frozen` on the sealed version with the assessment's evidence digest, and handle a refused assessment as the owner decides.
 

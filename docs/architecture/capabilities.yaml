@@ -349,18 +349,6 @@ open_questions:
     pointers:
       - docs/migration/issue-register.yaml:1681
       - docs/architecture/capabilities.yaml:2693
-  - id: storage-layout-adr
-    blocking: true
-    owner: project-owner
-    decision_needed: The storage layout ADR, which renames the authored
-      record folder hw/ to design/ as the owner decided on 2026-11-27, and
-      fixes where versions and their snapshots live under it.
-    origin: catalogue
-    question: Where do the record's folders live under design/? The owner
-      decided the rename; the ADR that sets the layout isn't written, and a
-      separate block renames the paths across the repository.
-    pointers:
-      - docs/specs/README.md:75
   - id: unscoped-freeze
     blocking: true
     owner: project-owner
@@ -677,7 +665,9 @@ capabilities:
       run those jobs. Jobs end with the session, and a client that
       disconnects while the server is still up can still fetch a job's
       result; the owner decided this on 2026-11-27 (Q2,
-      docs/design/edit-loop-performance.md:278).
+      docs/design/edit-loop-performance.md:278). ADR-0023 replaces the
+      per-job JSON store with in-memory jobs and the jobs table of the
+      state database, which job-journal builds.
     owner:
       - packages/benchhand-core
     contracts:
@@ -692,6 +682,7 @@ capabilities:
     adrs:
       - 4
       - 18
+      - 23
 
   # Phase 2: flow engine.
   - id: flow-engine
@@ -1002,9 +993,10 @@ capabilities:
   - id: version-snapshots
     title: Version snapshots, seal and verify
     purpose: Capture the version a build is made from, seal it under
-      hw/versions/<V>/ with a files sha256 map, and verify it later.
-      The freeze and the --since-version baselines use it, and it
-      honours the project ignore rules.
+      .benchhand/sealed/versions/<V>/ with a files sha256 map and its
+      binaries in the object store, and verify it later. The freeze
+      and the --since-version baselines use it, and it honours the
+      project ignore rules.
     layer: core
     container: containers.md:versions
     phase: 2
@@ -1013,6 +1005,12 @@ capabilities:
     source:
       kind: plan
       ref: docs/design-plan.md:561
+    note: ADR-0023 places the sealed bundles under .benchhand/sealed/,
+      seals versions on the main line only and refuses a version-label
+      collision at a merge (docs/adr/0023-storage-layout.md:76). The
+      prototype's sealed history stays readable where it lies under hw/.
+      The code writes hw/ until bead bhn-aef renames the record folder
+      to design/.
     owner:
       - packages/benchhand-core
     contracts:
@@ -1022,10 +1020,151 @@ capabilities:
       - skills/cad-record/scripts/prune.py
     depends_on:
       - record-store
-    open_questions:
-      - storage-layout-adr
+      - object-store
+      - managed-ignores
     adrs:
       - 17
+      - 23
+  - id: state-database
+    title: The project state database
+    purpose: 'One SQLite file in WAL mode, .benchhand/state.sqlite, for
+      the state that is derivable or disposable: the tables facts, jobs,
+      search, renders, objects_index, preview, work_units and leases.
+      Nothing in it is the only copy of anything that matters, so
+      deleting it costs time, never correctness. BENCHHAND_STATE_DIR
+      moves it out of the project.'
+    layer: core
+    container: containers.md:runStore
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: adr
+      ref: docs/adr/0023-storage-layout.md:43
+    note: Phase 2 builds the file with the jobs, objects_index and leases
+      tables. Each later table lands with the capability that fills it,
+      facts with fact-cache, renders with render-output, search with
+      docs-index and standards-parts-data, preview with preview-host and
+      work_units with scratch-workspaces
+      (docs/adr/0023-storage-layout.md:88).
+    owner:
+      - packages/benchhand-core
+    depends_on:
+      - record-store
+    adrs:
+      - 23
+    no_tool_reason: Internal to the server; the job, version, cache and
+      preview services read and write it.
+  - id: managed-ignores
+    title: Managed .benchhand/.gitignore and .gitattributes
+    purpose: 'Write and keep the two managed files under .benchhand/:
+      ignore everything by default, track the sealed text (json, yaml,
+      csv, md), treat the sealed binaries as the project''s storage
+      choice says (ignored, git LFS or plain git), and mark the sealed
+      folders linguist-generated -diff. No rule matches design/, and the
+      user''s top-level .gitignore stays as the user wrote it.'
+    layer: core
+    container: containers.md:versions
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: adr
+      ref: docs/adr/0023-storage-layout.md:32
+    note: It replaces the prototype's hw/.gitignore storage block and
+      settles the managed-block part of IR-012.
+    owner:
+      - packages/benchhand-core
+    prototype:
+      - skills/cad-record/scripts/layout.py
+    depends_on:
+      - record-store
+    adrs:
+      - 23
+    no_tool_reason: Internal to the record and version services; setup
+      and every seal keep the files current.
+  - id: object-store
+    title: Content-addressed object store
+    purpose: 'Keep the binary outputs (STEP, STL, 3MF, GLB, PNG, PDF,
+      SVG, FCStd) once each under .benchhand/objects/sha256/, hard-linked
+      into the sealed bundles, with the objects_index table of the state
+      database for garbage collection.'
+    layer: core
+    container: containers.md:versions
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: adr
+      ref: docs/adr/0023-storage-layout.md:25
+    note: The store is per project; no store is shared across projects
+      (docs/adr/0023-storage-layout.md:70). Which component puts a
+      provider's verified artifacts into it stays open under
+      artifact-placement.
+    owner:
+      - packages/benchhand-core
+    depends_on:
+      - state-database
+    open_questions:
+      - artifact-placement
+    adrs:
+      - 23
+    no_tool_reason: Internal to the version and release services.
+  - id: job-journal
+    title: In-memory jobs with a journal in the state database
+    purpose: 'Keep job state in memory while the server runs, and journal
+      each job''s start, finish and failure, its arguments, their digest
+      and its idempotency key in the jobs table. The same key with the
+      same inputs replays; different inputs are a conflict. After a
+      restart jobs.status answers interrupted with the exact re-run
+      call, long jobs resume from their checkpoints in facts, and a
+      start removes stale .partial-<PID> staging folders.'
+    layer: core
+    container: containers.md:jobService
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: adr
+      ref: docs/adr/0023-storage-layout.md:63
+    note: It replaces the per-job JSON files under .benchhand/runs/ on
+      main (bead bhn-5qa), and its contract change updates
+      contracts/jobs/. Job logs stay files under .benchhand/logs/.
+    owner:
+      - packages/benchhand-core
+    contracts:
+      - jobs/job.schema.json
+    depends_on:
+      - job-service
+      - state-database
+    adrs:
+      - 4
+      - 18
+      - 23
+    no_tool_reason: The jobs tools of job-service read it.
+  - id: run-leases
+    title: Run leases
+    purpose: The run guard as the leases table of the state database,
+      recording which process holds which version or build, with a
+      heartbeat, in place of lock and PID files.
+    layer: core
+    container: containers.md:jobService
+    phase: 2
+    status: planned
+    scope: baseline
+    source:
+      kind: adr
+      ref: docs/adr/0023-storage-layout.md:56
+    owner:
+      - packages/benchhand-core
+    prototype:
+      - skills/cad-flow/scripts/process_lifecycle.py
+    depends_on:
+      - state-database
+      - job-service
+    adrs:
+      - 23
+    no_tool_reason: Internal to the job and version services.
   - id: project-profile
     title: Project-start profile
     purpose: The project-start questions, the record of their answers
@@ -1245,8 +1384,11 @@ capabilities:
       - 3
   - id: scratch-workspaces
     title: Scratch workspaces for worker units
-    purpose: 'The workspace of one worker unit: copy hw/, build and
-      check the copy, then deliver the unit''s parts back.'
+    purpose: 'The workspace of one worker unit: copy the record into
+      .benchhand/work/<unit>/, build and check the copy, then deliver
+      the unit''s parts back. The work_units table of the state
+      database lists the active units and their reserved record-ID
+      blocks (RULE-37).'
     layer: core
     container: containers.md:domain
     phase: null
@@ -1259,13 +1401,17 @@ capabilities:
       - packages/benchhand-core
     prototype:
       - skills/cad-flow/scripts/scratch.py
+    note: Each unit's folder records its reserved ID block, so the
+      work_units table stays derivable (docs/adr/0023-storage-layout.md:89).
     depends_on:
       - record-store
       - model-build
+      - state-database
     open_questions:
       - no-phase
     adrs:
       - 4
+      - 23
 
   # Phase 3: MCP server and CLI.
   - id: mcp-server
@@ -2075,12 +2221,17 @@ capabilities:
       - skills/cad-render/scripts/versions.py
       - skills/cad-render/assets/
       - skills/cad-design/scripts/review_render.py
+    note: Its render cache index, from GLB sha256, camera, pose, size and
+      renderer digest to an object sha256, is the renders table of the
+      state database (docs/adr/0023-storage-layout.md:52).
     depends_on:
       - model-build
       - provider-host
+      - state-database
     adrs:
       - 6
       - 7
+      - 23
   - id: drawings
     title: Part and assembly drawings
     purpose: Producer-ready TechDraw part drawings and the checked
@@ -2146,8 +2297,9 @@ capabilities:
       - 7
   - id: release-packaging
     title: Release packaging
-    purpose: 'Seal a release of the frozen version under hw/releases/<REV>/:
-      byte copies and a manifest, the refusal checks, and the acceptance
+    purpose: 'Seal a release of the frozen version under releases/<REV>/
+      at the project root: byte copies and a manifest that names its
+      source version, the refusal checks, and the acceptance
       digest checked against the freeze. One refusal is a product
       export that holds a context or tooling part (plan section 12a).'
     layer: core
@@ -2174,6 +2326,7 @@ capabilities:
       - freeze-digest
     adrs:
       - 17
+      - 23
   - id: documentation-set
     title: Documentation set
     purpose: 'Beside the STEP AP242 deliverable, from the same version:
@@ -2286,12 +2439,17 @@ capabilities:
       - skills/cad-viewer/scripts/cadviewer/host.py
       - skills/cad-viewer/scripts/cadviewer/session.py
       - skills/cad-viewer/scripts/cadviewer/gallery.py
+    note: Each project's port and token sit in the preview table of the
+      state database, for stable viewer URLs
+      (docs/adr/0023-storage-layout.md:54).
     depends_on:
       - mcp-server
       - job-service
+      - state-database
     adrs:
       - 4
       - 10
+      - 23
   - id: viewer
     title: Viewer
     purpose: Show a version, compare two side by side with a synced
@@ -2911,11 +3069,14 @@ capabilities:
           ref: lane8-agentcad.md section 6, item 5
       baseline:
         - docs.get
+    note: Its FTS5 index is the search table of the state database
+      (docs/adr/0023-storage-layout.md:51).
     depends_on:
       - guide-service
       - part-sdk
     adrs:
       - 18
+      - 23
   - id: standards-parts-data
     title: Standards and parts data
     purpose: A pinned data package whose rows carry their provenance,
@@ -2938,8 +3099,12 @@ capabilities:
     open_questions:
       - read-only-cli
       - standards-sourcing-phase
+    note: Its FTS5 index for standards.search and parts.search is the
+      search table of the state database
+      (docs/adr/0023-storage-layout.md:51).
     adrs:
       - 17
+      - 23
   - id: step-import
     title: Supplier STEP import
     purpose: Freeze supplier STEP bytes and their sha256 into sources/,
@@ -3009,9 +3174,15 @@ capabilities:
       - release-packaging
     open_questions:
       - read-only-cli
+    note: A docset is sealed under .benchhand/sealed/docsets/<V>/<S>/,
+      with its manifest, recipe, UNKNOWN list and input JSON in git and
+      its PDFs and PNGs in the object store. It stays outside the
+      acceptance digest, and the release manifest covers it (D-37,
+      docs/adr/0023-storage-layout.md:71).
     adrs:
       - 6
       - 18
+      - 23
 
   # Proposed by the edit-loop performance note
   # (docs/design/edit-loop-performance.md); not in the plan.
@@ -3037,7 +3208,10 @@ capabilities:
       docs/design/edit-loop-performance.md:284), and that a part's
       STEP input is keyed by the hash of the STEP data section only,
       ignoring the header (Q6, docs/design/edit-loop-performance.md:286).
-      The middleware chain's own phase stays under no-phase.
+      The middleware chain's own phase stays under no-phase. ADR-0023
+      puts the store on disk in the facts table of the state database,
+      with the fingerprint memo, the interference pair cache and the
+      checkpoints of long jobs (docs/adr/0023-storage-layout.md:49).
     owner:
       - packages/benchhand-core
     contracts_planned:
@@ -3048,11 +3222,13 @@ capabilities:
       - middleware-chain
       - provider-host
       - store-provider
+      - state-database
     open_questions:
       - no-phase
     adrs:
       - 13
       - 17
+      - 23
     no_tool_reason: Internal to the server; the check, diff, pose and
       render tools use it.
   - id: resident-kernels

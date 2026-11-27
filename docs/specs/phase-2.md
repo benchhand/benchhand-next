@@ -17,6 +17,11 @@ Every Phase 2 capability of the catalogue, in catalogue order.
 | [result-envelope](../architecture/capabilities.md#result-envelope) | Result envelope and next actions | partial | [flow-engine](flow-engine.md) |
 | [guide-service](../architecture/capabilities.md#guide-service) | Guidance from the server | planned | not yet specced |
 | [version-snapshots](../architecture/capabilities.md#version-snapshots) | Version snapshots, seal and verify | planned | not yet specced |
+| [state-database](../architecture/capabilities.md#state-database) | The project state database | planned | not yet specced |
+| [managed-ignores](../architecture/capabilities.md#managed-ignores) | Managed .benchhand/.gitignore and .gitattributes | planned | not yet specced |
+| [object-store](../architecture/capabilities.md#object-store) | Content-addressed object store | planned | not yet specced |
+| [job-journal](../architecture/capabilities.md#job-journal) | In-memory jobs with a journal in the state database | planned | not yet specced |
+| [run-leases](../architecture/capabilities.md#run-leases) | Run leases | planned | not yet specced |
 | [project-profile](../architecture/capabilities.md#project-profile) | Project-start profile | planned | not yet specced |
 | [selection-assessment](../architecture/capabilities.md#selection-assessment) | Use case and candidate selection | planned | not yet specced |
 | [change-impact](../architecture/capabilities.md#change-impact) | Change impact | planned | not yet specced |
@@ -107,7 +112,6 @@ flowchart TD
   question_tool_stage_check{{"question: tool-stage-check"}}
   capability_version_snapshots(["capability: version-snapshots"])
   question_freeze_digest{{"question: freeze-digest"}}
-  question_storage_layout_adr{{"question: storage-layout-adr"}}
   capability_selection_assessment(["capability: selection-assessment"])
   question_unscoped_confirmation{{"question: unscoped-confirmation"}}
   question_unscoped_freeze{{"question: unscoped-freeze"}}
@@ -153,7 +157,6 @@ flowchart TD
   FE_5 --> FE_12
   capability_version_snapshots --> FE_12
   question_freeze_digest --> FE_12
-  question_storage_layout_adr --> FE_12
   FE_6 --> FE_13
   FE_7 --> FE_13
   FE_10 --> FE_13
@@ -179,7 +182,6 @@ flowchart TD
   RV_4 --> RV_5
   RV_8 --> RV_10
   capability_version_snapshots --> RV_10
-  question_storage_layout_adr --> RV_10
 ```
 
 ## Suggested order
@@ -210,7 +212,7 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 - **CP-4** (S, cel-pipeline): The JCS digest and its test vector. After CP-2.
 - **AP-1** (M, approvals): The decision writer. After AP-9.
 - **RV-5** (S, record-validation): Welded, brazed and soldered torque paths. After RV-4.
-- **RV-10** (S, record-validation): Clearance margins read from a version snapshot. After RV-8. Waits on capability `version-snapshots`, `storage-layout-adr` (blocking).
+- **RV-10** (S, record-validation): Clearance margins read from a version snapshot. After RV-8. Waits on capability `version-snapshots`.
 
 ### Wave 3
 
@@ -264,7 +266,7 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 ### Wave 12
 
 - **FE-9** (S, flow-engine): Middle gates without the user under the key-gates profile. After FE-7. Waits on `key-gate-auto` (blocking).
-- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`, `freeze-digest` (blocking), `storage-layout-adr` (blocking).
+- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`, `freeze-digest` (blocking).
 - **FE-13** (M, flow-engine): The flow end to end through the services. After FE-6, FE-7, FE-10. Waits on capability `selection-assessment`.
 
 ### Wave 13
@@ -285,7 +287,6 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | [key-gate-auto](../architecture/capabilities.md#key-gate-auto) | yes | project-owner | FE-9 |
 | [tool-stage-check](../architecture/capabilities.md#tool-stage-check) | yes | project-owner | FE-11 |
 | [freeze-digest](../architecture/capabilities.md#freeze-digest) | yes | project-owner | FE-12 |
-| [storage-layout-adr](../architecture/capabilities.md#storage-layout-adr) | yes | project-owner | FE-12, RV-10 |
 | [unscoped-confirmation](../architecture/capabilities.md#unscoped-confirmation) | yes | project-owner | AP-8 |
 | [unscoped-freeze](../architecture/capabilities.md#unscoped-freeze) | yes | project-owner | AP-8 |
 

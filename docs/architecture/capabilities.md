@@ -14,16 +14,16 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 |---|---|---|---|---|---|---|---|---|
 | P0 | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 0 |
 | P1 | 7 | 5 | 2 | 0 | 0 | 0 | 7 | 0 |
-| P2 | 20 | 0 | 1 | 19 | 0 | 0 | 20 | 0 |
+| P2 | 25 | 0 | 1 | 24 | 0 | 0 | 25 | 0 |
 | P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
 | P4 | 29 | 0 | 0 | 23 | 6 | 0 | 23 | 6 |
 | P5 | 9 | 0 | 0 | 7 | 1 | 1 | 7 | 2 |
 | P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | no phase | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 7 |
-| **all** | **89** | 6 | 5 | 68 | 9 | 1 | 72 | 17 |
+| **all** | **94** | 6 | 5 | 73 | 9 | 1 | 77 | 17 |
 
-MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28. Doc corrections: 1.
+MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 27. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -59,6 +59,11 @@ MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands:
 | [result-envelope](#result-envelope) | Result envelope and next actions | mcp-surface | `containers.md:surface` | partial | baseline | `packages/benchhand-core`, `contracts` | 0 | 0 |
 | [guide-service](#guide-service) | Guidance from the server | core | `containers.md:guide` | planned | baseline | `packages/benchhand-core`, `flow` | 1 | 0 |
 | [version-snapshots](#version-snapshots) | Version snapshots, seal and verify | core | `containers.md:versions` | planned | baseline | `packages/benchhand-core` | 1 | 2 |
+| [state-database](#state-database) | The project state database | core | `containers.md:runStore` | planned | baseline | `packages/benchhand-core` | 0 | 0 |
+| [managed-ignores](#managed-ignores) | Managed .benchhand/.gitignore and .gitattributes | core | `containers.md:versions` | planned | baseline | `packages/benchhand-core` | 0 | 0 |
+| [object-store](#object-store) | Content-addressed object store | core | `containers.md:versions` | planned | baseline | `packages/benchhand-core` | 0 | 0 |
+| [job-journal](#job-journal) | In-memory jobs with a journal in the state database | core | `containers.md:jobService` | planned | baseline | `packages/benchhand-core` | 0 | 0 |
+| [run-leases](#run-leases) | Run leases | core | `containers.md:jobService` | planned | baseline | `packages/benchhand-core` | 0 | 0 |
 | [project-profile](#project-profile) | Project-start profile | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 3 | 0 |
 | [selection-assessment](#selection-assessment) | Use case and candidate selection | core | `containers.md:record` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
 | [change-impact](#change-impact) | Change impact | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
@@ -190,6 +195,11 @@ flowchart LR
     result_envelope["Result envelope and next actions<br/>P2, partial"]:::partial
     guide_service["Guidance from the server<br/>P2, planned"]:::planned
     version_snapshots["Version snapshots, seal and verify<br/>P2, planned"]:::planned
+    state_database["The project state database<br/>P2, planned"]:::planned
+    managed_ignores["Managed .benchhand/.gitignore and .gitattributes<br/>P2, planned"]:::planned
+    object_store["Content-addressed object store<br/>P2, planned"]:::planned
+    job_journal["In-memory jobs with a journal in the state database<br/>P2, planned"]:::planned
+    run_leases["Run leases<br/>P2, planned"]:::planned
     project_profile["Project-start profile<br/>P2, planned"]:::planned
     selection_assessment["Use case and candidate selection<br/>P2, planned"]:::planned
     change_impact["Change impact<br/>P2, planned"]:::planned
@@ -297,6 +307,15 @@ flowchart LR
   result_envelope -.-> flow_engine
   guide_service -.-> flow_engine
   version_snapshots -.-> record_store
+  version_snapshots -.-> object_store
+  version_snapshots -.-> managed_ignores
+  state_database -.-> record_store
+  managed_ignores -.-> record_store
+  object_store -.-> state_database
+  job_journal -.-> job_service
+  job_journal -.-> state_database
+  run_leases -.-> state_database
+  run_leases -.-> job_service
   project_profile -.-> record_store
   project_profile -.-> flow_engine
   selection_assessment -.-> evidence_assessment
@@ -311,6 +330,7 @@ flowchart LR
   design_recheck -.->|no phase| evidence_assessment
   scratch_workspaces -.->|no phase| record_store
   scratch_workspaces -.->|no phase| model_build
+  scratch_workspaces -.->|no phase| state_database
   mcp_server -.-> result_envelope
   mcp_server -.-> contract_validation
   mcp_server -.-> guide_service
@@ -360,6 +380,7 @@ flowchart LR
   motion_analysis -.->|no phase| provider_host
   render_output -.-> model_build
   render_output -.->|no phase| provider_host
+  render_output -.-> state_database
   drawings -.-> freecad_runtime
   drawings -.-> model_build
   drawings -.-> job_service
@@ -377,6 +398,7 @@ flowchart LR
   policy_provider -.->|no phase| gate_policy
   preview_host -.-> mcp_server
   preview_host -.-> job_service
+  preview_host -.-> state_database
   viewer -.-> preview_host
   viewer -.-> model_build
   viewer -.-> model_inspect
@@ -440,6 +462,7 @@ flowchart LR
   fact_cache -.->|proposed| middleware_chain
   fact_cache -.->|proposed| provider_host
   fact_cache -.->|proposed| store_provider
+  fact_cache -.->|proposed| state_database
   resident_kernels -.->|proposed| provider_runtime
   resident_kernels -.->|proposed| provider_host
   edit_loop -.->|proposed| model_build
@@ -846,9 +869,9 @@ None.
 - `emit.py --sarif` ([result-envelope](#result-envelope))
 - `layout.py` ([version-snapshots](#version-snapshots))
 
-### Intentional CLI or internal replacements (39)
+### Intentional CLI or internal replacements (44)
 
-#### Capabilities with no MCP tool by design (29)
+#### Capabilities with no MCP tool by design (34)
 
 - [contracts-pipeline](#contracts-pipeline): Build-time tooling; nothing runs it through MCP.
 - [contract-validation](#contract-validation): A library that every boundary calls.
@@ -857,6 +880,11 @@ None.
 - [cel-rule-pipeline](#cel-rule-pipeline): Load-time machinery; the CLI's rules compile is its user surface.
 - [rule-lists](#rule-lists): Data the flow engine and the check tools evaluate.
 - [result-envelope](#result-envelope): The shape every tool returns.
+- [state-database](#state-database): Internal to the server; the job, version, cache and preview services read and write it.
+- [managed-ignores](#managed-ignores): Internal to the record and version services; setup and every seal keep the files current.
+- [object-store](#object-store): Internal to the version and release services.
+- [job-journal](#job-journal): The jobs tools of job-service read it.
+- [run-leases](#run-leases): Internal to the job and version services.
 - [existing-equipment](#existing-equipment): Record fields that the build, BOM, drawing and release tools read.
 - [middleware-chain](#middleware-chain): Runs inside every tool call.
 - [mcp-server](#mcp-server): The server hosts the tools; it has none of its own.
@@ -1091,7 +1119,7 @@ Which component moves a provider's verified artifacts into hw/; the record store
 
 - Pointers: `docs/architecture/data-flow.md:345`
 - Blocking: yes. Owner: project-owner. Decision needed: The component that moves a provider's verified artifacts into hw/.
-- Cited by: [provider-host](#provider-host), [model-build](#model-build), [store-provider](#store-provider)
+- Cited by: [object-store](#object-store), [provider-host](#provider-host), [model-build](#model-build), [store-provider](#store-provider)
 
 ### freeze-digest
 
@@ -1240,14 +1268,6 @@ The register gives the standards-data package and parts.search to Phase 2, with 
 - Pointers: `docs/migration/issue-register.yaml:1681`, `docs/architecture/capabilities.yaml:2693`
 - Blocking: yes. Owner: project-owner. Decision needed: The phase of the standards-data sourcing order and parts.search, which IR-047 and RULE-36 put in Phase 2 and the catalogue's standards-parts-data in Phase 4.
 - Cited by: [standards-parts-data](#standards-parts-data)
-
-### storage-layout-adr
-
-Where do the record's folders live under design/? The owner decided the rename; the ADR that sets the layout isn't written, and a separate block renames the paths across the repository. (catalogue)
-
-- Pointers: `docs/specs/README.md:75`
-- Blocking: yes. Owner: project-owner. Decision needed: The storage layout ADR, which renames the authored record folder hw/ to design/ as the owner decided on 2026-11-27, and fixes where versions and their snapshots live under it.
-- Cited by: [version-snapshots](#version-snapshots)
 
 ### unscoped-freeze
 
@@ -1410,9 +1430,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - MCP tools: `jobs.start`, `jobs.status`, `jobs.result`, `jobs.cancel`, `jobs.strays`
 - CLI: –
 - Depends on: [contract-validation](#contract-validation)
-- ADRs: ADR-0004, ADR-0018
+- ADRs: ADR-0004, ADR-0018, ADR-0023
 - Evidence: `packages/benchhand-core/src/benchhand_core/jobs/service.py:119`, `packages/benchhand-core/src/benchhand_core/jobs/supervisor.py`
-- Note: The scoped run claims and the stray-run report of the prototype's process_lifecycle.py are left to Phase 4, with the tools that run those jobs. Jobs end with the session, and a client that disconnects while the server is still up can still fetch a job's result; the owner decided this on 2026-11-27 (Q2, docs/design/edit-loop-performance.md:278).
+- Note: The scoped run claims and the stray-run report of the prototype's process_lifecycle.py are left to Phase 4, with the tools that run those jobs. Jobs end with the session, and a client that disconnects while the server is still up can still fetch a job's result; the owner decided this on 2026-11-27 (Q2, docs/design/edit-loop-performance.md:278). ADR-0023 replaces the per-job JSON store with in-memory jobs and the jobs table of the state database, which job-journal builds.
 - Prototype: `skills/cad-flow/scripts/process_lifecycle.py`
 - Open questions: [cancel-tool](#cancel-tool), [provider-job](#provider-job)
 
@@ -1546,7 +1566,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 ### version-snapshots
 
-**Version snapshots, seal and verify.** Capture the version a build is made from, seal it under hw/versions/<V>/ with a files sha256 map, and verify it later. The freeze and the --since-version baselines use it, and it honours the project ignore rules.
+**Version snapshots, seal and verify.** Capture the version a build is made from, seal it under .benchhand/sealed/versions/<V>/ with a files sha256 map and its binaries in the object store, and verify it later. The freeze and the --since-version baselines use it, and it honours the project ignore rules.
 
 - Layer and container: core, `containers.md:versions`
 - Phase and status: P2, planned, baseline
@@ -1554,11 +1574,88 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Contracts: `record/bundle-manifest.schema.json`
 - MCP tools: `version.parts`
 - CLI: `benchhand parts list`, `benchhand parts show`
-- Depends on: [record-store](#record-store)
-- ADRs: ADR-0017
+- Depends on: [record-store](#record-store), [object-store](#object-store), [managed-ignores](#managed-ignores)
+- ADRs: ADR-0017, ADR-0023
+- Note: ADR-0023 places the sealed bundles under .benchhand/sealed/, seals versions on the main line only and refuses a version-label collision at a merge (docs/adr/0023-storage-layout.md:76). The prototype's sealed history stays readable where it lies under hw/. The code writes hw/ until bead bhn-aef renames the record folder to design/.
 - Source: plan: `docs/design-plan.md:561`
 - Prototype: `skills/cad-record/scripts/layout.py`, `skills/cad-record/scripts/prune.py`
-- Open questions: [storage-layout-adr](#storage-layout-adr)
+
+### state-database
+
+**The project state database.** One SQLite file in WAL mode, .benchhand/state.sqlite, for the state that is derivable or disposable: the tables facts, jobs, search, renders, objects_index, preview, work_units and leases. Nothing in it is the only copy of anything that matters, so deleting it costs time, never correctness. BENCHHAND_STATE_DIR moves it out of the project.
+
+- Layer and container: core, `containers.md:runStore`
+- Phase and status: P2, planned, baseline
+- Owner: `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [record-store](#record-store)
+- ADRs: ADR-0023
+- Note: Phase 2 builds the file with the jobs, objects_index and leases tables. Each later table lands with the capability that fills it, facts with fact-cache, renders with render-output, search with docs-index and standards-parts-data, preview with preview-host and work_units with scratch-workspaces (docs/adr/0023-storage-layout.md:88).
+- Source: adr: `docs/adr/0023-storage-layout.md:43`
+
+### managed-ignores
+
+**Managed .benchhand/.gitignore and .gitattributes.** Write and keep the two managed files under .benchhand/: ignore everything by default, track the sealed text (json, yaml, csv, md), treat the sealed binaries as the project's storage choice says (ignored, git LFS or plain git), and mark the sealed folders linguist-generated -diff. No rule matches design/, and the user's top-level .gitignore stays as the user wrote it.
+
+- Layer and container: core, `containers.md:versions`
+- Phase and status: P2, planned, baseline
+- Owner: `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [record-store](#record-store)
+- ADRs: ADR-0023
+- Note: It replaces the prototype's hw/.gitignore storage block and settles the managed-block part of IR-012.
+- Source: adr: `docs/adr/0023-storage-layout.md:32`
+- Prototype: `skills/cad-record/scripts/layout.py`
+
+### object-store
+
+**Content-addressed object store.** Keep the binary outputs (STEP, STL, 3MF, GLB, PNG, PDF, SVG, FCStd) once each under .benchhand/objects/sha256/, hard-linked into the sealed bundles, with the objects_index table of the state database for garbage collection.
+
+- Layer and container: core, `containers.md:versions`
+- Phase and status: P2, planned, baseline
+- Owner: `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [state-database](#state-database)
+- ADRs: ADR-0023
+- Note: The store is per project; no store is shared across projects (docs/adr/0023-storage-layout.md:70). Which component puts a provider's verified artifacts into it stays open under artifact-placement.
+- Source: adr: `docs/adr/0023-storage-layout.md:25`
+- Open questions: [artifact-placement](#artifact-placement)
+
+### job-journal
+
+**In-memory jobs with a journal in the state database.** Keep job state in memory while the server runs, and journal each job's start, finish and failure, its arguments, their digest and its idempotency key in the jobs table. The same key with the same inputs replays; different inputs are a conflict. After a restart jobs.status answers interrupted with the exact re-run call, long jobs resume from their checkpoints in facts, and a start removes stale .partial-<PID> staging folders.
+
+- Layer and container: core, `containers.md:jobService`
+- Phase and status: P2, planned, baseline
+- Owner: `packages/benchhand-core`
+- Contracts: `jobs/job.schema.json`
+- MCP tools: –
+- CLI: –
+- Depends on: [job-service](#job-service), [state-database](#state-database)
+- ADRs: ADR-0004, ADR-0018, ADR-0023
+- Note: It replaces the per-job JSON files under .benchhand/runs/ on main (bead bhn-5qa), and its contract change updates contracts/jobs/. Job logs stay files under .benchhand/logs/.
+- Source: adr: `docs/adr/0023-storage-layout.md:63`
+
+### run-leases
+
+**Run leases.** The run guard as the leases table of the state database, recording which process holds which version or build, with a heartbeat, in place of lock and PID files.
+
+- Layer and container: core, `containers.md:jobService`
+- Phase and status: P2, planned, baseline
+- Owner: `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [state-database](#state-database), [job-service](#job-service)
+- ADRs: ADR-0023
+- Source: adr: `docs/adr/0023-storage-layout.md:56`
+- Prototype: `skills/cad-flow/scripts/process_lifecycle.py`
 
 ### project-profile
 
@@ -1685,7 +1782,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 ### scratch-workspaces
 
-**Scratch workspaces for worker units.** The workspace of one worker unit: copy hw/, build and check the copy, then deliver the unit's parts back.
+**Scratch workspaces for worker units.** The workspace of one worker unit: copy the record into .benchhand/work/<unit>/, build and check the copy, then deliver the unit's parts back. The work_units table of the state database lists the active units and their reserved record-ID blocks (RULE-37).
 
 - Layer and container: core, `containers.md:domain`
 - Phase and status: no phase, planned, deferred
@@ -1693,8 +1790,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Contracts: –
 - MCP tools: `work.init`, `work.build`, `work.deliver`
 - CLI: –
-- Depends on: [record-store](#record-store), [model-build](#model-build)
-- ADRs: ADR-0004
+- Depends on: [record-store](#record-store), [model-build](#model-build), [state-database](#state-database)
+- ADRs: ADR-0004, ADR-0023
+- Note: Each unit's folder records its reserved ID block, so the work_units table stays derivable (docs/adr/0023-storage-layout.md:89).
 - Source: plan: `docs/design-plan.md:494`
 - Prototype: `skills/cad-flow/scripts/scratch.py`
 - Open questions: [no-phase](#no-phase)
@@ -2089,8 +2187,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Contracts: `provider/protocol.schema.json#/$defs/RendererRenderParams`
 - MCP tools: `render.product`, `render.compare`
 - CLI: –
-- Depends on: [model-build](#model-build), [provider-host](#provider-host)
-- ADRs: ADR-0006, ADR-0007
+- Depends on: [model-build](#model-build), [provider-host](#provider-host), [state-database](#state-database)
+- ADRs: ADR-0006, ADR-0007, ADR-0023
+- Note: Its render cache index, from GLB sha256, camera, pose, size and renderer digest to an object sha256, is the renders table of the state database (docs/adr/0023-storage-layout.md:52).
 - Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-render/scripts/render.py`, `skills/cad-render/scripts/compare_renders.py`, `skills/cad-render/scripts/materials.py`, `skills/cad-render/scripts/parity_policy.py`, `skills/cad-render/scripts/versions.py`, `skills/cad-render/assets/`, `skills/cad-design/scripts/review_render.py`
 
@@ -2126,7 +2225,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 ### release-packaging
 
-**Release packaging.** Seal a release of the frozen version under hw/releases/<REV>/: byte copies and a manifest, the refusal checks, and the acceptance digest checked against the freeze. One refusal is a product export that holds a context or tooling part (plan section 12a).
+**Release packaging.** Seal a release of the frozen version under releases/<REV>/ at the project root: byte copies and a manifest that names its source version, the refusal checks, and the acceptance digest checked against the freeze. One refusal is a product export that holds a context or tooling part (plan section 12a).
 
 - Layer and container: core, `containers.md:release`
 - Phase and status: P4, planned, baseline
@@ -2135,7 +2234,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - MCP tools: `release.package`
 - CLI: –
 - Depends on: [version-snapshots](#version-snapshots), [evidence-assessment](#evidence-assessment), [existing-equipment](#existing-equipment)
-- ADRs: ADR-0017
+- ADRs: ADR-0017, ADR-0023
 - Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-record/scripts/release.py`
 - Open questions: [release-refusals](#release-refusals), [freeze-digest](#freeze-digest)
@@ -2196,8 +2295,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Contracts: –
 - MCP tools: `preview.serve`, `preview.stop`, `preview.list`
 - CLI: `benchhand serve`
-- Depends on: [mcp-server](#mcp-server), [job-service](#job-service)
-- ADRs: ADR-0004, ADR-0010
+- Depends on: [mcp-server](#mcp-server), [job-service](#job-service), [state-database](#state-database)
+- ADRs: ADR-0004, ADR-0010, ADR-0023
+- Note: Each project's port and token sit in the preview table of the state database, for stable viewer URLs (docs/adr/0023-storage-layout.md:54).
 - Source: plan: `docs/design-plan.md:594`
 - Contracts not yet published: the preview-host HTTP API
 - Prototype: `skills/cad-concept/scripts/serve.py`, `skills/cad-viewer/scripts/viewer.py`, `skills/cad-viewer/scripts/cadviewer/host.py`, `skills/cad-viewer/scripts/cadviewer/session.py`, `skills/cad-viewer/scripts/cadviewer/gallery.py`
@@ -2524,7 +2624,8 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - MCP tools: `docs.get`
 - CLI: `benchhand docs`
 - Depends on: [guide-service](#guide-service), [part-sdk](#part-sdk)
-- ADRs: ADR-0018
+- ADRs: ADR-0018, ADR-0023
+- Note: Its FTS5 index is the search table of the state database (docs/adr/0023-storage-layout.md:51).
 - Source: study: `lane8-agentcad.md section 6, item 5`
 
 ### standards-parts-data
@@ -2538,7 +2639,8 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - MCP tools: `standards.search`, `standards.show`, `parts.search`, `parts.show`, `record.cite_source`
 - CLI: `benchhand standards search`, `benchhand standards show`
 - Depends on: [record-store](#record-store), [evidence-assessment](#evidence-assessment)
-- ADRs: ADR-0017
+- ADRs: ADR-0017, ADR-0023
+- Note: Its FTS5 index for standards.search and parts.search is the search table of the state database (docs/adr/0023-storage-layout.md:51).
 - Source: study: `lane8-agentcad.md section 6, item 7`
 - Open questions: [read-only-cli](#read-only-cli), [standards-sourcing-phase](#standards-sourcing-phase)
 
@@ -2581,7 +2683,8 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - MCP tools: `docset.build`, `docset.unknowns`, `docset.show`, `docset.list`
 - CLI: `benchhand docset list`, `benchhand docset show`, `benchhand docset unknowns`, `benchhand docset preview`
 - Depends on: [documentation-set](#documentation-set), [version-snapshots](#version-snapshots), [bom](#bom), [release-packaging](#release-packaging)
-- ADRs: ADR-0006, ADR-0018
+- ADRs: ADR-0006, ADR-0018, ADR-0023
+- Note: A docset is sealed under .benchhand/sealed/docsets/<V>/<S>/, with its manifest, recipe, UNKNOWN list and input JSON in git and its PDFs and PNGs in the object store. It stays outside the acceptance digest, and the release manifest covers it (D-37, docs/adr/0023-storage-layout.md:71).
 - Source: study: `lane8b-product-docs.md section 6, items 1 to 9`
 - Contracts not yet published: a docset-input projection contract (study)
 - Open questions: [read-only-cli](#read-only-cli)
@@ -2596,9 +2699,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Contracts: –
 - MCP tools: –
 - CLI: –
-- Depends on: [middleware-chain](#middleware-chain), [provider-host](#provider-host), [store-provider](#store-provider)
-- ADRs: ADR-0013, ADR-0017
-- Note: The owner decided on 2026-11-27 that the fact cache belongs to Phase 4, with the kernel providers (Q4, docs/design/edit-loop-performance.md:284), and that a part's STEP input is keyed by the hash of the STEP data section only, ignoring the header (Q6, docs/design/edit-loop-performance.md:286). The middleware chain's own phase stays under no-phase.
+- Depends on: [middleware-chain](#middleware-chain), [provider-host](#provider-host), [store-provider](#store-provider), [state-database](#state-database)
+- ADRs: ADR-0013, ADR-0017, ADR-0023
+- Note: The owner decided on 2026-11-27 that the fact cache belongs to Phase 4, with the kernel providers (Q4, docs/design/edit-loop-performance.md:284), and that a part's STEP input is keyed by the hash of the STEP data section only, ignoring the header (Q6, docs/design/edit-loop-performance.md:286). The middleware chain's own phase stays under no-phase. ADR-0023 puts the store on disk in the facts table of the state database, with the fingerprint memo, the interference pair cache and the checkpoints of long jobs (docs/adr/0023-storage-layout.md:49).
 - Source: design: `docs/design/edit-loop-performance.md:35`
 - Contracts not yet published: a cache/fact contract with the fact key and entry (design note, gain 1); codeDigest in the provider protocol's InitializeResult
 - Open questions: [no-phase](#no-phase)

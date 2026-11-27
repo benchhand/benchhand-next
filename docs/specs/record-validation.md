@@ -9,7 +9,6 @@ questions:
   - validate-surface
   - record-migrate-tool
   - standards-sourcing-phase
-  - storage-layout-adr
 rules:
   - RULE-05
   - RULE-08
@@ -111,7 +110,7 @@ blocks:
     title: Clearance margins read from a version snapshot
     size: S
     requirements: [REQ-4]
-    depends_on: [RV-8, capability:version-snapshots, question:storage-layout-adr]
+    depends_on: [RV-8, capability:version-snapshots]
 ---
 
 # Record validation and migration in Phase 2
@@ -204,7 +203,6 @@ The reference map leaves `check_motion_cases` and `check_release_readiness` for 
 | [`validate-surface`](../architecture/capabilities.md#validate-surface) | yes | no Phase 2 block: it names the Phase 3 tools |
 | [`record-migrate-tool`](../architecture/capabilities.md#record-migrate-tool) | yes | no Phase 2 block: it decides the Phase 3 MCP path |
 | [`standards-sourcing-phase`](../architecture/capabilities.md#standards-sourcing-phase) | yes | no block here: IR-047 is deferred to `existing-equipment` |
-| [`storage-layout-adr`](../architecture/capabilities.md#storage-layout-adr) | yes | RV-10, which reads a snapshot under the record's layout |
 
 ## Blocks
 
@@ -266,7 +264,7 @@ Size S. No dependencies.
 
 ### RV-10: Clearance margins read from a version snapshot
 
-Size S. After RV-8. Needs `version-snapshots`, and waits on `storage-layout-adr` for where a version's record lives.
+Size S. After RV-8. Needs `version-snapshots`. A version's record lives under `.benchhand/sealed/versions/<V>/`, as [ADR-0023](../adr/0023-storage-layout.md) places it; the code writes `hw/` until bead `bhn-aef` renames the record folder to `design/`.
 
 **Scope.** The clearance-margin rule reads its margins from a sealed version's record as well as from the working record.
 

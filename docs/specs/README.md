@@ -18,6 +18,11 @@ not_yet_specced:
   - supplier-calibration
   - product-identity
   - decision-manifest-hash
+  - state-database
+  - managed-ignores
+  - object-store
+  - job-journal
+  - run-leases
 ---
 
 # Capability specs
@@ -77,7 +82,7 @@ A block is reviewable alone and leaves `main` green. A block that changes a cont
 
 ## Record paths
 
-The owner decided on 2026-11-27 that the authored record folder `hw/` becomes `design/`, under the storage layout ADR, which isn't written yet. Specs keep writing `hw/` until a block of that ADR renames the paths across the repository. A block that writes into the record's layout, such as a version snapshot or a freeze, depends on `question:storage-layout-adr`.
+The owner decided on 2026-11-27 that the authored record folder `hw/` becomes `design/`, and that the machine data moves under `.benchhand/`. [ADR-0023](../adr/0023-storage-layout.md) records the layout: sealed versions go under `.benchhand/sealed/versions/<V>/`, for example. Bead `bhn-aef` renames the paths across the repository. Specs keep writing `hw/` until it lands, because the code still uses `hw/`.
 
 ## Register entries
 
