@@ -71,6 +71,15 @@ Effort scale (my estimate, for the whole port with its tests): S is a day or les
   - Agent text: `harness/agents/`, Phase 6. The PR also regenerates four host renderings, which `benchhand install` produces and which need no port.
 - **Contract.** `record/part` minor. `identity` leaves `required` and an `anyOf` over `identity` and `designation` replaces it. That is a widening in intent. The breaking-change checker lists a new `anyOf` as `branches-reduced` (rules in `docs/contract/versioning.md`), so argue it in that file as the `obligation_id` widening was.
 - **Order.** Independent of the others. It shares `purchased.py` with #333 and `bom.py` with #337, so port it before both.
+- **Ported** in `b90394a8`: `record/part` 1.2.0 (`purchase.designation`, `reference_catalogue`, and the `anyOf` over `identity` and `designation`, argued in `docs/contract/versioning.md`). `commodity_identity.py` is in `record/rules/bom.py`, and `procurement_cells` states the designation column through `designation_cell`.
+  - Tests ported from `test_commodity_identity.py`: 16 of 18, in `test_record_bom_commodity.py`. The `M8x1` limit (bead `c7q.32`) has its own test there.
+  - Tests that wait from `test_commodity_identity.py`: 2, both for Phase 4. `designation_parses`, the free-text parser of the purchase check, comes with `purchased.py`. `commodity_label` with a given purchase comes with the drawings and the per-operation checks.
+  - Tests ported from `test_schema_manufacturing.py`: all 14 purchase cases, in `tests/test_part_contract.py`. That file adds cases for `finish`, `not_applicable`, `reference_catalogue`, the `standard` pattern, and a purchase that names both `identity` and `designation`.
+  - Tests ported from `test_bom.py` as validator cases in `test_record_validate.py`: the 3 cases for the designation column, and the designation-only round trip. The lamp-arm retaining ring LMP-0011 is the fixture, as `DIN 471 5x0.6`. The generator side of these tests waits for the Phase 4 BOM.
+  - Tests that wait for Phase 4: `test_process_checks.py` (10), `test_build_guide.py` (8), `test_part_drawings.py` (6) and `cad-fits` `test_commodity.py` (5).
+  - Not ported: the 4 new entries of `test_schema_bounds.py`, because this repository has no schema-bounds inventory. The `test_validate.py` change only copies a sibling script into a fixture.
+  - No migrate rule. A migrate fixture shows that the 4 lamp-arm purchases, each named by `identity` only, keep their bytes and validate (`test_migrate_service.py`).
+  - Remains: the purchase checks, build guide, BOM generator, drawings, fits data and agent text (Phases 4 and 6). The map entry `commodity_identity.py` to `record/rules/bom.py` lands with the pin move, as `partial` until `designation_parses` is ported.
 
 ### #333: `make_buy: existing`
 
