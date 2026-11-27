@@ -24,7 +24,7 @@ flowchart TB
     end
   end
 
-  providers["Providers<br/>kernel-cadquery, kernel-build123d, freecad, solver-calculix, collision-fcl,<br/>render-chromium, checks-process, store-fs: Phase 4<br/>viewer-ocp, policy-default: open, no phase"]:::planned
+  providers["Providers<br/>kernel-cadquery, kernel-build123d, freecad, solver-calculix, collision-fcl,<br/>render-chromium, checks-process, store-fs: Phase 4<br/>policy-default: open, no phase"]:::planned
 
   harness -.->|"stdio, the default: the host starts and stops the process"| surface
   harness -.->|"--http: a loopback MCP listener on a shared server"| surface
@@ -140,7 +140,7 @@ flowchart TB
 - The record service on `main` holds the published schemas, typed reads and writes (`store.py`), `validate`, `migrate` and `evidence`. The `record.*` MCP tools that expose those reads and writes come in Phase 3, versions in Phase 2 and release in Phase 4 ([containers.md](containers.md#components-of-benchhand-core)).
 - `docs/architecture/` is in review: it first appears on this branch, `pi-subagents/task-2-191ee0d-d83e-s0-t0`.
 - Plan section 1 also lists elicitation on the MCP surface, and forms in the interaction layer. ADR-0018 drops form elicitation from v1, so neither is drawn.
-- **Open: no phase.** The middleware chain, the provider host, `viewer-ocp` and `policy-default` have no phase in the plan's Steps. **Open: the SDK's environment.** The plan says `model.py` imports `benchhand-sdk`, but the kernel manifest example doesn't list it among its dependencies. The plan's [Open questions](../design-plan.md#open-questions) list neither item.
+- **Open: no phase.** The middleware chain, the provider host and `policy-default` have no phase in the plan's Steps. **Open: the SDK's environment.** The plan says `model.py` imports `benchhand-sdk`, but the kernel manifest example doesn't list it among its dependencies. The plan's [Open questions](../design-plan.md#open-questions) list neither item.
 
 ## Where the plan and the code differ
 

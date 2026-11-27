@@ -2281,7 +2281,7 @@
    "area": "cad-concept",
    "map_entry": "skills/cad-concept/scripts/concept.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/concept/"
    ],
    "phase": 5,
@@ -26657,7 +26657,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/__init__.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,
@@ -26691,7 +26691,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/capture.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "providers/render-chromium/"
    ],
    "phase": 5,
@@ -26920,7 +26920,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/gallery.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,
@@ -27034,7 +27034,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/host.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,
@@ -27477,7 +27477,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/motion.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,
@@ -27605,7 +27605,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/record.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,
@@ -27815,7 +27815,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/cadviewer/session.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,
@@ -27939,7 +27939,7 @@
    "area": "cad-viewer",
    "map_entry": "skills/cad-viewer/scripts/viewer.py",
    "home": [
-    "providers/viewer-ocp/",
+    "packages/benchhand/src/benchhand/preview/",
     "ui/viewer/"
    ],
    "phase": 5,

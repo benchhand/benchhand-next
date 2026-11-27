@@ -1,17 +1,17 @@
 # CAD Agent platform: MCP server, middleware, and packaging
 
-Status: revision 4. It applies the 7 review comments on revision 3 and the temporary-repo note. D1–D9 were settled in the Inbox thread "CAD platform design", and D10–D17 come from the plan reviews.
+Status: revision 4. It applies the 7 review comments on revision 3 and the temporary-repo note. D1–D9 were settled in the Inbox thread "CAD platform design", and D10–D17 come from the plan reviews. The owner's CAD-libraries decisions of 2026-11-27 amend D1, D6, sections 1, 2, 6, 7, 11 and 12, and the Steps; [CAD-libraries decisions](#cad-libraries-decisions-2026-11-27) at the end has the details, and "CAD D-n" cites them.
 
 ## Decisions
 
 | # | Topic | Decision |
 |---|---|---|
-| D1 | Interface | MCP is the only way to run the workflow. The product is called **benchhand**, and so are its CLI and its new repo. The CLI is a thin launcher and admin tool: `benchhand mcp`, `benchhand serve`, `install`, `doctor`, `setup`, `policy`, `rules compile` and `debug call`. Providers can add subcommands (section 7). The per-skill `uv run --script` commands are not carried over. |
+| D1 | Interface | MCP is the only way to run the workflow. The product is called **benchhand**, and so are its CLI and its new repo. The CLI is a thin launcher and admin tool: `benchhand mcp`, `benchhand serve`, `install`, `doctor`, `setup`, `policy`, `rules compile` and `debug call`. Providers can add subcommands (section 7), and read-only subcommands such as `docset` and `inspect` read a project (ADR-0001 amendment, CAD D-28). The per-skill `uv run --script` commands are not carried over. |
 | D2 | Install | No separate install step. Each harness's MCP config runs `uvx benchhand@<ver> mcp`, and uv fetches and caches the package on first start. `uv tool install benchhand` is optional, for pinned or offline use. An optional OCI image ships FreeCAD, both kernels, Chromium and the cache. It is started through the same entry point: `uvx benchhand@<ver> mcp --container` is a small launcher that runs the configured container runtime (Docker, Podman, nerdctl or Colima) with `run -i`, forwards stdio, and cleans up the container. The harness only ever starts a normal command (section 8). |
 | D3 | Gates | Gates steer the standard process; they are not a security control. The server doesn't defend against a malicious agent. It makes the guided path the easy one, and catches honest mistakes such as skipped steps, approval without asking, or a stale version. Each project sets a mode per gate in `hw/policy.yaml`: `ask` (the default) \| `chat` \| `auto` (for dev and tests). `benchhand policy` and the `policy.*` resources change it, and every relaxation is recorded in a DR. |
 | D4 | Server and runner lifetime | The harness starts the MCP server from its config. That process **is** the runner: it hosts the preview, viewer, concept and prototype pages on loopback HTTP, and it manages the provider workers and jobs. It lives as long as the harness session, so the spike isn't needed. A slow first start is acceptable next to how long CAD jobs take. `benchhand serve` runs the same preview host without an agent, for browsing a project. |
 | D5 | FreeCAD | Supported versions are listed explicitly in `freecad-versions.toml`, shipped with each benchhand release. Each entry has the version, platforms, download URLs, sha256 and a status: `supported`, `deprecated` or `removed`. The managed download (with your consent, into `~/.local/share/benchhand/freecad/<ver>`) offers only supported versions. A host FreeCAD is accepted only if its version is on the list. Any other version is refused with a fix; `--allow-unsupported` exists for development only, and its results are marked UNKNOWN. When FreeCAD releases a new version, we qualify it with the compatibility suite in our CI, add it to the list, and ship a release. |
-| D6 | Plugins | Every part of the system goes behind a provider interface from the first release: kernels, the CAD application, solvers, the renderer and viewers, process checks, artifact storage, and policy. Kernels, process checks and policy get full docs and conformance kits first; the rest are documented as experimental. |
+| D6 | Plugins | Every part of the system goes behind a provider interface from the first release: kernels, the CAD application, solvers, the renderer, process checks, part sources, artifact storage, and policy. The 3D viewer is not a provider: it is a page of the preview host that reads the kernel's output (CAD D-21). Kernels, process checks and policy get full docs and conformance kits first; the rest are documented as experimental. |
 | D7 | Build API | Output tools, part SDK, parametric generators, inspect tools, draft preview, concept scene tools, viewer and gallery control, typed record operations, engineering calculators, and the layout skeleton as a reviewable draft. |
 | D8 | Client features | Interaction adapts to each client's capabilities, with a fallback chain for each interaction (section 11). |
 | D9 | First-class hosts | Claude Code CLI, Claude Desktop, Codex CLI, the Codex / ChatGPT desktop app, OpenCode, Kiro CLI and Pi. Other MCP hosts work through the fallbacks without a guarantee. |
@@ -66,7 +66,7 @@ Intended outcome:
         └── provider host: JSON-RPC 2.0 plugin protocol (slopvac-3 style), lifecycle, timeouts
    ▼  JSON-RPC over stdio, one subprocess per provider, each in its own uv env
  Providers: kernel-cadquery · kernel-build123d · freecad · solver-calculix · collision-fcl ·
-            render-chromium · viewer-ocp · checks-process · store-fs · policy-default
+            render-chromium · checks-process · store-fs · policy-default
 ```
 
 ### 2. Repository and package layout (temporary repo `benchhand/benchhand-next`)
@@ -83,7 +83,7 @@ benchhand/
     benchhand-sdk/               part SDK imported by model.py (safe booleans, holes, fillets, fonts…)
   providers/                     each its own pyproject + pinned env; built-ins ship in the wheel extras
     kernel-cadquery/  kernel-build123d/  freecad/  solver-calculix/  collision-fcl/
-    render-chromium/  viewer-ocp/  checks-process/  store-fs/  policy-default/
+    render-chromium/  checks-process/  store-fs/  policy-default/
   ui/                            pnpm workspace (TypeScript, React); built to static assets in packages/benchhand
     viewer/  concept/  gate-card/  flow-view/  shared/
   contracts/                     TypeSpec sources, emitted to the published JSON Schema 2020-12: provider protocol, MCP tools, envelope, record, flow, policy (D17)
@@ -199,16 +199,16 @@ This is modelled on the slopvac 3.0 plugin protocol (`slopvac/docs/contract/plug
   | Kind | Hooks |
   |---|---|
   | `kernel` | `build`, `export`, `inspect` |
-  | `cad-app` | `drawing`, `assembly`, `fem` |
+  | `cad-app` | `drawing`, `assembly`, `fem`, `unfold` |
   | `solver` | `solve` |
   | `collision` | `check`, `sweep` |
   | `renderer` | `render`, `snapshot` |
-  | `viewer` | `show`, `compare`, `capture` |
+  | `viewer` | `show`, `compare`, `capture` (no built-in provider: the preview host serves the viewer, CAD D-21) |
   | `process-check` | `check` |
   | `store` | `put`, `get`, `list` |
   | `policy` | `evaluate` |
 
-  A missing provider or hook returns UNKNOWN coverage, never PASS.
+  A missing provider or hook returns UNKNOWN coverage, never PASS. The CAD-libraries decisions add a `part-source` kind, `cad-app/unfold`, FreeCAD addon pins and a process boundary for GPL tools ([CAD-libraries decisions](#cad-libraries-decisions-2026-11-27), Providers).
 
 ### 6a. Contracts: generated and enforced (D17)
 
@@ -251,7 +251,7 @@ Every boundary has one machine-readable contract, and no hand-written copy of it
 - `rules compile [--project DIR]` compiles a project's or a policy provider's rule lists into their rules bundle with the pinned cel-go tool (ADR-0020).
 - `debug call <tool> [json]` calls a tool through the same code path, for development.
 
-Extensibility: a provider manifest may declare `[cli]` subcommands, which are mounted as `benchhand <provider> <cmd>` and run through the provider protocol. An example is `benchhand freecad probe`. Python entry point `benchhand.cli` is the in-process alternative for core packages.
+Extensibility: a provider manifest may declare `[cli]` subcommands, which are mounted as `benchhand <provider> <cmd>` and run through the provider protocol. An example is `benchhand freecad probe`. Python entry point `benchhand.cli` is the in-process alternative for core packages. Read-only subcommands, such as `docset` and `inspect`, read a project over the same core as the MCP tools. Each is generated from its tool's contract, and none writes; writes stay on MCP or `debug call` (ADR-0001 amendment, CAD D-28). The CLI spec picks the list.
 
 ### 8. Prerequisites, FreeCAD and the container
 
@@ -351,13 +351,13 @@ Rules:
 - An empty or declined answer means no answer, and the gate stays open. Codex auto-review has been seen answering with empty content (openai/codex#23383).
 - Images are downscaled to stay under client limits: Claude Code `MAX_MCP_OUTPUT_TOKENS` defaults to 25k, and Codex has `output_token_limit`.
 - A tool that can run longer than about 30 s returns a task or a job handle (ADR-0018). Codex `tool_timeout_sec` defaults to 60 s, and Pi's timeout is 60 s, reset by progress.
-- Everything is local. Claude.ai web connectors can't reach localhost.
+- Everything is local. Claude.ai web connectors can't reach localhost. Gates are approved in chat or in the MCP App gate card; approving from the preview page is a future option, not planned (CAD D-29).
 
 The server is built on the MCP Python SDK v2 (2026-07-28 plus every earlier revision). The SDK has no tasks extension yet (python-sdk#2806), so job handles are the main path and the tasks adapter sits behind a flag. Apps are built with FastMCP `apps` helpers or raw `ui://` resources with `_meta.ui`.
 
 ### 12. Build API (D7)
 
-The agent writes `model.py` (CadQuery or build123d) for real geometry. Routine work is done by tools:
+The agent writes `model.py` (CadQuery or build123d) for real geometry. build123d becomes the default kernel for new parts once a build123d example part and a contract test exist, and a record may mix kernels (CAD D-2). A threaded part must use build123d; there is no CadQuery thread path (CAD D-9). Routine work is done by tools:
 
 - **Output.** Each takes a version reference and returns artifacts. Nothing is scripted by the agent:
   - `model.build`: STEP AP242, GLB and the manifest;
@@ -373,7 +373,7 @@ The agent writes `model.py` (CadQuery or build123d) for real geometry. Routine w
 - **Inspect:** `model.measure`, `section`, `mass_props` and `interference`.
 - **Draft preview:** `preview.part` and `preview.assembly` build without making a version, return snapshots, and update the live viewer.
 - **Concept scene tools:** `concept.add_variant`, `concept.set_primitive` and `concept.snapshot`.
-- **Viewer and gallery:** `viewer.show`, `compare`, `capture` and `camera`.
+- **Viewer and gallery:** `viewer.show`, `compare`, `capture` and `camera`, in benchhand's own three.js viewer (CAD D-21, [CAD-libraries decisions](#cad-libraries-decisions-2026-11-27)).
 - **Preview hosting:** `preview.serve(kind, target)` hosts the viewer, concept, gallery, flow view, or a prototype page or rendering the agent produced, and returns its URL. `preview.stop` and `preview.list` manage them.
 - **Typed record ops:** `record.add_requirement`, `add_interface`, `add_part`, `set_route`, `add_evidence` and `add_bom_row`, validated on write. This closes `c7q.13`.
 - **Calculators:** `fits.lookup`, `fits.stackup`, `fea.case_from_requirement` and `motion.pose`.
@@ -381,7 +381,7 @@ The agent writes `model.py` (CadQuery or build123d) for real geometry. Routine w
 
 ### 12a. Documentation set: annotations, groups, materials and finish
 
-STEP AP242 stays the primary deliverable for every released version. Everything in this section is added beside it and is built from the same version, so the STEP, the drawings, the FreeCAD document and the viewer always show the same names, groups and materials.
+STEP AP242 stays the primary deliverable for every released version. Everything in this section is added beside it and is built from the same version, so the STEP, the drawings, the FreeCAD document and the viewer always show the same names, groups and materials. The product documents and drawing sets built from it follow [CAD-libraries decisions](#cad-libraries-decisions-2026-11-27).
 
 **One annotation set per part and assembly** (a new contract, `contracts/record/annotations`). The tools derive it from the record and the user can edit it; nothing is drawn by hand:
 
@@ -500,7 +500,7 @@ This table says where each piece of current behaviour ends up. It is not a list 
 | `skills/cad-drawings/scripts/*`, `cad-analysis/scripts/*`, `cad-motion/scripts/freecad_assembly.py` | `providers/freecad/`, `providers/solver-calculix/` |
 | `skills/cad-motion/scripts/*` (other) | `providers/collision-fcl/` + `benchhand-core/motion/` |
 | `skills/cad-render/*`, `skills/cad-design/scripts/review_render.py` | `providers/render-chromium/`, `ui/` |
-| `skills/cad-viewer/*`, `skills/cad-concept/*` | `providers/viewer-ocp/`, `ui/viewer`, `ui/concept`, the preview host |
+| `skills/cad-viewer/*`, `skills/cad-concept/*` | `ui/viewer`, `ui/concept`, the preview host; exact measurement in `providers/kernel-*/inspect` (CAD D-21) |
 | `skills/cad-design/scripts/process_checks/*`, `form_check.py` | `providers/checks-process/` (dispatch → CEL rule list) |
 | `skills/cad-fits`, `cad-bom`, `cad-recheck` scripts | `benchhand-core/{fits,bom,recheck}/` |
 | `agents/*.md`, `harness/generate.py`, `harness/install.py` | `harness/` (templates) + `benchhand install` |
@@ -563,7 +563,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - Scoped approvals (ADR-0019): the approval scope in the decision contract, `changed_since_approval`, and the gate packet's changed-since-approval section.
   - Cut `flow/guides/*.md` from the current SKILL.md and `flow.md` prose.
   - Closes `c7q.2`, `c7q.3`, `c7q.4` and `c7q.14`.
-  - Record contract additions, in TypeSpec (the move happened in Phase 1, ADR-0017):
+  - Record contract additions, in TypeSpec (the move happened in Phase 1, ADR-0017), and the CAD-libraries record and manifest additions listed under [CAD-libraries decisions](#cad-libraries-decisions-2026-11-27), Work by phase:
     - `make_buy: existing` and the occurrence `role` (section 12a);
     - the annotation set (section 12a);
     - the `place` step kind with `retained_by`, and test-coupon evidence with test conditions (section 12b).
@@ -589,9 +589,9 @@ Every phase ends at a review gate. When a phase's work is done:
     - labelled views as PNG;
     - the structured `.FCStd` export (`cad-app` `document.export`);
     - STEP AP242 stays the primary deliverable.
-  - Provider-declared CLI subcommands.
+  - Provider-declared CLI subcommands. The CAD-libraries work of Phase 4 is listed under [CAD-libraries decisions](#cad-libraries-decisions-2026-11-27), Work by phase.
 - [ ] **Phase 5: preview host and the richer interactions.**
-  - The preview host plus `ui/`: viewer, concept, gallery, gate card and flow view (React Flow).
+  - The preview host plus `ui/`: viewer, concept, gallery, gate card and flow view (React Flow). The viewer is benchhand's own three.js viewer, with its `ViewerPick` and payload contracts (CAD D-21).
   - `preview.*`, `viewer.*` and `concept.*`, draft preview, and `layout.from_concept`.
   - Viewer layers from the annotation set: callouts, a legend, group toggles (sourcing, subassembly, material) and assembly-step playback.
   - MCP Apps shells, image results, and the tasks adapter behind a flag (no form elicitation, ADR-0018).
@@ -646,3 +646,54 @@ Every phase ends at a review gate. When a phase's work is done:
 
 - None blocking. The "?" cells in the capability table are settled by the manual probe in Phase 0.
 - The shipped guideline sets become a benchhand package asset when the guideline catalog is ported. Until then the evidence reader's caller names their directory (`read_built_version(shipped_guidelines=...)`). `reference/` stays a test oracle only.
+
+## CAD-libraries decisions (2026-11-27)
+
+The owner decided the questions of the CAD-libraries study on 2026-11-27. The [decision record](design/cad-libraries-2026-11-27.md) has one row per decision, D-1 to D-47. D-37, the project storage layout, is still open (bead `bhn-7pg`). This section lists what changes the plan.
+
+**Kernels and the SDK.**
+- build123d becomes the default kernel for new parts once a build123d example part and a contract test exist. A record may mix kernels (D-2).
+- A threaded part must use build123d (D-9). The SDK thread helper takes a printed thread's included angle from the process profile, at least 92 degrees at a 45-degree overhang limit (D-3), and its radial allowance from a per-printer calibration (D-4).
+- The thread wrapper's guard is always on: one valid solid, with a net volume gain or removal within tolerance of the expected value. Other callers get the same checks as an opt-in guard on `safe_cut` and `safe_fuse` (D-16).
+- bd_warehouse is pinned at 0.4.0, with a row-audit test that overrides its known-bad M3 and M14 hex-nut rows (D-10).
+- The strict OCCT Boolean argument check is an `inspect` report, not a gate (D-47).
+- The 3MF writer is rewritten in the kernel provider, with the prototype's writer and tests as the oracle (D-42).
+
+**Providers.**
+- **The process boundary for GPL and AGPL tools (D-17).** Slicers, gmsh, CalculiX and the FCGear addon run only as separate processes or containers, never imported. A provider downloads the pinned upstream file and checks its sha256; benchhand never rehosts it. The owner signs off before a Dockerfile that fetches AGPL code ships.
+- **`solver-calculix` runs gmsh and CalculiX directly (D-18)**, as subprocesses, with its own deck writer and result parser. FreeCAD stays for drawings, and for assembly solve and motion.
+- **`cad-app/unfold` (D-44)** unfolds sheet metal with the SheetMetal addon into a flat STEP, a DXF and a bend table. Sheet metal is a trial behind `process.sheet_forming.*`, with supplier K-factors per thickness from the capability profile (D-46).
+- **The `part-source` kind (D-20, D-44)** serves standards-parts data and part generators run out of process, such as FreeCAD Fasteners and FCGear. A generated STEP is frozen with its provenance. CC-BY-SA data ships as a separate package beside the MPL core. Its hooks are designed in Phase 4.
+- **FreeCAD addons and their lock (D-45, D-8).** `environment.freecad` gains `addons: [{url, commit}]` and a hashed lock of pure-Python dependencies; SheetMetal needs networkx. A generator on an addon's internal API is a trial, pinned by commit and checked by a geometry comparison test.
+- **An analysis-only slicer provider (D-14)**, opt in: OrcaSlicer first, in a container, with hashed profiles. It keeps only the statistics and discards the G-code and the sliced file. An unknown statistics version gives UNKNOWN. It has no phase yet.
+- **No viewer provider (D-21).** `viewer-ocp` leaves the plan, and the prototype's separate viewer server processes are retired.
+
+**The viewer (D-21).** benchhand builds its own three.js viewer in `ui/viewer`, served by the preview host.
+- STEP is parsed on the server only. The viewer reads the kernel's per-face GLB, one glTF primitive per B-rep face, plus an edge layer.
+- Measurements in the viewer are mesh based and labelled so. A value the agent records or a gate cites is exact, from a kernel call.
+- It meets WCAG 2.2 AA, with every control in benchhand's React UI.
+- Its `ViewerPick` and payload contracts are drafted in Phase 5. PMI in the viewer waits for the PMI trial (D-19).
+
+**Product documents and drawing sets** (D-26, D-34, D-38 to D-41).
+- Typst compiles them. The Typst PyPI wheel is the only distribution, for users, development, CI and the golden files, pinned in `uv.lock`. Users need no separate binary and no mise. A wheel upgrade regenerates the golden files.
+- The release profile is PDF/A-3a plus PDF/UA-1, with the input JSON attached. A drawing set holds its drawings as SVG sheets with a vendored Osifont, once the font file itself is checked. The release gates are that the set compiles and that veraPDF validates the golden files.
+- Text is set in Atkinson Hyperlegible, with Noto Sans Symbols 2 as the fallback, both vendored under the OFL. The build fails on a missing glyph. Diagram annotations are drawn as SVG before Typst runs.
+- A project may override the templates in `hw/templates/`, and the overrides are hashed into the recipe. That path may move with D-37.
+- Safety sections come from the hazards contract ([ADR-0022](adr/0022-hazards-risk-assessment.md)), with a signal-word panel and no ISO 7010 symbols by default. A release blocks on a safety UNKNOWN only where the service class is `safety_critical`.
+
+**Work by phase.**
+- **Phase 2:** the record additions, in TypeSpec:
+  - the bought-part fidelity levels `F3-envelope` and `F3-as-bought`, with the dimension source (D-5);
+  - the supplier calibration source, `source.kind: supplier` (D-25);
+  - the product identity fields: title, manufacturer or author, contact and licensor (D-36);
+  - an optional `manifest_sha256` beside the approval scope of a decision (D-31);
+  - the provider manifest's `environment.freecad` addon pins and Python lock (D-45).
+- **Phase 4:**
+  - `solver-calculix` on gmsh and CalculiX directly;
+  - `cad-app/unfold` and the sheet-metal trial;
+  - the `part-source` kind with its hooks and the standards-parts data;
+  - the SDK thread helper and its guard;
+  - the strict-check report;
+  - the product documents.
+- **Phase 5:** the three.js viewer and its contracts.
+- **After Phase 4:** the hazards contract (ADR-0022).

@@ -24,13 +24,12 @@ flowchart LR
     providerRuntime["benchhand-provider runtime and conformance kit<br/>stub on main, Phase 4"]:::planned
     kernels["kernel-cadquery, kernel-build123d<br/>kernel: build, export, inspect<br/>Phase 4"]:::planned
     sdk["benchhand-sdk, imported by model.py<br/>stub on main, Phase 4"]:::planned
-    freecadProvider["freecad<br/>cad-app: drawing, assembly, fem<br/>Phase 4"]:::planned
+    freecadProvider["freecad<br/>cad-app: drawing, assembly, fem, unfold<br/>Phase 4"]:::planned
     solver["solver-calculix<br/>solver: solve<br/>Phase 4"]:::planned
     collision["collision-fcl<br/>collision: check, sweep<br/>Phase 4"]:::planned
     renderer["render-chromium<br/>renderer: render, snapshot<br/>Phase 4"]:::planned
     checks["checks-process<br/>process-check: check, CEL dispatch<br/>Phase 4"]:::planned
     store["store-fs<br/>store: put, get, list<br/>Phase 4"]:::planned
-    viewer["viewer-ocp<br/>viewer: show, compare, capture<br/>open: no phase in Steps"]:::open
     policy["policy-default<br/>policy: evaluate<br/>open: no phase in Steps"]:::open
   end
 
@@ -50,7 +49,7 @@ flowchart LR
   core --> contractsPkg
   core -->|"record service"| hw
   core -.->|"provider host: JSON-RPC 2.0 over stdio, Content-Length framing"| providerRuntime
-  providerRuntime -.- kernels & freecadProvider & solver & collision & renderer & checks & store & viewer & policy
+  providerRuntime -.- kernels & freecadProvider & solver & collision & renderer & checks & store & policy
   kernels -.->|"runs model.py"| sdk
 
   style process fill:#fafafa,stroke:#9e9e9e,color:#1b1b1b
@@ -176,7 +175,8 @@ flowchart LR
 ## Legend
 
 - Styles as in the [legend](README.md#legend). Solid arrows exist on `main`, and dashed arrows are planned.
-- **Open: no phase in Steps.** The plan names the middleware chain, the provider host, `viewer-ocp`, `policy-default`, and the `recheck` and `work` modules, but no phase of its Steps delivers them. The plan's [Open questions](../design-plan.md#open-questions) don't list them.
+- **Open: no phase in Steps.** The plan names the middleware chain, the provider host, `policy-default`, and the `recheck` and `work` modules, but no phase of its Steps delivers them. The plan's [Open questions](../design-plan.md#open-questions) don't list them.
+- **No viewer provider.** The viewer is a page of the preview host and the `ui/` workspace. It reads the kernel's per-face GLB plus an edge layer, and exact measurement is a kernel call ([CAD-libraries decision D-21](../design/cad-libraries-2026-11-27.md)).
 - **Open: OpenAPI and Zod.** ADR-0017 adds them with the first HTTP or Zod consumer, which no phase names yet.
 - **Open: the integration points.** Plan section 5 puts CEL on transitions only: guards on the edges, `requires` on the gates. No source says a guard runs on every tool call. The provider host verifies artifacts and moves them into `hw/`, but no source routes them through the typed record store, which reads and writes YAML, CSV and decision documents only. No source names a call between record versions and the evidence service.
 - The record counts come from the generated [domain model](../contract/generated/domain-model/README.md): the documents (blue) and the libraries (amber) of its overview.

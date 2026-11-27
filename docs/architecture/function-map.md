@@ -175,15 +175,14 @@ flowchart LR
     subgraph next["benchhand-next"]
         h0["flow/flow.yaml"]
         h1["flow/guides/"]
-        h2["providers/viewer-ocp/"]
+        h2["benchhand/preview/"]
         h3["ui/concept/"]
-        h4["benchhand/preview/"]
     end
     p0 -->|"P2"| h0
     p0 -->|"P2"| h1
     p1 -->|"P5"| h2
     p1 -->|"P5"| h3
-    p2 -->|"P5"| h4
+    p2 -->|"P5"| h2
     p3 -->|"P5"| h3
     p4 -->|"P2"| h0
     p4 -->|"P2"| h1
@@ -196,7 +195,6 @@ flowchart LR
     class h1 home
     class h2 home
     class h3 home
-    class h4 home
     classDef ported fill:#d8f3dc,stroke:#2d6a4f
     classDef partial fill:#f1faf3,stroke:#2d6a4f,stroke-width:2px,stroke-dasharray: 6 3
     classDef inprogress fill:#fff3bf,stroke:#b08900
@@ -1081,7 +1079,7 @@ flowchart LR
     subgraph next["benchhand-next"]
         h0["flow/flow.yaml"]
         h1["flow/guides/"]
-        h2["providers/viewer-ocp/"]
+        h2["benchhand/preview/"]
         h3["ui/viewer/"]
         h4["providers/render-chromium/"]
     end
