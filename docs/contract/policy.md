@@ -36,4 +36,4 @@ When the flow loads, the interpreter refuses a requirement for a gate that `flow
 
 `tests/test_policy_contract.py` runs this merge on the prototype's lists, with a test for each kind and each reserved value.
 
-**Open for the owner:** composing policy providers' rule lists is open for the owner ([ADR-0020](../adr/0020-cel-rule-pipeline.md), "Open items"). Each list compiles to its own CheckedExpr and ends with an unconditional choice, so an evaluation order alone doesn't stop an earlier list's default from masking every later list. The merge order, the three no-match values and the rigor union above are this branch's proposal. Until the owner decides, the composition is undecided, and Phase 2 builds the merge only after that.
+**Decided:** the owner confirmed this composition on 2026-11-27, at the Phase 0 and 1 gate ([ADR-0020](../adr/0020-cel-rule-pipeline.md), "Open items"). Each list compiles to its own CheckedExpr and ends with an unconditional choice, so an evaluation order alone doesn't stop an earlier list's default from masking every later list. The merge order, the three no-match values and the rigor union above avoid that. Phase 2 builds the merge.

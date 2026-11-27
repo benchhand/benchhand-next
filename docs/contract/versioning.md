@@ -105,7 +105,7 @@ Before the first release nothing is published, so a narrowing keeps its version.
 
 `common/cel.schema.json` (version `0.1.0`) is provisional. It is the one CEL expression type (ADR-0014). Every CEL field refers to it by `$ref`, which is how the flow interpreter finds the expressions, and the generator refuses a string or a list of strings whose description says CEL. The type has no `format`: `jsonschema lint` refuses a format outside the specification, prefixed or not.
 
-`policy/contribution.schema.json` (version `0.1.0`) is provisional. It is what a policy provider adds to the flow ([policy](policy.md#provider-contributions)). Phase 2 builds the merge in the flow interpreter once the owner decides it (ADR-0020, "Open items"), and the provider protocol's `policy/evaluate` result doesn't refer to it yet.
+`policy/contribution.schema.json` (version `0.1.0`) is provisional. It is what a policy provider adds to the flow ([policy](policy.md#provider-contributions)). Phase 2 builds the merge in the flow interpreter, in the composition the owner decided on 2026-11-27 (ADR-0020, "Open items"), and the provider protocol's `policy/evaluate` result doesn't refer to it yet.
 
 ## The acceptance digest
 

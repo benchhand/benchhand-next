@@ -11,8 +11,8 @@ bool, and a condition or output that doesn't, an evaluation error included, fail
 is declared dyn, so a test that uses it proves the values a list gives, not that its expressions type-check.
 Phase 2 replaces the dyn variables with the environment generated from the contracts.
 
-`merged` runs the proposed merge of a kind's contributed lists with the flow's own (docs/contract/policy.md),
-which is open for the owner. A merged fidelity outside F0 to F3, or a dispatch handler id that doesn't exist,
+`merged` runs the merge of a kind's contributed lists with the flow's own (docs/contract/policy.md), which the
+owner decided on 2026-11-27. A merged fidelity outside F0 to F3, or a dispatch handler id that doesn't exist,
 is out of the kind's domain: it gives OutOfDomain, which Phase 2's evaluator records as UNKNOWN with a finding.
 """
 

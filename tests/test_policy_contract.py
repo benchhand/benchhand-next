@@ -68,7 +68,7 @@ def test_a_contribution_adds_rule_lists_and_gate_requirements() -> None:
     assert violations(CONTRIBUTION_ID, contribution) == []
 
 
-# The proposed merge of a kind's lists (docs/contract/policy.md, open for the owner), run on the prototype's own
+# The merge of a kind's lists (docs/contract/policy.md, decided by the owner on 2026-11-27), run on the prototype's own
 # lists as the flow's and on lists written for these tests as the contributions. Every contributed condition reads
 # the activation, as the policy compiler refuses a literal false and a literally true choice before the last one.
 def _flow_list(kind: str) -> dict[str, Any]:

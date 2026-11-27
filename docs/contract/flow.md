@@ -76,4 +76,4 @@ The decision contract doesn't refer to `ApprovalScope` yet. Phase 2 adds the ref
 
 The fixture holds the prototype's rules only. benchhand's `policy.mode == "auto"`, ADR-0019's `reapproval_scope` and the veto on an item that is `changed_since_approval` came after the prototype, so the schema's example shows them instead.
 
-`tests/test_flow_contract.py` validates each file, and `tests/test_policy_contract.py` runs the proposed merge on the fixture's lists. The fixture tests the schemas. Phase 2 writes the real flow.
+`tests/test_flow_contract.py` validates each file, and `tests/test_policy_contract.py` runs the merge on the fixture's lists. The fixture tests the schemas. Phase 2 writes the real flow.
