@@ -19,8 +19,6 @@ SCOPE_FACTS = ("material_family", "filler", "shore", "nozzle_material")
 MICROMETRE_TOLERANCE = 1e-6  # guidelines.py:90
 # file-name prefix of a shipped set a version build copies into its record/ (guidelines.py:74)
 SHIPPED_COPY = "shipped--"
-# capability profile id -> material profile name -> id@revision -> sha256
-GuidelineDigests = Mapping[str, Mapping[str, Mapping[str, str]]]
 
 
 @dataclass(frozen=True)

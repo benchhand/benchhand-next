@@ -36,7 +36,6 @@ TODAY = date(2026, 6, 1)
 READBACK = "cad.readback@LMP-0001"
 ROUTE = "route.consistency@LMP-0001"
 TRIAL = "process.fdm.trial@LMP-0001/print"
-EXPORT_3MF = "export.3mf@LMP-0001"
 JOINT = "assembly.joint@op:heat_set_base_bushing"
 APPROVED = "DR-005"
 EVIDENCE = Path("hw/manufacturing/evidence.yaml")

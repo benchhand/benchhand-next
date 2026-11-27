@@ -17,9 +17,6 @@ LEVELS = (
     "physically_validated",
 )
 PHYSICAL = "physically_validated"
-# The statuses of an obligation (evidence.py:121). Resolved: pass, waived (never a pass) and not_applicable.
-RESULTS = ("pass", "fail", "waived", "not_applicable", "not_assessed", "stale", "planned", "unknown")
-RESOLVED = frozenset({"pass", "waived", "not_applicable"})
 _WORST_FIRST = ("fail", "stale", "unknown", "planned", "not_assessed", "waived", "pass", "not_applicable")
 NOT_REQUIRED = "not_required"
 

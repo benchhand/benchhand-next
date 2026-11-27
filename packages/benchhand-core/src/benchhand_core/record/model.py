@@ -24,8 +24,6 @@ from benchhand_contracts.models.record import (
     verification_row_schema,
 )
 
-JsonObject = dict[str, Any]
-
 Product = product_schema.BenchhandProductRecordHwProductYaml
 Requirements = requirements_schema.BenchhandRequirementsRecordHwRequirementsYaml
 Interfaces = interfaces_schema.BenchhandInterfacesRecordHwInterfacesYaml

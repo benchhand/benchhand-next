@@ -18,6 +18,10 @@ dev = [
   "pyyaml>=6.0",
   "datamodel-code-generator==0.101.0",
   "cel-expr-python==0.1.4",
+  "pyright==1.1.414",
+  "vulture==2.16",
+  "pytest-cov==7.1.0",
+  "pytest-xdist==3.8.0",
 ]
 
 [tool.ruff]
@@ -46,5 +50,50 @@ addopts = "-q -m 'not wheel'"
 markers = ["wheel: builds and installs a wheel in a fresh venv; run on its own with `pytest -m wheel`"]
 
 [tool.pyright]
+include = ["packages", "tests", "tools"]
+exclude = [
+  "**/node_modules",
+  "**/.venv",
+  # A PEP 723 script with its own pinned dependencies (mcp), run by hand; the workspace environment lacks them.
+  "tools/probe",
+  "packages/benchhand-contracts/src/benchhand_contracts/models",
+]
 # tools/gen and tools/equiv are imported by their tests through pytest's pythonpath, not installed.
 extraPaths = ["tools/gen", "tools/equiv", "tools/map"]
+
+[tool.vulture]
+paths = ["packages", "tools"]
+# 60 is vulture's lowest: it reports every function, class, variable and attribute that nothing names. What
+# the framework or the language calls for you is listed below, each with its reason; anything else is dead.
+min_confidence = 60
+exclude = [
+  "*/node_modules/*",
+  "*/benchhand_contracts/models/*",
+  # A PEP 723 script: its tools are registered by decorator and it is run by hand.
+  "*/tools/probe/*",
+]
+ignore_decorators = [
+  "@pytest.fixture", # called by pytest
+  "@record.command", # a typer command (packages/benchhand/src/benchhand/cli.py)
+]
+ignore_names = [
+  "model_config", # read by pydantic
+  "exc_type",     # the arguments of __exit__
+  "exc",
+  "tb",
+  "missing_ok",   # a test's stand-in for Path.unlink keeps its signature
+  "form_class",   # a pydantic field a test assigns
+  "inferred",     # a field of docs/architecture/reference-map.yaml entries, which tools/map reads by name
+]
+
+[tool.coverage.run]
+source = ["packages", "tools"]
+omit = [
+  "*/tests/*",
+  "packages/benchhand-contracts/src/benchhand_contracts/models/*",
+  "tools/probe/*",
+  "tools/equiv/*",
+]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

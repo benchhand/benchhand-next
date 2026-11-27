@@ -16,7 +16,7 @@ import copy
 import json
 import sys
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -34,7 +34,6 @@ MUTANTS_PER_CASE = 4000
 UNRESOLVABLE = "unresolvable"
 Verdict = tuple[tuple[str, str, str], ...] | str
 """The violations of an instance in order, ``()`` when it is valid, or ``UNRESOLVABLE``."""
-Judge = Callable[[str, Any], Verdict]
 
 
 def _registry(directory: Path) -> Registry:

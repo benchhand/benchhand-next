@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from benchhand_contracts.validation import ContractValidator
+from jsonschema.protocols import Validator
 from referencing import Registry, Resource
 
 from .sources import GENERATED_NOTICE, Contract
@@ -84,11 +85,11 @@ def _is_fixture_target(pointer: str) -> bool:
     return pointer == "" or (len(parts) == 3 and parts[1] == "$defs")
 
 
-def _validator(schema_id: str, registry: Registry) -> ContractValidator:
+def _validator(schema_id: str, registry: Registry) -> Validator:
     return ContractValidator({"$ref": schema_id}, registry=registry)
 
 
-def _check_examples(schema_id: str, examples: list[Any], validator: ContractValidator) -> None:
+def _check_examples(schema_id: str, examples: list[Any], validator: Validator) -> None:
     for index, example in enumerate(examples):
         if not validator.is_valid(example):
             raise ExampleError(f"{schema_id}: examples[{index}] doesn't validate")
@@ -117,7 +118,7 @@ def _case(schema_id: str, examples: list[Any], registry: Registry, constrained: 
     return {"schema_id": schema_id, "valid": examples, "invalid": invalid}
 
 
-def _invalid_variants(example: Any, validator: ContractValidator) -> Iterator[dict[str, Any]]:
+def _invalid_variants(example: Any, validator: Validator) -> Iterator[dict[str, Any]]:
     """At most one fixture per mutation kind: the first candidate the schema rejects."""
     for name, mutation in MUTATIONS:
         for pointer, instance in mutation(example):
