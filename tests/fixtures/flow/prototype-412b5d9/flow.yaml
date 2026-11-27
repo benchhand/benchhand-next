@@ -97,6 +97,10 @@ gates:
   # full check, then the human gate. The approval, answer, cites the
   # provisional decision and, when the sweep left unproved between-sample
   # intervals, the decision that accepts them ("Gate control", 3).
+  # answer.cites is a test stand-in. GateDecisionRequest carries the
+  # provisional decision, and the engine supplies the decision that accepts
+  # the intervals from the record: the request has no field for it
+  # (docs/contract/flow.md, "Gate decisions").
   - id: layout_freeze
     stage: layout
     kind: provisional+full+human

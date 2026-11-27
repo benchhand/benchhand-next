@@ -56,6 +56,7 @@ The flow's list is evaluated last, and its result is final, so a flow's `[]` or 
 - `channel` uses the decision record's channel values. A request refuses `form`, because v1 doesn't use form elicitation (ADR-0018). The record contract still accepts `form`.
 - Every channel except `auto` names who decided (`by`) and quotes their words (`quote`). Both have at least one character that isn't whitespace, `NonblankText`, because an empty answer is no answer (plan section 11) and a blank name is nobody. Whitespace there is every Unicode `White_Space` character, which includes every `Zs` character and U+0085 NEXT LINE. It also covers U+FEFF, from the ECMAScript whitespace class, and U+001C to U+001F, from Python's `str.isspace`. The pattern lists them as code points, because the regex engines read `\s` differently. An `auto` decision quotes nobody.
 - `provisional` cites the provisional decision of a `provisional+full+human` gate.
+- The request has no field for the decision that accepts unproved between-sample intervals that the full sweep left. The engine supplies that citation from the record: the decision on the same version that accepts them. The owner decided this on 2026-11-27, at the Phase 0 and 1 gate.
 
 ## Approval scope
 
@@ -71,7 +72,7 @@ The decision contract doesn't refer to `ApprovalScope` yet. Phase 2 adds the ref
 
 `tests/fixtures/flow/prototype-412b5d9/` writes the prototype's flow at the reference commit in these shapes:
 
-- `flow.yaml`: every stage and its guides, the four single human gates, the three-step gates at L1 to L4, and the VOID cascade scope. Every human gate needs the user's explicit approval. The full sweep runs at each of L1 to L4. Each of those human gates therefore also needs the sweep to leave no unproved between-sample intervals, or a decision on the same version that accepts them. The approval cites its provisional decision and, when intervals are left, the decision that accepts them.
+- `flow.yaml`: every stage and its guides, the four single human gates, the three-step gates at L1 to L4, and the VOID cascade scope. Every human gate needs the user's explicit approval. The full sweep runs at each of L1 to L4. Each of those human gates therefore also needs the sweep to leave no unproved between-sample intervals, or a decision on the same version that accepts them. The approval cites its provisional decision and, when intervals are left, the decision that accepts them. The fixture's `answer.cites` stands in for both citations in the tests: the request's `provisional` field, and the citation that the engine supplies from the record.
 - one `*.celpolicy` file per rule list, with the checks-by-iteration table among them
 
 The fixture holds the prototype's rules only. benchhand's `policy.mode == "auto"`, ADR-0019's `reapproval_scope` and the veto on an item that is `changed_since_approval` came after the prototype, so the schema's example shows them instead.
