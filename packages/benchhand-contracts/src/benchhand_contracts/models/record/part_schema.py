@@ -274,7 +274,7 @@ class Designation1(ContractModel):
     standard: Annotated[
         str,
         Field(
-            pattern="^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n\\r\\u2028\\u2029]*$"
+            pattern="^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r\\u001c-\\u001f \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\t\\n\\v\\f\\r\\u001c-\\u001f \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\n]*\\n?$"
         ),
     ]
     size: Annotated[str, Field(min_length=1)]
@@ -662,7 +662,7 @@ class Purchase2(ContractModel):
 
 class Operation(ContractModel):
     """
-    One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity, specification and ratings
+    One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity or designation, specification and ratings
     """
 
     model_config = ConfigDict(

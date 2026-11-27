@@ -518,7 +518,7 @@ No other properties are allowed.
 
 ### `operation`
 
-One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity, specification and ratings
+One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity or designation, specification and ratings
 
 Type: object
 

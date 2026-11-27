@@ -287,7 +287,7 @@ model critical_surface {
   dimension_state: Common.dimension_state;
 }
 
-/** One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity, specification and ratings */
+/** One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity or designation, specification and ratings */
 @extension("if", #{ properties: #{ kind: #{ `const`: "purchased" } } })
 @extension(
   "then",
@@ -406,7 +406,9 @@ union designation {
 model PartDesignation0 {
   kind: "standard_designation";
 
-  @pattern("^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n\\r\\u2028\\u2029]*$")
+  // The prototype's Python regex `\s\S.*$`, spelled out so ECMAScript and Python read it alike: Python's
+  // whitespace set (it has \x1c-\x1f and \x85 but not \ufeff) and one optional trailing newline.
+  @pattern("^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r\\u001c-\\u001f \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\t\\n\\v\\f\\r\\u001c-\\u001f \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\n]*\\n?$")
   standard: string;
 
   @minLength(1)

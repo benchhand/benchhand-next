@@ -162,7 +162,7 @@ In diagram 1.
 
 In diagram 2.
 
-One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity, specification and ratings
+One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity or designation, specification and ratings
 
 | Field | Type | Required | Description |
 |---|---|---|---|
