@@ -1,0 +1,41 @@
+---
+// The "Planned" aside, built from docs/design-plan.md's phase list (scripts/planned-pages.mjs
+// writes plan-phases.json before the build). MarkdownContent shows it for a page's `phase`; a page
+// that is only partly planned places it before the planned section, with the phases that write it.
+import { Aside } from "@astrojs/starlight/components";
+
+import plan from "../generated/plan-phases.json";
+
+interface Props {
+  phases: number[];
+}
+
+const { phases } = Astro.props;
+const titles: Record<string, string> = plan.phases;
+for (const phase of phases) {
+  if (titles[String(phase)] === undefined) throw new Error(`phase ${phase} is not a phase of docs/design-plan.md`);
+}
+const single = phases.length === 1;
+---
+
+<Aside type="note" title={single ? `Planned: written in Phase ${phases[0]}` : `Planned: written in Phases ${phases.join(", ")}`}>
+  {
+    single ? (
+      <>
+        This page is an outline. It is written with <a href={plan.stepsUrl}>Phase {phases[0]} of the design plan</a>:{" "}
+        {titles[String(phases[0])]}.
+      </>
+    ) : (
+      <>
+        What follows is not built yet. The <a href={plan.stepsUrl}>design plan</a> writes it in these phases:{" "}
+        {phases.map((phase, i) => (
+          <>
+            {i > 0 && (i === phases.length - 1 ? " and " : ", ")}
+            Phase {phase} ({titles[String(phase)]})
+          </>
+        ))}
+        .
+      </>
+    )
+  }
+</Aside>
