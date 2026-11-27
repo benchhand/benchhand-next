@@ -232,7 +232,7 @@ flowchart LR
         h2["providers/kernel-cadquery/"]
         h3["providers/kernel-build123d/"]
         h4["providers/checks-process/"]
-        h5["flow/dispatch.rules.yaml"]
+        h5["flow/dispatch.celpolicy"]
         h6["providers/render-chromium/"]
         h7["ui/"]
     end
@@ -824,7 +824,7 @@ flowchart LR
         h11["benchhand-core/record/evidence/"]
         h12["benchhand-core/record/evidence/paths.py"]
         h13["benchhand-core/record/evidence/path_judge.py"]
-        h14["flow/checks-by-iteration.rules.yaml"]
+        h14["flow/checks-by-iteration.celpolicy"]
         h15["benchhand-core/flow/profile.py"]
         h16["benchhand-core/record/evidence/guidelines.py"]
         h17["benchhand-core/record/evidence/guideline_files.py"]

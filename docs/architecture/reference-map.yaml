@@ -175,7 +175,7 @@ entries:
     status: planned
   - path: skills/cad-design/scripts/process_checks/dispatch.py
     home:
-      - flow/dispatch.rules.yaml
+      - flow/dispatch.celpolicy
       - providers/checks-process/
     phase: 2
     status: planned
@@ -783,7 +783,7 @@ entries:
     status: ported
     basis: inferred
   - path: skills/cad-record/scripts/fail_fast.py
-    home: flow/checks-by-iteration.rules.yaml
+    home: flow/checks-by-iteration.celpolicy
     phase: 2
     status: planned
     basis: inferred
