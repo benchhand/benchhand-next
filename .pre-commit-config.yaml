@@ -1,0 +1,93 @@
+# Git hooks, run by prek (pinned in mise.toml). `just hooks-install` installs them; CI runs every one on every
+# file (`just hooks`). Each hook that checks the project calls the `just` recipe CI calls, so the two can't
+# diverge; the generic ones below are prek's built-in versions of pre-commit-hooks.
+#
+# Pre-commit stays fast (no tests, no type check, no contract regeneration). Pre-push runs pyright and the
+# unit and API tests. What the hooks leave to CI: the full test suite, the wheel tests, the function map,
+# contract drift (`just contracts-drift`), the history secret scan and the vulnerability audit.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: builtin
+    hooks:
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+        # A generated validator is up to 900 KiB, and grows with its schema.
+        exclude: ^(reference/|research/|ui/shared/contracts/|packages/benchhand-contracts/src/benchhand_contracts/(schemas|models|examples)/|docs/contract/generated/)
+      - id: check-yaml
+        exclude: ^reference/
+      - id: check-toml
+        exclude: ^(reference/|research/)
+      - id: check-json
+        exclude: ^(reference/|research/|tools/probe/runs/)
+      # The fixers rewrite a file and fail once. Files written by a tool, or kept verbatim, are left out: a
+      # fixed copy would differ from a fresh run and fail `just contracts-drift`, or stop matching its source.
+      - id: trailing-whitespace
+        exclude: &verbatim ^(reference/|research/|ui/shared/contracts/|packages/benchhand-contracts/src/benchhand_contracts/(schemas|models|examples)/|docs/contract/generated/|tools/probe/runs/|tools/equiv/results/|\.pi/|packages/benchhand-core/tests/record/evidence/lamp_arm_[a-z_]*\.412b5d9\.json$|uv\.lock$|mise\.lock$|pnpm-lock\.yaml$)
+      - id: end-of-file-fixer
+        exclude: *verbatim
+
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff check and format
+        entry: just lint
+        language: system
+        pass_filenames: false
+        files: ^(.*\.py|pyproject\.toml)$
+      - id: typos
+        name: typos
+        entry: just spell
+        language: system
+        pass_filenames: false
+      - id: gitleaks
+        name: gitleaks (staged changes)
+        entry: just secrets
+        language: system
+        pass_filenames: false
+        # Without this a commit that stages nothing a hook matches would skip the scan.
+        always_run: true
+      - id: taplo
+        name: taplo
+        entry: just lint-toml
+        language: system
+        pass_filenames: false
+        files: \.toml$
+      - id: workflows
+        name: actionlint, zizmor and pinact (offline)
+        entry: just lint-workflows
+        language: system
+        pass_filenames: false
+        files: ^\.github/
+      # The contract errors that need no regeneration. A missing toolchain fails with the install command;
+      # drift stays in CI and in `just contracts-drift`.
+      - id: contracts
+        name: contracts (format, compile with warnings as errors, schema meta-validation and lint)
+        entry: just contracts-validate
+        language: system
+        pass_filenames: false
+        files: ^(contracts/|tools/gen/|packages/benchhand-contracts/src/benchhand_contracts/(schemas|models|examples)/|ui/shared/contracts/|docs/contract/generated/)
+      - id: pyright
+        name: pyright
+        entry: just typecheck-python
+        language: system
+        pass_filenames: false
+        files: ^(.*\.py|pyproject\.toml|uv\.lock)$
+        stages: [pre-push]
+      - id: dead-code
+        name: vulture
+        entry: just dead-code
+        language: system
+        pass_filenames: false
+        files: ^(.*\.py|pyproject\.toml)$
+        stages: [pre-push]
+      - id: tests
+        name: unit and API tests
+        entry: just test-fast
+        language: system
+        pass_filenames: false
+        files: ^(packages/|pyproject\.toml|uv\.lock)
+        stages: [pre-push]
