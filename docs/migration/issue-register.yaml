@@ -5422,6 +5422,11 @@ bead_dispositions:
     area: cad-drawings
     disposition: not-applicable
     reason: A load flake in a prototype process-group test.
+  - bead_id: benchhand-aa73
+    area: cad-concept
+    disposition: not-applicable
+    reason: A load flake in a prototype browser-test fixture that waits
+      on time, not on a ready signal.
   - bead_id: benchhand-39v
     area: cad-fits
     disposition: port-fix
@@ -6002,6 +6007,7 @@ ledger_snapshot:
     benchhand-9mw: closed
     benchhand-9rqu: open
     benchhand-a0m: closed
+    benchhand-aa73: open
     benchhand-ah3x: open
     benchhand-amg: open
     benchhand-amg.1: open

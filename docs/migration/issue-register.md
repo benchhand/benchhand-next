@@ -59,15 +59,15 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 
 ## Bead coverage
 
-444 beads from the prototype's ledger, each referenced once: 288 in an issue's `beads`, and 156 in `bead_dispositions`.
+445 beads from the prototype's ledger, each referenced once: 288 in an issue's `beads`, and 157 in `bead_dispositions`.
 
 | Bead disposition | Count |
 |---|---|
 | port-fix | 79 |
 | design-input | 3 |
 | already-covered | 13 |
-| not-applicable | 61 |
-| total | 156 |
+| not-applicable | 62 |
+| total | 157 |
 
 ## Design rules
 
