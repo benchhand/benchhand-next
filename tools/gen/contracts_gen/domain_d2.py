@@ -40,7 +40,7 @@ MAX_TYPE_CHARS = 60
 OVERVIEW_GROUP = "record"
 """The contract directory whose documents and libraries the overview shows."""
 
-_VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)\b")
+_VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+\S*)$")
 
 CLASSES_D2 = """\
 # The colours of every diagram, set once. A sql_table takes its header from `fill` and its body from `stroke`.
@@ -72,7 +72,7 @@ class D2VersionError(RuntimeError):
 
 
 def parse_d2_version(output: str) -> str:
-    """The version in the output of ``d2 --version``, e.g. ``0.9.0`` for ``v0.9.0``."""
+    """The whole version in the output of ``d2 --version``: ``0.9.0`` for ``v0.9.0``, ``0.9.0-rc.1`` for a prerelease."""
     found = _VERSION_PATTERN.match(output.strip())
     if not found:
         raise D2VersionError(f"can't read a D2 version from {output!r}")

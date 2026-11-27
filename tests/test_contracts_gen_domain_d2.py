@@ -282,7 +282,9 @@ def test_the_pinned_version_passes() -> None:
     check_d2_version(f"v{D2_VERSION}\n")
 
 
-@pytest.mark.parametrize("output", ["v0.9.1\n", "v0.8.9", "v1.0.0", "v0.10.0"])
+@pytest.mark.parametrize(
+    "output", ["v0.9.1\n", "v0.8.9", "v1.0.0", "v0.10.0", "v0.9.0-rc.1", "0.9.0-beta", "v0.9.0+dev"]
+)
 def test_another_d2_version_is_refused(output: str) -> None:
     with pytest.raises(D2VersionError, match=re.escape(D2_VERSION)):
         check_d2_version(output)
