@@ -170,6 +170,11 @@ def test_an_agentcad_product_test_report_section_is_a_source(tmp_path: Path) -> 
     assert load_register(_repo(tmp_path, register)).issues[1]["sources"] == [source.strip("'")]
 
 
+def test_a_cad_libraries_decision_is_a_source(tmp_path: Path) -> None:
+    register = REGISTER.replace("sources: [findings 1.2]", "sources: [cad-libraries decision D-17]", 1)
+    assert load_register(_repo(tmp_path, register)).issues[1]["sources"] == ["cad-libraries decision D-17"]
+
+
 @pytest.fixture(autouse=True)
 def _no_local_private_patterns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(PRIVATE_PATTERNS_ENV, raising=False)

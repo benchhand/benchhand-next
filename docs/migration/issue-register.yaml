@@ -16,6 +16,7 @@
 #   design <name> <section or question>, handover-2026-11-20 §x,
 #   decisions-while-away <entry>, pkgB <bead>-decision,
 #   agentcad product test 2026-11-27, REPORT §<section> [item N],
+#   cad-libraries decision D-N (docs/design/cad-libraries-2026-11-27.md),
 #   plus bead ids and prototype PR numbers.
 #
 # disposition:
@@ -463,6 +464,90 @@ design_rules:
       the threshold and the fit limits on 2026-11-27 (design note
       Q3).
     pointer: docs/design/edit-loop-performance.md §Interference rule
+  - id: RULE-40
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-5). A bought
+      part described only by an envelope clears the F3 fidelity level
+      as F3-envelope: the record states its dimension source (datasheet,
+      measurement or customer), and the gate shows a warning. Nothing
+      blocks. A supplier STEP, or a generated STEP that the maker verified,
+      gives F3-as-bought. At release, the BOM and the release notes
+      list every part that is envelope only. A standard ISO or DIN part
+      takes its geometry in the library order of RULE-36.'
+    sources:
+      - cad-libraries decision D-5
+      - 'test-project tool-issues #25'
+    benchhand_next: Not built yet. The levels and the dimension source
+      are Phase 2 record additions (catalogue purchased-part-fidelity),
+      and the fidelity rule list and the release refusals read them
+      (IR-031).
+    pointer: docs/design/cad-libraries-2026-11-27.md §Decisions
+  - id: RULE-41
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-6). A supplier
+      STEP''s sha256 is always recorded. Its bytes are committed only
+      where the supplier''s terms allow it. A run fails only when a
+      STEP frozen as required evidence is missing or changed, never
+      for an optional one.'
+    sources:
+      - cad-libraries decision D-6
+    benchhand_next: Not built yet; the supplier STEP import (Phase 4)
+      implements it.
+    pointer: docs/design/cad-libraries-2026-11-27.md §Decisions
+  - id: RULE-42
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-7). On a supplier
+      site whose terms are unread or restrictive, the user approves
+      each download and the agent downloads the file on the user''s
+      behalf. benchhand never asks a supplier for permission; that
+      is the user''s call.'
+    sources:
+      - cad-libraries decision D-7
+    benchhand_next: Not built yet; the supplier STEP import and the
+      part-source providers (Phase 4) ask for the approval.
+    pointer: docs/design/cad-libraries-2026-11-27.md §Decisions
+  - id: RULE-43
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-16). The thread
+      wrapper''s guard is always on: the result is one valid solid, and
+      its net volume gain or removal is within tolerance of the expected
+      value. A bare minimum-gain check is not enough. Other callers
+      get the same checks as an opt-in guard on safe_cut and safe_fuse,
+      whose generic contract stays as it is.'
+    sources:
+      - cad-libraries decision D-16
+    benchhand_next: Not built yet; the SDK thread helper and the safe
+      Booleans (Phase 4) implement it (IR-024).
+    pointer: docs/design/cad-libraries-2026-11-27.md §Decisions
+  - id: RULE-44
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-17). GPL and
+      AGPL tools (slicers, gmsh, CalculiX, the FCGear addon) run only
+      as separate processes or containers, never imported. benchhand
+      downloads the pinned upstream file and checks its sha256, and
+      never rehosts it. The owner signs off before a Dockerfile that
+      fetches AGPL code ships.'
+    sources:
+      - cad-libraries decision D-17
+    benchhand_next: Plan section 6 states it. The solver, slicer and
+      part-source providers (Phase 4) follow it.
+    pointer: docs/design-plan.md §CAD-libraries decisions (2026-11-27)
+  - id: RULE-45
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-25). A supplier''s
+      published specification counts as calibration, with the source
+      kind supplier. It can turn UNKNOWN into pass or fail, and the
+      record shows that the figure is supplier data.'
+    sources:
+      - cad-libraries decision D-25
+    benchhand_next: Not built yet; a Phase 2 record addition (catalogue
+      supplier-calibration), read by the process checks.
+    pointer: docs/design/cad-libraries-2026-11-27.md §Decisions
+  - id: RULE-46
+    rule: 'Owner decision of 2026-11-27 (CAD-libraries D-32). A design
+      adopted from another project is rewritten by default. A file
+      is ported only when the owner approves that file, and then it
+      keeps its licence notice, for example agentcad''s Apache-2.0 notice
+      on solid_compare.py or edit_risk.py.'
+    sources:
+      - cad-libraries decision D-32
+    benchhand_next: The plan's rewrite rule (section 4) already holds
+      it; model.diff and model.inspect (Phase 4) follow it.
+    pointer: docs/design-plan.md §4
 
 issues:
   - id: IR-001
@@ -1142,10 +1227,14 @@ issues:
       - skills/cad-drawings/scripts/drawing_intent.py
     disposition: design-input
     benchhand_next:
-      action: The SDK offers a printed-thread helper that gives
-        a valid solid for Boolean use (or a cosmetic thread with
-        a note), and the drawing tools call out a thread by its
-        profile values.
+      action: The SDK offers a printed-thread helper, build123d only
+        (CAD-libraries D-9), that gives a valid solid for Boolean use
+        under an always-on guard (RULE-43), or a cosmetic thread with
+        a note. A modelled thread has an included angle of
+        at least 92 degrees from the process profile (D-3) and a calibrated
+        radial allowance (D-4). The drawing tools call out a thread by
+        its profile values, and a release with a non-ISO callout waits
+        for a wording check (D-24).
       phase: 4
     acceptance: SDK tests that build threads at the pitches printed
       threads use and pass a Boolean with their host, and a drawing
@@ -1316,13 +1405,17 @@ issues:
       - skills/cad-design/references/
     disposition: design-input
     benchhand_next:
-      action: A purchased-part fidelity check needs a supplier STEP
-        under the part's sources, a library object, or a declared
-        envelope with a reason reported as a gate note.
+      action: 'Owner decision, 2026-11-27 (CAD-libraries D-5, RULE-40):
+        a bought part with only an envelope clears F3 as F3-envelope,
+        with its dimension source recorded and a gate warning, and never
+        blocks. A supplier STEP under the part''s sources, or a generated
+        STEP the maker verified, gives F3-as-bought. The release lists
+        every envelope-only part.'
       phase: 4
     acceptance: A checks-process test where a bought part with only
-      an envelope and no reason fails the detail gate, and one with
-      a supplier STEP passes.
+      an envelope and its dimension source passes the detail gate
+      as F3-envelope with a warning, one with a supplier STEP passes
+      as F3-as-bought, and the release notes list the first.
   - id: IR-032
     title: No plan for geometry libraries and external tools that
       would raise model fidelity (thread and fastener libraries,
@@ -1340,10 +1433,14 @@ issues:
       - skills/cad-model/references/
     disposition: design-input
     benchhand_next:
-      action: 'Owner decision, 2026-11-27: the CAD-libraries study
-        is the plan for geometry libraries and external tools. Its
-        decisions are pending in the owner''s CAD study thread. The
-        kernel providers'' pinned environments and the SDK''s import
+      action: 'Owner decision, 2026-11-27: the CAD-libraries decisions
+        (docs/design/cad-libraries-2026-11-27.md) are the plan for geometry
+        libraries and external tools. build123d is the default kernel
+        for new parts (D-2) and the only thread path (D-9); bd_warehouse
+        0.4.0 is pinned with a row-audit test (D-10); FreeCAD addon generators
+        are a pinned trial through the part-source kind (D-8, D-20, D-45);
+        GPL and AGPL tools stay behind a process boundary (D-17, RULE-44).
+        The kernel providers'' pinned environments and the SDK''s import
         allow-list follow those decisions; each library enters with
         a pin and a test.'
       phase: 4
