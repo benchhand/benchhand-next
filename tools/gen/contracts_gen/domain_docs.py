@@ -112,7 +112,7 @@ def render_readme(model: DomainModel, plan: DiagramPlan, contracts: list[Contrac
 
 def _legend() -> list[str]:
     return [
-        "## Reading the diagrams",
+        "## Legend",
         "",
         "Each table is a type: a contract root, a named `$defs` object or union, or an object written "
         "inline. An inline object `b` of property `a` is named `a.b`. Each row is a field, and `req` marks "
