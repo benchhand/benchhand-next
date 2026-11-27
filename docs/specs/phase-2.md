@@ -39,8 +39,9 @@ flowchart TD
 
 ## Suggested order
 
-The blocks in dependency order. Among the blocks that are ready, the order of the specs in the README comes first, then each spec's own order. A block that waits on an open question or an unspecced capability keeps its place, and it starts once that is settled.
+The blocks in dependency waves. A block's wave follows the latest wave of the blocks it depends on, so the blocks of one wave can run side by side. Within a wave, the README's spec order comes first, then each spec's own order. A block that waits on an open question or an unspecced capability keeps its wave, and it starts once that is settled.
 
+The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/phase-0-1.md:117`). Its capabilities have no spec yet, so it isn't in these waves; `docs/phases/prototype-port-331-341.md` orders it.
 
 
 ## Open questions that hold blocks

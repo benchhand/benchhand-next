@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 import yaml
 from capability_specs.cli import REPO_ROOT, run
-from capability_specs.render import suggested_order
+from capability_specs.render import waves
 from capability_specs.specs import (
     CATALOGUE_FILE,
     INDEX_FILE,
@@ -508,10 +508,14 @@ def test_the_page_indexes_every_phase_2_capability_and_the_entries_no_spec_close
     assert "| [which-gate](../architecture/capabilities.md#which-gate) | yes | project-owner | EN-2 |" in page
 
 
-def test_the_suggested_order_puts_each_block_after_what_it_needs(repo: Repo) -> None:
-    repo.write()
+def test_the_suggested_order_puts_each_block_in_the_wave_after_what_it_needs(repo: Repo) -> None:
+    assert repo.check() == []
     specs = load_specs(repo.root, load_index(repo.root))
-    assert [block["id"] for block in suggested_order(specs)] == ["EN-1", "DR-1", "EN-2"]
+    assert [[block["id"] for block in wave] for wave in waves(specs)] == [["EN-1", "DR-1"], ["EN-2"]]
+    assert (
+        "### Wave 2\n\n- **EN-2** (S, engine): Gates. After EN-1, DR-1. Waits on `which-gate` (blocking)."
+        in (repo.root / PAGE_FILE).read_text(encoding="utf-8")
+    )
 
 
 @needs_mermaid

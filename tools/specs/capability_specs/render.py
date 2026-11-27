@@ -110,44 +110,49 @@ def _graph(specs: list[Spec]) -> str:
     return text + "```mermaid\n" + "\n".join(lines + edges) + "\n```"
 
 
-def suggested_order(specs: list[Spec]) -> list[dict[str, Any]]:
-    """The blocks in dependency order; among the blocks that are ready, the index's spec order, then the block's."""
-    rank = {
-        block["id"]: (position, number)
-        for position, spec in enumerate(specs)
-        for number, block in enumerate(spec.blocks)
-    }
+def waves(specs: list[Spec]) -> list[list[dict[str, Any]]]:
+    """The blocks in dependency waves: a block is in the wave after the latest of the blocks it depends on.
+    Within a wave, the index's spec order, then each spec's own order. The graph has no cycle (check_specs)."""
     blocks = {block["id"]: block for spec in specs for block in spec.blocks}
-    waiting = {key: set(block_dependencies(block)) for key, block in blocks.items()}
-    order: list[dict[str, Any]] = []
-    while waiting:
-        ready = sorted((key for key, needs in waiting.items() if not needs), key=rank.__getitem__)
-        if not ready:
-            break
-        order.append(blocks[ready[0]])
-        del waiting[ready[0]]
-        for needs in waiting.values():
-            needs.discard(ready[0])
-    return order
+    level: dict[str, int] = {}
+
+    def level_of(key: str) -> int:
+        if key not in level:
+            level[key] = 1 + max((level_of(need) for need in block_dependencies(blocks[key])), default=-1)
+        return level[key]
+
+    grouped: list[list[dict[str, Any]]] = []
+    for spec in specs:
+        for block in spec.blocks:
+            wave = level_of(block["id"])
+            grouped.extend([] for _ in range(wave + 1 - len(grouped)))
+            grouped[wave].append(block)
+    return grouped
 
 
 def _order(specs: list[Spec], sources: Sources) -> str:
     spec_of = {block["id"]: spec.id for spec in specs for block in spec.blocks}
     lines: list[str] = []
-    for number, block in enumerate(suggested_order(specs), start=1):
-        after = block_dependencies(block)
-        waits = [target for target in block["depends_on"] if target.startswith((QUESTION, CAPABILITY))]
-        line = f"{number}. **{block['id']}** ({block['size']}, {spec_of[block['id']]}): {block['title']}."
-        if after:
-            line += " After " + ", ".join(after) + "."
-        if waits:
-            line += " Waits on " + ", ".join(_wait(target, sources) for target in waits) + "."
-        lines.append(line)
+    for number, wave in enumerate(waves(specs), start=1):
+        lines += ["", f"### Wave {number}", ""]
+        for block in wave:
+            after = block_dependencies(block)
+            waits = [target for target in block["depends_on"] if target.startswith((QUESTION, CAPABILITY))]
+            line = f"- **{block['id']}** ({block['size']}, {spec_of[block['id']]}): {block['title']}."
+            if after:
+                line += " After " + ", ".join(after) + "."
+            if waits:
+                line += " Waits on " + ", ".join(_wait(target, sources) for target in waits) + "."
+            lines.append(line)
     return (
         "## Suggested order\n\n"
-        "The blocks in dependency order. Among the blocks that are ready, the order of the specs in the "
-        "README comes first, then each spec's own order. A block that waits on an open question or an "
-        "unspecced capability keeps its place, and it starts once that is settled.\n\n" + "\n".join(lines)
+        "The blocks in dependency waves. A block's wave follows the latest wave of the blocks it depends on, "
+        "so the blocks of one wave can run side by side. Within a wave, the README's spec order comes first, "
+        "then each spec's own order. A block that waits on an open question or an unspecced capability keeps "
+        "its wave, and it starts once that is settled.\n\n"
+        "The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/phase-0-1.md:117`). "
+        "Its capabilities have no spec yet, so it isn't in these waves; `docs/phases/prototype-port-331-341.md` "
+        "orders it.\n" + "\n".join(lines)
     )
 
 
