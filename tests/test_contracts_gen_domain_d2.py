@@ -29,6 +29,7 @@ from contracts_gen.domain_d2 import (
     render_env,
     render_overview,
     stubs_of,
+    svg_link,
 )
 from contracts_gen.sources import REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
 
@@ -238,7 +239,7 @@ def test_a_stub_of_a_class_in_another_diagram_of_the_same_contract_names_only_th
     source = render_diagram(model, plan, diagram)
     for stub in stubs:
         assert plan.home[stub] is not diagram
-        assert f'label: "{model.classes[stub].label}"\n  link: "{plan.home[stub].number:02d}-' in source
+        assert f'label: "{model.classes[stub].label}"\n  link: "./{plan.home[stub].number:02d}-' in source
 
 
 def test_the_overview_has_documents_and_libraries_and_counts_refs_without_fields() -> None:
@@ -251,7 +252,10 @@ def test_the_overview_has_documents_and_libraries_and_counts_refs_without_fields
     assert "sql_table" not in source
     assert re.search(r'-> "record/[^"]+": "\d+ refs"', source)
     for link in re.findall(r'link: "([^"]+)"', source):
-        assert link.removesuffix(".svg") in {d.path for ds in plan.diagrams.values() for d in ds}
+        assert link.startswith("./")
+        assert posixpath.normpath(link).removesuffix(".svg") in {
+            d.path for ds in plan.diagrams.values() for d in ds
+        }
 
 
 def test_the_colours_are_set_once_in_a_shared_class_file() -> None:
@@ -371,6 +375,13 @@ def test_a_type_too_long_for_one_table_line_is_cut_with_an_ellipsis() -> None:
     assert '"short": "string"' in source
 
 
+def test_a_link_starts_with_dot_slash_or_dot_dot_slash_for_d2_to_keep_it() -> None:
+    assert svg_link("record/a/01-a.svg", "record/a") == "./01-a.svg"
+    assert svg_link("record/a/01-a.svg", "record/b") == "../a/01-a.svg"
+    assert svg_link("record/a/01-a.svg", "") == "./record/a/01-a.svg"
+    assert svg_link("record/a/01-a.svg", "record/b/c") == "../../a/01-a.svg"
+
+
 def test_the_render_environment_drops_every_variable_that_changes_a_render() -> None:
     environ = {
         "PATH": "/bin",
@@ -383,3 +394,37 @@ def test_the_render_environment_drops_every_variable_that_changes_a_render() -> 
         "SCALE": "0.5",
     }
     assert render_env(environ) == {"PATH": "/bin", "HOME": "/home/x"}
+
+
+def _hrefs(svg: bytes) -> set[str]:
+    return {href.decode() for href in re.findall(rb'href="([^"]+)"', svg)}
+
+
+@needs_d2
+def test_rendered_svgs_keep_the_links_of_stubs_in_the_same_directory_and_of_the_overview(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("D2_THEME", "200")  # a developer's setting must not reach the render
+    wide = _flat_union(30)
+    model = _model(wide)
+    plan = plan_diagrams(model)
+    (tmp_path / "classes.d2").write_text(CLASSES_D2, encoding="utf-8")
+    overview = tmp_path / "overview.d2"
+    overview.write_text(render_overview(model, plan, ref_counts([wide])), encoding="utf-8")
+    sources = {overview: ""}
+    for diagram in plan.diagrams["record/wide"]:
+        source = tmp_path / f"{diagram.path}.d2"
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(render_diagram(model, plan, diagram), encoding="utf-8")
+        sources[source] = posixpath.dirname(diagram.path)
+    rendered = {}
+    for source in sources:
+        links = set(re.findall(r'^\s*link: "([^"]+)"$', source.read_text(encoding="utf-8"), re.MULTILINE))
+        svg = render_d2(source, source.with_suffix(".svg"))
+        assert _hrefs(svg) == links, source.name
+        rendered[source] = links
+    for source, links in rendered.items():
+        for href in links:
+            target = posixpath.normpath(posixpath.join(sources[source], href))
+            assert (tmp_path / target).with_suffix(".svg").exists(), f"{source.name}: {href}"
+    assert sum(len(links) for links in rendered.values()) > len(sources)

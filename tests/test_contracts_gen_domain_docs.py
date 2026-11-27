@@ -233,3 +233,23 @@ def test_the_committed_pages_and_sources_are_what_the_generator_writes(
     expected = set(files) - {STUB_FILE}
     expected |= {path.removesuffix(".d2") + ".svg" for path in diagram_sources(files)}
     assert committed == expected
+
+
+def test_every_rendered_svg_keeps_the_links_of_its_source_and_each_resolves(
+    published: tuple[list[Contract], DomainModel, dict[str, str]],
+) -> None:
+    """D2 drops a link it doesn't read as a URL, so the committed SVGs are read, not the sources alone."""
+    _, _, files = published
+    root = REPO_ROOT / DOCS_OUT
+    linked = 0
+    for source in diagram_sources(files):
+        links = set(re.findall(r'^\s*link: "([^"]+)"$', files[source], re.MULTILINE))
+        svg = (root / source).with_suffix(".svg").read_text(encoding="utf-8")
+        hrefs = set(re.findall(r'href="([^"]+)"', svg))
+        assert hrefs == links, source
+        for href in hrefs:
+            target = posixpath.normpath(posixpath.join(posixpath.dirname(source), href))
+            assert (root / target).is_file(), f"{source}: {href}"
+        linked += len(hrefs)
+    assert linked > 50
+    assert 'href="./' in (root / MODEL_DIR / "overview.svg").read_text(encoding="utf-8")

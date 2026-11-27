@@ -326,7 +326,7 @@ def _table(node: ClassNode, stem_root: str, indent: str) -> list[str]:
 
 def _stub(node: ClassNode, here: Diagram, target: Diagram) -> list[str]:
     label = node.label if node.stem == here.stem else f"{node.label}\n({node.stem})"
-    link = posixpath.relpath(f"{target.path}.svg", posixpath.dirname(here.path))
+    link = svg_link(f"{target.path}.svg", posixpath.dirname(here.path))
     return [
         f"{_quote(_stub_id(node.id))}: {{",
         "  class: stub",
@@ -334,6 +334,15 @@ def _stub(node: ClassNode, here: Diagram, target: Diagram) -> list[str]:
         f"  link: {_quote(link)}",
         "}",
     ]
+
+
+def svg_link(target: str, start: str) -> str:
+    """``target`` as a link from the directory ``start``, written as D2 keeps it: with a ``./`` or ``../`` start.
+
+    D2 drops a link such as ``02-b.svg`` or ``sub/02-b.svg`` from the SVG: it does not read it as a URL.
+    """
+    relative = posixpath.relpath(target, start or ".")
+    return relative if relative.startswith("../") else f"./{relative}"
 
 
 def _stub_id(class_id: str) -> str:
@@ -441,7 +450,7 @@ def render_overview(model: DomainModel, plan: DiagramPlan, refs: Counter[tuple[s
     shown = set(documents) | set(libraries)
     lines = [f"...@{CLASSES_FILE.removesuffix('.d2')}", "direction: right", ""]
     for stem, kind in [(stem, "document") for stem in documents] + [(stem, "library") for stem in libraries]:
-        link = f"{plan.diagrams[stem][0].path}.svg"
+        link = svg_link(f"{plan.diagrams[stem][0].path}.svg", "")
         lines += [
             f"{_quote(stem)}: {{",
             f"  class: overview_{kind}",
