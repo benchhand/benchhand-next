@@ -7,6 +7,7 @@ are prototype PR #331's test_schema_manufacturing.py purchase cases."""
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -76,6 +77,14 @@ def test_a_purchase_names_its_identity() -> None:
         pytest.param(designate(SCREW), id="standard-designation-only"),
         pytest.param(designate({**SCREW, "finish": "A2"}), id="standard-designation-with-finish"),
         pytest.param(designate(SCREW, length="not_applicable"), id="length-not-applicable"),
+        pytest.param(designate(SCREW, standard="ISO 4762\n"), id="standard-with-block-scalar-newline"),
+        pytest.param(designate(SCREW, standard="ISO 4762\r"), id="standard-with-trailing-carriage-return"),
+        pytest.param(
+            designate(SCREW, standard="ISO\x1c4762"), id="standard-separated-by-a-python-only-space"
+        ),
+        pytest.param(
+            designate(SCREW, standard="ISO \ufeff4762"), id="standard-number-led-by-a-byte-order-mark"
+        ),
         pytest.param(designate(INSERT), id="heat-set-insert-family-designation"),
         pytest.param(lambda document: document.update(designation=SCREW), id="identity-and-designation"),
         pytest.param(
@@ -101,6 +110,12 @@ def test_a_purchase_names_a_commodity_item_by_designation(change: Callable[[dict
         pytest.param(designate(SCREW, length=0), id="screw-of-zero-length"),
         pytest.param(designate(SCREW, length=-20), id="screw-of-negative-length"),
         pytest.param(designate(SCREW, standard="ISO4762"), id="standard-without-number"),
+        pytest.param(designate(SCREW, standard="ISO 4762\n\n"), id="standard-with-two-trailing-newlines"),
+        pytest.param(designate(SCREW, standard="ISO 4762\nM4"), id="standard-over-two-lines"),
+        pytest.param(designate(SCREW, standard="ISO \n4762"), id="standard-number-on-the-next-line"),
+        pytest.param(
+            designate(SCREW, standard="ISO\ufeff4762"), id="standard-separated-by-a-byte-order-mark"
+        ),
         pytest.param(designate(INSERT, length=0), id="insert-of-zero-length"),
         pytest.param(designate(INSERT, length=-5.7), id="insert-of-negative-length"),
         pytest.param(designate(INSERT, outside_diameter=0), id="insert-of-zero-outside-diameter"),
@@ -109,6 +124,9 @@ def test_a_purchase_names_a_commodity_item_by_designation(change: Callable[[dict
         pytest.param(designate(INSERT, recommended_hole=-4.0), id="insert-of-negative-hole"),
         pytest.param(designate(INSERT, omit="recommended_hole"), id="insert-without-hole"),
         pytest.param(designate(INSERT, kind="standard_designation"), id="insert-fields-under-standard-kind"),
+        pytest.param(
+            lambda document: document.update(reference_catalogue=[]), id="empty-reference-catalogue"
+        ),
         pytest.param(
             lambda document: document.update(
                 reference_catalogue=[{"vendor": "Accu", "url": "https://accu.co.uk"}]
@@ -125,3 +143,25 @@ def test_a_purchase_names_a_commodity_item_by_designation(change: Callable[[dict
 )
 def test_a_purchase_outside_the_designation_shapes_is_refused(change: Callable[[dict], None]) -> None:
     assert violations(PURCHASE_ID, purchase(change))
+
+
+PROTOTYPE_STANDARD = re.compile(r"^(ISO|DIN|EN|ASME|ANSI|JIS)\s\S.*$")  # part.schema.json, prototype 3a7542dd
+STANDARD_PARTS = ["ISO", "DIN", "ISOX", "iso"]
+STANDARD_GAPS = ["", " ", "\t", "\n", "\r", "\x1c", "\x85", "\xa0", "\u2028", "\u3000", "\ufeff", "x", "  "]
+STANDARD_ENDS = ["", "4762", "\n", "\r", "\u2028", "4762\n", "4762\n\n", "47\n62", "4762\r\n", "\ufeff", " "]
+
+
+def _accepts_standard(text: str) -> bool:
+    return violations(PURCHASE_ID, purchase(designate(SCREW, standard=text))) == []
+
+
+def test_the_standard_pattern_accepts_what_the_prototype_regex_accepts() -> None:
+    """The prototype's Python regex `\\s\\S.*$` reads a trailing newline and Python's own whitespace; the
+    contract's ECMAScript pattern must accept exactly the same strings."""
+    candidates = [
+        part + gap + end for part in STANDARD_PARTS for gap in STANDARD_GAPS for end in STANDARD_ENDS
+    ]
+    disagreements = [
+        text for text in candidates if bool(PROTOTYPE_STANDARD.search(text)) != _accepts_standard(text)
+    ]
+    assert disagreements == []
