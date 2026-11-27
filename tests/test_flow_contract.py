@@ -566,7 +566,7 @@ def test_every_choice_of_the_prototype_dispatch_list_has_an_explanation() -> Non
     assert all("explanation" in choice for choice in _prototype_rules("dispatch")["rule"]["match"])
 
 
-@pytest.mark.parametrize("explained", [[0], [1]], ids=["first-only", "last-only"])
+@pytest.mark.parametrize("explained", [[0], [-1]], ids=["first-only", "last-only"])
 def test_a_rule_list_with_an_explanation_on_some_choices_only_is_refused(explained: list[int]) -> None:
     # In cel-go's explanation copy a choice without one is dropped, so its explanation would answer another choice.
     fidelity = _prototype_rules("fidelity")
@@ -575,6 +575,23 @@ def test_a_rule_list_with_an_explanation_on_some_choices_only_is_refused(explain
     found = violations(RULES_ID, fidelity)
     assert found
     assert all(violation.pointer.startswith("/rule/match") for violation in found)
+
+
+def test_a_rule_list_with_no_choices_is_refused() -> None:
+    found = violations(RULES_ID, {"name": "fidelity", "rule": {"match": []}})
+    assert found
+    assert {violation.pointer for violation in found} == {"/rule/match"}
+
+
+@pytest.mark.parametrize(
+    "choice",
+    [
+        pytest.param({"output": '"F2"'}, id="without-explanation"),
+        pytest.param({"output": '"F2"', "explanation": '"the default"'}, id="with-explanation"),
+    ],
+)
+def test_a_rule_list_of_one_unconditional_choice_validates(choice: dict[str, str]) -> None:
+    assert violations(RULES_ID, {"name": "fidelity", "rule": {"match": [choice]}}) == []
 
 
 def test_a_rule_list_with_an_explanation_on_every_choice_validates() -> None:
