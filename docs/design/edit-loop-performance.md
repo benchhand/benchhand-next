@@ -262,7 +262,7 @@ The upside-down iso view is a prototype bug (IR-199), not a speed issue.
 ## Open questions for the owner
 
 - **Q1. A fork per job, and Windows.** `fork` is POSIX-only, and the plan ships a Windows Claude Desktop bundle. Is a cold path with `warm: false` acceptable on Windows, or should kernels use a spawn-based worker pool there? Recommendation: a cold path that reports `warm: false`, recorded in the new ADR.
-- **Q2. Jobs and the session.** The prompt asks that a build job survive a client disconnect. Inside a session, job handles already cover a dropped call. A job that outlives the server contradicts D4 ([plan](../design-plan.md), line 12), the rule that no provider outlives the host ([plan](../design-plan.md), line 183) and the job contract's owner rule (`contracts/jobs/job.tsp`, line 103). Recommendation: jobs end with the session. Collect the staging folder, and let the store's reuse of built parts make a retry cheap (8.3 s in the test, V).
+- **Q2. Jobs and the session.** The report's gain 5 asks that a build job survive a client disconnect. Inside a session, job handles already cover a dropped call. A job that outlives the server contradicts D4 ([plan](../design-plan.md), line 12), the rule that no provider outlives the host ([plan](../design-plan.md), line 183) and the job contract's owner rule (`contracts/jobs/job.tsp`, line 103). Recommendation: jobs end with the session. Collect the staging folder, and let the store's reuse of built parts make a retry cheap (8.3 s in the test, V).
 - **Q3. The interference threshold and the fit limits.**
   - RULE-39 blocks an undeclared overlap above a fixed 0.001 mm³. RULE-28 uses the collision provider's stated tolerance (IR-021), and that tolerance may be larger.
   - IR-115 bounds a declared pair's allowed overlap by the fit's limits, while the prototype allows any overlap on a declared pair.
@@ -316,4 +316,5 @@ Not created. Each bead is for the owner's review.
   - the capabilities `fact-cache`, `resident-kernels` and `edit-loop`;
   - the tool `model.edit_loop`;
   - a note on `jobs.start` about the key semantics;
-  - the open questions `resident-kernel-fork` (Q1) and `job-outlives-session` (Q2).
+  - the open questions `resident-kernel-fork` (Q1) and `job-outlives-session` (Q2);
+  - a new source kind, `design`, for a name a design note proposes, checked as a path:line pointer like `plan`.

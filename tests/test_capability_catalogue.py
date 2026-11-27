@@ -201,6 +201,10 @@ def test_a_name_that_does_not_resolve_is_reported(change: Any, message: str) -> 
             "docs/design-plan.md:9 doesn't name jobs.status",
         ),
         (
+            lambda d: d["tools"][1]["source"].update(kind="design", ref="docs/design-plan.md:9"),
+            "docs/design-plan.md:9 doesn't name jobs.status",
+        ),
+        (
             lambda d: d["tools"][1].update(
                 name="unrelated.list", source={"kind": "plan", "ref": PREVIEW_LINE}
             ),

@@ -12,8 +12,9 @@
 # Conventions:
 # - status, phase and every name come from a source; a pointer says which.
 #   A tool or command no source names is `proposed`, with source `catalogue`
-#   (this file's name for a prototype command the plan implies) or `study`
-#   (the CAD-libraries study, lanes 8 and 8b, not in this repository).
+#   (this file's name for a prototype command the plan implies), `study`
+#   (the CAD-libraries study, lanes 8 and 8b, not in this repository) or
+#   `design` (a design note under docs/design/, pointed to as path:line).
 # - A capability's tools and CLI commands are the entries of `tools` and `cli`
 #   that name it; they are not repeated on the capability.
 # - Where sources disagree, both are recorded in an open question.
@@ -338,6 +339,38 @@ open_questions:
       that retrieves a saved result is named.
     pointers:
       - contracts/envelope/envelope.tsp:16
+  - id: resident-kernel-fork
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether resident kernels fork a worker per job,
+      recorded in a new ADR with an amendment to provider protocol
+      sections 2 and 7, and what Windows does without fork.'
+    origin: existing
+    question: The edit-loop note proposes resident kernel providers
+      that fork a worker per job before any boolean runs. fork is
+      POSIX-only, and the plan ships a Claude Desktop bundle for Windows.
+      Is a cold path that reports warm false acceptable there?
+    pointers:
+      - docs/design/edit-loop-performance.md:264
+      - docs/contract/provider-protocol.md:118
+      - docs/design-plan.md:459
+  - id: job-outlives-session
+    blocking: false
+    owner: project-owner
+    decision_needed: 'Whether a build job may outlive the server session.'
+    origin: existing
+    question: May a build job outlive the server session, as agentcad's
+      daemon finished a run after its client was killed? Job handles
+      already keep a job running past a dropped call.
+    pointers:
+      - docs/design/edit-loop-performance.md:265
+    positions:
+      - source: docs/design/edit-loop-performance.md:265
+        says: The note recommends that jobs end with the session, and
+          that a retry reuses the parts the store kept.
+      - source: contracts/jobs/job.tsp:103
+        says: The job's supervisor ends its process group when the
+          command ends or its owner, the job service, does.
   - id: setup-over-mcp
     blocking: true
     owner: project-owner
@@ -645,6 +678,7 @@ capabilities:
     open_questions:
       - cancel-tool
       - provider-job
+      - job-outlives-session
     adrs:
       - 4
       - 18
@@ -2731,6 +2765,106 @@ capabilities:
       - 6
       - 18
 
+  # Proposed by the edit-loop performance note
+  # (docs/design/edit-loop-performance.md); not in the plan.
+  - id: fact-cache
+    title: Content-addressed fact cache
+    purpose: 'Cache derived per-part facts (mass properties, validity,
+      export read-back, drawing features, the posing definition and
+      renders) by an invalidation tuple: the fact kind and version,
+      the sha256 of each input file, the producing provider''s code
+      digest and the request parameters'' digest. An in-process LRU
+      in the host, backed by the store on disk, so an unchanged part
+      costs one lookup and a new session starts warm.'
+    layer: core
+    container: containers.md:middleware
+    phase: 4
+    status: proposed
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/edit-loop-performance.md:35
+    owner:
+      - packages/benchhand-core
+    contracts_planned:
+      - a cache/fact contract with the fact key and entry (design note,
+        gain 1)
+      - codeDigest in the provider protocol's InitializeResult
+    depends_on:
+      - middleware-chain
+      - provider-host
+      - store-provider
+    open_questions:
+      - no-phase
+    adrs:
+      - 13
+      - 17
+    no_tool_reason: Internal to the server; the check, diff, pose and
+      render tools use it.
+  - id: resident-kernels
+    title: Resident kernel providers with a worker per job
+    purpose: 'Keep the kernel providers resident with OCP imported
+      once, fork a fresh worker per job before any boolean runs, kill
+      the worker''s process group when the job ends, and hold the decoded
+      shapes of the current and previous version. Every result says
+      whether it ran warm, and why not when it didn''t.'
+    layer: providers
+    container: containers.md:kernels
+    phase: 4
+    status: proposed
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/edit-loop-performance.md:105
+    owner:
+      - providers/kernel-cadquery
+      - providers/kernel-build123d
+      - packages/benchhand-provider
+    contracts:
+      - provider/manifest.schema.json
+    contracts_planned:
+      - warm, with its reason, in the provider protocol's HookResultBase
+        and in the envelope (design note, gain 2)
+    depends_on:
+      - provider-runtime
+      - provider-host
+    open_questions:
+      - resident-kernel-fork
+    adrs:
+      - 13
+    no_tool_reason: Providers are reached through the host, not through
+      tools.
+  - id: edit-loop
+    title: One edit-loop job
+    purpose: Build a version, then check and diff only the changed
+      parts from the shapes the resident kernel holds, in one job,
+      and return the changed parts, their shared, A-only and B-only
+      volumes and the blocking findings.
+    layer: providers
+    container: containers.md:kernels
+    phase: 4
+    status: proposed
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/edit-loop-performance.md:132
+    owner:
+      - packages/benchhand-core
+      - providers/kernel-cadquery
+      - providers/kernel-build123d
+    contracts_planned:
+      - the model.edit_loop input and output, reusing the version-diff
+        result (design note, gain 3)
+    depends_on:
+      - model-build
+      - check-orchestration
+      - model-diff
+      - fact-cache
+      - resident-kernels
+      - job-service
+    adrs:
+      - 18
+
 # MCP tools. input and output are contract references or `not yet defined`;
 # output is the envelope payload, since every result is the envelope. Where
 # the plan is silent, access follows what the prototype command writes: a
@@ -3225,7 +3359,10 @@ tools:
       kind: plan
       ref: docs/design-plan.md:345
     note: The handle is the envelope's `job` field
-      (jobs/job.schema.json#/$defs/JobHandle).
+      (jobs/job.schema.json#/$defs/JobHandle). The bounded-results proposal
+      adds an idempotency key; the edit-loop note binds it to the inputs,
+      so the same key and inputs replay the job and different inputs
+      are refused as a conflict (docs/design/edit-loop-performance.md:181).
   - name: jobs.status
     capability: job-service
     access: read
@@ -3436,6 +3573,22 @@ tools:
       ref: lane8-agentcad.md section 6, item 4
     replaces:
       - cad_model.py diff
+  - name: model.edit_loop
+    capability: edit-loop
+    access: write
+    input: not yet defined
+    output: not yet defined
+    envelope: job-handle
+    gate: unspecified
+    phase: 4
+    status: proposed
+    source:
+      kind: design
+      ref: docs/design/edit-loop-performance.md:144
+    note: Whether the loop is a tool of its own or a mode of model.build
+      is the contract's choice.
+    implied_by:
+      - docs/design/edit-loop-performance.md:132
   - name: checks.run
     capability: check-orchestration
     access: write

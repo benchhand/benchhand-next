@@ -82,7 +82,8 @@ def _introduction(catalogue: Catalogue) -> list[str]:
         "its note says what is left.",
         "- **planned**: a phase of the design plan's Steps builds it. **proposed**: no source plans it. "
         "A proposed name comes from this catalogue (`catalogue`), for a prototype command or a gap the "
-        "plan implies, or from the CAD-libraries study (`study`), whose reports aren't in this repository.",
+        "plan implies, from the CAD-libraries study (`study`), whose reports aren't in this repository, or "
+        "from a design note under docs/design/ (`design`).",
         "- `P2` is Phase 2 of the plan's Steps. `no phase` means no phase delivers it; an open question "
         "says why.",
         "- A capability's status is its core's. Each tool and CLI command has its own status and phase. A tool "

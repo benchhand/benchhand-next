@@ -133,7 +133,7 @@
       "pattern": "^[a-z][a-z_]*\\.[a-z][a-z_]*$"
     },
     "Source": {
-      "description": "Where a tool, command or capability is named. plan, adr, contract, architecture and code point into this repository as path:line, and the checker requires the pointed line to name it: a tool in full, or after a tool of the same namespace as the rest of its name in a code span (`model.measure`, `section`); a CLI command by its words in order, allowing usage brackets (`mcp [--http]`), alternatives (`policy get|set`) and a Typer group's command (`@record.command('migrate')`). catalogue is a name this catalogue proposes for a prototype command, or for a gap the plan implies. study is a name the CAD-libraries study proposes; its reports are not in the repository, so `ref` is a citation the checker does not resolve.",
+      "description": "Where a tool, command or capability is named. plan, adr, contract, architecture and code point into this repository as path:line, and the checker requires the pointed line to name it: a tool in full, or after a tool of the same namespace as the rest of its name in a code span (`model.measure`, `section`); a CLI command by its words in order, allowing usage brackets (`mcp [--http]`), alternatives (`policy get|set`) and a Typer group's command (`@record.command('migrate')`). catalogue is a name this catalogue proposes for a prototype command, or for a gap the plan implies. study is a name the CAD-libraries study proposes; its reports are not in the repository, so `ref` is a citation the checker does not resolve. design is a name a design note under docs/design/ proposes, pointed to as path:line like plan, and checked the same way.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -149,7 +149,8 @@
             "architecture",
             "code",
             "catalogue",
-            "study"
+            "study",
+            "design"
           ]
         },
         "ref": {
@@ -767,7 +768,8 @@
                   "kind": {
                     "enum": [
                       "catalogue",
-                      "study"
+                      "study",
+                      "design"
                     ]
                   }
                 }

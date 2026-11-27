@@ -21,7 +21,7 @@ from .catalogue import Catalogue
 SCHEMAS_DIR = "packages/benchhand-contracts/src/benchhand_contracts/schemas"
 REFERENCE_MAP = "docs/architecture/reference-map.yaml"
 ARCHITECTURE_DIR = "docs/architecture"
-REPO_SOURCES = ("plan", "adr", "contract", "architecture", "code")
+REPO_SOURCES = ("plan", "adr", "contract", "architecture", "code", "design")
 """Source kinds that point into the repository."""
 _LINE = re.compile(r"^(?P<path>[^:#]+)(?::(?P<line>[0-9]+)|#(?P<anchor>[A-Za-z0-9_-]+))?$")
 
