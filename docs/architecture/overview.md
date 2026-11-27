@@ -7,6 +7,7 @@ Start here. This page draws benchhand in two diagrams: the software in layers, a
 - [layers.md](layers.md): the layered architecture of plan section 1, the repository layout, and the package dependencies.
 - [data-flow.md](data-flow.md): sequences for one MCP call, a long job, evidence and freeze, release, and migrate.
 - [flow.md](flow.md) and the generated [domain model](../contract/generated/domain-model/README.md).
+- [capabilities.md](capabilities.md), generated: the capability catalogue, which lists each feature, MCP tool and CLI command with its phase and status.
 
 The diagrams are D2, the format of the domain model. Each has its source and its rendered SVG in [`overview/`](overview/).
 
