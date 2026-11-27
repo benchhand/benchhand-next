@@ -11,11 +11,25 @@ import starlightLinksValidator from "starlight-links-validator";
 import { base, repoUrl, site } from "./site-url.mjs";
 import { codeThemeDark, codeThemeLight } from "./src/code-themes.mjs";
 import remarkBaseLinks from "./src/remark-base-links.mjs";
+import remarkDiagramFrames from "./src/remark-diagram-frames.mjs";
+
+// Mermaid draws in the site's tokens: ink lines on paper in light, light lines on navy in dark. astro-mermaid
+// gives both themes one config, so the colours are CSS variables that follow [data-theme] (theme.css), and
+// the labels use the mono at 13px.
+const MERMAID_THEME_CSS = [
+  ".node rect, .node polygon, .node circle, .node ellipse, .node path, .cluster rect, .actor, .labelBox,",
+  "rect.task, .note { fill: var(--sl-color-bg); stroke: var(--sl-color-white); }",
+  ".edgePath .path, .flowchart-link, .transition, .messageLine0, .messageLine1, .relation, line, .loopLine",
+  "{ stroke: var(--sl-color-white); }",
+  ".arrowheadPath, marker path, .arrowhead { fill: var(--sl-color-white); stroke: var(--sl-color-white); }",
+  ".nodeLabel, .edgeLabel, .label, text, span { color: var(--sl-color-white); fill: var(--sl-color-white); }",
+  ".edgeLabel, .edgeLabel rect, .labelBkg { background-color: var(--sl-color-bg); fill: var(--sl-color-bg); }",
+].join(" ");
 
 export default defineConfig({
   site,
   base,
-  markdown: { remarkPlugins: [[remarkBaseLinks, { base, repoUrl }]] },
+  markdown: { remarkPlugins: [[remarkBaseLinks, { base, repoUrl }], remarkDiagramFrames] },
   // src/site-link.ts links "repo:<path>" to the repository; site-url.mjs reads release.toml, so
   // components get its result as a constant rather than importing it.
   vite: { define: { __BENCHHAND_REPO_URL__: JSON.stringify(repoUrl) } },
@@ -25,7 +39,12 @@ export default defineConfig({
     // (theme.css) instead of shrinking to the column: useMaxWidth makes Mermaid size the SVG to 100%.
     mermaid({
       autoTheme: true,
-      mermaidConfig: { flowchart: { useMaxWidth: false }, state: { useMaxWidth: false } },
+      mermaidConfig: {
+        flowchart: { useMaxWidth: false },
+        state: { useMaxWidth: false },
+        themeVariables: { fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontSize: "13px" },
+        themeCSS: MERMAID_THEME_CSS,
+      },
     }),
     starlight({
       title: "benchhand",
@@ -88,6 +107,8 @@ export default defineConfig({
         Hero: "./src/components/Hero.astro",
         // Adds the header's section links before the GitHub icon.
         SocialIcons: "./src/components/SocialIcons.astro",
+        // Loads the script that makes sideways-scrolling boxes focusable, labelled regions.
+        MarkdownContent: "./src/components/MarkdownContent.astro",
       },
       plugins: [starlightLinksValidator()],
       sidebar: [

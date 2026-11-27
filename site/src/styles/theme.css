@@ -352,38 +352,56 @@ site-search button[data-open-modal] > kbd {
 }
 
 /* Diagram frames: a sheet with crop marks on two corners. */
-.sl-markdown-content pre.mermaid {
+.sl-markdown-content :is(pre.mermaid, .bh-diagram-frame) {
   position: relative;
 }
-.sl-markdown-content pre.mermaid::before,
-.sl-markdown-content pre.mermaid::after {
+.sl-markdown-content :is(pre.mermaid, .bh-diagram-frame)::before,
+.sl-markdown-content :is(pre.mermaid, .bh-diagram-frame)::after {
   content: "";
   position: absolute;
+  z-index: 1;
   width: 14px;
   height: 14px;
   border: 0 solid var(--sl-color-white);
   pointer-events: none;
 }
-.sl-markdown-content pre.mermaid::before {
+.sl-markdown-content :is(pre.mermaid, .bh-diagram-frame)::before {
   inset-block-start: 5px;
   inset-inline-start: 5px;
   border-block-start-width: 1.5px;
   border-inline-start-width: 1.5px;
 }
-.sl-markdown-content pre.mermaid::after {
+.sl-markdown-content :is(pre.mermaid, .bh-diagram-frame)::after {
   inset-block-end: 5px;
   inset-inline-end: 5px;
   border-block-end-width: 1.5px;
   border-inline-end-width: 1.5px;
 }
 
-/* D2 diagrams are rendered SVGs with a white page baked in. They sit on a framed panel in both
- * themes, so in dark the white page reads as a drawing sheet rather than a hole in the page. */
-.sl-markdown-content img[src*=".svg"] {
+/* D2 diagrams (src/remark-diagram-frames.mjs): a frame with crop marks around a sheet that scrolls sideways
+ * and shows the SVG at its natural size, so no label renders under 11px. Each diagram has a light and a dark
+ * render; the one that matches [data-theme] shows. */
+.sl-markdown-content .bh-diagram-frame {
+  position: relative;
+  padding: 0.75rem;
+  border: 1px solid var(--bh-color-border);
+  background: var(--sl-color-bg);
+}
+.sl-markdown-content .bh-diagram-sheet {
+  overflow-x: auto;
+}
+.sl-markdown-content .bh-diagram-sheet img {
   display: block;
-  padding: 0.5rem;
-  border: 1px solid var(--sl-color-hairline-light);
-  background: #ffffff;
+  max-width: none;
+  height: auto;
+}
+:root[data-theme="light"] .sl-markdown-content img.bh-diagram-dark,
+:root:not([data-theme="light"]) .sl-markdown-content img.bh-diagram-light {
+  display: none;
+}
+.sl-markdown-content .bh-diagram-open {
+  margin-top: 0.4rem;
+  font: 400 0.8rem/1.4 var(--__sl-font-mono);
 }
 
 /* Mermaid diagrams follow the active theme (astro-mermaid autoTheme); give them the same frame. They keep

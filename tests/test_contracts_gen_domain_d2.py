@@ -19,6 +19,8 @@ import pytest
 from contracts_gen.domain import ClassNode, DomainModel, build_model, ref_counts
 from contracts_gen.domain_d2 import (
     CLASSES_D2,
+    CLASSES_DARK_D2,
+    CLASSES_DARK_FILE,
     D2_COMMAND,
     D2_LAYOUT,
     D2_VERSION,
@@ -28,6 +30,8 @@ from contracts_gen.domain_d2 import (
     D2VersionError,
     add_caption,
     check_d2_version,
+    dark_source,
+    dark_svg,
     diagram_caption,
     overview_caption,
     overview_rows,
@@ -498,6 +502,36 @@ def test_a_link_starts_with_dot_slash_or_dot_dot_slash_for_d2_to_keep_it() -> No
     assert svg_link("record/a/01-a.svg", "record/b") == "../a/01-a.svg"
     assert svg_link("record/a/01-a.svg", "") == "./record/a/01-a.svg"
     assert svg_link("record/a/01-a.svg", "record/b/c") == "../../a/01-a.svg"
+
+
+def test_the_dark_source_imports_the_dark_classes_and_links_the_dark_svgs() -> None:
+    source = (
+        '...@../../classes\ndirection: right\n"stub__a": {\n  label: "classes"\n  link: "../a/01-a.svg"\n}\n'
+    )
+    assert dark_source(source) == (
+        '...@../../classes-dark\ndirection: right\n"stub__a": {\n  label: "classes"\n'
+        '  link: "../a/01-a.dark.svg"\n}\n'
+    )
+    assert dark_source("...@classes\n").startswith("...@classes-dark\n")
+    assert dark_svg(Path("record/a/01-a.svg")) == Path("record/a/01-a.dark.svg")
+
+
+@needs_d2
+def test_the_dark_render_has_the_light_layout_on_the_dark_ground(tmp_path: Path) -> None:
+    model = _model(PERSON, SHOP)
+    plan = plan_diagrams(model)
+    diagram = plan.home["record_shop"]
+    (tmp_path / "classes.d2").write_text(CLASSES_D2, encoding="utf-8")
+    (tmp_path / CLASSES_DARK_FILE).write_text(CLASSES_DARK_D2, encoding="utf-8")
+    source = tmp_path / f"{diagram.path}.d2"
+    source.parent.mkdir(parents=True)
+    source.write_text(render_diagram(model, plan, diagram), encoding="utf-8")
+    light = render_d2(source, tmp_path / "light.svg")
+    dark = render_d2(source, tmp_path / "dark.svg", dark=True)
+    view_box = re.compile(rb'viewBox="[^"]+"')
+    assert view_box.findall(light) == view_box.findall(dark)
+    assert b'fill="#0c1a2c"' in dark
+    assert b'fill="#0c1a2c"' not in light
 
 
 def test_the_render_environment_drops_every_variable_that_changes_a_render() -> None:

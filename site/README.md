@@ -110,3 +110,6 @@ The build needs `uvx` on `PATH` for this step.
 The domain model draws its diagrams in Mermaid. `astro-mermaid` renders them in the browser.
 The sync copies the `.svg` and `.png` files of the synced directories next to their pages, so a committed D2 SVG renders where its Markdown embeds it.
 An image elsewhere in the repository links to its raw file on GitHub.
+
+The generator renders each D2 diagram twice, as `<name>.svg` and `<name>.dark.svg`.
+`src/remark-diagram-frames.mjs` puts both in one frame at their natural size, and the site shows the one that matches its theme.

@@ -24,6 +24,8 @@ from typing import Any
 from .domain import MAX_ENUM_VALUES, ClassNode, DomainModel, build_model, literal, ref_counts
 from .domain_d2 import (
     CLASSES_D2,
+    CLASSES_DARK_D2,
+    CLASSES_DARK_FILE,
     CLASSES_FILE,
     MAX_DIAGRAM_NODES,
     OVERVIEW_FILE,
@@ -32,6 +34,7 @@ from .domain_d2 import (
     DiagramPlan,
     RelationshipRow,
     check_d2_version,
+    dark_svg,
     diagram_caption,
     overview_caption,
     overview_rows,
@@ -81,6 +84,7 @@ def domain_model_files(contracts: list[Contract]) -> dict[str, str]:
         STUB_FILE: render_stub(),
         README_PATH: render_readme(model, plan, contracts),
         f"{MODEL_DIR}/{CLASSES_FILE}": CLASSES_D2,
+        f"{MODEL_DIR}/{CLASSES_DARK_FILE}": CLASSES_DARK_D2,
         f"{MODEL_DIR}/{OVERVIEW_FILE}.d2": render_overview(model, plan, ref_counts(contracts)),
     }
     for contract in contracts:
@@ -93,11 +97,12 @@ def domain_model_files(contracts: list[Contract]) -> dict[str, str]:
 
 def diagram_sources(files: Iterable[str]) -> list[str]:
     """The ``.d2`` files among ``files`` that D2 lays out: every one but the shared classes."""
-    return [path for path in files if path.endswith(".d2") and not path.endswith(f"/{CLASSES_FILE}")]
+    shared = (f"/{CLASSES_FILE}", f"/{CLASSES_DARK_FILE}")
+    return [path for path in files if path.endswith(".d2") and not path.endswith(shared)]
 
 
 def write_domain_model(contracts: list[Contract], docs_dir: Path) -> None:
-    """Write the pages and sources below ``docs_dir`` and lay every diagram out beside its source."""
+    """Write the pages and sources below ``docs_dir`` and lay every diagram out beside its source, light and dark."""
     check_d2_version()
     files = domain_model_files(contracts)
     for rel_path, text in files.items():
@@ -106,16 +111,15 @@ def write_domain_model(contracts: list[Contract], docs_dir: Path) -> None:
         path.write_text(text, encoding="utf-8")
     model = build_model(contracts)
     captions = diagram_captions(model, plan_diagrams(model), contracts)
-    sources = [docs_dir / rel_path for rel_path in diagram_sources(files)]
+    renders = [(docs_dir / rel_path, dark) for rel_path in diagram_sources(files) for dark in (False, True)]
+
+    def render(source: Path, dark: bool) -> bytes:
+        light = source.with_suffix(".svg")
+        caption = captions[source.relative_to(docs_dir).as_posix()]
+        return render_d2(source, dark_svg(light) if dark else light, caption, dark=dark)
+
     with ThreadPoolExecutor(max_workers=RENDER_WORKERS) as pool:
-        list(
-            pool.map(
-                lambda source: render_d2(
-                    source, source.with_suffix(".svg"), captions[source.relative_to(docs_dir).as_posix()]
-                ),
-                sources,
-            )
-        )
+        list(pool.map(lambda job: render(*job), renders))
 
 
 def render_stub() -> str:

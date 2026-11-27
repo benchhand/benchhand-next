@@ -17,8 +17,10 @@ from typing import Any
 import pytest
 from contracts_gen.domain import MAX_ENUM_VALUES, DomainModel, build_model, class_id, ref_counts
 from contracts_gen.domain_d2 import (
+    CLASSES_DARK_FILE,
     D2_COMMAND,
     MAX_DIAGRAM_NODES,
+    dark_svg,
     overview_rows,
     plan_diagrams,
     relationship_rows,
@@ -265,10 +267,11 @@ def test_a_description_already_shown_is_not_repeated_under_the_type() -> None:
 def test_writing_lays_every_diagram_out_beside_its_source(tmp_path: Path) -> None:
     write_domain_model([SHOP, LIBRARY], tmp_path)
     sources = list((tmp_path / MODEL_DIR).rglob("*.d2"))
-    assert {path.name for path in sources} >= {"classes.d2", "overview.d2", "01-shop.d2"}
+    assert {path.name for path in sources} >= {"classes.d2", CLASSES_DARK_FILE, "overview.d2", "01-shop.d2"}
     for source in sources:
-        if source.name != "classes.d2":
+        if source.name not in {"classes.d2", CLASSES_DARK_FILE}:
             assert b"<svg" in source.with_suffix(".svg").read_bytes()
+            assert b"<svg" in dark_svg(source.with_suffix(".svg")).read_bytes()
     assert (tmp_path / STUB_FILE).is_file()
 
 
@@ -289,6 +292,7 @@ def test_the_committed_pages_and_sources_are_what_the_generator_writes(
     }
     expected = set(files) - {STUB_FILE}
     expected |= {path.removesuffix(".d2") + ".svg" for path in diagram_sources(files)}
+    expected |= {path.removesuffix(".d2") + ".dark.svg" for path in diagram_sources(files)}
     assert committed == expected
 
 
@@ -301,12 +305,14 @@ def test_every_rendered_svg_keeps_the_links_of_its_source_and_each_resolves(
     linked = 0
     for source in diagram_sources(files):
         links = set(re.findall(r'^\s*link: "([^"]+)"$', files[source], re.MULTILINE))
-        svg = (root / source).with_suffix(".svg").read_text(encoding="utf-8")
-        hrefs = set(re.findall(r'href="([^"]+)"', svg))
-        assert hrefs == links, source
-        for href in hrefs:
-            target = posixpath.normpath(posixpath.join(posixpath.dirname(source), href))
-            assert (root / target).is_file(), f"{source}: {href}"
-        linked += len(hrefs)
-    assert linked > 50
+        light = (root / source).with_suffix(".svg")
+        renders = {light: links, dark_svg(light): {link.removesuffix(".svg") + ".dark.svg" for link in links}}
+        for svg, expected in renders.items():
+            hrefs = set(re.findall(r'href="([^"]+)"', svg.read_text(encoding="utf-8")))
+            assert hrefs == expected, svg.name
+            for href in hrefs:
+                target = posixpath.normpath(posixpath.join(posixpath.dirname(source), href))
+                assert (root / target).is_file(), f"{svg.name}: {href}"
+            linked += len(hrefs)
+    assert linked > 100
     assert 'href="./' in (root / MODEL_DIR / "overview.svg").read_text(encoding="utf-8")

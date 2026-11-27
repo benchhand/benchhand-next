@@ -16,6 +16,10 @@ overview of the record contracts, and ``CLASSES_D2`` holds the colours the diagr
 lays a diagram out with ``d2 --layout elk``, which this module pins to ``D2_VERSION``; the same source and
 version give the same SVG bytes, so the SVGs are committed and checked for drift.
 
+Each diagram is laid out twice, as ``<name>.svg`` and ``<name>.dark.svg``. The dark one has the same layout
+in the colours of ``CLASSES_DARK_D2``, and its links name the dark SVGs (``dark_source``). The docs site shows
+the one that matches its theme toggle; D2's own ``--dark-theme`` follows the OS setting, not the toggle.
+
 D2 draws nothing a screen reader can read, so a diagram also yields its text alternative from the same
 model: ``relationship_rows`` and ``overview_rows`` list every arrow as a row, ``diagram_caption`` and
 ``overview_caption`` name the diagram and describe it, and ``render_d2`` writes the caption into the SVG as
@@ -45,6 +49,8 @@ RENDER_VARIABLES = ("SCALE",)
 """Variables outside the ``D2_`` prefix that change a render."""
 D2_COMMAND = "d2"
 CLASSES_FILE = "classes.d2"
+CLASSES_DARK_FILE = "classes-dark.d2"
+DARK_SVG_SUFFIX = ".dark.svg"
 OVERVIEW_FILE = "overview"
 MAX_DIAGRAM_NODES = 12
 """The classes one diagram owns, stubs not counted."""
@@ -58,6 +64,8 @@ OVERVIEW_GROUP = "record"
 """The contract directory whose documents and libraries the overview shows."""
 
 _VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+\S*)$")
+_CLASSES_IMPORT = re.compile(rf"^(\.\.\.@(?:\.\./)*){CLASSES_FILE.removesuffix('.d2')}$", re.MULTILINE)
+_SVG_LINK = re.compile(r'^(\s*link: ".*)\.svg"$', re.MULTILINE)
 
 CLASSES_D2 = """\
 # The colours of every diagram, set once. A sql_table takes its header from `fill` and its body from `stroke`.
@@ -88,6 +96,61 @@ classes: {
     target-arrowhead: { shape: triangle; style: { filled: false } }
   }
   reference: { style: { stroke: "#64748b" } }
+}
+"""
+
+CLASSES_DARK_D2 = """\
+# The colours of every diagram's dark render, on the docs site's navy: the same classes as classes.d2, and the
+# theme's own colours (the ground, table rows, edge labels) overridden to the site's dark tokens.
+vars: {
+  d2-config: {
+    theme-overrides: {
+      N1: "#e6edf5"
+      N2: "#a6b5c8"
+      N3: "#a6b5c8"
+      N4: "#647b98"
+      N5: "#223a57"
+      N6: "#12243a"
+      N7: "#0c1a2c"
+      B1: "#e6edf5"
+      B2: "#8fc3ff"
+      B3: "#647b98"
+      B4: "#223a57"
+      B5: "#12243a"
+      B6: "#12243a"
+      AA2: "#ffc58f"
+      AA4: "#223a57"
+      AA5: "#12243a"
+      AB4: "#223a57"
+      AB5: "#12243a"
+    }
+  }
+}
+classes: {
+  document: { style: { fill: "#1d4ed8"; stroke: "#12243a"; font-color: "#ffffff" } }
+  owned: { style: { fill: "#0f766e"; stroke: "#12243a"; font-color: "#ffffff" } }
+  union: { style: { fill: "#7c3aed"; stroke: "#12243a"; font-color: "#ffffff" } }
+  overview_document: {
+    shape: page
+    style: { fill: "#1d4ed8"; stroke: "#8fc3ff"; font-color: "#ffffff"; font-size: 20 }
+  }
+  overview_library: {
+    shape: package
+    style: { fill: "#b45309"; stroke: "#ffc58f"; font-color: "#ffffff"; font-size: 20 }
+  }
+  stub: {
+    style: { fill: "#12243a"; stroke: "#647b98"; font-color: "#a6b5c8"; font-size: 14; stroke-dash: 2 }
+  }
+  aggregate: {
+    style: { fill: "#0c1a2c"; stroke: "#647b98"; stroke-dash: 3; font-size: 22; font-color: "#a6b5c8" }
+  }
+  composition: { style: { stroke: "#e6edf5"; stroke-width: 2 } }
+  association: { style: { stroke: "#a6b5c8"; stroke-dash: 4 } }
+  inheritance: {
+    style: { stroke: "#c4a7ff"; stroke-width: 2 }
+    target-arrowhead: { shape: triangle; style: { filled: false } }
+  }
+  reference: { style: { stroke: "#a6b5c8" } }
 }
 """
 
@@ -132,17 +195,43 @@ def render_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
     }
 
 
-def render_d2(source: Path, target: Path, caption: Caption | None = None) -> bytes:
-    """Lay ``source`` out with ELK into ``target``; return the SVG, titled and described when ``caption`` is given."""
-    command = [D2_COMMAND, "--layout", D2_LAYOUT, "--pad", str(D2_PAD), str(source), str(target)]
+def render_d2(source: Path, target: Path, caption: Caption | None = None, *, dark: bool = False) -> bytes:
+    """Lay ``source`` out with ELK into ``target``; return the SVG, titled and described when ``caption`` is given.
+
+    With ``dark``, D2 reads ``dark_source`` of the source from stdin, in the source's directory so that its
+    import of the dark classes resolves.
+    """
+    if dark:
+        source_arg, stdin, cwd = "-", dark_source(source.read_text(encoding="utf-8")), source.parent
+    else:
+        source_arg, stdin, cwd = str(source), None, None
+    command = [D2_COMMAND, "--layout", D2_LAYOUT, "--pad", str(D2_PAD), source_arg, str(target.resolve())]
     result = subprocess.run(
-        command, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS, check=False, env=render_env()
+        command,
+        input=stdin,
+        capture_output=True,
+        text=True,
+        timeout=RENDER_TIMEOUT_SECONDS,
+        check=False,
+        env=render_env(),
+        cwd=cwd,
     )
     if result.returncode:
         raise RuntimeError(f"d2 failed on {source}:\n{result.stderr}")
     if caption is not None:
         target.write_bytes(add_caption(target.read_bytes(), caption))
     return target.read_bytes()
+
+
+def dark_source(text: str) -> str:
+    """``text``, a diagram's D2, for the dark render: it imports ``CLASSES_DARK_FILE``, and each link names a dark SVG."""
+    text = _CLASSES_IMPORT.sub(rf"\g<1>{CLASSES_DARK_FILE.removesuffix('.d2')}", text)
+    return _SVG_LINK.sub(rf'\g<1>{DARK_SVG_SUFFIX}"', text)
+
+
+def dark_svg(svg: Path) -> Path:
+    """The dark render beside ``svg``: ``01-part.dark.svg`` for ``01-part.svg``."""
+    return svg.with_name(svg.name.removesuffix(".svg") + DARK_SVG_SUFFIX)
 
 
 @dataclass(frozen=True)

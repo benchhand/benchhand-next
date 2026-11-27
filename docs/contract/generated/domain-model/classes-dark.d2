@@ -1,0 +1,52 @@
+# The colours of every diagram's dark render, on the docs site's navy: the same classes as classes.d2, and the
+# theme's own colours (the ground, table rows, edge labels) overridden to the site's dark tokens.
+vars: {
+  d2-config: {
+    theme-overrides: {
+      N1: "#e6edf5"
+      N2: "#a6b5c8"
+      N3: "#a6b5c8"
+      N4: "#647b98"
+      N5: "#223a57"
+      N6: "#12243a"
+      N7: "#0c1a2c"
+      B1: "#e6edf5"
+      B2: "#8fc3ff"
+      B3: "#647b98"
+      B4: "#223a57"
+      B5: "#12243a"
+      B6: "#12243a"
+      AA2: "#ffc58f"
+      AA4: "#223a57"
+      AA5: "#12243a"
+      AB4: "#223a57"
+      AB5: "#12243a"
+    }
+  }
+}
+classes: {
+  document: { style: { fill: "#1d4ed8"; stroke: "#12243a"; font-color: "#ffffff" } }
+  owned: { style: { fill: "#0f766e"; stroke: "#12243a"; font-color: "#ffffff" } }
+  union: { style: { fill: "#7c3aed"; stroke: "#12243a"; font-color: "#ffffff" } }
+  overview_document: {
+    shape: page
+    style: { fill: "#1d4ed8"; stroke: "#8fc3ff"; font-color: "#ffffff"; font-size: 20 }
+  }
+  overview_library: {
+    shape: package
+    style: { fill: "#b45309"; stroke: "#ffc58f"; font-color: "#ffffff"; font-size: 20 }
+  }
+  stub: {
+    style: { fill: "#12243a"; stroke: "#647b98"; font-color: "#a6b5c8"; font-size: 14; stroke-dash: 2 }
+  }
+  aggregate: {
+    style: { fill: "#0c1a2c"; stroke: "#647b98"; stroke-dash: 3; font-size: 22; font-color: "#a6b5c8" }
+  }
+  composition: { style: { stroke: "#e6edf5"; stroke-width: 2 } }
+  association: { style: { stroke: "#a6b5c8"; stroke-dash: 4 } }
+  inheritance: {
+    style: { stroke: "#c4a7ff"; stroke-width: 2 }
+    target-arrowhead: { shape: triangle; style: { filled: false } }
+  }
+  reference: { style: { stroke: "#a6b5c8" } }
+}
