@@ -44,7 +44,11 @@ Each engine's adapter builds its environment from the manifest and keeps its own
 
 ### The JCS digest
 
-The profile digest is the SHA-256 of the manifest's canonical JSON under RFC 8785 (JCS). It is never taken over protobuf bytes or over the env YAML. The generator refuses a manifest with a float, a non-ASCII string or an integer above 2^53. On that subset, JCS is sorted keys with no whitespace. Python's `json.dumps(sort_keys=True, separators=(",", ":"))` and Go's `encoding/json` with HTML escaping off both produce it.
+The profile digest is the SHA-256 of the manifest's canonical JSON under RFC 8785 (JCS). RFC 8785 is normative: the canonical bytes are what it defines, whatever encoder an adapter uses. The digest is never taken over protobuf bytes or over the env YAML.
+
+The generator refuses a manifest with a float, a non-ASCII string, or an integer `n` with |n| > 2^53, in either sign. The bound keeps every integer exactly representable as a double. Without the negative bound, a decoder that reads JSON numbers as doubles would round `-9007199254740993` while another keeps it, and the two digests would differ.
+
+The cel-go tool and the host must produce the same canonical bytes for the same manifest. A cross-adapter test vector in CI enforces it: a manifest, its canonical bytes and its digest, which each adapter must reproduce. The vector covers key order, escaping, both integer bounds and the end of the output: the canonical bytes end at the closing brace, with no trailing newline, although some encoders append one.
 
 ### Structural scopes
 
@@ -165,6 +169,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
 - **Both checkers of record** check every standalone expression that benchhand ships. CI fails when they disagree on whether it checks, or on its output type.
 - **The cel-spec simple tests**, in protobuf JSON, run on both engines against a committed failure baseline. A missing engine, a new failure or a new pass fails the run. The scores themselves are diagnostic.
 - **Each adapter** has a test that an unknown extension version is refused at load, and a refusal fixture: a descriptor set whose bytes differ from the manifest's SHA-256, refused before any environment is built.
+- **The JCS vector:** the cel-go tool and the host reproduce its canonical bytes and digest exactly.
 
 ## Consequences
 
