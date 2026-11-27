@@ -14,7 +14,7 @@ Status: provisional, version `0.1.0`. Phase 2 writes `flow/flow.yaml`, the `flow
 - `edges` are the transitions. An edge can pass through a gate, and its `guard` must hold as well.
 - `void_scope` selects the later stages that a VOID reopens, besides the voided stage.
 
-The schema checks one file's shape: every stage, at least one gate and at least one edge. The flow loader checks the references within the file when it loads it. It refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, a standalone expression that doesn't compile or type-check, and a fidelity rule list that gives `"none"`. The schema's example has every stage but only the LAYOUT freeze gate and its edge: it shows the shape, not a working flow.
+The schema checks one file's shape: every stage, at least one gate and at least one edge. The flow loader checks the references within the file when it loads it. It refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, a standalone expression that doesn't compile or type-check, and a fidelity rule list with an output that is the literal `"none"`. The schema's example has every stage but only the LAYOUT freeze gate and its edge: it shows the shape, not a working flow.
 
 ## Rule lists
 
@@ -44,7 +44,7 @@ Each kind but `rigor` reserves one no-match value. A list that gives it falls th
 
 - `checks_by_iteration`: `[]`. The flow's own list may end in `[]`, which runs no check.
 - `dispatch`: `"unknown"`. The flow's own list may end in `"unknown"`, which means UNKNOWN coverage.
-- `fidelity`: `"none"`. Only a contributed list gives it. The flow's own list ends in `"F0"`, and the flow loader refuses `"none"` in it.
+- `fidelity`: `"none"`. Only a contributed list gives it. The flow's own list ends in `"F0"`. No schema can refuse `"none"` in it: a rule-list file doesn't say its kind, and `flow.yaml` only names the file. The Phase 2 flow loader refuses an output of the flow's fidelity list that is the literal `"none"`. A computed `"none"` is seen only when the list is evaluated, and the evaluator records it as out of the domain, UNKNOWN with a finding.
 
 The flow's list is evaluated last, and its result is final, so a flow's `[]` or `"unknown"` is the value. `rigor` reserves no value and doesn't fall through: its final `[]` means no unmet requirement.
 

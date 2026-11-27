@@ -119,8 +119,9 @@ def test_the_flow_list_may_end_in_its_kinds_no_match_value(kind: str) -> None:
     assert _constant(last["output"]) == NO_MATCH[kind]
 
 
-def test_the_flow_fidelity_list_ends_in_f0_and_never_gives_the_contribution_only_none() -> None:
-    # The flow loader refuses "none" in flow.yaml's fidelity list.
+def test_the_prototype_fidelity_list_ends_in_f0_and_no_output_is_none() -> None:
+    # Only the fixture: no schema can refuse "none" in a flow's fidelity list, since the file doesn't say its kind.
+    # The Phase 2 loader refuses a literal "none"; test_policy_contract shows a computed one is UNKNOWN.
     outputs = [_constant(choice["output"]) for choice in _prototype_rules("fidelity")["rule"]["match"]]
     assert outputs[-1] == "F0"
     assert NO_MATCH["fidelity"] not in outputs
