@@ -1,0 +1,758 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand-next/tools/catalogue/capabilities.schema.json",
+  "title": "benchhand capability catalogue",
+  "description": "The shape of docs/architecture/capabilities.yaml: benchhand's capabilities (features), the MCP tools and CLI commands that expose them, the prototype commands they replace, and the open questions they raise. Internal tooling data, read only by tools/catalogue; it is not a product contract (ADR-0017 covers the shapes that cross a product boundary).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_base",
+    "open_questions",
+    "capabilities",
+    "tools",
+    "cli",
+    "prototype_commands"
+  ],
+  "properties": {
+    "contract_base": {
+      "description": "The base URI of the published contract schemas; a contract reference is resolved against it to give the schema's $id.",
+      "type": "string",
+      "format": "uri"
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/OpenQuestion"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Capability"
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Tool"
+      }
+    },
+    "cli": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CliCommand"
+      }
+    },
+    "prototype_commands": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PrototypeCommand"
+      }
+    }
+  },
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "Text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "Pointer": {
+      "description": "A repository path, optionally with :LINE or #anchor. The checker requires the file and the line to exist.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.][A-Za-z0-9_./*-]*(:[0-9]+|#[A-Za-z0-9_-]+)?$"
+    },
+    "Phase": {
+      "description": "The phase of the design plan's Steps that builds it, 0 to 7, or null when no phase does (then an open question says why).",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 7
+    },
+    "ContractRef": {
+      "description": "A published contract, as a URI reference relative to contract_base, optionally with a #/$defs/<Name> fragment.",
+      "type": "string",
+      "pattern": "^[a-z]+/[a-z-]+\\.schema\\.json(#/\\$defs/[A-Za-z_]+)?$"
+    },
+    "ToolContract": {
+      "description": "A contract reference, or `not yet defined` when no contract holds the shape yet.",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ContractRef"
+        },
+        {
+          "const": "not yet defined"
+        }
+      ]
+    },
+    "ToolName": {
+      "description": "An MCP tool name as the plan writes it: a family and an operation.",
+      "type": "string",
+      "pattern": "^[a-z][a-z_]*\\.[a-z][a-z_]*$"
+    },
+    "Source": {
+      "description": "Where a tool, command or capability is named. plan, adr, contract, architecture and code point into this repository as path:line, and the checker requires the pointed line to contain the name's last part. catalogue is a name this catalogue proposes for a prototype command, or for a gap the plan implies. study is a name the CAD-libraries study proposes; its reports are not in the repository, so `ref` is a citation the checker does not resolve.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "plan",
+            "adr",
+            "contract",
+            "architecture",
+            "code",
+            "catalogue",
+            "study"
+          ]
+        },
+        "ref": {
+          "$ref": "#/$defs/Text"
+        }
+      }
+    },
+    "Position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "says"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/Pointer"
+        },
+        "says": {
+          "$ref": "#/$defs/Text"
+        }
+      }
+    },
+    "OpenQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "question",
+        "origin",
+        "pointers"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "question": {
+          "$ref": "#/$defs/Text"
+        },
+        "origin": {
+          "description": "existing: a source already lists it as open. catalogue: this catalogue found it, usually where two sources disagree.",
+          "enum": [
+            "existing",
+            "catalogue"
+          ]
+        },
+        "pointers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Pointer"
+          }
+        },
+        "positions": {
+          "description": "Where sources disagree: what each says.",
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/Position"
+          }
+        }
+      }
+    },
+    "McpSurface": {
+      "description": "The MCP resources, prompts and Apps a capability serves, as the sources name them. ADR-0018: each is an enhancement over a tool that returns the same content.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Text"
+          }
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Text"
+          }
+        },
+        "apps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Text"
+          }
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "source": {
+          "$ref": "#/$defs/Pointer"
+        }
+      },
+      "required": [
+        "phase",
+        "source"
+      ]
+    },
+    "Capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "purpose",
+        "layer",
+        "container",
+        "phase",
+        "status",
+        "owner",
+        "adrs"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/Text"
+        },
+        "purpose": {
+          "$ref": "#/$defs/Text"
+        },
+        "layer": {
+          "description": "The layer of docs/architecture/layers.md (plan section 1), or where the capability sits outside the server.",
+          "enum": [
+            "mcp-surface",
+            "interaction",
+            "preview-host",
+            "core",
+            "providers",
+            "contracts",
+            "cli",
+            "ui",
+            "harness-integration",
+            "distribution",
+            "dev-tooling"
+          ]
+        },
+        "container": {
+          "description": "A node of a docs/architecture page, as <page>:<node id>, such as containers.md:record.",
+          "type": "string",
+          "pattern": "^[a-z-]+\\.md:[A-Za-z]+$"
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "status": {
+          "description": "built: on main, doing what its phase asks. partial: part of it is on main; the note says what is left. planned: a phase of the plan builds it. proposed: no source plans it yet. dropped: not carried over.",
+          "enum": [
+            "built",
+            "partial",
+            "planned",
+            "proposed",
+            "dropped"
+          ]
+        },
+        "evidence": {
+          "description": "For built and partial: where the code on main is.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Pointer"
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/Text"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "owner": {
+          "description": "The owning packages, providers or directories (plan section 2).",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(packages/[a-z-]+|providers/[a-z0-9-]+|ui/[a-z-]+|flow|harness|container|contracts|tools/[a-z]+)$"
+          }
+        },
+        "contracts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContractRef"
+          }
+        },
+        "contracts_planned": {
+          "description": "Contracts a source names that are not published yet.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Text"
+          }
+        },
+        "mcp": {
+          "$ref": "#/$defs/McpSurface"
+        },
+        "prototype": {
+          "description": "Paths of docs/architecture/reference-map.yaml entries.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "adrs": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "no_tool_reason": {
+          "description": "Why the capability has no MCP tool, when that is by design; a capability without tools and without this is a gap.",
+          "$ref": "#/$defs/Text"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "built",
+                  "partial"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "evidence"
+            ],
+            "properties": {
+              "evidence": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "partial"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "note"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "proposed",
+                  "dropped"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "source"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": null
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "open_questions"
+            ],
+            "properties": {
+              "open_questions": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "capability",
+        "access",
+        "input",
+        "output",
+        "envelope",
+        "gate",
+        "phase",
+        "status",
+        "source"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ToolName"
+        },
+        "capability": {
+          "$ref": "#/$defs/Id"
+        },
+        "access": {
+          "description": "read: changes nothing in the project. write: writes hw/, .benchhand/ or the flow state.",
+          "enum": [
+            "read",
+            "write"
+          ]
+        },
+        "input": {
+          "$ref": "#/$defs/ToolContract"
+        },
+        "output": {
+          "description": "The envelope payload's contract; the result itself is always envelope/envelope.schema.json.",
+          "$ref": "#/$defs/ToolContract"
+        },
+        "envelope": {
+          "description": "sync: the result comes back in the call. sync-or-job: ok in the call, or pending with a job handle when the work would pass the long-call threshold (ADR-0018, docs/contract/envelope.md). job-handle: always returns a handle.",
+          "enum": [
+            "sync",
+            "sync-or-job",
+            "job-handle"
+          ]
+        },
+        "gate": {
+          "description": "none: no flow effect. records-decision: records a gate decision, with the user's words unless the gate is auto (needs_user). requests-transition: moves the flow, refused out of order with a reason and next action. records-policy-change: a relaxation recorded in a DR (D3). unspecified: writes, and no source says whether the call is checked against the stage.",
+          "enum": [
+            "none",
+            "records-decision",
+            "requests-transition",
+            "records-policy-change",
+            "unspecified"
+          ]
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "status": {
+          "enum": [
+            "built",
+            "planned",
+            "proposed",
+            "dropped"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "replaces": {
+          "description": "The prototype commands (prototype_commands[].command) the tool replaces.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Text"
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/Text"
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "implied_by": {
+          "description": "For a catalogue proposal that replaces no prototype command: what in the sources implies the tool.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Pointer"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "proposed"
+              },
+              "source": {
+                "properties": {
+                  "kind": {
+                    "const": "catalogue"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "replaces"
+                ],
+                "properties": {
+                  "replaces": {
+                    "minItems": 1
+                  }
+                }
+              },
+              {
+                "required": [
+                  "implied_by"
+                ],
+                "properties": {
+                  "implied_by": {
+                    "minItems": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "planned"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "plan",
+                      "adr",
+                      "contract",
+                      "architecture",
+                      "code"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "proposed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "catalogue",
+                      "study"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": null
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "open_questions"
+            ]
+          }
+        }
+      ]
+    },
+    "CliCommand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "capability",
+        "status",
+        "phase",
+        "access",
+        "role",
+        "source"
+      ],
+      "properties": {
+        "name": {
+          "description": "The subcommand after `benchhand`.",
+          "type": "string",
+          "pattern": "^[a-z<][a-z0-9 <>|.-]*$"
+        },
+        "capability": {
+          "$ref": "#/$defs/Id"
+        },
+        "status": {
+          "enum": [
+            "built",
+            "planned",
+            "proposed",
+            "dropped"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Pointer"
+          }
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "mcp": {
+          "description": "The MCP tool that does the same work, if any.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ToolName"
+          }
+        },
+        "access": {
+          "enum": [
+            "read",
+            "write"
+          ]
+        },
+        "role": {
+          "description": "Its place under ADR-0001: launcher (starts the server or the preview host), admin (administers the install or the project), dev (development only), provider (mounted from a provider manifest), read-only-adapter (lane 8's proposed ADR-0001 amendment: a read-only command over the same core as an MCP tool).",
+          "enum": [
+            "launcher",
+            "admin",
+            "dev",
+            "provider",
+            "read-only-adapter"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "note": {
+          "$ref": "#/$defs/Text"
+        },
+        "open_questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "built"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "evidence"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": null
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "open_questions"
+            ]
+          }
+        }
+      ]
+    },
+    "PrototypeCommand": {
+      "description": "A command a prototype skill told the agent to run, through cad-flow/scripts/run.py.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "path",
+        "capability"
+      ],
+      "properties": {
+        "command": {
+          "description": "The script name and its subcommand, if it has one.",
+          "type": "string",
+          "pattern": "^[a-z_0-9]+\\.py( [a-z-]+)?$"
+        },
+        "path": {
+          "description": "Its docs/architecture/reference-map.yaml entry.",
+          "type": "string",
+          "minLength": 1
+        },
+        "capability": {
+          "description": "The capability that takes it over, or null: a gap.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "note": {
+          "$ref": "#/$defs/Text"
+        }
+      }
+    }
+  }
+}
