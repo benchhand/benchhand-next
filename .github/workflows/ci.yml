@@ -28,6 +28,9 @@ jobs:
         with:
           fetch-depth: 0 # the breaking-change check compares with the last v* release tag
           persist-credentials: false
+      # The `hooks` job skips the reuse hook; this is the CI check (`just reuse` runs it locally).
+      - name: REUSE compliance
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           enable-cache: true

@@ -30,6 +30,13 @@ repos:
       - id: end-of-file-fixer
         exclude: *verbatim
 
+  # The REUSE project's own hook: `reuse lint` on the whole project. It installs its own copy of reuse, so
+  # the rev is pinned here as well as in mise.toml (the recipe `just reuse`).
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v6.3.0
+    hooks:
+      - id: reuse
+
   - repo: local
     hooks:
       - id: ruff

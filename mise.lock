@@ -236,6 +236,15 @@ url = "https://github.com/suzuki-shunsuke/pinact/releases/download/v5.0.2/pinact
 url_api = "https://api.github.com/repos/suzuki-shunsuke/pinact/releases/assets/675205667"
 provenance = "github-attestations"
 
+[[tools."pipx:reuse"]]
+version = "6.3.0"
+backend = "pipx:reuse"
+specifiers = ["6.3.0"]
+uv = { path = ".mise/locks/pipx-reuse/6.3.0~068c1fb0", digest = "sha256:288692e0a33eb619cdb4b6128e8e446ffd5c2354bf95a5bcfffc4dd23d28c986" }
+
+[tools."pipx:reuse".options]
+extras = "charset-normalizer"
+
 [[tools.prek]]
 version = "0.5.11"
 backend = "aqua:j178/prek"

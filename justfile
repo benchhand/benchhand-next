@@ -9,11 +9,15 @@ default: check
 # Lint, type-check and test everything, and check the generated contract code. The git hooks
 # (.pre-commit-config.yaml) call the same recipes. `audit`, `secrets-history` and `lint-workflows-online`
 # need the network and run in CI.
-check: lint spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map
+check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map
 
 lint:
     uv run ruff check .
     uv run ruff format --check .
+
+# Licence and copyright data on every file (SPDX headers, REUSE.toml, LICENSES/).
+reuse:
+    reuse lint
 
 # Spelling in source, docs and config (_typos.toml lists what is left out and why).
 spell:
@@ -205,8 +209,8 @@ reference-map *args:
 hooks-install:
     prek install --install-hooks --hook-type pre-commit --hook-type pre-push
 
-# Run every hook on every file, as CI does, except two: `gitleaks` scans the staged changes, which a CI
+# Run every hook on every file, as CI does, except three: `reuse` has its own CI step (fsfe/reuse-action), `gitleaks` scans the staged changes, which a CI
 # checkout has none of (`secrets-history` covers it there), and `tests` is the `check` job's `test-coverage`.
 hooks:
-    SKIP=gitleaks prek run --all-files --stage pre-commit
+    SKIP=gitleaks,reuse prek run --all-files --stage pre-commit
     SKIP=tests prek run --all-files --stage pre-push

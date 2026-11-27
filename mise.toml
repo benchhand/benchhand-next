@@ -19,3 +19,5 @@ zizmor = "1.33.1"
 pinact = "5.0.2"
 # Known vulnerabilities in uv.lock and both pnpm lockfiles.
 osv-scanner = "2.7.1"
+# Per-file licence and copyright data (REUSE.toml, SPDX headers). The extra is the encoding detector reuse needs.
+"pipx:reuse" = { version = "6.3.0", extras = ["charset-normalizer"] }
