@@ -29,7 +29,7 @@ Every compiled list ends with an unconditional choice, so the interpreter can't 
 
 1. The interpreter evaluates the lists of one kind in order: the contributions in ascending order of provider name, then the list in `flow.yaml`. The flow's result is final.
 2. `checks_by_iteration`, `dispatch` and `fidelity` fall through on the kind's [reserved no-match value](flow.md#reserved-values): `[]`, `"unknown"` and `"none"`. A contributed list ends in its kind's value. A list that gives it passes to the next list, and the first other value is the result. A contributed list therefore replaces the flow's value whenever it matches, and a contributed `checks_by_iteration` list can't select "no checks".
-3. `rigor` doesn't fall through. Every list is evaluated, the contributions and the flow's, and the result is the union of their messages in evaluation order. Rigor holds only when the union is empty, so a contribution can add requirements but never waive the flow's.
+3. `rigor` doesn't fall through. Every list is evaluated, the contributions and the flow's, and the result is the union of their messages, each once, in the order first given. Rigor holds only when the union is empty, so a contribution can add requirements but never waive the flow's.
 4. A gate's contributed requirements hold as well as the requirements of `flow.yaml`. The interpreter checks the `flow.yaml` requirements first, then each provider's in the same provider order.
 
 When the flow loads, the interpreter refuses a requirement for a gate that `flow.yaml` doesn't declare, or for a step that the gate doesn't have.

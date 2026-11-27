@@ -48,11 +48,14 @@ def merged(
 ) -> Any:
     """The kind's result: the contributed lists, by ascending provider name, then the flow's, whose result is final.
 
-    rigor gives the union of every list's messages, in evaluation order.
+    rigor gives the union of every list's messages, each once, in the order first given.
     """
     ordered = [contributed[provider] for provider in sorted(contributed)]
     if kind == "rigor":
-        return [message for rule_list in [*ordered, flow_list] for message in first_match(rule_list, data)]
+        messages = [
+            message for rule_list in [*ordered, flow_list] for message in first_match(rule_list, data)
+        ]
+        return list(dict.fromkeys(messages))
     for rule_list in ordered:
         value = first_match(rule_list, data)
         if value != NO_MATCH[kind]:

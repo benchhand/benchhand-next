@@ -191,10 +191,15 @@ REGULATED_OFF_WELDED = _rigor_activation("regulated", turns_check_off=True, weld
 FLOW_RIGOR_MESSAGE = "regulated rigor refuses a flow profile that turns a check off"
 
 
-def test_rigor_gives_the_union_of_every_lists_messages_in_evaluation_order() -> None:
+def test_rigor_gives_the_union_of_every_lists_messages_each_once_in_evaluation_order() -> None:
+    # A message two lists give is in the union once, where it first appears.
     contributed = {
-        "zinc": _contributed("rigor", WELDED, '["a weld map is reviewed"]'),
-        "alpha": _contributed("rigor", 'policy.rigor == "regulated"', '["every part names its material"]'),
+        "zinc": _contributed("rigor", WELDED, f'["{FLOW_RIGOR_MESSAGE}", "a weld map is reviewed"]'),
+        "alpha": _contributed(
+            "rigor",
+            'policy.rigor == "regulated"',
+            '["every part names its material", "a weld map is reviewed"]',
+        ),
     }
     assert merged("rigor", contributed, _flow_list("rigor"), REGULATED_OFF_WELDED) == [
         "every part names its material",
