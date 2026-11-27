@@ -9,7 +9,10 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from rule_lists import first_match, holds
+from benchhand_contracts import violations
+from rule_lists import explanation, first_match, holds
+
+RULES_ID = "https://benchhand.github.io/benchhand/contracts/flow/rules.schema.json"
 
 
 def _list(condition: str) -> dict[str, Any]:
@@ -46,3 +49,42 @@ def test_an_output_that_fails_to_evaluate_fails_the_test() -> None:
     rule_list = {"rule": {"match": [{"output": "record.fidelity"}]}}
     with pytest.raises(AssertionError, match="fails"):
         first_match(rule_list, {"record": {}})
+
+
+def _explained(text: str) -> dict[str, Any]:
+    return {
+        "name": "fidelity",
+        "rule": {
+            "match": [
+                {"condition": 'stage == "parts"', "output": '"F2"', "explanation": text},
+                {"output": '"F0"', "explanation": '"not parts"'},
+            ]
+        },
+    }
+
+
+def test_explanation_gives_the_text_of_the_choice_that_gives_the_output() -> None:
+    rule_list = _explained('"form check at " + stage')
+    assert explanation(rule_list, {"stage": "parts"}) == "form check at parts"
+    assert explanation(rule_list, {"stage": "layout"}) == "not parts"
+
+
+def test_a_list_without_explanations_explains_nothing() -> None:
+    assert explanation(_list('stage == "parts"'), {"stage": "parts"}) is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("stage.size()", id="int"),
+        pytest.param("[stage]", id="list"),
+        pytest.param('stage == "parts"', id="bool"),
+        pytest.param("record.missing", id="missing-key"),
+    ],
+)
+def test_an_explanation_that_does_not_give_a_cel_string_fails_the_test(text: str) -> None:
+    # The schema types an explanation as a CEL expression, so it can't see what the expression gives.
+    rule_list = _explained(text)
+    assert violations(RULES_ID, rule_list) == []
+    with pytest.raises(AssertionError, match="not a string"):
+        explanation(rule_list, {"stage": "parts", "record": {}})

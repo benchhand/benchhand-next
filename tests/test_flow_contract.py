@@ -17,7 +17,7 @@ from typing import Any
 import pytest
 import yaml
 from benchhand_contracts import violations
-from rule_lists import NO_MATCH, first_match, holds
+from rule_lists import NO_MATCH, explanation, first_match, holds
 
 CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
 FLOW_ID = f"{CONTRACTS}flow/flow.schema.json"
@@ -151,11 +151,10 @@ def test_a_rule_list_file_no_longer_carries_its_kind_or_the_old_shape(key: str) 
         ("rule", "variables"),
         ("rule", "id"),
         ("rule", "description"),
-        ("choice", "explanation"),
     ],
 )
 def test_a_rule_list_outside_the_restricted_profile_is_refused(where: str, feature: str) -> None:
-    # ADR-0020's profile: a name and one rule with one match block of conditions and outputs, nothing else.
+    # ADR-0020's profile: a name and one rule with one match block of conditions, outputs and explanations.
     fidelity = _prototype_rules("fidelity")
     holder = {"list": fidelity, "rule": fidelity["rule"], "choice": fidelity["rule"]["match"][0]}[where]
     holder[feature] = '"text"'
@@ -534,6 +533,56 @@ def test_the_prototype_dispatch_list_follows_handler_for(
     # that kind's table; anything else, and every coverage obligation, is UNKNOWN.
     obligation = {"family": family, **({"operation": operation} if operation else {})}
     assert first_match(_prototype_rules("dispatch"), {"obligation": obligation}) == handler
+
+
+@pytest.mark.parametrize(
+    ("family", "operation", "text"),
+    [
+        ("process.fdm.orientation", {"kind": "fdm"}, "handled by process.fdm.orientation"),
+        (
+            "process.welding.coverage",
+            {"kind": "welding"},
+            "no handler exists for process.welding.coverage: its kind has no check contract, so its"
+            " manufacturability is not assessed",
+        ),
+        ("purchase.price", None, "this producer has no handler for purchase.price, so it is not assessed"),
+        (
+            "process.fdm.orientation",
+            {"kind": "cnc"},
+            "this producer has no handler for process.fdm.orientation, so it is not assessed",
+        ),
+    ],
+)
+def test_the_prototype_dispatch_list_explains_a_missing_handler_as_the_prototype_did(
+    family: str, operation: dict[str, str] | None, text: str
+) -> None:
+    # dispatch.py coverage_gap and _no_handler: a coverage obligation has no check contract, and any other
+    # unhandled family has no handler; both are UNKNOWN, and the explanation carries the finding's text.
+    obligation = {"family": family, **({"operation": operation} if operation else {})}
+    assert explanation(_prototype_rules("dispatch"), {"obligation": obligation}) == text
+
+
+def test_every_choice_of_the_prototype_dispatch_list_has_an_explanation() -> None:
+    assert all("explanation" in choice for choice in _prototype_rules("dispatch")["rule"]["match"])
+
+
+@pytest.mark.parametrize("explained", [[0], [1]], ids=["first-only", "last-only"])
+def test_a_rule_list_with_an_explanation_on_some_choices_only_is_refused(explained: list[int]) -> None:
+    # In cel-go's explanation copy a choice without one is dropped, so its explanation would answer another choice.
+    fidelity = _prototype_rules("fidelity")
+    for index in explained:
+        fidelity["rule"]["match"][index]["explanation"] = '"why"'
+    found = violations(RULES_ID, fidelity)
+    assert found
+    assert all(violation.pointer.startswith("/rule/match") for violation in found)
+
+
+def test_a_rule_list_with_an_explanation_on_every_choice_validates() -> None:
+    fidelity = _prototype_rules("fidelity")
+    for choice in fidelity["rule"]["match"]:
+        choice["explanation"] = '"the fidelity of " + stage'
+    assert violations(RULES_ID, fidelity) == []
+    assert explanation(fidelity, {"stage": "parts", "stage_order": {}}) == "the fidelity of parts"
 
 
 def test_every_dispatch_case_is_an_owned_obligation() -> None:

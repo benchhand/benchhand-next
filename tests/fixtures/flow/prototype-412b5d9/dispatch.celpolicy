@@ -17,6 +17,10 @@
 # so a process.<kind>.coverage obligation reaches the last item and is
 # UNKNOWN, a coverage gap. The activation names are made up for
 # this test, as in flow.yaml.
+#
+# Every choice has an explanation, the text of the finding the prototype
+# gave: dispatch.py coverage_gap for a process.<kind>.coverage obligation,
+# and _no_handler for any other family without a handler.
 name: prototype.dispatch
 rule:
   match:
@@ -24,102 +28,128 @@ rule:
         obligation.family in
         ["route.consistency", "route.operation_plan", "optical.route"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         obligation.family in ["purchase.identity", "purchase.rating",
         "purchase.dimensions", "purchase.mounting", "purchase.availability"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "fdm"
         && obligation.family in ["process.fdm.orientation",
         "process.fdm.geometry", "process.fdm.support",
         "process.fdm.thermal_distortion"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "resin"
         && obligation.family in ["process.resin.orientation",
         "process.resin.geometry", "process.resin.support",
         "process.resin.drainage", "process.resin.post_cure"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "cnc"
         && obligation.family in ["process.cnc.stock", "process.cnc.setup",
         "process.cnc.access", "process.cnc.features",
         "process.cnc.precision"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "laser"
         && obligation.family in ["process.laser.material",
         "process.laser.kerf", "process.laser.features",
         "process.laser.thermal", "process.laser.nesting"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "waterjet"
         && obligation.family in ["process.waterjet.material",
         "process.waterjet.kerf", "process.waterjet.features",
         "process.waterjet.edge"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "plasma"
         && obligation.family in ["process.plasma.material",
         "process.plasma.kerf", "process.plasma.features",
         "process.plasma.thermal"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation)
         && obligation.operation.kind == "sheet_forming"
         && obligation.family in ["process.sheet_forming.bend",
         "process.sheet_forming.sequence", "process.sheet_forming.distortion"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "casting"
         && obligation.family in ["process.casting.draft",
         "process.casting.walls", "process.casting.tooling",
         "process.casting.defects"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "moulding"
         && obligation.family in ["process.moulding.draft",
         "process.moulding.walls", "process.moulding.tooling",
         "process.moulding.defects"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "extrusion"
         && obligation.family in ["process.extrusion.profile",
         "process.extrusion.secondary"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "drilling"
         && obligation.family in ["process.drilling.access",
         "process.drilling.feature"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "reaming"
         && obligation.family in ["process.reaming.access",
         "process.reaming.allowance"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "tapping"
         && obligation.family in ["process.tapping.access",
         "process.tapping.engagement"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "finishing"
         && obligation.family in ["process.finishing.allowance",
         "process.finishing.access"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "coating"
         && obligation.family in ["process.coating.allowance",
         "process.coating.access"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "joining"
         && obligation.family in ["process.joining.access",
         "process.joining.distortion"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - condition: >-
         has(obligation.operation) && obligation.operation.kind == "inspection"
         && obligation.family in ["process.inspection.access",
         "process.inspection.capability"]
       output: obligation.family
+      explanation: '"handled by " + obligation.family'
     - output: '"unknown"'
+      explanation: >-
+        obligation.family.startsWith("process.")
+        && obligation.family.endsWith(".coverage")
+        ? "no handler exists for " + obligation.family
+        + ": its kind has no check contract, so its manufacturability is not assessed"
+        : "this producer has no handler for " + obligation.family
+        + ", so it is not assessed"

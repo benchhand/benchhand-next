@@ -56,14 +56,35 @@ def holds(expression: str, data: dict[str, Any]) -> bool:
     return bool(value.value())
 
 
-def first_match(rule_list: dict[str, Any], data: dict[str, Any]) -> Any:
-    env = _env(data)
+def _first_choice(rule_list: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
     for choice in rule_list["rule"]["match"]:
         if "condition" not in choice or holds(choice["condition"], data):
-            output = env.compile(choice["output"]).eval(data=data)
-            assert output.type() != cel.Type.ERROR, f"{choice['output']!r} fails: {output.value()}"
-            return output.plain_value()
+            return choice
     raise AssertionError("no choice matched: the last choice of a rule list must be unconditional")
+
+
+def first_match(rule_list: dict[str, Any], data: dict[str, Any]) -> Any:
+    choice = _first_choice(rule_list, data)
+    output = _env(data).compile(choice["output"]).eval(data=data)
+    assert output.type() != cel.Type.ERROR, f"{choice['output']!r} fails: {output.value()}"
+    return output.plain_value()
+
+
+def explanation(rule_list: dict[str, Any], data: dict[str, Any]) -> str | None:
+    """The explanation of the choice that gives the output, or None for a list without explanations.
+
+    The pinned cel-go tool compiles a list's explanations as a second checked expression (ADR-0020). Every choice has
+    one or none does, so that expression takes the same choice as the output's. An explanation must give a CEL
+    string, which cel-go doesn't check and the schema can't: anything else, an evaluation error included, fails.
+    """
+    choice = _first_choice(rule_list, data)
+    if "explanation" not in choice:
+        return None
+    value = _env(data).compile(choice["explanation"]).eval(data=data)
+    assert value.type() == cel.Type.STRING, (
+        f"{choice['explanation']!r} gives {value.type()} {value.value()!r}, not a string"
+    )
+    return str(value.value())
 
 
 def merged(

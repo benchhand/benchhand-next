@@ -15,7 +15,7 @@ direction: right
     class: owned
     label: "Rule"
     shape: sql_table
-    "match": "RuleMatch[1..*]" { constraint: "req" }
+    "match": "any" { constraint: "req" }
   }
   "flow_rules__RuleMatch": {
     class: owned
@@ -23,6 +23,7 @@ direction: right
     shape: sql_table
     "condition": "CelExpression"
     "output": "CelExpression" { constraint: "req" }
+    "explanation": "CelExpression"
   }
 }
 "aggregate__flow_rules__FlowRuleLists": {

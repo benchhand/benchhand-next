@@ -8,7 +8,7 @@ export type RuleName = string;
 export type RuleListFile = string;
 
 /**
- * Provisional: one rule-list file, flow/<name>.celpolicy, in the restricted cel-policy profile of ADR-0020 (github.com/cel-expr/cel-policy): a name and one rule with one first-match match block. The profile has no variables, no aggregate, no nested rule and no other cel-policy field, explanation and imports included. The first choice whose condition holds gives its output. Every choice but the last has a condition, and the last has none, so every list gives a value. The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle. It refuses a conditional last choice, an excluded feature and a result type other than its kind's. The schema checks the rest of the shape, exactly one unconditional choice included, but not that it is the last. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: list(string), the check ids in run order, with a conditional check concatenated as a CEL ternary; [] is its no-match value. dispatch: string, a handler id, or its no-match value "unknown", which the host records as UNKNOWN coverage, never a pass. fidelity: string, the form-check fidelity "F0" to "F3", or its no-match value "none", which only a contributed list gives. rigor: list(string), the messages of the requirements the record doesn't meet under the project's rigor policy, ending in []. The slot type is string, so the compiler accepts any string a fidelity or dispatch output gives, computed ones included. The Phase 2 evaluator checks the kind's result against its domain: a fidelity outside F0 to F3, and a dispatch handler id that no handler has, is out of the domain, and the evaluator records it as UNKNOWN with a finding that names the value, never as a pass. policy/contribution.schema.json says how the lists of one kind combine
+ * Provisional: one rule-list file, flow/<name>.celpolicy, in the restricted cel-policy profile of ADR-0020 (github.com/cel-expr/cel-policy): a name and one rule with one first-match match block. The profile has no variables, no aggregate, no nested rule, no imports and no other cel-policy field but explanation. The first choice whose condition holds gives its output. Every choice but the last has a condition, and the last has none, so every list gives a value. A choice's explanation, when the list has them, says why it gives its output; every choice has one, or none does. The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle. It refuses a conditional last choice, an excluded feature and a result type other than its kind's. The schema checks the rest of the shape, exactly one unconditional choice included, but not that it is the last. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: list(string), the check ids in run order, with a conditional check concatenated as a CEL ternary; [] is its no-match value. dispatch: string, a handler id, or its no-match value "unknown", which the host records as UNKNOWN coverage, never a pass. fidelity: string, the form-check fidelity "F0" to "F3", or its no-match value "none", which only a contributed list gives. rigor: list(string), the messages of the requirements the record doesn't meet under the project's rigor policy, ending in []. The slot type is string, so the compiler accepts any string a fidelity or dispatch output gives, computed ones included. The Phase 2 evaluator checks the kind's result against its domain: a fidelity outside F0 to F3, and a dispatch handler id that no handler has, is out of the domain, and the evaluator records it as UNKNOWN with a finding that names the value, never as a pass. policy/contribution.schema.json says how the lists of one kind combine
  */
 export interface BenchhandRuleListFlowNameCelpolicyRestrictedCelPolicyProvisional {
   /**
@@ -18,13 +18,16 @@ export interface BenchhandRuleListFlowNameCelpolicyRestrictedCelPolicyProvisiona
   rule: Rule;
 }
 /**
- * The one rule of the list: an ordered, first-match list of choices. Exactly one choice has no condition; the compiler checks that it is the last
+ * The one rule of the list: an ordered, first-match list of choices. Exactly one choice has no condition; the compiler checks that it is the last. Every choice has an explanation, or none does
  */
 export interface Rule {
   /**
    * @minItems 1
    */
-  match: [RuleMatch, ...RuleMatch[]];
+  match: {
+    [k: string]: unknown;
+  }[] &
+    [RuleMatch, ...RuleMatch[]];
 }
 /**
  * One choice: when condition holds, the list gives output. A choice without condition always holds
@@ -38,6 +41,10 @@ export interface RuleMatch {
    * A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
   output: string;
+  /**
+   * A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  explanation?: string;
 }
 /**
  * A reference to one rule-list file

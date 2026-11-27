@@ -22,10 +22,11 @@ Each rule list is a file of its own, `flow/<name>.celpolicy`, written in the [ce
 
 - The top-level keys are `name` and `rule`.
 - `rule` has one `match` block and nothing else: no `aggregate`, no `variables` and no nested `rule`.
-- Each choice of `match` has an `output` and, except the last, a `condition`. Both are CEL expressions. The profile has no `explanation`, no `imports` and no `description`.
+- Each choice of `match` has an `output` and, except the last, a `condition`. Both are CEL expressions. The profile has no `imports` and no `description`.
+- A choice may have an `explanation`, a CEL expression that gives a `string`: why the choice gives its output, such as a finding's text. Every choice of a list has one, or none does, and the schema refuses a list with only some (ADR-0020, "The restricted cel-policy profile"). The owner added it on 2026-11-27.
 - The first choice whose `condition` holds gives its `output`. The last choice has no condition, so every list gives a value.
 
-The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle. It also refuses a list whose last choice has a condition, a feature outside the profile, and a result type other than its kind's. The schema checks that exactly one choice has no condition (`contains`, `minContains: 1` and `maxContains: 1` on the choices without `condition`). It can't check that this choice is the last; the compiler does.
+The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle, and a list's explanations into a second one. It also refuses a list whose last choice has a condition, a feature outside the profile, a result type other than its kind's, and an explanation whose result isn't a `string`. The schema checks that exactly one choice has no condition (`contains`, `minContains: 1` and `maxContains: 1` on the choices without `condition`). It can't check that this choice is the last; the compiler does.
 
 The file doesn't say which list it is. `flow.yaml` names one file of each kind under `rules`, as `{file, rules_version}` relative to `flow.yaml`. A [policy contribution](policy.md#provider-contributions) names its files in the same shape. `rules_version` is the version of the rule-list format. The kind sets the type of every output:
 

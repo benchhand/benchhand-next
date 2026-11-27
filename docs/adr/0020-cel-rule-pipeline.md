@@ -1,6 +1,6 @@
 # ADR-0020: The CEL rule pipeline
 
-Status: accepted. Source: the owner, 2026-11-27, on `research/cel-neutral/REPORT.md` and `research/cel-k8s/REPORT.md`. It supersedes part of [ADR-0014](0014-flow-rules-cel.md): rule lists are cel-policy files compiled before load, not CEL checked at load, and the types "generated from the contracts" are a descriptor set and a profile manifest. It refines section 5 of [the plan](../design-plan.md). Amended 2026-11-27, at the Phase 0 and 1 gate: the owner decided the composition of providers' rule lists ("Open items").
+Status: accepted. Source: the owner, 2026-11-27, on `research/cel-neutral/REPORT.md` and `research/cel-k8s/REPORT.md`. It supersedes part of [ADR-0014](0014-flow-rules-cel.md): rule lists are cel-policy files compiled before load, not CEL checked at load, and the types "generated from the contracts" are a descriptor set and a profile manifest. It refines section 5 of [the plan](../design-plan.md). Amended 2026-11-27, at the Phase 0 and 1 gate: the owner decided the composition of providers' rule lists ("Open items"), and added `explanation` to the restricted profile ("The restricted cel-policy profile").
 
 ## Context
 
@@ -105,9 +105,19 @@ A rule list is a cel-policy file, `flow/*.celpolicy`. The profile is an allow-li
 
 - a `name`, and a `rule` with one `match` block, evaluated first-match;
 - each choice has an `output`, and every choice except the final one has a `condition`;
-- the final choice has no condition, so it always matches.
+- the final choice has no condition, so it always matches;
+- each choice may have an `explanation`, a CEL expression that gives a `string`, when every choice of the list has one.
 
-The profile has no `variables`, no `aggregate` and no nested `rule`. Every other cel-policy field, `explanation` and `imports` included, is outside it. The compile step refuses an excluded feature before the policy compiler runs, in every profile. A feature joins the profile only when the CheckedExpr the compiler emits for it passes the supported-profile gate on cel-expr-python.
+The profile has no `variables`, no `aggregate` and no nested `rule`. Every other cel-policy field, `imports` included, is outside it. The compile step refuses an excluded feature before the policy compiler runs, in every profile. A feature joins the profile only when the CheckedExpr the compiler emits for it passes the supported-profile gate on cel-expr-python.
+
+**Amended 2026-11-27: `explanation` joins the profile.** The owner added it at the Phase 0 and 1 gate, so that a rule list can carry a finding's text, such as the prototype dispatch list's "no handler for ...". This text first listed `explanation` as outside the profile. cel-go's policy module at v0.33.3 handles it as follows:
+
+- The parser reads `explanation` on a match choice as a CEL expression, the same kind of value as `output` and `condition` (`policy/parser.go:922-926`). Beside a nested `rule` it is an error, "explanation can only be set on output match cases, not nested rules" (`:923-933`). The cel-policy format describes it as "a CEL expression evaluating to a `string`" (`github.com/cel-expr/cel-policy`, `README.md:154-155`, at `8e4cf03`).
+- The policy compiler doesn't compile it (`policy/compiler.go` doesn't read it). `Policy.GetExplanationOutputPolicy` returns a copy of the policy in which each choice's output is its explanation (`policy/parser.go:152-165`, `:286-303`). That copy compiles to a second CheckedExpr.
+- In the copy, a choice without an explanation has neither an output nor a rule, and the compiler drops it without an error (`policy/compiler.go:373-397`). The copy's first match would then answer for another choice. An explanation on the final choice alone would explain every output.
+- cel-go doesn't check the type of the explanation's result.
+
+So the profile adds three rules. Every choice of a list has an explanation, or none does; the rule-list schema checks this. The pinned cel-go tool compiles the explanation copy of a list that has explanations into a second CheckedExpr of the list's bundle entry. It refuses a result type other than `string`, as it checks the output's slot type. The host evaluates the explanation's CheckedExpr on the same activation as the output's and uses its text as the finding's.
 
 The final choice keeps "no match means UNKNOWN". A dispatch list ends with `- output: '"unknown"'`. The rule-list schema reserves the value `unknown`, and the host records it as UNKNOWN coverage, never PASS. Every other list's final choice outputs an explicit default of the same type as its other outputs, so the compiler's output-type check still holds. How the lists that policy providers contribute combine with the flow's own was open for the owner, who decided it on 2026-11-27 (see "Open items").
 
@@ -183,7 +193,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
 - A rule-list edit takes effect only after a compile step.
 - A contract change that alters a scope changes its profile digest, which makes every bundle in that profile stale. CI recompiles benchhand's own. A project or a policy provider runs `benchhand rules compile` after a benchhand upgrade, and the refusal names that command.
 - The release builds a wheel matrix for `benchhand-celcheck`, and every install carries the binary, also when a project has no rules of its own. An install smoke test runs `benchhand rules compile` from the installed wheel on each supported target and in the container image (plan, Phase 3).
-- Rule lists can't use `variables`, `aggregate`, nested rules or explanations. A sub-expression that several conditions share is repeated in each.
+- Rule lists can't use `variables`, `aggregate` or nested rules. A sub-expression that several conditions share is repeated in each.
 - The checker doesn't check enum values. `decision.status == "aproved"` passes the check and is always false.
 - Cost has no bound. cel-go's static estimate in CI is an estimate: the `strings` extension at version 4 has no cost model, and the input limits the estimate assumes aren't validated. cel-expr-python has no cost API, and whether it can interrupt an evaluation is unverified.
 - cel-expr-python (0.1.x) is the only evaluator. The plan's old Rust-backed fallback is gone with D12.
