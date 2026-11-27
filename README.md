@@ -9,11 +9,14 @@ This is the temporary home of the benchhand rewrite: agent-guided mechanical CAD
 - Provider protocol: [`docs/contract/provider-protocol.md`](docs/contract/provider-protocol.md)
 - Phase summaries: [`docs/phases/`](docs/phases/phase-0-1.md)
 - Testing: [`docs/testing.md`](docs/testing.md)
+- Tooling, hooks and CI checks: [`docs/tooling.md`](docs/tooling.md)
 - Behavioural reference from the prototype (tests, fixtures, schemas, examples): [`reference/`](reference/). It is read-only. Production code is written fresh (ADR-0012).
 
 ## Develop
 
 ```sh
 uv sync --all-packages
+mise install        # the pinned tools: d2, prek, typos, taplo, gitleaks, actionlint, zizmor, pinact, osv-scanner
+just hooks-install  # git hooks; they call the same recipes CI does (docs/tooling.md)
 just check
 ```
