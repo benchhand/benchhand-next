@@ -1,0 +1,61 @@
+name: trivy
+# Misconfiguration in Dockerfiles, Kubernetes manifests, Terraform and the like, uploaded to code scanning.
+# Trivy's vulnerability and secret scanners are off on purpose: osv-scanner and gitleaks (security.yml)
+# already cover those, and running both would report each finding twice. docs/tooling.md has the comparison.
+# The repo holds no such file yet; the scan starts finding things when the Phase 7 image lands.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths-ignore: ["reference/**"]
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: trivy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  misconfig:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Trivy config
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: config
+          scan-ref: .
+          skip-dirs: reference,target,node_modules,.venv,.pi
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-config.sarif
+          exit-code: "1"
+      - name: Print the findings
+        if: failure()
+        run: |
+          jq -r '
+            .runs[].results[]?
+            | "\(.ruleId) [\(.level)] \(.message.text | split("\n")[0])"
+              + " @ \(.locations[0].physicalLocation.artifactLocation.uri // "?")"
+          ' trivy-config.sarif
+      # A pull request from a fork gets a read-only token, and the upload would fail.
+      - name: Upload SARIF to code scanning
+        if: >-
+          always() && hashFiles('trivy-config.sarif') != '' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
