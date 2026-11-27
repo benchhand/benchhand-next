@@ -152,11 +152,22 @@ def test_a_broken_cross_reference_is_reported(tmp_path: Path, old: str, new: str
         ("reason: Prototype process.", "pointer: docs/x.md", "'reason' is a required property"),
         ("kind: decision", "kind: wish", "'wish' is not one of"),
         ("sources: [findings 1.2]", "sources: [hw/parts/x/part.yaml]", "does not match"),
+        (
+            "sources: [findings 1.2]",
+            "sources: ['agentcad product test 2026-11-27, REPORT']",
+            "does not match",
+        ),
     ],
 )
 def test_a_schema_violation_is_reported(tmp_path: Path, old: str, new: str, message: str) -> None:
     assert old in REGISTER
     assert message in _problems(tmp_path, REGISTER.replace(old, new, 1))
+
+
+def test_an_agentcad_product_test_report_section_is_a_source(tmp_path: Path) -> None:
+    source = "'agentcad product test 2026-11-27, REPORT \u00a7bugs item 4'"
+    register = REGISTER.replace("sources: [findings 1.2]", f"sources: [{source}]", 1)
+    assert load_register(_repo(tmp_path, register)).issues[1]["sources"] == [source.strip("'")]
 
 
 @pytest.fixture(autouse=True)

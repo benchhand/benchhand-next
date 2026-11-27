@@ -1,7 +1,8 @@
 # Migration issue register: every issue found in the prototype
-# (benchhand/benchhand) by the test project and by the prototype's lead
-# sessions, and every bead in the prototype's ledger, with how benchhand-next
-# addresses it. The owner's rule: all of them are addressed in the new build.
+# (benchhand/benchhand) by the test project, by the prototype's lead sessions
+# and by the agentcad product test, and every bead in the prototype's ledger,
+# with how benchhand-next addresses it. The owner's rule: all of them are
+# addressed in the new build.
 # `just issues` checks this file against tools/issues/issue-register.schema.json
 # and the reference map, and writes docs/migration/issue-register.md from it
 # (`--write`). `just issues-sync` (local only) compares it with the live ledger
@@ -14,6 +15,7 @@
 #   test-project gate-vN-blockers, handoff §x, findings <area.number>,
 #   design <name> <section or question>, handover-2026-11-20 §x,
 #   decisions-while-away <entry>, pkgB <bead>-decision,
+#   agentcad product test 2026-11-27, REPORT §<section> [item N],
 #   plus bead ids and prototype PR numbers.
 #
 # disposition:
@@ -440,6 +442,21 @@ design_rules:
       - pkgB y87-decision2
     benchhand_next: Not built yet; the analysis port (Phase 4) and
       the material contract carry it (RULE-30, RULE-31).
+  - id: RULE-39
+    rule: Interference the record declares never blocks. A declared
+      interference press or locating fit, a heat-set insert on exactly
+      that occurrence pair, or an explicit allow of the pair is
+      reported as allowed, with its declared fit, its interface id
+      and the measured mm³. Of the measured overlaps, only an undeclared
+      one above 0.001 mm³ blocks; an unknown measurement still fails
+      (RULE-05).
+    sources:
+      - agentcad product test 2026-11-27, REPORT §quality
+    benchhand_next: Not built yet; the interference check (Phase
+      4) ports it with the mixed test (IR-212). How its fixed threshold
+      and the fit limits combine with RULE-16, RULE-28 and IR-115
+      is open for the owner (design note Q3).
+    pointer: docs/design/edit-loop-performance.md §Interference rule
 
 issues:
   - id: IR-001
@@ -5167,6 +5184,338 @@ issues:
     acceptance: A kernel-provider test where a study queries the
       faces, bounds and a distance of a synthetic STEP file, the
       record is unchanged, and a malformed query gives one finding.
+  - id: IR-198
+    title: The assembly drawing given a relative output folder reports
+      sheet paths that don't exist, because it resolves them against
+      the project root.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 1
+    prototype_status: open
+    area: cad-drawings
+    prototype_paths:
+      - skills/cad-drawings/scripts/assembly_drawing.py
+    disposition: port-fix
+    benchhand_next:
+      action: The drawing provider writes its sheets under the request's
+        absolute outDir and lists them as artifacts, which the host
+        checks exist under outDir with their size and sha256 (provider
+        protocol §6).
+      phase: 4
+    acceptance: A drawing-provider test that builds the assembly sheets
+      and finds every listed sheet path on disk under outDir, and
+      a host test where a listed path that doesn't exist is refused
+      as provider-output-invalid.
+  - id: IR-199
+    title: The iso product render is upside down, because its camera
+      up vector has a negative Z component.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 2
+    prototype_status: open
+    area: cad-render
+    prototype_paths:
+      - skills/cad-render/scripts/render.py
+    disposition: port-fix
+    benchhand_next:
+      action: The renderer derives each view's camera up from the
+        assembly's +Z, and the render manifest records the up vector
+        used, so a check can read it.
+      phase: 4
+    acceptance: A render test where the iso, front and side views
+      each record an up vector with a positive Z component in the
+      assembly frame, and an engraved test part's text reads the
+      right way up in the iso view.
+  - id: IR-200
+    title: The short result of a build or a check hides what to act
+      on, the failing pair and its mm³ or a build error's part and
+      line, so the agent opens the full JSON.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 3
+      - agentcad product test 2026-11-27, REPORT §quality
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/emit.py
+      - skills/cad-model/scripts/cad_model.py
+    disposition: contract
+    also:
+      - design-input
+    benchhand_next:
+      action: The envelope lists blocking findings first. An interference
+        finding names both PNs and the mm³; a build error carries its
+        PN and file and line, through an optional Finding line and
+        the kernel build result's error location (design note, gain
+        4).
+      phase: 3
+    acceptance: Envelope tests where an undeclared overlap gives a
+      first finding naming both PNs and the mm³, and a failing fillet
+      gives a first finding with the PN, the model file and its line.
+  - id: IR-201
+    title: A successful diff that finds changes reports status unknown,
+      because the emitter takes a verdict from fields a diff doesn't
+      have.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 4
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/emit.py
+      - skills/cad-model/scripts/cad_model.py
+    disposition: already-covered
+    pointer: docs/contract/envelope.md §Status and verdict
+    benchhand_next:
+      action: The envelope keeps the call's status apart from a check's
+        verdict, and only a check-type tool sets a verdict, so a diff
+        returns status ok with no verdict.
+      phase: 4
+    acceptance: A model.diff test on two versions that differ, which
+      returns status ok, no verdict and the changed parts.
+  - id: IR-202
+    title: A killed build leaves its staging folder behind for good,
+      and while it is there the store's garbage collection refuses
+      to run.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 6
+      - agentcad product test 2026-11-27, REPORT §quality
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/build.py
+    disposition: port-fix
+    benchhand_next:
+      action: The build stages its version in a folder named by its
+        job id, and the version store collects a staging folder whose
+        job has ended, judged by the job record's process identity
+        (design note, gain 5).
+      phase: 2
+    acceptance: A version-store test that kills a staging build, starts
+      the service again and finds the staging folder collected and
+      the latest version unchanged, and a staging folder of a running
+      job that is kept.
+  - id: IR-203
+    title: Every STEP write puts OCCT transfer banners with ANSI colour
+      codes on stderr.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 5
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/stepfile.py
+      - skills/cad-model/scripts/cadmodel/runner.py
+    disposition: port-fix
+    benchhand_next:
+      action: The kernel worker silences OCCT's default message printers
+        and sends OCCT messages as structured $/log lines (provider
+        protocol §5).
+      phase: 4
+    acceptance: A kernel-provider test that writes a STEP file and
+      finds no OCCT banner and no ANSI escape on stderr, with the
+      transfer messages as $/log lines.
+  - id: IR-204
+    title: The assembly drawing prints about 24 KB of indented JSON
+      instead of the short summary and handle the other producers
+      use.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §bugs item 7
+    prototype_status: open
+    area: cad-drawings
+    prototype_paths:
+      - skills/cad-drawings/scripts/assembly_drawing.py
+    disposition: design-input
+    benchhand_next:
+      action: The drawing tool returns the envelope like every other
+        tool, with the full report as an artifact, under the envelope
+        bound that the bounded-results proposal sets (design note,
+        gain 4).
+      phase: 4
+    acceptance: A drawing-tool test whose result stays under the envelope
+      bound and lists the full report as an artifact.
+  - id: IR-205
+    title: A changed-only check re-runs every check other than pair
+      geometry on the unchanged parts, so it takes as long as a full
+      check.
+    kind: bug
+    sources:
+      - agentcad product test 2026-11-27, REPORT §speed
+      - agentcad product test 2026-11-27, REPORT §fixed-time
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/check.py
+      - skills/cad-model/scripts/cadmodel/manufacture.py
+      - skills/cad-motion/scripts/pose.py
+      - skills/cad-motion/scripts/incremental.py
+    disposition: design-input
+    also:
+      - contract
+    benchhand_next:
+      action: Per-part facts (mass properties, validity, export read-back,
+        drawing features, the posing definition) are cached by the
+        sha256 of their input files and the producing code digest,
+        so an unchanged part costs one lookup (design note, gain 1).
+      phase: 4
+    acceptance: A check test on a synthetic assembly where, after
+      one part changes, only that part's facts are computed and the
+      others come from the cache, and an identical re-check reads
+      no STEP file.
+  - id: IR-206
+    title: Every check hashes the whole code closure again, although
+      the code can't change while the process runs.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §fixed-time
+    prototype_status: open
+    area: cad-motion
+    prototype_paths:
+      - skills/cad-motion/scripts/code_shas.py
+      - skills/cad-model/scripts/cadmodel/check.py
+    disposition: design-input
+    also:
+      - contract
+    benchhand_next:
+      action: Each provider reports its code digest once, in initialize,
+        and the host and the fact cache use that value (design note,
+        gain 1).
+      phase: 4
+    acceptance: A provider-runtime test that counts one code digest
+      per provider process over several checks.
+  - id: IR-207
+    title: Every build starts a fresh kernel process that imports
+      the kernel again, about 3 s each time.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §speed
+      - agentcad product test 2026-11-27, REPORT §gains item 1
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/runner.py
+      - skills/cad-model/scripts/cadmodel/scriptenv.py
+    disposition: design-input
+    benchhand_next:
+      action: The kernel providers stay resident and fork a worker
+        per job before any boolean runs; every result reports whether
+        it ran warm, and why not (design note, gain 2; an ADR first).
+      phase: 4
+    acceptance: A conformance case that runs a boolean in a forked
+      worker within the hook deadline, and a forced cold run whose
+      result reports warm false with a reason.
+  - id: IR-208
+    title: The edit loop takes three calls, a build, a check and a
+      diff, and the diff reloads every STEP file.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §speed
+      - agentcad product test 2026-11-27, REPORT §gains item 3
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cad_model.py
+      - skills/cad-model/scripts/cadmodel/diff.py
+    disposition: design-input
+    benchhand_next:
+      action: One edit-loop job builds, then checks and diffs only
+        the changed parts from the shapes the resident kernel holds,
+        and returns the changed parts, their volume deltas and the
+        blocking findings (design note, gain 3).
+      phase: 4
+    acceptance: An edit-loop test on a synthetic assembly after a
+      one-part edit that returns that part as changed, its shared,
+      A-only and B-only volumes, and no STEP reload of an unchanged
+      part.
+  - id: IR-209
+    title: The first start builds the kernel environments one after
+      the other, about 4 minutes cold.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §speed
+      - agentcad product test 2026-11-27, REPORT §gains item 7
+    prototype_status: open
+    area: cad-flow
+    prototype_paths:
+      - skills/cad-flow/scripts/preflight.py
+    disposition: design-input
+    benchhand_next:
+      action: The host warms the provider environments in parallel,
+        with progress in env.doctor (design note, gain 6).
+      phase: 4
+    acceptance: An environment test with two fake providers whose
+      builds overlap in time, and a doctor report that shows both
+      in progress.
+  - id: IR-210
+    title: A product render of four views takes about 18 s, and nobody
+      knows where the time goes.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §speed
+      - agentcad product test 2026-11-27, REPORT §gains item 6
+    prototype_status: open
+    area: cad-render
+    prototype_paths:
+      - skills/cad-render/scripts/render.py
+    disposition: design-input
+    benchhand_next:
+      action: Profile the render first, then keep Chromium resident
+        with one warm page per project, cache renders by GLB sha256,
+        camera, pose, size and renderer code digest, and add an OCC
+        offscreen preview only if it is still slow (design note,
+        rendering plan).
+      phase: 4
+    acceptance: A render profile that attributes the time to launch,
+      load, pose, render and write, and a render test where a repeated
+      render with the same key is a cache hit.
+  - id: IR-211
+    title: A build killed with its caller loses its work, and a retry
+      can't tell a replay from a new build.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §quality
+      - agentcad product test 2026-11-27, REPORT §gains item 5
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cad_model.py
+      - skills/cad-model/scripts/cadmodel/build.py
+    disposition: contract
+    also:
+      - design-input
+    benchhand_next:
+      action: A build runs as a job that a dropped call doesn't end,
+        and jobs.start takes an idempotency key bound to the inputs;
+        the same key and inputs replay the job, and different inputs
+        are refused as a conflict (design note, gain 5). Whether a
+        job may outlive the session is open for the owner.
+      phase: 3
+    acceptance: Job-service tests where a replayed key starts no second
+      job, a key with changed inputs is refused with a reason, and
+      a dropped call's job is still reported by jobs.status.
+  - id: IR-212
+    title: No test checks a declared and an undeclared overlap in
+      the same assembly.
+    kind: gap
+    sources:
+      - agentcad product test 2026-11-27, REPORT §quality
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/check.py
+      - skills/cad-motion/scripts/pair_policy.py
+    disposition: port-fix
+    benchhand_next:
+      action: The interference check ports RULE-39 with one test that
+        holds both overlaps (design note, interference rule).
+      phase: 4
+    acceptance: An interference test on one synthetic assembly with
+      a declared press-fit overlap and an undeclared overlap, where
+      the verdict is fail, exactly one finding blocks and names the
+      undeclared pair and its mm³, and the declared pair's row is
+      allowed with its fit, interface id and mm³.
 
 bead_dispositions:
   - bead_id: benchhand-0gx

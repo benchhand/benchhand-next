@@ -31,7 +31,7 @@
     "source": {
       "description": "A citation by public name only: never a private file path or a quote.",
       "type": "string",
-      "pattern": "^(test-project tool-issues #[0-9]+|test-project brief [a-z0-9-]+( item [0-9]+[a-z]?)?|test-project gate-v[0-9]+-blockers|handoff §[0-9.]+|findings (F-)?[0-9]+\\.(M|F)?[0-9]+|findings T[0-9]+|design (T3-scope|t4-t5|inclined-features) (§[0-9.]+|[A-Z]?[0-9]+|O[0-9]+|Q[0-9]+|R[0-9]+|RC[0-9]+|D[0-9]+)|handover-2026-11-20 §[0-9.]+|decisions-while-away [A-Za-z]+-?D?[0-9]+|decisions-while-away §[a-z-]+|pkgB [a-z0-9]+-(decision2?|verdict))$"
+      "pattern": "^(test-project tool-issues #[0-9]+|test-project brief [a-z0-9-]+( item [0-9]+[a-z]?)?|test-project gate-v[0-9]+-blockers|handoff §[0-9.]+|findings (F-)?[0-9]+\\.(M|F)?[0-9]+|findings T[0-9]+|design (T3-scope|t4-t5|inclined-features) (§[0-9.]+|[A-Z]?[0-9]+|O[0-9]+|Q[0-9]+|R[0-9]+|RC[0-9]+|D[0-9]+)|handover-2026-11-20 §[0-9.]+|decisions-while-away [A-Za-z]+-?D?[0-9]+|decisions-while-away §[a-z-]+|pkgB [a-z0-9]+-(decision2?|verdict)|agentcad product test 2026-11-27, REPORT §[a-z-]+( item [0-9]+)?)$"
     },
     "bead_id": { "type": "string", "pattern": "^benchhand-[a-z0-9]+(\\.[0-9]+)*$" },
     "area": {
