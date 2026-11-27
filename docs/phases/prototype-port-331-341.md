@@ -1,6 +1,6 @@
 # Prototype port survey: PRs #331 to #341
 
-Status: survey only. No code or contract was changed. Written 2026-11-27 against `benchhand-next` `main` at `fb9cb2e` and prototype `main` at `6cdc291e`.
+Status: survey, written 2026-11-27 against `benchhand-next` `main` at `fb9cb2e` and prototype `main` at `6cdc291e`. The verdict, table and notes describe that state. The note of each PR lists the ports that landed since, under **Ported**.
 
 The prototype pin in `release.toml` is `reference_commit` `412b5d9`. This survey covers `benchhand/benchhand` PRs #331 to #341, which merged after it.
 
@@ -49,6 +49,10 @@ Effort scale (my estimate, for the whole port with its tests): S is a day or les
 - **Contract.** `record/part` gains one optional enum property: minor.
 - **Port now.** The `render` field with its default text. The plan's section 12a already says renders ghost context parts with a toggle, so the field is the missing contract half. Phase 4 ports the renderer with the test that pins the exact pixels. That test needs a tolerance decision for other GPUs, because the PR itself says the exactness holds on one machine.
 - **Order.** Before #337, which sets the default to `ghost` for existing equipment.
+- **Ported** in `b87b37f2`: the `render` field, `record/part` 1.1.0.
+  - Tests from the PR: none ported. All 24 drive the renderer or the motion renderer, Phase 4: 21 in `skills/cad-render/tests/test_render.py` and 3 in `skills/cad-motion/tests/test_motion_render.py`.
+  - New tests: each `render` value validates and any other value is refused (`test_record_validate.py`). A migrate fixture shows that the lamp-arm parts, which have no `render`, keep their bytes and validate (`test_migrate_service.py`).
+  - Remains: the `--hide`, `--ghost` and `--show` flags, the `hidden` and `ghosted` lists and their cache key (Phase 4), the skill text (Phase 2 guides), and a tolerance rule for the ambient-occlusion test.
 
 ### #331: commodity hardware sourced by designation
 
