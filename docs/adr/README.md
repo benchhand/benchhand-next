@@ -22,3 +22,4 @@
 - [ADR-0020: The CEL rule pipeline](0020-cel-rule-pipeline.md)
 - [ADR-0021: Assembly operation kinds](0021-assembly-operation-kinds.md)
 - [ADR-0022: A hazards and risk-assessment contract](0022-hazards-risk-assessment.md)
+- [ADR-0023: The project storage layout](0023-storage-layout.md)
