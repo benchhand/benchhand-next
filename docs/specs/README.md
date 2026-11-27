@@ -1,13 +1,10 @@
 ---
-specs: []
-not_yet_specced:
+specs:
+  - cel-pipeline
   - flow-engine
-  - cel-rule-pipeline
-  - rule-lists
-  - gate-policy
-  - decision-records
-  - scoped-reapproval
-  - result-envelope
+  - approvals
+  - record-validation
+not_yet_specced:
   - guide-service
   - version-snapshots
   - project-profile

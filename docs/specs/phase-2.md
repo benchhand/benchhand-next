@@ -8,13 +8,13 @@ Every Phase 2 capability of the catalogue, in catalogue order.
 
 | Capability | Title | Catalogue status | Spec |
 |---|---|---|---|
-| [flow-engine](../architecture/capabilities.md#flow-engine) | Flow engine | planned | not yet specced |
-| [cel-rule-pipeline](../architecture/capabilities.md#cel-rule-pipeline) | CEL rule pipeline | planned | not yet specced |
-| [rule-lists](../architecture/capabilities.md#rule-lists) | Rule lists | planned | not yet specced |
-| [gate-policy](../architecture/capabilities.md#gate-policy) | Gate policy | planned | not yet specced |
-| [decision-records](../architecture/capabilities.md#decision-records) | Gate decisions and decision records | planned | not yet specced |
-| [scoped-reapproval](../architecture/capabilities.md#scoped-reapproval) | Scoped approvals and changed-since-approval | planned | not yet specced |
-| [result-envelope](../architecture/capabilities.md#result-envelope) | Result envelope and next actions | partial | not yet specced |
+| [flow-engine](../architecture/capabilities.md#flow-engine) | Flow engine | planned | [flow-engine](flow-engine.md) |
+| [cel-rule-pipeline](../architecture/capabilities.md#cel-rule-pipeline) | CEL rule pipeline | planned | [cel-pipeline](cel-pipeline.md) |
+| [rule-lists](../architecture/capabilities.md#rule-lists) | Rule lists | planned | [cel-pipeline](cel-pipeline.md) |
+| [gate-policy](../architecture/capabilities.md#gate-policy) | Gate policy | planned | [flow-engine](flow-engine.md) |
+| [decision-records](../architecture/capabilities.md#decision-records) | Gate decisions and decision records | planned | [approvals](approvals.md) |
+| [scoped-reapproval](../architecture/capabilities.md#scoped-reapproval) | Scoped approvals and changed-since-approval | planned | [approvals](approvals.md) |
+| [result-envelope](../architecture/capabilities.md#result-envelope) | Result envelope and next actions | partial | [flow-engine](flow-engine.md) |
 | [guide-service](../architecture/capabilities.md#guide-service) | Guidance from the server | planned | not yet specced |
 | [version-snapshots](../architecture/capabilities.md#version-snapshots) | Version snapshots, seal and verify | planned | not yet specced |
 | [project-profile](../architecture/capabilities.md#project-profile) | Project-start profile | planned | not yet specced |
@@ -24,10 +24,16 @@ Every Phase 2 capability of the catalogue, in catalogue order.
 | [assembly-steps-and-coupons](../architecture/capabilities.md#assembly-steps-and-coupons) | Assembly steps and joint evidence | planned | not yet specced |
 | [annotation-set](../architecture/capabilities.md#annotation-set) | Annotation set | planned | not yet specced |
 
+The specs also cover capabilities of other phases: `record-validate` (record-validation), `record-migrate` (record-validation).
+
 ## Specs
 
 | Spec | Title | Status | Capabilities | Blocks | Sizes |
 |---|---|---|---|---|---|
+| [cel-pipeline](cel-pipeline.md) | The CEL pipeline and the flow's rule lists | draft | `cel-rule-pipeline`, `rule-lists` | 8 | 1 S, 4 M, 3 L |
+| [flow-engine](flow-engine.md) | The flow engine, gate policy and next actions | draft | `flow-engine`, `gate-policy`, `result-envelope` | 13 | 3 S, 9 M, 1 L |
+| [approvals](approvals.md) | Decision records and scoped re-approval | draft | `decision-records`, `scoped-reapproval` | 8 | 2 S, 6 M |
+| [record-validation](record-validation.md) | Record validation and migration in Phase 2 | draft | `record-validate`, `record-migrate` | 6 | 4 S, 1 M, 1 L |
 
 ## Block graph
 
@@ -35,6 +41,116 @@ An arrow runs from what a block needs to the block. A hexagon is an open questio
 
 ```mermaid
 flowchart TD
+  subgraph spec_cel_pipeline["cel-pipeline"]
+    CP_1["CP-1 (M): Rule scopes and the structural-scope check"]
+    CP_2["CP-2 (S): The profile-manifest and rules-bundle contracts"]
+    CP_3["CP-3 (L): The descriptor set, the profile manifest and the JCS digest"]
+    CP_4["CP-4 (L): The pinned cel-go tool"]
+    CP_5["CP-5 (M): The host adapter and bundle verification"]
+    CP_6["CP-6 (M): The presence lint"]
+    CP_7["CP-7 (M): The flow's four rule lists and the stale-entry step in CI"]
+    CP_8["CP-8 (L): The supported-profile gate in CI"]
+  end
+  subgraph spec_flow_engine["flow-engine"]
+    FE_1["FE-1 (M): The flow loader"]
+    FE_2["FE-2 (M): The real flow/flow.yaml"]
+    FE_3["FE-3 (S): The result envelope in core"]
+    FE_4["FE-4 (L): The interpreter, its transitions and refusals"]
+    FE_5["FE-5 (M): Gate obligations from the evidence assessment"]
+    FE_6["FE-6 (M): The VOID cascade"]
+    FE_7["FE-7 (M): Gate modes, rigor and policy changes"]
+    FE_8["FE-8 (M): Merging contributed rule lists and gate requirements"]
+    FE_9["FE-9 (S): Middle gates without the user under the key-gates profile"]
+    FE_10["FE-10 (M): Next actions from the gate state"]
+    FE_11["FE-11 (S): Tool calls against flow.stage"]
+    FE_12["FE-12 (M): The design freeze"]
+    FE_13["FE-13 (M): The flow end to end through the services"]
+  end
+  subgraph spec_approvals["approvals"]
+    AP_1["AP-1 (M): The decision writer"]
+    AP_2["AP-2 (S): Decisions for undeclared transitions"]
+    AP_3["AP-3 (M): Several chosen options and a carry-forward disposition"]
+    AP_4["AP-4 (S): Recording a provisional approval"]
+    AP_5["AP-5 (M): The approval scope in the decision contract"]
+    AP_6["AP-6 (M): Changed since approval"]
+    AP_7["AP-7 (M): Confirmation at the next human gate"]
+    AP_8["AP-8 (M): Migrated decisions without a scope"]
+  end
+  subgraph spec_record_validation["record-validation"]
+    RV_1["RV-1 (S): Verification rows by header name"]
+    RV_2["RV-2 (M): A not_applicable verification result"]
+    RV_3["RV-3 (S): Evidence paths that name a current file"]
+    RV_4["RV-4 (L): The design rules of design_rules.py"]
+    RV_5["RV-5 (S): Welded, brazed and soldered torque paths"]
+    RV_6["RV-6 (S): Missing inputs only from the stage that produces them"]
+  end
+  question_user_bundle_location{{"question: user-bundle-location"}}
+  question_envelope_phase{{"question: envelope-phase"}}
+  capability_evidence_assessment(["capability: evidence-assessment"])
+  question_key_gate_auto{{"question: key-gate-auto"}}
+  question_provisional_recording{{"question: provisional-recording"}}
+  question_tool_stage_check{{"question: tool-stage-check"}}
+  capability_version_snapshots(["capability: version-snapshots"])
+  question_freeze_digest{{"question: freeze-digest"}}
+  capability_selection_assessment(["capability: selection-assessment"])
+  question_unscoped_confirmation{{"question: unscoped-confirmation"}}
+  question_unscoped_freeze{{"question: unscoped-freeze"}}
+  question_user_bundle_location --> CP_1
+  CP_1 --> CP_3
+  CP_2 --> CP_3
+  CP_3 --> CP_4
+  CP_3 --> CP_5
+  CP_4 --> CP_5
+  CP_5 --> CP_6
+  CP_4 --> CP_7
+  CP_5 --> CP_7
+  CP_6 --> CP_8
+  CP_7 --> CP_8
+  FE_2 --> CP_8
+  CP_5 --> FE_1
+  FE_1 --> FE_2
+  CP_7 --> FE_2
+  question_envelope_phase --> FE_3
+  FE_2 --> FE_4
+  FE_3 --> FE_4
+  AP_1 --> FE_4
+  FE_4 --> FE_5
+  capability_evidence_assessment --> FE_5
+  FE_4 --> FE_6
+  AP_1 --> FE_6
+  FE_4 --> FE_7
+  AP_1 --> FE_7
+  FE_1 --> FE_8
+  CP_7 --> FE_8
+  FE_7 --> FE_9
+  question_key_gate_auto --> FE_9
+  FE_4 --> FE_10
+  question_provisional_recording --> FE_10
+  FE_4 --> FE_11
+  question_tool_stage_check --> FE_11
+  FE_5 --> FE_12
+  capability_version_snapshots --> FE_12
+  question_freeze_digest --> FE_12
+  FE_6 --> FE_13
+  FE_7 --> FE_13
+  FE_10 --> FE_13
+  capability_selection_assessment --> FE_13
+  AP_1 --> AP_2
+  FE_1 --> AP_2
+  AP_1 --> AP_4
+  FE_4 --> AP_4
+  question_provisional_recording --> AP_4
+  AP_1 --> AP_5
+  capability_evidence_assessment --> AP_5
+  AP_5 --> AP_6
+  FE_1 --> AP_6
+  AP_6 --> AP_7
+  FE_4 --> AP_7
+  FE_12 --> AP_7
+  AP_7 --> AP_8
+  question_unscoped_confirmation --> AP_8
+  question_unscoped_freeze --> AP_8
+  RV_4 --> RV_5
 ```
 
 ## Suggested order
@@ -43,19 +159,93 @@ The blocks in dependency waves. A block's wave follows the latest wave of the bl
 
 The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/phase-0-1.md:117`). Its capabilities have no spec yet, so it isn't in these waves; `docs/phases/prototype-port-331-341.md` orders it.
 
+### Wave 1
+
+- **CP-1** (M, cel-pipeline): Rule scopes and the structural-scope check. Waits on `user-bundle-location` (non-blocking).
+- **CP-2** (S, cel-pipeline): The profile-manifest and rules-bundle contracts.
+- **FE-3** (S, flow-engine): The result envelope in core. Waits on `envelope-phase` (non-blocking).
+- **AP-1** (M, approvals): The decision writer.
+- **AP-3** (M, approvals): Several chosen options and a carry-forward disposition.
+- **RV-1** (S, record-validation): Verification rows by header name.
+- **RV-2** (M, record-validation): A not_applicable verification result.
+- **RV-3** (S, record-validation): Evidence paths that name a current file.
+- **RV-4** (L, record-validation): The design rules of design_rules.py.
+- **RV-6** (S, record-validation): Missing inputs only from the stage that produces them.
+
+### Wave 2
+
+- **CP-3** (L, cel-pipeline): The descriptor set, the profile manifest and the JCS digest. After CP-1, CP-2.
+- **AP-5** (M, approvals): The approval scope in the decision contract. After AP-1. Waits on capability `evidence-assessment`.
+- **RV-5** (S, record-validation): Welded, brazed and soldered torque paths. After RV-4.
+
+### Wave 3
+
+- **CP-4** (L, cel-pipeline): The pinned cel-go tool. After CP-3.
+
+### Wave 4
+
+- **CP-5** (M, cel-pipeline): The host adapter and bundle verification. After CP-3, CP-4.
+
+### Wave 5
+
+- **CP-6** (M, cel-pipeline): The presence lint. After CP-5.
+- **CP-7** (M, cel-pipeline): The flow's four rule lists and the stale-entry step in CI. After CP-4, CP-5.
+- **FE-1** (M, flow-engine): The flow loader. After CP-5.
+
+### Wave 6
+
+- **FE-2** (M, flow-engine): The real flow/flow.yaml. After FE-1, CP-7.
+- **FE-8** (M, flow-engine): Merging contributed rule lists and gate requirements. After FE-1, CP-7.
+- **AP-2** (S, approvals): Decisions for undeclared transitions. After AP-1, FE-1.
+- **AP-6** (M, approvals): Changed since approval. After AP-5, FE-1.
+
+### Wave 7
+
+- **CP-8** (L, cel-pipeline): The supported-profile gate in CI. After CP-6, CP-7, FE-2.
+- **FE-4** (L, flow-engine): The interpreter, its transitions and refusals. After FE-2, FE-3, AP-1.
+
+### Wave 8
+
+- **FE-5** (M, flow-engine): Gate obligations from the evidence assessment. After FE-4. Waits on capability `evidence-assessment`.
+- **FE-6** (M, flow-engine): The VOID cascade. After FE-4, AP-1.
+- **FE-7** (M, flow-engine): Gate modes, rigor and policy changes. After FE-4, AP-1.
+- **FE-10** (M, flow-engine): Next actions from the gate state. After FE-4. Waits on `provisional-recording` (blocking).
+- **FE-11** (S, flow-engine): Tool calls against flow.stage. After FE-4. Waits on `tool-stage-check` (blocking).
+- **AP-4** (S, approvals): Recording a provisional approval. After AP-1, FE-4. Waits on `provisional-recording` (blocking).
+
+### Wave 9
+
+- **FE-9** (S, flow-engine): Middle gates without the user under the key-gates profile. After FE-7. Waits on `key-gate-auto` (blocking).
+- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`, `freeze-digest` (blocking).
+- **FE-13** (M, flow-engine): The flow end to end through the services. After FE-6, FE-7, FE-10. Waits on capability `selection-assessment`.
+
+### Wave 10
+
+- **AP-7** (M, approvals): Confirmation at the next human gate. After AP-6, FE-4, FE-12.
+
+### Wave 11
+
+- **AP-8** (M, approvals): Migrated decisions without a scope. After AP-7. Waits on `unscoped-confirmation` (blocking), `unscoped-freeze` (blocking).
 
 ## Open questions that hold blocks
 
 | Question | Blocking | Owner | Blocks it holds |
 |---|---|---|---|
+| [user-bundle-location](../architecture/capabilities.md#user-bundle-location) | no | none | CP-1 |
+| [envelope-phase](../architecture/capabilities.md#envelope-phase) | no | none | FE-3 |
+| [key-gate-auto](../architecture/capabilities.md#key-gate-auto) | yes | project-owner | FE-9 |
+| [provisional-recording](../architecture/capabilities.md#provisional-recording) | yes | project-owner | FE-10, AP-4 |
+| [tool-stage-check](../architecture/capabilities.md#tool-stage-check) | yes | project-owner | FE-11 |
+| [freeze-digest](../architecture/capabilities.md#freeze-digest) | yes | project-owner | FE-12 |
+| [unscoped-confirmation](../architecture/capabilities.md#unscoped-confirmation) | yes | project-owner | AP-8 |
+| [unscoped-freeze](../architecture/capabilities.md#unscoped-freeze) | yes | project-owner | AP-8 |
 
 ## Phase 2 register entries no spec closes
 
-82 of the 82 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
+70 of the 82 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
 
 | Entry | Disposition | Deferred to | Title |
 |---|---|---|---|
-| IR-001 | design-input | none | The gate's form judge ignores approved waivers and dispositions, so an accepted waiver can't settle a fail at any gate. |
 | IR-003 | contract | none | No category for customer-furnished reference geometry, which then needs purchase facts and ships in the product export, BOM and release. |
 | IR-005 | port-fix | none | The assembly order allows one base, so a subassembly built on the bench and then joined as a unit can't be recorded. |
 | IR-006 | contract | none | Free-text step instructions and hand work have no field, so every named tool counts as an unmodelled envelope and access stays unknown. |
@@ -67,30 +257,24 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-020 | contract | none | The machine profile has no field for a printer's calibration state (standard built-in or custom). |
 | IR-025 | decide | none | A loose kit item (a shipped tool or a length option) must be placed in the assembly, which puts it in the checks, the sweep and the access plan. |
 | IR-028 | contract | none | A fixed joint silently ignores a non-zero value, so a placement offset given there is lost. |
-| IR-029 | contract | none | There is no way to offset a whole subassembly without editing every child placement. |
+| IR-029 | contract | assembly-steps-and-coupons | There is no way to offset a whole subassembly without editing every child placement. |
 | IR-036 | contract | none | There are no assembly configurations, so a sweep can't cover alternative operating envelopes such as several bundle sizes. |
 | IR-039 | contract | none | Validate accepts an operation acceptance with the wrong feature count for its kind, which the access check then refuses. |
-| IR-043 | design-input | none | The commit-scope evidence run stops at the first failing step, so later producers never run and their obligations show as unknown. |
+| IR-043 | design-input | check-orchestration | The commit-scope evidence run stops at the first failing step, so later producers never run and their obligations show as unknown. |
 | IR-047 | contract | none | A catalogue or standard part needs a frozen, hashed copy of its specification even when nothing can be frozen or the standard is paywalled. |
-| IR-048 | design-input | none | Service-class scope is applied only at release, so a fit-only prototype must prove service strength before design freeze. |
 | IR-049 | contract | none | The service-class rules live as code and prose in several copies, and two lists of the service classes can drift apart. |
 | IR-050 | contract | none | A CAD-and-simulation release can't close a physical obligation as checked before use. |
-| IR-051 | port-fix | none | After a release, the next change is validated against the released version's rules and frozen digest, so it can't add a planned row. |
+| IR-051 | port-fix | version-snapshots | After a release, the next change is validated against the released version's rules and frozen digest, so it can't add a planned row. |
 | IR-052 | port-fix | none | An expired waiver from an earlier version blocks a part that has since been tested. |
 | IR-054 | contract | none | A waived verification row can't cite the result or decision that justified the waiver. |
-| IR-055 | contract | none | The verification record has no not-applicable result, so an inapplicable requirement can never be closed. |
-| IR-056 | port-fix | none | The verification CSV reader needs an exact column order and drops every row when the file starts with a byte-order mark. |
 | IR-057 | contract | none | A route can't start from a bought blank, so a machined catalogue part can't be declared and a drilled stock plate has no primary process. |
 | IR-059 | port-fix | none | A waiver limited to a change outlives that change. |
-| IR-060 | already-covered | none | An earlier approval authorises evidence that has changed since. |
-| IR-061 | design-input | none | Under the key-gates approval profile, the middle gates still wait for the user. |
 | IR-062 | port-fix | none | The evidence digest exits 2 on a missing or overlong cited file, and its refusal output is not checked against its schema. |
-| IR-063 | port-fix | none | Evidence paths with a trailing colon or placeholder text pass validation and the commit check; only release refuses them. |
 | IR-064 | port-fix | none | A dropped physical not-assessed outcome leaves no trace, and validate doesn't check a stated not-assessed result. |
 | IR-065 | port-fix | none | Selection matches results and approvals by operation kind and material, so a rejected shop eliminates the approved one, engraving approval counts for cutting, and a result matches without its dimension state or conditions. |
 | IR-066 | port-fix | none | Candidate-only declarations vanish from selection, and a candidate's supplier evidence is read from the current route. |
 | IR-067 | port-fix | none | A translucent diffuser is eliminated by the transparent-window rule for any additive step. |
-| IR-068 | design-input | none | References that name a part by occurrence are not resolved everywhere, so selection, change impact, the heat-set check and drawing intent drop or misjudge them. |
+| IR-068 | design-input | selection-assessment | References that name a part by occurrence are not resolved everywhere, so selection, change impact, the heat-set check and drawing intent drop or misjudge them. |
 | IR-069 | port-fix | none | An authored pass overrides a computed unknown allowable with no basis. |
 | IR-070 | port-fix | none | Selection coverage is the union of every alternative, so a rejected alternative counts as covered. |
 | IR-071 | port-fix | none | Two obligations of the same kind on one feature, or two policy requirements at one level, collapse into one and the second is lost silently. |
@@ -98,28 +282,23 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-073 | contract | none | The unit vocabulary has no electrical, pressure or inch units, and a load can only be a force or torque along one direction. |
 | IR-075 | contract | none | A multi-material part is judged on one part-level material. |
 | IR-076 | contract | none | A misspelled limit key passes the schema and silently drops the inspection obligation it would create. |
-| IR-077 | design-input | none | A new project deadlocks at the start, because validate demands records before the stage that writes them and selection needs a digest only a valid run gives. |
+| IR-077 | design-input | selection-assessment | A new project deadlocks at the start, because validate demands records before the stage that writes them and selection needs a digest only a valid run gives. |
 | IR-078 | design-input | none | A headline status is stronger than its weakest part, such as a form check that passes while its manufacturing result is unknown, or a sweep reported complete that skips pairs. |
 | IR-079 | port-fix | none | The quantity reader overflows on huge integers and labels a non-finite number a units error because of the message text. |
 | IR-080 | port-fix | none | Selection crashes on a list-valued recommendation role when candidates exist. |
-| IR-081 | port-fix | none | The decision records accept a gate whose from-stage comes after its to-stage. |
-| IR-083 | already-covered | none | Stage advance, decision records, the selection digest, the concept handoff and the layout render have no command, so the agent edits records by hand. |
-| IR-084 | already-covered | none | A decision record can't hold several chosen options or a carry-forward disposition. |
-| IR-085 | already-covered | none | Errors print raw structures without line numbers, exit codes don't match the outcome, and tools return differently shaped results. |
 | IR-086 | already-covered | none | Release compares file drift with the built snapshot when no design freeze exists, which invites calling the build frozen. |
 | IR-087 | port-fix | none | Recheck stamps compared dates, so a decision at 23:59 and a recheck at 00:01 failed, and malformed stamp or gate input exits 2. |
 | IR-089 | contract | none | An existing host part can't give the temperature limit of a joint, because its material can only come through make intent. |
 | IR-090 | port-fix | none | Print-in-place members are reported as never installed. |
 | IR-092 | contract | none | Hard schema maxima act as plausibility checks, capping pair clearance and margin at small values. |
 | IR-093 | contract | none | Each check keeps its own short list of qualifying source kinds, so a retention calculation or a guideline value can't be a source. |
-| IR-094 | contract | none | A welded, brazed or soldered torque path can't be declared. |
 | IR-095 | contract | none | Designation parsers disagree and are incomplete, so JIS screws, Unified threads and fine-pitch metric threads are refused, and a blank standard crashes the BOM. |
 | IR-096 | contract | none | A cosmetic purchase needs a functional rating, and a not-applicable rating with a reason still counts as unknown. |
 | IR-097 | port-fix | none | Zero thread engagement passes the engagement check. |
 | IR-130 | contract | none | A supplier STEP can only be used through a Python wrapper; a part can't declare a STEP as its model. |
 | IR-133 | contract | none | Service access is only checked in the nominal posture, with no per-operation joint pose. |
 | IR-134 | contract | none | Removal paths can't use the waypoints that insertion accepts. |
-| IR-136 | contract | none | A cylindrical joint, sliding and rotating on one pair, is rejected. |
+| IR-136 | contract | assembly-steps-and-coupons | A cylindrical joint, sliding and rotating on one pair, is rejected. |
 | IR-138 | contract | none | Play needs a direct joint between the contacting parts, so a cam with a guided follower gets no verdict. |
 | IR-141 | already-covered | none | Motion-plan validation in the scratch tool and the motion-plan schema disagree on step bounds. |
 | IR-143 | contract | none | An as-printed finish can't be declared sufficient, so a printed part's drawing needs edge limits and a roughness value. |
@@ -128,12 +307,12 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-160 | design-input | none | A fixed joint needs the parts to touch, so a flexible member such as a belt has no honest mount. |
 | IR-162 | port-fix | none | The connection check reports assembly structure errors one build at a time. |
 | IR-165 | port-fix | none | The start questions are not chosen by applicability, so a project with no printing is asked every filament setting, and a skipped option is not named when an answer is also missing. |
-| IR-166 | design-input | none | Approved profile choices, such as no FEA, no stack-up or light critique, are ignored by the stage instructions. |
+| IR-166 | design-input | guide-service | Approved profile choices, such as no FEA, no stack-up or light critique, are ignored by the stage instructions. |
 | IR-168 | contract | none | Separate operating loads must all be in every FEA case, because the record has no notion of load combination. |
 | IR-171 | port-fix | none | The printer question still offers to wait for a test print. |
-| IR-173 | contract | none | The use-case questions are one fixed list, so an appearance-only project is asked about cyclic load, wear life and standards. |
+| IR-173 | contract | selection-assessment | The use-case questions are one fixed list, so an appearance-only project is asked about cyclic load, wear life and standards. |
 | IR-174 | port-fix | none | The profile writer exits 2 on an inline flow mapping, and replacing a quoted profile key writes a duplicate. |
-| IR-175 | design-input | none | The start questions don't ask whether the product targets one model or a class of equipment, or which power and data routes are allowed. |
+| IR-175 | design-input | guide-service | The start questions don't ask whether the product targets one model or a class of equipment, or which power and data routes are allowed. |
 | IR-176 | port-fix | none | The flow asks for and blocks on a printer profile, and rejects a machine identity the user declares. |
 | IR-177 | design-input | none | There is no guided machine setup that builds a capability profile from published specifications. |
 | IR-190 | port-fix | none | Scratch delivery copies and renames by path name, so a linked parts folder can redirect publication outside the record. |
