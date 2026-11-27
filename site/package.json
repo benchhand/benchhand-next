@@ -7,7 +7,7 @@
     "node": "26.x"
   },
   "scripts": {
-    "sync": "node scripts/sync-docs.mjs && node scripts/python-api.mjs && node scripts/planned-pages.mjs",
+    "sync": "node scripts/sync-docs.mjs && node scripts/python-api.mjs && node scripts/cli-reference.mjs",
     "dev": "pnpm sync && astro dev",
     "build": "pnpm sync && astro build",
     "preview": "astro preview",

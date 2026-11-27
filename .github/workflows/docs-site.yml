@@ -11,8 +11,11 @@ on:
     paths:
       - "site/**"
       - "docs/**"
-      # The published schemas and the Python API source feed the site too.
+      # The published schemas, the Python API sources and the CLI feed the site too.
       - "packages/benchhand-contracts/**"
+      - "packages/benchhand-provider/**"
+      - "packages/benchhand-sdk/**"
+      - "packages/benchhand/**"
       # The generated contract docs and the drift check read the sources and the generator.
       - "contracts/**"
       - "tools/gen/**"

@@ -1,28 +1,13 @@
 ---
 title: Reference
-description: The generated reference for benchhand's contracts, tools, commands and APIs.
+description: The MCP tools, the CLI, the flow, the contracts and the Python API of benchhand.
 ---
 
-Some pages under Reference are generated from the repository at build time, and nobody edits those by hand: the contracts, the JSON Schemas and the Python API.
-The rest are outlines that a later phase writes, and they are marked as such.
+The CLI, the contracts, the JSON Schemas and the Python API pages are generated from the repository at build time.
 
-## Contracts and schemas
-
-- [Contracts](/reference/contracts/): one page per contract, with its `$id`, version and fields, and the domain model.
+- [MCP tools](/reference/mcp-tools/): every tool the benchhand MCP server offers, with its inputs, outputs and errors.
+- [CLI](/reference/cli/): every `benchhand` command, with its arguments and options.
+- [Flow](/reference/contracts/flow/): the flow definition, `flow.yaml`, and the rule lists it references.
+- [Contracts](/reference/contracts/): one page per contract, with its `$id`, version and fields, and a domain-model page for each.
 - [JSON Schemas](/reference/contracts/schemas/): the published schemas. This site serves each one at `/contracts/<name>`, and the page lists its URL beside its `$id`.
-
-## APIs
-
-- [Python API](/reference/python-api/): `benchhand-contracts`, the first package with a generated page.
-- [TypeScript API](/reference/typescript-api/): the packages in `ui/`. An outline.
-
-## Tools, commands and the flow
-
-These four are outlines:
-
-- [MCP tools](/reference/mcp-tools/)
-- [CLI](/reference/cli/)
-- [Flow](/reference/flow/)
-- [Codes and configuration](/reference/codes/)
-
-The [list of outlines by phase](/planned/) shows which of these pages are outlines and the phase that writes each one.
+- [Python API](/reference/python-api/): `benchhand-contracts`, `benchhand-provider` and `benchhand-sdk`.

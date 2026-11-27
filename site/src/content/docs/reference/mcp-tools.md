@@ -1,7 +1,6 @@
 ---
 title: MCP tools
 description: Every MCP tool with its inputs, outputs, errors and examples.
-phase: 3
 ---
 
 ## The result envelope

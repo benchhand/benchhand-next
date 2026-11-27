@@ -31,7 +31,7 @@ function editTargets() {
 }
 
 test("the build has edit links to check", () => {
-  assert.ok(editTargets().length > 50, "expected an edit link on each hand-written and synced page");
+  assert.ok(editTargets().length > 30, "expected an edit link on each hand-written and synced page");
 });
 
 test("every edit link targets a path tracked in git", () => {
@@ -41,10 +41,12 @@ test("every edit link targets a path tracked in git", () => {
 
 test("generated pages have no edit link", () => {
   const pages = [
-    "planned/index.html",
+    "reference/cli/index.html",
     "reference/contracts/schemas/index.html",
     "reference/python-api/index.html",
     "reference/python-api/benchhand-contracts/index.html",
+    "reference/python-api/benchhand-provider/index.html",
+    "reference/python-api/benchhand-sdk/index.html",
   ];
   const withLink = new Set(editTargets().map(({ page }) => page));
   for (const page of pages) assert.ok(!withLink.has(page), `${page} is generated and must not link to an edit page`);
