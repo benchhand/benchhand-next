@@ -3,16 +3,28 @@
 Read [AGENTS.md](AGENTS.md) and [docs/design-plan.md](docs/design-plan.md) before you change an area.
 [docs/tooling.md](docs/tooling.md) lists the checks. `just check` runs them, and the git hooks run the same recipes.
 
-## Contributor License Agreement
+## Contributor license agreement
 
-Every pull request needs a signed [CLA](CLA.md). The CLA Assistant bot comments on your first pull request
-with a link. Reply with `I have read the CLA Document and I hereby sign the CLA` to sign once for all later
-contributions. The bot stores the signature in
-[benchhand/cla-signers](https://github.com/benchhand/cla-signers). Comment `recheck` to run the check again.
+Each contribution to Benchhand needs a signed [Contributor License Agreement](CLA.md) (CLA). The CLA is the Individual Contributor Non-Exclusive License Agreement from the Contributor Agreements chooser. You keep the copyright in your contribution. You grant Sjors Robroek a license to use it and to license it to others.
 
-The CLA keeps the maintainer able to offer the code under other terms, such as a commercial licence, without
-tracking down every contributor. Your contribution stays available under the project's licence,
-[MPL-2.0](LICENSE), either way.
+### How to sign
+
+[CLA Assistant](https://cla-assistant.io) asks you to sign when you open your first pull request. Sign through the link in its comment. It posts the result as the CLA status on the pull request. A signature covers your later pull requests.
+
+The agreement text is [CLA.md](CLA.md). A public [gist](https://gist.github.com/srobroek/235173e8c3e2efb8de2ec9858e8b36a4) mirrors it for CLA Assistant. Any change to CLA.md must update the gist in the same change.
+
+### Contributions from your employer
+
+If your employer has rights in work that you create, get its permission first. The "How to use this Contributor Agreement" section of the CLA describes this. Benchhand has no CLA for companies.
+
+### Bots
+
+These accounts do not sign:
+
+- `dependabot[bot]`
+- `renovate[bot]`
+- `github-actions[bot]`
+- `sjorsr-release-bot[bot]`, the release bot
 
 ## Licence headers
 

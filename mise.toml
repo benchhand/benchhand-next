@@ -17,9 +17,6 @@ gitleaks = "8.30.1"
 actionlint = "1.7.12"
 zizmor = "1.33.1"
 pinact = "5.0.2"
-# Pushes the CLA secrets from 1Password to the repository's GitHub secrets (fnox.toml). Run by the owner on a
-# workstation; CI does not install it.
-fnox = "1.50.0"
 # Known vulnerabilities in uv.lock and both pnpm lockfiles.
 osv-scanner = "2.7.1"
 # Per-file licence and copyright data (REUSE.toml, SPDX headers). The extra is the encoding detector reuse needs.
