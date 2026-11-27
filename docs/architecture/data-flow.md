@@ -168,7 +168,7 @@ sequenceDiagram
     S-->>H: packet and preview URL
     H->>U: present the packet and ask, in chat
     U-->>H: answer
-    H->>S: flow.record_decision, channel chat, the user's words quoted
+    H->>S: flow.transition, channel chat, the user's words quoted
     alt empty, declined or cancelled
       F-->>S: no answer, so the gate stays open
     else explicit approval
@@ -198,7 +198,7 @@ sequenceDiagram
   S-->>H: packet
   H->>U: ask, in chat
   U-->>H: explicit approval
-  H->>S: flow.record_decision, channel chat
+  H->>S: flow.transition, channel chat
   F->>R: decision record: kind gate, status approved
   H->>S: release tool with REV and the frozen version
   S->>Rel: package REV from vN

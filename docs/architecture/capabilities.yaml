@@ -3152,8 +3152,8 @@ tools:
     phase: 3
     status: dropped
     source:
-      kind: plan
-      ref: docs/design-plan.md:341
+      kind: contract
+      ref: docs/contract/flow.md:62
     note: The owner dropped it on 2026-11-27 for flow.transition, which
       records a human-gate decision as its approval
       (docs/contract/flow.md:62).

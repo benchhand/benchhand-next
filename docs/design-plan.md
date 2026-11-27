@@ -338,7 +338,7 @@ The `interaction` component reads the client capabilities: on 2026-07-28 from ea
 
 | Interaction | 1st | 2nd | Last resort |
 |---|---|---|---|
-| **Human gate** | MCP App gate card (packet, renders, flow view, Approve or Request changes) | none (form elicitation dropped in v1, ADR-0018) | The agent presents the packet and the gate-page URL in chat, asks, and passes your reply to `flow.record_decision` (`channel: chat`, your words quoted) |
+| **Human gate** | MCP App gate card (packet, renders, flow view, Approve or Request changes) | none (form elicitation dropped in v1, ADR-0018) | The agent presents the packet and the gate-page URL in chat, asks, and passes your reply to `flow.transition` (`channel: chat`, your words quoted) |
 | **Preview for you** | Preview-host page at a loopback URL, in every host. Where Apps render, the App (`ui://benchhand/viewer`) is a thin shell that embeds the same page (CSP `frameDomains` set to the preview origin). | URL in the tool result | Absolute paths |
 | **Preview for the agent** | PNG snapshots as image content | `resource_link` to the snapshot files | Absolute paths |
 | **Structured questions** (GROUND, INTENT, SPECIFY) | MCP App form (nested schemas) | none (form elicitation dropped in v1, ADR-0018) | Asked in chat, recorded through `record.*` |

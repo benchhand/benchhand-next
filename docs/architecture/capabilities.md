@@ -491,7 +491,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `flow.gate_packet` | [gate-packet](#gate-packet) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `the chat baseline of the human gate` | – |
 | `flow.guide` | [guide-service](#guide-service) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:309` | – |
 | `flow.impact` | [change-impact](#change-impact) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `impact.py` | `impact.py` |
-| `flow.record_decision` | [decision-records](#decision-records) | write | `flow/flow.schema.json#/$defs/GateDecisionRequest` | not yet defined | sync | records-decision | P3 | dropped | plan: `docs/design-plan.md:341` | – |
+| `flow.record_decision` | [decision-records](#decision-records) | write | `flow/flow.schema.json#/$defs/GateDecisionRequest` | not yet defined | sync | records-decision | P3 | dropped | contract: `docs/contract/flow.md:62` | – |
 | `flow.record_provisional` | [decision-records](#decision-records) | write | not yet defined | not yet defined | sync | records-decision | P3 | dropped | contract: `contracts/envelope/envelope.tsp:105` | – |
 | `flow.transition` | [flow-engine](#flow-engine) | write | not yet defined | not yet defined | sync | requests-transition | P3 | planned | contract: `docs/contract/flow.md:62` | – |
 | `jobs.cancel` | [job-service](#job-service) | write | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `tasks/cancel without its baseline` | – |
@@ -996,7 +996,7 @@ None.
 #### Dropped tools (5)
 
 - `flow.advance` ([flow-engine](#flow-engine), catalogue): The owner dropped it on 2026-11-27 for flow.transition (docs/contract/flow.md:62). The interpreter is the normal writer of flow.stage; the prototype agent wrote it by hand.
-- `flow.record_decision` ([decision-records](#decision-records), plan): The owner dropped it on 2026-11-27 for flow.transition, which records a human-gate decision as its approval (docs/contract/flow.md:62).
+- `flow.record_decision` ([decision-records](#decision-records), contract): The owner dropped it on 2026-11-27 for flow.transition, which records a human-gate decision as its approval (docs/contract/flow.md:62).
 - `flow.record_provisional` ([decision-records](#decision-records), contract): The owner dropped it on 2026-11-27 for flow.transition, whose provisional step the engine records itself (docs/contract/flow.md:62). The envelope example still names it until the Phase 2 contract change.
 - `motion.check` ([motion-analysis](#motion-analysis), catalogue): Proposed for `motion.py check`, which doesn't exist at the pin; `motion.py plan` checks coverage, and motion.plan replaces it.
 - `recheck.diff` ([design-recheck](#design-recheck), catalogue): Proposed for `stamp.py diff`, which doesn't exist at the pin; stamp.py has flag-only modes, and `--verify --committed` goes to recheck.verify.
