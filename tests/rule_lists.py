@@ -2,7 +2,8 @@
 
 Phase 2 evaluates the one checked expression that the pinned cel-go tool writes for each rule list before load
 (ADR-0020). Until then this helper runs the same flat first-match semantics itself on cel-expr-python, which
-has no policy API: the conditions in order, then the output of the first that holds. Every activation variable
+has no policy API: the conditions in order, then the output of the first that holds. A condition must give a CEL
+bool, and a condition or output that doesn't, an evaluation error included, fails the test. Every activation variable
 is declared dyn, so a test that uses it proves the values a list gives, not that its expressions type-check.
 Phase 2 replaces the dyn variables with the environment generated from the contracts.
 
@@ -33,10 +34,12 @@ def holds(expression: str, data: dict[str, Any]) -> bool:
 
 
 def first_match(rule_list: dict[str, Any], data: dict[str, Any]) -> Any:
-    env = cel.NewEnv(variables=dict.fromkeys(data, cel.Type.DYN))
+    env = _env(data)
     for choice in rule_list["rule"]["match"]:
-        if env.compile(choice.get("condition", "true")).eval(data=data).value():
-            return env.compile(choice["output"]).eval(data=data).plain_value()
+        if "condition" not in choice or holds(choice["condition"], data):
+            output = env.compile(choice["output"]).eval(data=data)
+            assert output.type() != cel.Type.ERROR, f"{choice['output']!r} fails: {output.value()}"
+            return output.plain_value()
     raise AssertionError("no choice matched: the last choice of a rule list must be unconditional")
 
 
