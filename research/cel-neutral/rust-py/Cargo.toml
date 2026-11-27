@@ -1,0 +1,21 @@
+[package]
+name = "cel_core_py"
+version = "0.1.0"
+edition = "2024"
+
+# A measurement, not a product: the smallest pyo3 binding that gives Python cel-core's checker and
+# evaluator over the same env YAML, descriptor set and CheckedExprs as the other engines.
+[lib]
+name = "cel_core_py"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1.0.105"
+cel-core = "=0.5.1"
+cel-core-proto = "=0.5.1"
+cel_neutral_rs = { path = "../rust" }
+prost = "0.14"
+prost-reflect = "0.16"
+prost-types = "0.14"
+pyo3 = { version = "0.30", features = ["extension-module", "abi3-py312"] }
+serde_yaml = "0.9"

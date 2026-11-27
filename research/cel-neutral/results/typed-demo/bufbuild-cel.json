@@ -1,0 +1,551 @@
+[
+ {
+  "engine": "bufbuild-cel",
+  "kind": "accept",
+  "case": "decision.status == \"approved\" && has(decision.approval) && decision.approval.channel != \"auto\"",
+  "ok": true,
+  "detail": "checker unsupported, ran unchecked: true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "accept",
+  "case": "job.status == \"running\" && job.progress.fraction > 0.25",
+  "ok": true,
+  "detail": "checker unsupported, ran unchecked: true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "accept",
+  "case": "job.argv.exists(a, a == \"--version\")",
+  "ok": true,
+  "detail": "checker unsupported, ran unchecked: true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "accept",
+  "case": "part.make_buy == \"buy\" && part.procurement.mode == \"catalog\"",
+  "ok": true,
+  "detail": "checker unsupported, ran unchecked: true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "accept",
+  "case": "has(part.mass_target) && part.mass_target < 1.0",
+  "ok": true,
+  "detail": "checker unsupported, ran unchecked: true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "accept",
+  "case": "decision.supersedes.all(d, d.startsWith(\"DR-\"))",
+  "ok": true,
+  "detail": "checker unsupported, ran unchecked: true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "decision.approvel.channel == \"chat\"",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> field not found: approvel"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "job.exitcode == 0",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> field not found: exitcode"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "job.progress.fraction + \"x\" == \"y\"",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> found no matching overload for '_+_' applied to '(double, string)'"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "part.mass_target > \"1\"",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> found no matching overload for '_>_' applied to '(double, string)'"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "decision.status == 1",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "part.intent.route.size() > 0",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> field not found: intent"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "reject",
+  "case": "undeclared.x == 1",
+  "ok": false,
+  "detail": "checker unsupported; unchecked eval -> unresolved attribute"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "job.status.upperAscii() == \"RUNNING\"",
+  "ok": true,
+  "detail": "strings extension, version 4 (enabled): unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "\"%s of %d\".format([\"pair\", 30]) == \"pair of 30\"",
+  "ok": true,
+  "detail": "strings extension, format (version 4, enabled): unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "[1, \"a\"].size() == 2",
+  "ok": true,
+  "detail": "homogeneous_aggregate_literals false: unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "math.greatest(1, 2) == 2",
+  "ok": true,
+  "detail": "math extension (excluded): unchecked eval -> unbound function: greatest"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "part.?mass_target.hasValue()",
+  "ok": true,
+  "detail": "optional syntax (optional extension excluded): unchecked eval -> <input>:1:5: found . but expecting end of input"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "cel.bind(x, 1, x == 1)",
+  "ok": true,
+  "detail": "bindings extension (excluded): unchecked eval -> unbound function: bind"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "base64.encode(b\"a\") == \"YQ==\"",
+  "ok": true,
+  "detail": "encoders extension (excluded): unchecked eval -> unbound function: encode"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "[2, 1].sort() == [1, 2]",
+  "ok": true,
+  "detail": "lists extension (excluded): unchecked eval -> unbound function: sort"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "profile",
+  "case": "job.progress.fraction > 0",
+  "ok": false,
+  "detail": "cross_type_numeric_comparisons false (double > int): unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.mass_target == null",
+  "ok": true,
+  "detail": "a missing wrapper reads as null: unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{}.mass_target)",
+  "ok": true,
+  "detail": "has() on a missing wrapper: unchecked eval -> false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.mass_target < 1.0",
+  "ok": true,
+  "detail": "bare selection of a missing wrapper in arithmetic: unchecked eval -> found no matching overload for '_<_' applied to '(null_type, double)'"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{mass_target: 0.0} .mass_target)",
+  "ok": true,
+  "detail": "has() on a wrapper set to zero: unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{mass_target: null} .mass_target)",
+  "ok": true,
+  "detail": "has() on a wrapper set to null: unchecked eval -> false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "benchhand.contracts.record.part.Part{}.form_class == \"\"",
+  "ok": true,
+  "detail": "a missing optional scalar reads as its zero value: unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{}.form_class)",
+  "ok": true,
+  "detail": "has() on a missing optional scalar: unchecked eval -> false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.record.part.Part{form_class: \"\"}.form_class)",
+  "ok": true,
+  "detail": "has() on an optional scalar set to its zero value: unchecked eval -> true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.jobs.job.JobRecord{}.status)",
+  "ok": true,
+  "detail": "has() on a missing plain scalar: unchecked eval -> false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence",
+  "case": "has(benchhand.contracts.jobs.job.JobRecord{status: \"\"}.status)",
+  "ok": true,
+  "detail": "has() on a plain scalar set to its zero value: unchecked eval -> false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target missing: has(part.mass_target)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target null: has(part.mass_target)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target null: part.mass_target == null",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.mass_target zero: has(part.mass_target)",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame missing: has(part.model_frame)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame missing: part.model_frame == \"\"",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame null: has(part.model_frame)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.model_frame zero: has(part.model_frame)",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "job.status missing: has(job.status)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "job.status null: has(job.status)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "job.status zero: has(job.status)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.procurement missing: has(part.procurement)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.procurement null: has(part.procurement)",
+  "ok": true,
+  "detail": "false"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "presence_record",
+  "case": "part.procurement zero: has(part.procurement)",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "cel-go-ref",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-0.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-1.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-2.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-3.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-4.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-5.binpb",
+  "writer": "go",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-0.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-1.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-2.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-3.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-4.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "shipped",
+  "case": "accept-5.binpb",
+  "writer": "python",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-0.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-1.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-2.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-3.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-4.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "portability",
+  "case": "accept-5.binpb",
+  "writer": "rust-cel-core",
+  "ok": true,
+  "detail": "true"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "bundle",
+  "case": "other profile",
+  "ok": true,
+  "detail": "refused: cel-go-ref: checked in profile 000000000000, not 38f0f9a90603"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "bundle",
+  "case": "stale source",
+  "ok": true,
+  "detail": "refused: cel-go-ref/accept-0.binpb: stale, the source changed since it was checked"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "bundle",
+  "case": "substituted payload",
+  "ok": true,
+  "detail": "refused: cel-neutral-swap-ts-HWZywZ/accept-0.binpb: the payload isn't the one the checker shipped"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "bundle",
+  "case": "not a checker of record",
+  "ok": true,
+  "detail": "refused: cel-go-ref: cel-core 0.5.1 isn't a checker of record"
+ },
+ {
+  "engine": "bufbuild-cel",
+  "kind": "bundle",
+  "case": "evaluator without sources",
+  "ok": true,
+  "detail": "verified"
+ }
+]

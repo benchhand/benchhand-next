@@ -1,0 +1,9 @@
+name: bad_field
+description: >-
+  A misspelt field in a condition: the ordinary type check rejects it, at
+  the file, line and column of the condition.
+rule:
+  match:
+    - condition: part.make_bye == "buy"
+      output: '["catalog_check"]'
+    - output: '["form_check"]'

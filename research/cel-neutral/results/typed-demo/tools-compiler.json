@@ -1,0 +1,65 @@
+[
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "job.status.upperAscii() == \"RUNNING\"",
+  "ok": true,
+  "detail": "strings extension, version 4 (enabled): checked"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "\"%s of %d\".format([\"pair\", 30]) == \"pair of 30\"",
+  "ok": true,
+  "detail": "strings extension, format (version 4, enabled): checked"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "[1, \"a\"].size() == 2",
+  "ok": true,
+  "detail": "homogeneous_aggregate_literals false: checked"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "math.greatest(1, 2) == 2",
+  "ok": true,
+  "detail": "math extension (excluded): e.Compile(\"math.greatest(1, 2) == 2\") failed: ERROR: \u003cinput\u003e:1:1: undeclared reference to 'math'"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "part.?mass_target.hasValue()",
+  "ok": false,
+  "detail": "optional syntax (optional extension excluded): checked"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "cel.bind(x, 1, x == 1)",
+  "ok": false,
+  "detail": "bindings extension (excluded): checked"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "base64.encode(b\"a\") == \"YQ==\"",
+  "ok": true,
+  "detail": "encoders extension (excluded): e.Compile(\"base64.encode(b\\\"a\\\") == \\\"YQ==\\\"\") failed: ERROR: \u003cinput\u003e:1:1: undeclared reference to 'base64'"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "[2, 1].sort() == [1, 2]",
+  "ok": true,
+  "detail": "lists extension (excluded): e.Compile(\"[2, 1].sort() == [1, 2]\") failed: ERROR: \u003cinput\u003e:1:12: undeclared reference to 'sort'"
+ },
+ {
+  "engine": "tools/compiler",
+  "kind": "profile",
+  "case": "job.progress.fraction \u003e 0",
+  "ok": true,
+  "detail": "cross_type_numeric_comparisons false (double \u003e int): e.Compile(\"job.progress.fraction \u003e 0\") failed: ERROR: \u003cinput\u003e:1:23: found no matching overload for '_\u003e_' applied to '(wrapper(double), int)'"
+ }
+]

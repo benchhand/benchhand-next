@@ -1,0 +1,14 @@
+# Plan section 5's "checks by iteration" rule list in benchhand's planned
+# form: an ordered, first-match list of {when, then}. `then` names the
+# checks to run. checks_by_iteration.celpolicy is the same list in the
+# cel-policy format.
+scope: checks_by_iteration
+rules:
+  - when: stage in ["parts", "detail"] && iteration == "commit"
+    then: ["form_check", "check_changed_only"]
+  - when: part.make_buy == "buy" && part.procurement.mode == "catalog"
+    then: ["catalog_check"]
+  - when: has(part.mass_target) && part.mass_target < 1.0
+    then: ["mass_check"]
+  - when: "true"
+    then: ["form_check"]

@@ -1,0 +1,1 @@
+optionals/optionals/type: want {"boolValue": true}, got check_error: "check errors: undeclared reference to 'optional_type'"

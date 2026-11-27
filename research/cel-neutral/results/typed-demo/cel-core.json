@@ -1,0 +1,503 @@
+[
+  {
+    "engine": "cel-core",
+    "kind": "accept",
+    "case": "decision.status == \"approved\" && has(decision.approval) && decision.approval.channel != \"auto\"",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "accept",
+    "case": "job.status == \"running\" && job.progress.fraction > 0.25",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "accept",
+    "case": "job.argv.exists(a, a == \"--version\")",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "accept",
+    "case": "part.make_buy == \"buy\" && part.procurement.mode == \"catalog\"",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "accept",
+    "case": "has(part.mass_target) && part.mass_target < 1.0",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "accept",
+    "case": "decision.supersedes.all(d, d.startsWith(\"DR-\"))",
+    "ok": true,
+    "detail": "true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "decision.approvel.channel == \"chat\"",
+    "ok": true,
+    "detail": "check errors: undefined field 'approvel' on type 'benchhand.contracts.record.decision.GateDecision'; undefined field 'channel' on type 'error'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "job.exitcode == 0",
+    "ok": true,
+    "detail": "check errors: undefined field 'exitcode' on type 'benchhand.contracts.jobs.job.JobRecord'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "job.progress.fraction + \"x\" == \"y\"",
+    "ok": true,
+    "detail": "check errors: no matching overload for '_+_' with argument types (wrapper<double>, string)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "part.mass_target > \"1\"",
+    "ok": true,
+    "detail": "check errors: no matching overload for '_>_' with argument types (wrapper<double>, string)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "decision.status == 1",
+    "ok": false,
+    "detail": "type-checked; expected: wrong operand type (string == int)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "part.intent.route.size() > 0",
+    "ok": true,
+    "detail": "check errors: undefined field 'intent' on type 'benchhand.contracts.record.part.Part'; undefined field 'route' on type 'error'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "reject",
+    "case": "undeclared.x == 1",
+    "ok": true,
+    "detail": "check errors: undeclared reference to 'undeclared'; undefined field 'x' on type 'error'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "job.status.upperAscii() == \"RUNNING\"",
+    "ok": true,
+    "detail": "strings extension, version 4 (enabled): true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "\"%s of %d\".format([\"pair\", 30]) == \"pair of 30\"",
+    "ok": true,
+    "detail": "strings extension, format (version 4, enabled): true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "[1, \"a\"].size() == 2",
+    "ok": true,
+    "detail": "homogeneous_aggregate_literals false: true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "math.greatest(1, 2) == 2",
+    "ok": true,
+    "detail": "math extension (excluded): check errors: undeclared reference to 'math'; undeclared reference to 'greatest'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "part.?mass_target.hasValue()",
+    "ok": true,
+    "detail": "optional syntax (optional extension excluded): check errors: undeclared reference to 'hasValue'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "cel.bind(x, 1, x == 1)",
+    "ok": false,
+    "detail": "bindings extension (excluded): checked, should be refused; evaluated to true"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "base64.encode(b\"a\") == \"YQ==\"",
+    "ok": true,
+    "detail": "encoders extension (excluded): check errors: undeclared reference to 'base64'; undeclared reference to 'encode'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "[2, 1].sort() == [1, 2]",
+    "ok": true,
+    "detail": "lists extension (excluded): check errors: undeclared reference to 'sort'"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "profile",
+    "case": "job.progress.fraction > 0",
+    "ok": true,
+    "detail": "cross_type_numeric_comparisons false (double > int): check errors: no matching overload for '_>_' with argument types (wrapper<double>, int)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "benchhand.contracts.record.part.Part{}.mass_target == null",
+    "ok": true,
+    "detail": "a missing wrapper reads as null: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{}.mass_target)",
+    "ok": true,
+    "detail": "has() on a missing wrapper: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "benchhand.contracts.record.part.Part{}.mass_target < 1.0",
+    "ok": true,
+    "detail": "bare selection of a missing wrapper in arithmetic: Error(EvalError { message: \"no matching overload for function: _<_\", kind: NoMatchingOverload })"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{mass_target: 0.0} .mass_target)",
+    "ok": true,
+    "detail": "has() on a wrapper set to zero: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{mass_target: null} .mass_target)",
+    "ok": true,
+    "detail": "has() on a wrapper set to null: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "benchhand.contracts.record.part.Part{}.form_class == \"\"",
+    "ok": true,
+    "detail": "a missing optional scalar reads as its zero value: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{}.form_class)",
+    "ok": true,
+    "detail": "has() on a missing optional scalar: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.record.part.Part{form_class: \"\"}.form_class)",
+    "ok": true,
+    "detail": "has() on an optional scalar set to its zero value: Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.jobs.job.JobRecord{}.status)",
+    "ok": true,
+    "detail": "has() on a missing plain scalar: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence",
+    "case": "has(benchhand.contracts.jobs.job.JobRecord{status: \"\"}.status)",
+    "ok": true,
+    "detail": "has() on a plain scalar set to its zero value: Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.mass_target missing: has(part.mass_target)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.mass_target null: has(part.mass_target)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.mass_target null: part.mass_target == null",
+    "ok": true,
+    "detail": "Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.mass_target zero: has(part.mass_target)",
+    "ok": true,
+    "detail": "Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.model_frame missing: has(part.model_frame)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.model_frame missing: part.model_frame == \"\"",
+    "ok": true,
+    "detail": "Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.model_frame null: has(part.model_frame)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.model_frame zero: has(part.model_frame)",
+    "ok": true,
+    "detail": "Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "job.status missing: has(job.status)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "job.status null: has(job.status)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "job.status zero: has(job.status)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.procurement missing: has(part.procurement)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.procurement null: has(part.procurement)",
+    "ok": true,
+    "detail": "Bool(false)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "presence_record",
+    "case": "part.procurement zero: has(part.procurement)",
+    "ok": true,
+    "detail": "Bool(true)"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "other profile",
+    "ok": true,
+    "detail": "refused: cel-go-ref: checked in profile 000000000000, not 38f0f9a90603"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "stale source",
+    "ok": true,
+    "detail": "refused: cel-go-ref/accept-0.binpb: stale, the source changed since it was checked"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "substituted payload",
+    "ok": true,
+    "detail": "refused: cel-neutral-swap-rust-44301/accept-0.binpb: the payload isn't the one the checker shipped"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "not a checker of record",
+    "ok": true,
+    "detail": "refused: cel-go-ref: cel-core 0.5.1 isn't a checker of record"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "bundle",
+    "case": "evaluator without sources",
+    "ok": true,
+    "detail": "verified"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-0.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-1.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-2.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-3.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-4.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-5.binpb",
+    "writer": "cel-go-ref",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "portability",
+    "case": "accept-0.binpb",
+    "writer": "go",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "portability",
+    "case": "accept-1.binpb",
+    "writer": "go",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "portability",
+    "case": "accept-2.binpb",
+    "writer": "go",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "portability",
+    "case": "accept-3.binpb",
+    "writer": "go",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "portability",
+    "case": "accept-4.binpb",
+    "writer": "go",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "portability",
+    "case": "accept-5.binpb",
+    "writer": "go",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-0.binpb",
+    "writer": "python",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-1.binpb",
+    "writer": "python",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-2.binpb",
+    "writer": "python",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-3.binpb",
+    "writer": "python",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-4.binpb",
+    "writer": "python",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  },
+  {
+    "engine": "cel-core",
+    "kind": "shipped",
+    "case": "accept-5.binpb",
+    "writer": "python",
+    "ok": true,
+    "detail": "Ok(Bool(true))"
+  }
+]

@@ -1,0 +1,10 @@
+name: not_caught_no_final_choice
+description: >-
+  A match whose choices are all conditional. The compiler accepts it and the
+  output type becomes optional(list(string)); the supported profile refuses
+  it (celcheck's restricted-profile check), because the evaluator then needs
+  the optional extension and no match would not mean UNKNOWN.
+rule:
+  match:
+    - condition: iteration == "commit"
+      output: '["form_check"]'

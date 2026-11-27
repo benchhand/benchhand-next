@@ -1,0 +1,6 @@
+[
+ {"testCase": "commit in detail", "bindings": {"stage": "detail", "iteration": "commit", "part": {"make_buy": "make"}}, "expected": ["form_check", "check_changed_only"]},
+ {"testCase": "catalog buy part", "bindings": {"stage": "concept", "iteration": "draft", "part": {"make_buy": "buy", "procurement": {"mode": "catalog"}}}, "expected": ["catalog_check"]},
+ {"testCase": "light part", "bindings": {"stage": "concept", "iteration": "draft", "part": {"make_buy": "make", "mass_target": 0.4}}, "expected": ["mass_check"]},
+ {"testCase": "fallback", "bindings": {"stage": "concept", "iteration": "draft", "part": {"make_buy": "make"}}, "expected": ["form_check"]}
+]

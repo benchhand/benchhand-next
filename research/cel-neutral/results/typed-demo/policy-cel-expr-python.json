@@ -1,0 +1,37 @@
+[
+ {
+  "engine": "cel-expr-python",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb commit in detail",
+  "ok": true,
+  "detail": "['form_check', 'check_changed_only']"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb catalog buy part",
+  "ok": true,
+  "detail": "['catalog_check']"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb light part",
+  "ok": true,
+  "detail": "['mass_check']"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "policy",
+  "case": "checks_by_iteration/checks_by_iteration_flat.binpb fallback",
+  "ok": true,
+  "detail": "['form_check']"
+ },
+ {
+  "engine": "cel-expr-python",
+  "kind": "bundle",
+  "case": "checks_by_iteration_bindings",
+  "ok": false,
+  "detail": "checks_by_iteration_bindings: cel-expr-python has no bindings version 1"
+ }
+]

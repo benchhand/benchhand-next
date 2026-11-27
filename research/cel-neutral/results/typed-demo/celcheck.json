@@ -1,0 +1,156 @@
+[
+ {
+  "engine": "celcheck",
+  "kind": "accept",
+  "case": "decision.status == \"approved\" \u0026\u0026 has(decision.approval) \u0026\u0026 decision.approval.channel != \"auto\"",
+  "ok": true,
+  "detail": "checked: bool"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "accept",
+  "case": "job.status == \"running\" \u0026\u0026 job.progress.fraction \u003e 0.25",
+  "ok": true,
+  "detail": "checked: bool"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "accept",
+  "case": "job.argv.exists(a, a == \"--version\")",
+  "ok": true,
+  "detail": "checked: bool"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "accept",
+  "case": "part.make_buy == \"buy\" \u0026\u0026 part.procurement.mode == \"catalog\"",
+  "ok": true,
+  "detail": "checked: bool"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "accept",
+  "case": "has(part.mass_target) \u0026\u0026 part.mass_target \u003c 1.0",
+  "ok": true,
+  "detail": "checked: bool"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "accept",
+  "case": "decision.supersedes.all(d, d.startsWith(\"DR-\"))",
+  "ok": true,
+  "detail": "checked: bool"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "decision.approvel.channel == \"chat\"",
+  "ok": true,
+  "detail": "wrong field (approvel): ERROR: \u003cinput\u003e:1:9: undefined field 'approvel'\n | decision.approvel.channel == \"chat\"\n | ........^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "job.exitcode == 0",
+  "ok": true,
+  "detail": "wrong field (exitcode, the field is exitCode): ERROR: \u003cinput\u003e:1:4: undefined field 'exitcode'\n | job.exitcode == 0\n | ...^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "job.progress.fraction + \"x\" == \"y\"",
+  "ok": true,
+  "detail": "wrong operand type (double + string): ERROR: \u003cinput\u003e:1:23: found no matching overload for '_+_' applied to '(wrapper(double), string)'\n | job.progress.fraction + \"x\" == \"y\"\n | ......................^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "part.mass_target \u003e \"1\"",
+  "ok": true,
+  "detail": "wrong operand type (double \u003e string): ERROR: \u003cinput\u003e:1:18: found no matching overload for '_\u003e_' applied to '(wrapper(double), string)'\n | part.mass_target \u003e \"1\"\n | .................^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "decision.status == 1",
+  "ok": true,
+  "detail": "wrong operand type (string == int): ERROR: \u003cinput\u003e:1:17: found no matching overload for '_==_' applied to '(string, int)'\n | decision.status == 1\n | ................^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "part.intent.route.size() \u003e 0",
+  "ok": true,
+  "detail": "omitted union field (intent isn't declared): ERROR: \u003cinput\u003e:1:5: undefined field 'intent'\n | part.intent.route.size() \u003e 0\n | ....^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "reject",
+  "case": "undeclared.x == 1",
+  "ok": true,
+  "detail": "undeclared variable: ERROR: \u003cinput\u003e:1:1: undeclared reference to 'undeclared'\n | undeclared.x == 1\n | ^"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "job.status.upperAscii() == \"RUNNING\"",
+  "ok": true,
+  "detail": "strings extension, version 4 (enabled): checked"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "\"%s of %d\".format([\"pair\", 30]) == \"pair of 30\"",
+  "ok": true,
+  "detail": "strings extension, format (version 4, enabled): checked"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "[1, \"a\"].size() == 2",
+  "ok": true,
+  "detail": "homogeneous_aggregate_literals false: checked"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "math.greatest(1, 2) == 2",
+  "ok": true,
+  "detail": "math extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'math'"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "part.?mass_target.hasValue()",
+  "ok": true,
+  "detail": "optional syntax (optional extension excluded): ERROR: \u003cinput\u003e:1:5: unsupported syntax '.?'"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "cel.bind(x, 1, x == 1)",
+  "ok": true,
+  "detail": "bindings extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'cel'"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "base64.encode(b\"a\") == \"YQ==\"",
+  "ok": true,
+  "detail": "encoders extension (excluded): ERROR: \u003cinput\u003e:1:1: undeclared reference to 'base64'"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "[2, 1].sort() == [1, 2]",
+  "ok": true,
+  "detail": "lists extension (excluded): ERROR: \u003cinput\u003e:1:12: undeclared reference to 'sort'"
+ },
+ {
+  "engine": "celcheck",
+  "kind": "profile",
+  "case": "job.progress.fraction \u003e 0",
+  "ok": true,
+  "detail": "cross_type_numeric_comparisons false (double \u003e int): ERROR: \u003cinput\u003e:1:23: found no matching overload for '_\u003e_' applied to '(wrapper(double), int)'"
+ }
+]

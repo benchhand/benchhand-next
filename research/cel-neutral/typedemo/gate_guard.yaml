@@ -1,0 +1,146 @@
+# The typed demo every engine runs against the gate_guard profile
+# (generated/profile/gate_guard.profile.json) and generated/types.binpb.
+# `accept` must type-check and evaluate to `expect` on the activation;
+# `reject` must fail the type check. `profile` is the effective-environment
+# test: each case either uses a feature the manifest enables (`expect`) or
+# one it excludes (`refuse`), so an engine whose environment differs from the
+# manifest fails a case.
+scope: gate_guard
+# Activation: real records from the published schemas' examples and fixtures.
+activation:
+  decision: {schema: record/decision.schema.json, example: 1}
+  job: {schema: jobs/job.schema.json, example: 0}
+  part: {fixture: record/part.examples.json, valid: 0}
+accept:
+  - expr: >-
+      decision.status == "approved" && has(decision.approval)
+      && decision.approval.channel != "auto"
+    expect: true
+  - expr: job.status == "running" && job.progress.fraction > 0.25
+    expect: true
+  - expr: job.argv.exists(a, a == "--version")
+    expect: true
+  - expr: part.make_buy == "buy" && part.procurement.mode == "catalog"
+    expect: true
+  - expr: has(part.mass_target) && part.mass_target < 1.0
+    expect: true
+  - expr: decision.supersedes.all(d, d.startsWith("DR-"))
+    expect: true
+reject:
+  - expr: decision.approvel.channel == "chat"
+    why: wrong field (approvel)
+  - expr: job.exitcode == 0
+    why: wrong field (exitcode, the field is exitCode)
+  - expr: job.progress.fraction + "x" == "y"
+    why: wrong operand type (double + string)
+  - expr: part.mass_target > "1"
+    why: wrong operand type (double > string)
+  - expr: decision.status == 1
+    why: wrong operand type (string == int)
+  - expr: part.intent.route.size() > 0
+    why: omitted union field (intent isn't declared)
+  - expr: undeclared.x == 1
+    why: undeclared variable
+profile:
+  - expr: job.status.upperAscii() == "RUNNING"
+    feature: strings extension, version 4 (enabled)
+    expect: true
+  - expr: '"%s of %d".format(["pair", 30]) == "pair of 30"'
+    feature: strings extension, format (version 4, enabled)
+    expect: true
+  - expr: '[1, "a"].size() == 2'
+    feature: homogeneous_aggregate_literals false
+    expect: true
+  - expr: math.greatest(1, 2) == 2
+    feature: math extension (excluded)
+    refuse: true
+  - expr: part.?mass_target.hasValue()
+    feature: optional syntax (optional extension excluded)
+    refuse: true
+  - expr: cel.bind(x, 1, x == 1)
+    feature: bindings extension (excluded)
+    refuse: true
+  - expr: base64.encode(b"a") == "YQ=="
+    feature: encoders extension (excluded)
+    refuse: true
+  - expr: '[2, 1].sort() == [1, 2]'
+    feature: lists extension (excluded)
+    refuse: true
+  - expr: job.progress.fraction > 0
+    feature: cross_type_numeric_comparisons false (double > int)
+    refuse: true
+# Presence: how missing, zero and null read, per kind of field. Each case
+# builds the message with a literal, so every engine sees the same input.
+# `expect` is the value; `error: true` means evaluation must fail.
+# mass_target is a nullable scalar (google.protobuf.DoubleValue), form_class
+# an optional scalar (proto3 `optional string`), status a plain scalar.
+presence:
+  - expr: 'benchhand.contracts.record.part.Part{}.mass_target == null'
+    meaning: a missing wrapper reads as null
+    expect: true
+  - expr: 'has(benchhand.contracts.record.part.Part{}.mass_target)'
+    meaning: has() on a missing wrapper
+    expect: false
+  - expr: 'benchhand.contracts.record.part.Part{}.mass_target < 1.0'
+    meaning: bare selection of a missing wrapper in arithmetic
+    error: true
+  - expr: >-
+      has(benchhand.contracts.record.part.Part{mass_target: 0.0}
+      .mass_target)
+    meaning: has() on a wrapper set to zero
+    expect: true
+  - expr: >-
+      has(benchhand.contracts.record.part.Part{mass_target: null}
+      .mass_target)
+    meaning: has() on a wrapper set to null
+    expect: false
+  - expr: 'benchhand.contracts.record.part.Part{}.form_class == ""'
+    meaning: a missing optional scalar reads as its zero value
+    expect: true
+  - expr: 'has(benchhand.contracts.record.part.Part{}.form_class)'
+    meaning: has() on a missing optional scalar
+    expect: false
+  - expr: 'has(benchhand.contracts.record.part.Part{form_class: ""}.form_class)'
+    meaning: has() on an optional scalar set to its zero value
+    expect: true
+  - expr: 'has(benchhand.contracts.jobs.job.JobRecord{}.status)'
+    meaning: has() on a missing plain scalar
+    expect: false
+  - expr: 'has(benchhand.contracts.jobs.job.JobRecord{status: ""}.status)'
+    meaning: has() on a plain scalar set to its zero value
+    expect: false
+# Presence through the activation path: each case edits one field of a
+# record in generated/activation/gate_guard.json (removes it, sets it to
+# JSON null, or sets it to a zero value), parses the record with the
+# engine's own protobuf JSON parser, and evaluates the rule. Field kinds:
+# part.mass_target is a nullable scalar (DoubleValue), part.model_frame an
+# optional scalar, job.status a required scalar, part.procurement a message.
+presence_records:
+  - {variable: part, field: mass_target, state: missing,
+     expr: has(part.mass_target), expect: false}
+  - {variable: part, field: mass_target, state: 'null',
+     expr: has(part.mass_target), expect: false}
+  - {variable: part, field: mass_target, state: 'null',
+     expr: part.mass_target == null, expect: true}
+  - {variable: part, field: mass_target, state: zero, zero: 0.0,
+     expr: has(part.mass_target), expect: true}
+  - {variable: part, field: model_frame, state: missing,
+     expr: has(part.model_frame), expect: false}
+  - {variable: part, field: model_frame, state: missing,
+     expr: 'part.model_frame == ""', expect: true}
+  - {variable: part, field: model_frame, state: 'null',
+     expr: has(part.model_frame), expect: false}
+  - {variable: part, field: model_frame, state: zero, zero: '',
+     expr: has(part.model_frame), expect: true}
+  - {variable: job, field: status, state: missing,
+     expr: has(job.status), expect: false}
+  - {variable: job, field: status, state: 'null',
+     expr: has(job.status), expect: false}
+  - {variable: job, field: status, state: zero, zero: '',
+     expr: has(job.status), expect: false}
+  - {variable: part, field: procurement, state: missing,
+     expr: has(part.procurement), expect: false}
+  - {variable: part, field: procurement, state: 'null',
+     expr: has(part.procurement), expect: false}
+  - {variable: part, field: procurement, state: zero, zero: {},
+     expr: has(part.procurement), expect: true}

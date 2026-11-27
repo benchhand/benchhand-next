@@ -1,0 +1,81 @@
+# Activation scopes: the variables each rule list sees, each typed by one
+# node of a published schema. gen/celgen.py refuses a scope whose reachable
+# nodes aren't structural (one shape each), unless the node is in `omit`.
+# An omitted field isn't declared, so a rule that reads it fails the check.
+#
+# Each structural scope is one environment profile. gen/profile.py writes its
+# manifest (generated/profile/<scope>.profile.json): the descriptor set
+# digest, the declarations, the extensions with pinned versions, and the
+# options below. Every adapter builds its environment from that manifest.
+#
+# profile_checkers_of_record: whose CheckedExprs an evaluator may run. A
+# bundle names its checker; a verifier refuses any other. The reference
+# checker checks rule lists and anything shipped; the host checks
+# standalone expressions.
+profile_checkers_of_record:
+  - {engine: celcheck, version: cel.dev/cel-go v0.33.4}
+  - {engine: cel-expr-python, version: 0.1.4}
+profile_options:
+  # int, uint and double never mix in a comparison at check time.
+  cross_type_numeric_comparisons: false
+  # A list or map literal may mix element types.
+  homogeneous_aggregate_literals: false
+scopes:
+  # A gate guard: the gate decision, the job behind its evidence, the part.
+  # Strings only, so the browser evaluator (@bufbuild/cel) runs the profile.
+  gate_guard:
+    extensions:
+      - {name: strings, version: 4}
+    variables:
+      decision:
+        schema: record/decision.schema.json
+        pointer: /$defs/gate_decision
+      job:
+        schema: jobs/job.schema.json
+        pointer: /$defs/JobRecord
+      part:
+        schema: record/part.schema.json
+    omit:
+      # Both reach union-valued fields (facts, scales, tolerances).
+      - record/part.schema.json#/properties/intent
+      - record/part.schema.json#/properties/drawing
+      # A message or null: two readings of absence, so not a nullable scalar.
+      - jobs/job.schema.json#/$defs/JobRecord/properties/process
+
+  # Refused: the decision root is a oneOf of gate and design decisions.
+  refused_decision_root:
+    expect: refused
+    variables:
+      decision:
+        schema: record/decision.schema.json
+  # Refused: the job root is a oneOf of JobRecord and JobHandle.
+  refused_job_root:
+    expect: refused
+    variables:
+      job:
+        schema: jobs/job.schema.json
+  # Refused: a whole part reaches fact unions through intent.
+  refused_part_unscoped:
+    expect: refused
+    variables:
+      part:
+        schema: record/part.schema.json
+
+  # The checks-by-iteration rule list (policy/), in the restricted policy
+  # profile: no extensions, so a compiled policy can't use cel.@block.
+  checks_by_iteration:
+    variables: &checks_vars
+      stage: {type: string}
+      iteration: {type: string}
+      part:
+        schema: record/part.schema.json
+    omit: &part_omit
+      - record/part.schema.json#/properties/intent
+      - record/part.schema.json#/properties/drawing
+  # The same list with policy variables, which compile to cel.@block and so
+  # need bindings version 1. Outside the supported profile.
+  checks_by_iteration_bindings:
+    extensions:
+      - {name: bindings, version: 1}
+    variables: *checks_vars
+    omit: *part_omit

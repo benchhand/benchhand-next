@@ -1,0 +1,12 @@
+name: bad_unreachable
+description: >-
+  An unconditional choice before the last one: the compiler reports "match
+  creates unreachable outputs". The list still ends with an unconditional
+  choice, so the restricted-profile check passes and the compiler's own
+  check is what refuses it.
+rule:
+  match:
+    - output: '["form_check"]'
+    - condition: iteration == "commit"
+      output: '["check_changed_only"]'
+    - output: '["mass_check"]'

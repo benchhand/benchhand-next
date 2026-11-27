@@ -1,0 +1,11 @@
+name: aggregate
+description: >-
+  An aggregate rule: every matching choice contributes to a list output,
+  instead of the first match deciding. The compiler accepts it; the supported
+  profile refuses it (celcheck's restricted-profile check), because only
+  first-match has tests of its emitted CheckedExpr on every evaluator.
+rule:
+  aggregate:
+    - condition: iteration == "commit"
+      output: '"form_check"'
+    - output: '"unknown"'

@@ -1,0 +1,128 @@
+basic/variables/self_eval_unbound_lookup: want an eval error, got check_error 
+basic/variables/unbound_is_runtime_error: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'x' (in container '')\\n | x || true\\n | ^\""
+basic/functions/unbound: want an eval error, got check_error 
+basic/functions/unbound_is_runtime_error: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:10: undeclared reference to 'f_unknown' (in container '')\\n | f_unknown(17) || true\\n | .........^\""
+block_ext/basic/int_add: want {"int64Value": "4"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:15: undeclared reference to 'cel' (in container '')\\n | cel.block([1, cel.index(0) + 1, cel.index(1) + 1, c
+block_ext/basic/size_1: want {"int64Value": "5"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:25: undeclared reference to 'cel' (in container '')\\n | cel.block([[1, 2], size(cel.index(0)), cel.index(1)
+block_ext/basic/size_2: want {"int64Value": "7"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:25: undeclared reference to 'cel' (in container '')\\n | cel.block([[1, 2], size(cel.index(0)), 2 + cel.inde
+block_ext/basic/size_3: want {"int64Value": "6"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:22: undeclared reference to 'cel' (in container '')\\n | cel.block([[0], size(cel.index(0)), [1, 2], size(ce
+block_ext/basic/size_4: want {"int64Value": "17"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:22: undeclared reference to 'cel' (in container '')\\n | cel.block([[0], size(cel.index(0)), [1, 2], size(ce
+block_ext/basic/timestamp: want {"int64Value": "13934"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:39: undeclared reference to 'cel' (in container '')\\n | cel.block([timestamp(1000000000), int(cel.index(0))
+block_ext/basic/map_index: want {"int64Value": "6"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:22: undeclared reference to 'cel' (in container '')\\n | cel.block([{\\\"a\\\": 2}, cel.index(0)[\\\"a\\\"],
+block_ext/basic/nested_map_construction: want {"mapValue": {"entries": [{"key": {"stringValue": "a"}, "value": {"mapValue": {"entries": [{"key": {"stringValue": "b"}, "value": {"int64Value": "1"}}]}}}, {"key": {"stringValue": "c"}, "value": {"mapValue": {"entries": [{"key": {"stringValue": "b"}, "value": {"int64Value": "1"}}]}}}, {"key": {"stringValue": "d"}, "value": {"mapValue": {"entries": [{"key": {"stringValue": "e"}, "value": {"mapValue": {"entries": [{"key": {"stringValue": "b"}, "value": {"int64Value": "1"}}]}}}]}}}, {"key": {"stringValue": "e"}, "value": {"mapValue": {"entries": [{"key": {"stringValue": "e"}, "value": {"mapValue": {"entries": [{"key": {"stringValue": "b"}, "value": {"int64Value": "1"}}]}}}]}}}]}}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:28: undeclared reference to 'cel' (in container '')\\n | cel.block([{\\\"b\\\": 1}, {\\\"e\\\": cel.index(0)
+block_ext/basic/nested_list_construction: want {"listValue": {"values": [{"int64Value": "1"}, {"listValue": {"values": [{"int64Value": "1"}, {"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}, {"int64Value": "2"}, {"listValue": {"values": [{"int64Value": "1"}, {"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}, {"int64Value": "5"}, {"listValue": {"values": [{"int64Value": "1"}, {"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}, {"int64Value": "7"}, {"listValue": {"values": [{"listValue": {"values": [{"int64Value": "1"}, {"int64Value": "2"}]}}, {"listValue": {"values": [{"int64Value": "1"}, {"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}]}}, {"listValue": {"values": [{"int64Value": "1"}, {"int64Value": "2"}]}}]}}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:35: undeclared reference to 'cel' (in container '')\\n | cel.block([[1, 2, 3, 4], [1, 2], [cel.index(1), cel
+block_ext/basic/multiple_macros_1: want {"int64Value": "4"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:34: exists() variable name must be a simple identifier\\n | cel.block([[1].exists(cel.iterVar(0, 0), cel.ite
+block_ext/basic/multiple_macros_2: want {"listValue": {"values": [{"boolValue": true}, {"boolValue": true}, {"boolValue": true}, {"boolValue": true}]}}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:34: exists() variable name must be a simple identifier\\n | cel.block([[1].exists(cel.iterVar(0, 0), cel.ite
+block_ext/basic/multiple_macros_3: want {"boolValue": false}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:34: exists() variable name must be a simple identifier\\n | cel.block([[1].exists(cel.iterVar(0, 0), cel.ite
+block_ext/basic/nested_macros_1: want {"listValue": {"values": [{"listValue": {"values": [{"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}, {"listValue": {"values": [{"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}, {"listValue": {"values": [{"int64Value": "2"}, {"int64Value": "3"}, {"int64Value": "4"}]}}]}}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:52: map() variable name must be a simple identifier\\n | cel.block([[1, 2, 3]], cel.index(0).map(cel.iterVar
+block_ext/basic/nested_macros_2: want {"listValue": {"values": [{"listValue": {"values": [{"int64Value": "1"}]}}, {"listValue": {"values": [{"int64Value": "2"}]}}]}}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:23: map() variable name must be a simple identifier\\n | [1, 2].map(cel.iterVar(0, 0), [1, 2, 3].filter(cel.
+block_ext/basic/adjacent_macros: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:51: map() variable name must be a simple identifier\\n | cel.block([[1, 2, 3], cel.index(0).map(cel.iterVar(
+block_ext/basic/inclusion_list: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:28: undeclared reference to 'cel' (in container '')\\n | cel.block([[1, 2, 3], 1 in cel.index(0), 2 in cel.i
+block_ext/basic/inclusion_map: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:39: undeclared reference to 'cel' (in container '')\\n | cel.block([{true: false}, {\\\"a\\\": 1, 2: cel.ind
+block_ext/basic/presence_test: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:29: undeclared reference to 'cel' (in container '')\\n | cel.block([{\\\"a\\\": true}, has(cel.index(0).a), 
+block_ext/basic/presence_test_2: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:29: undeclared reference to 'cel' (in container '')\\n | cel.block([{\\\"a\\\": true}, has(cel.index(0).a)],
+block_ext/basic/optional_map: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:45: undeclared reference to 'cel' (in container '')\\n | cel.block([optional.of(\\\"hello\\\"), {?\\\"hello\
+block_ext/basic/optional_map_chained: want {"stringValue": "test"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:59: undeclared reference to 'cel' (in container '')\\n | cel.block([{\\\"key\\\": \\\"test\\\"}, optional.of
+block_ext/basic/call: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:23: undeclared reference to 'cel' (in container '')\\n | cel.block([\\\"h\\\" + \\\"e\\\", cel.index(0) + \\
+comparisons/eq_literal/not_eq_list_length: want {"boolValue": false}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:9: found no matching overload for '_==_' applied to '(list(string), list(int))'\\n | ['one'] == [2, 3]\\n | 
+comparisons/eq_literal/eq_mixed_types: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:5: found no matching overload for '_==_' applied to '(double, int)'\\n | 1.0 == 1\\n | ....^\""
+comparisons/eq_literal/eq_list_elem_mixed_types: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:5: found no matching overload for '_==_' applied to '(list(int), list(double))'\\n | [1] == [1.0]\\n | ....^
+comparisons/ne_literal/ne_mixed_types: want {"boolValue": false}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:4: found no matching overload for '_!=_' applied to '(uint, int)'\\n | 2u != 2\\n | ...^\""
+comparisons/lt_literal/lt_list_unsupported: want an eval error, got check_error 
+comparisons/lt_literal/lt_map_unsupported: want an eval error, got check_error 
+comparisons/lt_literal/lt_mixed_types_error: want an eval error, got check_error 
+comparisons/gt_literal/gt_list_unsupported: want an eval error, got check_error 
+comparisons/gt_literal/gt_map_unsupported: want an eval error, got check_error 
+comparisons/gt_literal/gt_mixed_types_error: want an eval error, got check_error 
+comparisons/lte_literal/lte_list_unsupported: want an eval error, got check_error 
+comparisons/lte_literal/lte_map_unsupported: want an eval error, got check_error 
+comparisons/lte_literal/lte_mixed_types_error: want an eval error, got check_error 
+comparisons/gte_literal/gte_list_unsupported: want an eval error, got check_error 
+comparisons/gte_literal/gte_map_unsupported: want an eval error, got check_error 
+comparisons/gte_literal/gte_mixed_types_error: want an eval error, got check_error 
+dynamic/int32/literal_no_field_access: want an eval error, got check_error 
+dynamic/int64/literal_no_field_access: want an eval error, got check_error 
+dynamic/uint32/literal_no_field_access: want an eval error, got check_error 
+dynamic/uint64/literal_no_field_access: want an eval error, got check_error 
+dynamic/float/literal_no_field_access: want an eval error, got check_error 
+dynamic/double/literal_no_field_access: want an eval error, got check_error 
+dynamic/bool/literal_no_field_access: want an eval error, got check_error 
+dynamic/string/literal_no_field_access: want an eval error, got check_error 
+dynamic/bytes/literal_no_field_access: want an eval error, got check_error 
+dynamic/list/literal_no_field_access: want an eval error, got check_error 
+fields/quoted_map_fields/field_access_slash: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:37: unsupported syntax '`'\\n | {'/api/v1': true, '/api/v2': false}.`/api/v1`\\n | .........................
+fields/quoted_map_fields/field_access_dash: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:61: unsupported syntax '`'\\n | {'content-type': 'application/json', 'content-length': 145}.`content-type` =
+fields/quoted_map_fields/field_access_dot: want {"int64Value": "32"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:34: unsupported syntax '`'\\n | {'foo.txt': 32, 'bar.csv': 1024}.`foo.txt`\\n | ............................
+fields/quoted_map_fields/has_field_slash: want {"boolValue": false}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:41: unsupported syntax '`'\\n | has({'/api/v1': true, '/api/v2': false}.`/api/v3`)\\n | ....................
+fields/quoted_map_fields/has_field_dash: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:65: unsupported syntax '`'\\n | has({'content-type': 'application/json', 'content-length': 145}.`content-typ
+fields/quoted_map_fields/has_field_dot: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:38: unsupported syntax '`'\\n | has({'foo.txt': 32, 'bar.csv': 1024}.`foo.txt`)\\n | .......................
+fields/qualified_identifier_resolution/map_value_repeat_key_heterogeneous: want an eval error, got value {'int64Value': '1'}
+fp_math/fp_math/mod_not_support: want an eval error, got check_error 
+integer_math/int64_math/unary_minus_no_overload: want an eval error, got check_error 
+integer_math/int64_math/unary_minus_not_bool: want an eval error, got check_error 
+integer_math/uint64_math/negative_no_overload: want an eval error, got check_error 
+logic/conditional/mixed_type: want {"stringValue": "cows"}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:6: found no matching overload for '_?_:_' applied to '(bool, string, int)'\\n | true ? 'cows' : 17\\n | ....
+logic/conditional/bad_type: want an eval error, got check_error 
+logic/AND/short_circuit_type_left: want {"boolValue": false}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:7: found no matching overload for '_&&_' applied to '(bool, int)'\\n | false && 32\\n | ......^\""
+logic/AND/short_circuit_type_right: want {"boolValue": false}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:10: found no matching overload for '_&&_' applied to '(string, bool)'\\n | 'horses' && false\\n | .........^
+logic/AND/no_overload: want an eval error, got check_error 
+logic/OR/short_circuit_type_left: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:6: found no matching overload for '_||_' applied to '(bool, int)'\\n | true || 32\\n | .....^\""
+logic/OR/short_circuit_type_right: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:10: found no matching overload for '_||_' applied to '(string, bool)'\\n | 'horses' || true\\n | .........^\
+logic/OR/no_overload: want an eval error, got check_error 
+logic/NOT/no_overload: want an eval error, got check_error 
+parse/receiver_function_names/as: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.as() || true\\n | ^\\nERROR: <input>:1:5: undeclared
+parse/receiver_function_names/break: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.break() || true\\n | ^\\nERROR: <input>:1:8: undecla
+parse/receiver_function_names/const: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.const() || true\\n | ^\\nERROR: <input>:1:8: undecla
+parse/receiver_function_names/continue: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.continue() || true\\n | ^\\nERROR: <input>:1:11: und
+parse/receiver_function_names/else: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.else() || true\\n | ^\\nERROR: <input>:1:7: undeclar
+parse/receiver_function_names/for: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.for() || true\\n | ^\\nERROR: <input>:1:6: undeclare
+parse/receiver_function_names/function: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.function() || true\\n | ^\\nERROR: <input>:1:11: und
+parse/receiver_function_names/if: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.if() || true\\n | ^\\nERROR: <input>:1:5: undeclared
+parse/receiver_function_names/import: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.import() || true\\n | ^\\nERROR: <input>:1:9: undecl
+parse/receiver_function_names/let: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.let() || true\\n | ^\\nERROR: <input>:1:6: undeclare
+parse/receiver_function_names/loop: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.loop() || true\\n | ^\\nERROR: <input>:1:7: undeclar
+parse/receiver_function_names/package: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.package() || true\\n | ^\\nERROR: <input>:1:10: unde
+parse/receiver_function_names/namespace: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.namespace() || true\\n | ^\\nERROR: <input>:1:12: un
+parse/receiver_function_names/return: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.return() || true\\n | ^\\nERROR: <input>:1:9: undecl
+parse/receiver_function_names/var: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.var() || true\\n | ^\\nERROR: <input>:1:6: undeclare
+parse/receiver_function_names/void: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.void() || true\\n | ^\\nERROR: <input>:1:7: undeclar
+parse/receiver_function_names/while: want {"boolValue": true}, got check_error: "code: InvalidArgument, message: \"ERROR: <input>:1:1: undeclared reference to 'a' (in container '')\\n | a.while() || true\\n | ^\\nERROR: <input>:1:8: undecla
+string_ext/type_errors/charat_invalid_type: want an eval error, got check_error 
+string_ext/type_errors/charat_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/indexof_unary_invalid_type: want an eval error, got check_error 
+string_ext/type_errors/indexof_unary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/indexof_binary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/indexof_binary_invalid_argument_2: want an eval error, got check_error 
+string_ext/type_errors/indexof_binary_both_invalid_arguments: want an eval error, got check_error 
+string_ext/type_errors/indexof_ternary_invalid_arguments: want an eval error, got check_error 
+string_ext/type_errors/split_invalid_type: want an eval error, got check_error 
+string_ext/type_errors/replace_invalid_type: want an eval error, got check_error 
+string_ext/type_errors/replace_binary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/replace_binary_invalid_argument_2: want an eval error, got check_error 
+string_ext/type_errors/replace_ternary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/replace_ternary_invalid_argument_2: want an eval error, got check_error 
+string_ext/type_errors/replace_ternary_invalid_argument_3: want an eval error, got check_error 
+string_ext/type_errors/replace_ternary_invalid_argument_4: want an eval error, got check_error 
+string_ext/type_errors/replace_quaternary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/split_invalid_type_empty_arg: want an eval error, got check_error 
+string_ext/type_errors/split_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/split_binary_invalid_type: want an eval error, got check_error 
+string_ext/type_errors/split_binary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/split_binary_invalid_argument_2: want an eval error, got check_error 
+string_ext/type_errors/split_ternary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/substring_ternary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/substring_binary_invalid_type: want an eval error, got check_error 
+string_ext/type_errors/substring_binary_invalid_argument: want an eval error, got check_error 
+string_ext/type_errors/substring_binary_invalid_argument_2: want an eval error, got check_error 
+timestamps/timestamp_range/from_string_under: want an eval error, got value {'unsupported': 'Timestamp(0000-01-01T00:00:00Z)'}
+timestamps/timestamp_range/from_string_over: want an eval error, got value {'unsupported': 'Timestamp(+10000-01-01T00:00:00Z)'}
+timestamps/timestamp_range/add_duration_under: want an eval error, got value {'unsupported': 'Timestamp(0000-12-31T23:59:59Z)'}
+timestamps/timestamp_range/add_duration_over: want an eval error, got value {'unsupported': 'Timestamp(+10000-01-01T00:00:00Z)'}
+timestamps/timestamp_range/add_duration_nanos_over: want an eval error, got value {'unsupported': 'Timestamp(+10000-01-01T00:00:00Z)'}
+timestamps/timestamp_range/add_duration_nanos_under: want an eval error, got value {'unsupported': 'Timestamp(1970-01-01T00:00:00Z)'}
+timestamps/timestamp_range/sub_time_duration_over: want an eval error, got value {'unsupported': 'Duration(TimeDelta { secs: 315537897599, nanos: 0 })'}
+timestamps/timestamp_range/sub_time_duration_under: want an eval error, got value {'unsupported': 'Duration(TimeDelta { secs: -315537897599, nanos: 0 })'}
+timestamps/duration_range/add_under: want an eval error, got value {'unsupported': 'Duration(TimeDelta { secs: -400000000000, nanos: 0 })'}
+timestamps/duration_range/add_over: want an eval error, got value {'unsupported': 'Duration(TimeDelta { secs: 400000000000, nanos: 0 })'}
+timestamps/duration_range/sub_under: want an eval error, got value {'unsupported': 'Duration(TimeDelta { secs: -400000000000, nanos: 0 })'}
+timestamps/duration_range/sub_over: want an eval error, got value {'unsupported': 'Duration(TimeDelta { secs: 400000000000, nanos: 0 })'}
