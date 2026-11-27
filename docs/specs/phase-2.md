@@ -23,6 +23,11 @@ Every Phase 2 capability of the catalogue, in catalogue order.
 | [existing-equipment](../architecture/capabilities.md#existing-equipment) | Existing equipment and occurrence roles | planned | not yet specced |
 | [assembly-steps-and-coupons](../architecture/capabilities.md#assembly-steps-and-coupons) | Assembly steps and joint evidence | planned | not yet specced |
 | [annotation-set](../architecture/capabilities.md#annotation-set) | Annotation set | planned | not yet specced |
+| [freecad-environment-pins](../architecture/capabilities.md#freecad-environment-pins) | FreeCAD addon pins and Python lock | planned | not yet specced |
+| [purchased-part-fidelity](../architecture/capabilities.md#purchased-part-fidelity) | Bought-part fidelity levels | planned | not yet specced |
+| [supplier-calibration](../architecture/capabilities.md#supplier-calibration) | Supplier data as calibration | planned | not yet specced |
+| [product-identity](../architecture/capabilities.md#product-identity) | Product identity fields | planned | not yet specced |
+| [decision-manifest-hash](../architecture/capabilities.md#decision-manifest-hash) | The manifest hash of an approval | planned | not yet specced |
 
 The specs also cover capabilities of other phases: `record-validate` (record-validation), `record-migrate` (record-validation).
 

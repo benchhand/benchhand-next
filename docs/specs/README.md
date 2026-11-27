@@ -13,6 +13,11 @@ not_yet_specced:
   - existing-equipment
   - assembly-steps-and-coupons
   - annotation-set
+  - freecad-environment-pins
+  - purchased-part-fidelity
+  - supplier-calibration
+  - product-identity
+  - decision-manifest-hash
 ---
 
 # Capability specs
