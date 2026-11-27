@@ -21,7 +21,7 @@ import { gfm } from "micromark-extension-gfm";
 import { visit } from "unist-util-visit";
 
 import { base, repoRoot, repoUrl, schemaIdPrefix, site } from "../site-url.mjs";
-import { adrIndexPage, contractsIndexPage } from "./section-indexes.mjs";
+import { contractsIndexPage } from "./section-indexes.mjs";
 
 const siteRoot = fileURLToPath(new URL("..", import.meta.url));
 const docsOut = path.join(siteRoot, "src/content/docs");
@@ -31,8 +31,6 @@ const schemasSource = "packages/benchhand-contracts/src/benchhand_contracts/sche
 // Each source's README.md becomes the destination's index page. A `generated` source is written by
 // `just contracts`, so its pages have no edit link.
 const MARKDOWN_SOURCES = [
-  { from: "docs/architecture", to: "architecture", recursive: true },
-  { from: "docs/adr", to: "adr", recursive: false },
   { from: "docs/contract", to: "reference/contracts", recursive: false },
   { from: "docs/contract/generated", to: "reference/contracts", recursive: true, generated: true },
 ];
@@ -41,7 +39,7 @@ const MARKDOWN_SOURCES = [
 const ASSET_EXTENSIONS = new Set([".svg", ".png"]);
 
 // The gitignored outputs (site/.gitignore), cleared before each sync.
-const OUTPUTS = ["src/content/docs/architecture", "src/content/docs/adr", "src/content/docs/reference/contracts", "public/contracts"];
+const OUTPUTS = ["src/content/docs/reference/contracts", "public/contracts"];
 
 // Rewritten to GitHub when the target is not a synced page. A link to a file that doesn't exist
 // fails the sync: fix the source doc.
@@ -156,6 +154,19 @@ function plainText(node) {
   return (node.children ?? []).map(plainText).join("");
 }
 
+// A contract field page names its file in its title, "benchhand part record (hw/parts/<PN>/part.yaml)",
+// and the sidebar shows that file name. A title without one keeps its title as the label.
+const FILE_NAME = /[\w<>#*./-]+\.(?:yaml|csv|json|toml|md|celpolicy)\b/;
+function fileNameLabel(title) {
+  return title.match(/\(([^)]*)\)/)?.[1].match(FILE_NAME)?.[0];
+}
+
+function sidebarFrontMatter(source, dest, title) {
+  if (dest.endsWith("index.md")) return ["sidebar:", "  label: Overview", "  order: 0"];
+  const label = generatedSources.has(source) ? fileNameLabel(title) : undefined;
+  return label ? ["sidebar:", `  label: ${JSON.stringify(label)}`] : [];
+}
+
 function convertPage(source, dest, plan, rewrites) {
   const markdown = readFileSync(path.join(repoRoot, source), "utf8");
   if (markdown.startsWith("---\n")) throw new Error(`${source} has front matter; the sync writes its own`);
@@ -182,7 +193,7 @@ function convertPage(source, dest, plan, rewrites) {
     "---",
     `title: ${JSON.stringify(plainText(h1))}`,
     `editUrl: ${generatedSources.has(source) ? "false" : JSON.stringify(`${repoUrl}/edit/main/${source}`)}`,
-    ...(dest.endsWith("index.md") ? ["sidebar:", "  label: Overview", "  order: 0"] : []),
+    ...sidebarFrontMatter(source, dest, plainText(h1)),
     "---",
   ];
   return `${frontMatter.join("\n")}\n${body.replace(/^\s*\n/, "\n")}`;
@@ -253,8 +264,7 @@ function main() {
     cpSync(path.join(repoRoot, source), path.join(docsOut, dest));
   }
   const schemaCount = syncSchemas();
-  // The two section indexes are tables built from their sources, in place of the synced READMEs.
-  write("adr/index.md", adrIndexPage());
+  // The contracts index is a table built from its sources, in place of the synced README.
   write("reference/contracts/index.md", contractsIndexPage(schemasSource));
 
   mkdirSync(path.join(siteRoot, ".cache"), { recursive: true });

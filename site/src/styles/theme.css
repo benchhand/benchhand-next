@@ -6,7 +6,7 @@
 
 /* benchhand's theme over Starlight's tokens (node_modules/@astrojs/starlight/dist/style/props.css).
  * It sets the accent and the grey ramp of both themes, and adds the few global rules the site needs:
- * the wordmark, focus rings, framed D2 diagrams and the landing-page layout.
+ * the wordmark, focus rings and framed diagrams.
  * Text and links reach at least 4.5:1 on every background they sit on: the lowest pair is the
  * dark accent on the nav background, 8.7:1, and the light accent on the nav background, 5.2:1.
  * Fonts are the system UI and mono stacks Starlight already uses; the site loads no font files. */
@@ -75,8 +75,7 @@
 
 /* D2 diagrams are rendered SVGs with a white page baked in. They sit on a framed panel in both
  * themes, so in dark the white page reads as a drawing sheet rather than a hole in the page. */
-.sl-markdown-content img[src*=".svg"],
-.bh-figure img {
+.sl-markdown-content img[src*=".svg"] {
   display: block;
   padding: 0.5rem;
   border: 1px solid var(--sl-color-hairline-light);
@@ -109,68 +108,6 @@
   .sl-markdown-content table td code:only-child {
     white-space: nowrap;
   }
-}
-
-/* Landing and section-index layout. */
-.bh-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: 1rem;
-}
-.sl-markdown-content .bh-grid {
-  margin-top: 1.25rem;
-}
-/* Starlight spaces Markdown siblings with margin-top; grid items use the gap instead. */
-.sl-markdown-content .bh-grid > *,
-.sl-markdown-content .bh-split > * {
-  margin-top: 0;
-}
-
-.bh-figure {
-  margin-top: 1.25rem;
-}
-.bh-figure img {
-  width: 100%;
-  height: auto;
-}
-.bh-figure figcaption {
-  margin-top: 0.75rem;
-  font-size: var(--sl-text-sm);
-  color: var(--sl-color-gray-3);
-}
-/* Inline code sits on gray-5; gray-3 on it falls below 4.5:1 in dark, so code text steps up. */
-.bh-figure figcaption code {
-  color: var(--sl-color-gray-2);
-}
-
-.bh-split {
-  display: grid;
-  gap: 1.5rem 2.5rem;
-}
-@media (min-width: 64rem) {
-  .bh-split {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.sl-markdown-content .bh-split > section {
-  margin-top: 0;
-  padding: 1rem 1rem 1.25rem;
-  border: 1px solid var(--sl-color-hairline-light);
-  border-radius: 0.5rem;
-}
-@media (min-width: 50rem) {
-  .sl-markdown-content .bh-split > section {
-    padding: 1.25rem 1.5rem 1.5rem;
-  }
-}
-.sl-markdown-content .bh-split > section > :first-child {
-  margin-top: 0;
-}
-.sl-markdown-content .bh-split > section.bh-available {
-  border-top: 3px solid var(--sl-color-text-accent);
-}
-.sl-markdown-content .bh-split > section.bh-planned {
-  border-top: 3px dashed var(--sl-color-gray-4);
 }
 
 @media (prefers-reduced-motion: reduce) {
