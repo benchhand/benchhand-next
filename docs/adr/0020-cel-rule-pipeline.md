@@ -40,7 +40,7 @@ Each rule scope has one environment profile manifest. `contracts_gen` generates 
 
 A profile enables an extension only at a version that both cel-go and cel-expr-python implement. cel-expr-python has no `bindings` version 1, so no profile enables it.
 
-Each engine's adapter builds its environment from the manifest and keeps its own inventory of the extension versions it implements. At load it refuses an extension version outside that inventory, or an option it can't set. The inventory is the adapter's, because cel-go passes an unknown extension version through without an error. The generator also writes each scope's cel-go env YAML for tools that read that format. No engine in benchhand reads it.
+Each engine's adapter builds its environment from the manifest and keeps its own inventory of the extension versions it implements. Before it builds the environment, it hashes the descriptor-set bytes it loaded and refuses them when the SHA-256 differs from the manifest's. The profile digest covers only the manifest, so without this check a replaced descriptor set would leave the digest and every bundle check unchanged. Both the cel-go tool and the host make the check. At load an adapter also refuses an extension version outside its inventory, or an option it can't set. The inventory is the adapter's, because cel-go passes an unknown extension version through without an error. The generator also writes each scope's cel-go env YAML for tools that read that format. No engine in benchhand reads it.
 
 ### The JCS digest
 
@@ -105,7 +105,7 @@ The policy compiler checks output-type assignability, a literal `false` conditio
 
 ### Compilation and the rules bundle
 
-The pinned cel-go tool lives in `tools/celcheck/`, a Go module pinned to one `cel.dev/cel-go` version and its matching `policy` module. It builds its environment from the profile manifest with explicit options and appends nothing. It compiles each rule list into one CheckedExpr in a `google.protobuf.Any`, and writes the rules bundle.
+The pinned cel-go tool lives in `tools/celcheck/`, a Go module pinned to one `cel.dev/cel-go` version and its matching `policy` module. It verifies the descriptor-set bytes against the manifest, then builds its environment from the manifest with explicit options and appends nothing. It compiles each rule list into one CheckedExpr in a `google.protobuf.Any`, and writes the rules bundle.
 
 A bundle's identity is three things:
 
@@ -122,11 +122,12 @@ Who compiles what:
 
 At load the host:
 
-1. builds its environment from the manifest and computes the profile digest;
-2. refuses a bundle whose profile digest differs;
-3. refuses a bundle whose checker isn't of record in the manifest;
-4. refuses an entry whose payload SHA-256 differs;
-5. hashes each rule-list source and refuses a list with no entry, or with an entry whose source SHA-256 differs.
+1. refuses a descriptor set whose bytes don't match the manifest's SHA-256;
+2. builds its environment from the manifest and computes the profile digest;
+3. refuses a bundle whose profile digest differs;
+4. refuses a bundle whose checker isn't of record in the manifest;
+5. refuses an entry whose payload SHA-256 differs;
+6. hashes each rule-list source and refuses a list with no entry, or with an entry whose source SHA-256 differs.
 
 A refusal stops the load. It names the file and the command to run, `benchhand rules compile`. After the checks, the host evaluates each CheckedExpr with cel-expr-python without checking it again.
 
@@ -163,7 +164,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
   - every CheckedExpr the cel-go tool shipped, evaluated to its expected value.
 - **Both checkers of record** check every standalone expression that benchhand ships. CI fails when they disagree on whether it checks, or on its output type.
 - **The cel-spec simple tests**, in protobuf JSON, run on both engines against a committed failure baseline. A missing engine, a new failure or a new pass fails the run. The scores themselves are diagnostic.
-- **Each adapter** has a test that an unknown extension version is refused at load.
+- **Each adapter** has a test that an unknown extension version is refused at load, and a refusal fixture: a descriptor set whose bytes differ from the manifest's SHA-256, refused before any environment is built.
 
 ## Consequences
 
