@@ -1,0 +1,61 @@
+name: security
+# Network checks that a new advisory can fail without a change in this repository, so they run on a schedule
+# as well as when a lockfile changes. `main` keeps a result for each push.
+on:
+  push:
+    branches: [main]
+    paths: [uv.lock, ui/pnpm-lock.yaml, contracts/pnpm-lock.yaml, mise.toml, mise.lock]
+  pull_request:
+    paths: [uv.lock, ui/pnpm-lock.yaml, contracts/pnpm-lock.yaml, mise.toml, mise.lock]
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Known vulnerabilities in uv.lock and both pnpm lockfiles (osv.dev).
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3.1.0
+        with:
+          just-version: 1.59.0
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        env:
+          MISE_LOCKED: "1"
+        with:
+          version: 2026.11.6
+          install_args: osv-scanner
+          cache: false
+      - run: just audit
+
+  # Secrets anywhere in the history (offline; .gitleaks.toml lists the false positives).
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3.1.0
+        with:
+          just-version: 1.59.0
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        env:
+          MISE_LOCKED: "1"
+        with:
+          version: 2026.11.6
+          install_args: gitleaks
+          cache: false
+      - run: just secrets-history

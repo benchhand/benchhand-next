@@ -20,16 +20,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0 # the breaking-change check compares with the last v* release tag
-      - uses: astral-sh/setup-uv@v6
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
           enable-cache: true
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           package_json_file: ui/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: lts/*
           # One pnpm store for both installs; either lockfile changes the key.
@@ -37,9 +38,13 @@ jobs:
           cache-dependency-path: |
             ui/pnpm-lock.yaml
             contracts/pnpm-lock.yaml
-      - uses: extractions/setup-just@v3
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3.1.0
+        with:
+          just-version: 1.59.0
       - name: D2 as pinned in mise.toml, for the domain diagrams
         uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        env:
+          MISE_LOCKED: "1" # mise.lock holds each tool's checksum; the install fails without a match
         with:
           version: 2026.11.6
           install_args: d2
@@ -69,21 +74,71 @@ jobs:
       - name: Contract tools pinned in contracts/package.json
         run: pnpm install --frozen-lockfile
         working-directory: contracts
-      - run: uv run ruff check . && uv run ruff format --check .
-      - run: uv run pytest
+      # Lint, types, spelling and the other hooks run in the `hooks` job below.
+      - name: Tests, with line coverage in the job summary (no threshold)
+        run: |
+          just test-coverage
+          { echo "### Line coverage"; echo; uv run coverage report --format=markdown --skip-covered; } >> "$GITHUB_STEP_SUMMARY"
       - name: Function map against the pinned prototype, coverage required
         run: just reference-map
       - name: Built wheels run outside the checkout
         run: uv run pytest -m wheel
       - name: TypeScript types, the generated contract types included
-        run: just typecheck
+        run: just typecheck-ui
       - name: Contract format, schema lint and breaking changes (ADR-0017)
         run: just contracts-check
       - name: Regenerated contracts match the commit (ADR-0017)
         run: just contracts-drift
       - name: Prose gate on changed Markdown
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch -q --depth=1 origin "${{ github.base_ref }}"
+          git fetch -q --depth=1 origin "$BASE_REF"
           files=$(git diff --name-only --diff-filter=AM FETCH_HEAD -- '*.md' ':!reference/**' ':!docs/design-plan.md')
-          if [ -n "$files" ]; then uvx slopvac $files; fi
+          if [ -n "$files" ]; then
+            # shellcheck disable=SC2086 # one argument per file; the names hold no spaces
+            uvx slopvac $files
+          fi
+
+  # The git hooks (.pre-commit-config.yaml) on every file: lint, spelling, TOML, workflows, contract errors,
+  # pyright and dead code. The tests the pre-push hook runs belong to the `check` job.
+  hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          enable-cache: true
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          package_json_file: ui/package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: lts/*
+          cache: pnpm
+          cache-dependency-path: contracts/pnpm-lock.yaml
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3.1.0
+        with:
+          just-version: 1.59.0
+      - name: The tools pinned in mise.toml, except osv-scanner
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        env:
+          MISE_LOCKED: "1"
+        with:
+          version: 2026.11.6
+          install_args: d2 prek typos taplo gitleaks actionlint zizmor pinact
+          cache: false
+      - run: uv sync --all-packages --locked
+      - name: Contract tools pinned in contracts/package.json
+        run: pnpm install --frozen-lockfile
+        working-directory: contracts
+      - name: Every hook on every file
+        run: just hooks
+      - name: Action pins match their version comments, and zizmor's online audits
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just lint-workflows-online
