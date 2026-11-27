@@ -1,6 +1,6 @@
 # ADR-0019: A design change reopens the approvals it touches, not the stage
 
-Status: accepted. Source: the owner, 2026-11-26. It refines [ADR-0014](0014-flow-rules-cel.md) and section 5 of [the plan](../design-plan.md).
+Status: accepted. Source: the owner, 2026-11-26. It refines [ADR-0014](0014-flow-rules-cel.md) and section 5 of [the plan](../design-plan.md). Amended 2026-11-27: a migrated decision without a scope needs confirmation at the next gate ("Amendment, 2026-11-27").
 
 ## Context
 
@@ -29,3 +29,11 @@ Deciding which items a change affects is CEL in `flow.yaml` (ADR-0014), next to 
 - Phase 2 adds an approval-scope field to the decision contract, the fingerprint comparison, and the `changed_since_approval` status. It also adds the flow test "a change to an approved item reopens only that item".
 - Gate packets grow a "changed since approval" section.
 - This differs from the prototype. The migrate rules can't attach a scope to existing prototype approvals, so migrated decisions have none. The Phase 2 design must say how a decision without a scope is treated, either as covering the whole stage or as needing confirmation at the next gate. That choice is open.
+
+## Amendment, 2026-11-27
+
+The owner decided the open choice at the Phase 0 and 1 gate. A migrated decision carries no approval scope, so it needs confirmation at the next human gate. It doesn't count as covering the whole stage.
+
+- Phase 2 treats a scopeless migrated decision as unconfirmed. The next human gate's packet lists it. Approving that gate records a new decision with an approval scope, which cites the migrated one, as in decision 3.
+- Until then the stage can't freeze or release, as with an item that is `changed_since_approval`.
+- [Record migration](../contract/record-migration.md#decided-defaults) records this as a Phase 2 requirement.
