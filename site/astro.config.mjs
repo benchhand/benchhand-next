@@ -61,6 +61,7 @@ export default defineConfig({
               collapsed: true,
               items: [{ autogenerate: { directory: "reference/contracts" } }],
             },
+            { label: "Python API", items: [{ autogenerate: { directory: "reference/python-api" } }] },
             { label: "TypeScript API", link: "/reference/typescript-api/" },
           ],
         },

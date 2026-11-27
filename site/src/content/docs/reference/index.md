@@ -12,6 +12,7 @@ Every page under Reference is generated from the repository at build time, and n
 
 ## APIs
 
+- [Python API](/reference/python-api/): `benchhand-contracts`, the first package with a generated page.
 - [TypeScript API](/reference/typescript-api/): the packages in `ui/`.
 
 ## Tools, commands and the flow

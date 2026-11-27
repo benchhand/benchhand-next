@@ -36,6 +36,7 @@ slopvac lints them, with the repository's `slopvac.toml`.
 | | `src/content/docs/adr/` | `docs/adr/*.md` |
 | | `src/content/docs/reference/contracts/` | `docs/contract/*.md` and `docs/contract/generated/**` |
 | | `public/contracts/` and `reference/contracts/schemas.md` | the published schemas in `packages/benchhand-contracts/src/benchhand_contracts/schemas/` |
+| `scripts/python-api.mjs` | `src/content/docs/reference/python-api/` | griffe's dump of `benchhand_contracts` |
 | `scripts/planned-pages.mjs` | `src/content/docs/planned.md`, `src/generated/plan-phases.json` | the `phase` of each page, and `docs/design-plan.md` |
 
 Edit the sources, not the copies. Each synced page's edit link points at its source.
@@ -59,6 +60,18 @@ A page whose front matter sets `phase: N` is an outline of a page that Phase N o
 `src/components/MarkdownContent.astro` shows the "Planned" aside on it, so its own prose carries no status wording.
 `scripts/planned-pages.mjs` fails the build when a `phase` names no phase of the plan, or when such a page has status wording of its own.
 It lists the pages by phase on `/planned/`.
+
+## The Python API
+
+`scripts/python-api.mjs` runs griffe (pinned in the script, through `uvx`), which reads `benchhand_contracts` without importing it, and renders the dump to MDX. It has these limits:
+
+- It renders one package, `benchhand-contracts`, and only the names in its `__all__`.
+- It renders functions and classes only. A class lists its public attributes and methods, and `__init__`.
+- It shows docstrings as text. It turns reST ``` ``code`` ``` and `:role:` references into code spans, and it doesn't parse Args, Returns or Raises sections.
+- A griffe expression type that it doesn't know fails the render.
+- It leaves out the generated models under `benchhand_contracts.models`, because the contract reference documents them.
+
+The build needs `uvx` on `PATH` for this step.
 
 ## Mermaid
 
