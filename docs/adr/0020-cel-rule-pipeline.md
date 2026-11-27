@@ -11,11 +11,11 @@ ADR-0014 makes every condition in the flow a CEL expression, compiled and type-c
 `research/cel-neutral/REPORT.md` ran seven engines against artefacts generated from the published JSON Schemas. This ADR rests on these findings:
 
 - A FileDescriptorSet generated from the published schemas types the rules. A wrong field name fails the check in cel-go and in cel-expr-python, and both rejected all seven bad rules of the typed demo.
-- A `cel.expr.CheckedExpr` that cel-go writes is evaluated by cel-expr-python without the source and without a second check. A CheckedExpr carries no environment identity, and a writer's bytes aren't reproducible between runs.
+- A `cel.expr.CheckedExpr` that cel-go writes is evaluated by cel-expr-python without the source and without a second check, for the six good rules of the typed demo. A CheckedExpr carries no environment identity, and a writer's bytes aren't reproducible between runs.
 - Equal env YAML and descriptor-set hashes don't prove that two engines run the same environment. Extension versions and checker options drifted between the demos until each engine built its environment from one manifest.
-- cel-go's policy compiler turns a cel-policy `match` block into one CheckedExpr. Without `variables` it emits nested `?:`, which every evaluator ran. With `variables` it emits `cel.@block`, which cel-expr-python runs and most other evaluators don't.
+- cel-go's policy compiler turns a cel-policy `match` block into one CheckedExpr. The research compiled one benchhand rule list, "checks by iteration", in two forms and ran its four test cases on the three evaluators tested on it: cel-expr-python, cel-core and @bufbuild/cel. The flat form, without `variables`, compiles to nested `?:` and passed 4 of 4 on all three. The form with `variables` compiles to `cel.@block`, which passed on cel-expr-python and failed on the other two. The cel-policy conformance suite wasn't run on any engine.
 - cel-go's `tools/compiler` package always appends the latest `optional` and `bindings` extensions, so it can't check against an exact environment. The `cel-expr` CLI writes no CheckedExpr.
-- On the 1640 cel-spec simple tests, cel-go passes 1611 and cel-expr-python 1610. Almost all of the failures are `cel.block`, which no rule author writes.
+- The research ran 1,640 of cel-spec's 2,344 simple tests: those that need no declarations, bindings, container or conformance message types. On that subset cel-go passes 1,611 and cel-expr-python 1,610. `cel.block`, which no rule author writes, accounts for 22 of cel-go's 29 failures and 22 of cel-expr-python's 30. These scores are diagnostic data about the subset.
 
 The owner decided on 2026-11-27:
 
@@ -101,7 +101,7 @@ So:
 
 ### The restricted cel-policy profile
 
-A rule list is a cel-policy file, `flow/*.celpolicy`. The profile is an allow-list of what was shown to run:
+A rule list is a cel-policy file, `flow/*.celpolicy`. The profile is an allow-list of what the flat "checks by iteration" list exercised on the three evaluators tested on it:
 
 - a `name`, and a `rule` with one `match` block, evaluated first-match;
 - each choice has a `condition` and an `output`;
@@ -173,7 +173,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
   - the tampered-bundle cases, refused by the host's verifier;
   - every CheckedExpr the cel-go tool shipped, evaluated to its expected value.
 - **Both checkers of record** check every standalone expression that benchhand ships. CI fails when they disagree on whether it checks, or on its output type.
-- **The cel-spec simple tests**, in protobuf JSON, run on both engines against a committed failure baseline. A missing engine, a new failure or a new pass fails the run. The scores themselves are diagnostic.
+- **The cel-spec simple tests**, in protobuf JSON, run on both engines against a committed failure baseline. The suite starts as the research's subset, 1,640 of cel-spec's 2,344 simple tests. A missing engine, a new failure or a new pass fails the run. The scores are diagnostic data about that subset.
 - **Each adapter** has a test that an unknown extension version is refused at load, and a refusal fixture: a descriptor set whose bytes differ from the manifest's SHA-256, refused before any environment is built.
 - **The JCS vector:** the cel-go tool and the host reproduce its canonical bytes and digest exactly.
 
