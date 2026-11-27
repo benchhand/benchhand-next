@@ -123,7 +123,7 @@ The owner decided these on 2026-11-27.
 
    The `relicense` commit that `git log main` also finds is the prototype's (`2f6cef77`, in the imported history under `reference/`).
 4. **Composing providers' rule lists, as proposed.** The contributions in ascending provider name, then the flow's list, whose result is final. A list that gives its kind's reserved no-match value passes to the next list. Rigor is the union of every list's messages, each once, and no list can waive one. Recorded in ADR-0020 ("Open items", decided 2026-11-27), `docs/contract/policy.md` and `contracts/policy/contribution.tsp`.
-5. **`explanation` joins ADR-0020's restricted profile.** The owner decided to admit it: a choice's explanation is a CEL expression that gives a string. The supervisor added three rules to make it safe, which the owner didn't decide:
+5. **`explanation` joins ADR-0020's restricted profile.** The owner decided to admit it: a choice's explanation is a CEL expression that gives a string. The supervisor proposed three rules to make it safe, which the owner confirmed on 2026-11-27:
    - every choice of a list has an explanation, or none does, because cel-go's explanation copy drops a choice without one;
    - the cel-go tool compiles the explanations as a second checked expression in the list's bundle entry;
    - the tool refuses an explanation whose checked type isn't `string`.
@@ -170,7 +170,7 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
 ## Open items for the owner
 
 1. **Composing policy providers' rule lists.** Decided 2026-11-27: as proposed. See [Decided](#decided) 4.
-2. **`explanation` in ADR-0020's restricted profile.** The owner decided on 2026-11-27 to admit it. The supervisor added the all-or-none and checked-string rules, which the owner hasn't confirmed. See [Decided](#decided) 5.
+2. **`explanation` in ADR-0020's restricted profile.** The owner decided on 2026-11-27 to admit it. The supervisor added the all-or-none and checked-string rules, which the owner confirmed on 2026-11-27. See [Decided](#decided) 5.
 3. **How the gate request cites an interval-acceptance decision.** Decided 2026-11-27: the engine supplies it from the record, and the request gets no field. See [Decided](#decided) 6.
 4. **53 `basis: inferred` entries in the reference map.** They are entries of `docs/architecture/reference-map.yaml` whose home the plan's behavioural reference map doesn't name (header, `:18`). They are not in the migrate output, which has no such notion. They cover 127 prototype files, which is the "about 130" (`inferred.py`, log 13). By status: 36 `planned`, 7 `partial`, 9 `dropped` and 1 `ported`. By phase: 8 in Phase 1, 15 in Phase 2, 5 in Phase 3, 13 in Phase 4, 1 each in Phases 5 and 6, and 10 with no phase. The owner confirms or corrects the homes. The 10 with no phase need a phase first.
 5. **Probe gaps.** Run the Codex / ChatGPT desktop app, and settle Kiro's tool exposure (`docs/client-support.md:15,17`). The 2026-11-25 document records both as paused at the owner's request.
