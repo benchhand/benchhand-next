@@ -21,11 +21,10 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 | Disposition | Count |
 |---|---|
 | port-fix | 99 |
-| design-input | 45 |
-| contract | 33 |
+| design-input | 49 |
+| contract | 34 |
 | already-covered | 11 |
 | not-applicable | 4 |
-| decide | 5 |
 | total | 197 |
 
 | Phase | Count |
@@ -33,10 +32,10 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 | Phase 1 | 4 |
 | Phase 2 | 82 |
 | Phase 3 | 3 |
-| Phase 4 | 90 |
+| Phase 4 | 92 |
 | Phase 5 | 5 |
 | Phase 6 | 3 |
-| no phase | 10 |
+| no phase | 8 |
 | total | 197 |
 
 ### By area and disposition
@@ -44,30 +43,30 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 | Area | port-fix | design-input | contract | already-covered | not-applicable | decide | Issues |
 |---|---|---|---|---|---|---|---|
 | agents-and-harness |  | 4 |  |  | 3 |  | 7 |
-| cad-analysis | 3 |  | 1 |  |  | 1 | 5 |
+| cad-analysis | 3 | 1 | 1 |  |  |  | 5 |
 | cad-concept | 3 |  |  |  |  |  | 3 |
 | cad-design | 15 | 5 | 1 |  |  |  | 21 |
 | cad-drawings | 15 | 3 | 4 |  |  |  | 22 |
 | cad-fits | 5 |  | 1 |  |  |  | 6 |
-| cad-flow | 7 | 6 | 1 |  |  | 1 | 15 |
-| cad-model | 12 | 6 | 1 | 1 | 1 | 1 | 22 |
+| cad-flow | 7 | 7 | 1 |  |  |  | 15 |
+| cad-model | 12 | 7 | 1 | 1 | 1 |  | 22 |
 | cad-motion | 8 | 7 | 5 | 1 |  |  | 21 |
 | cad-recheck | 1 |  |  |  |  |  | 1 |
-| cad-record | 25 | 13 | 19 | 9 |  | 2 | 68 |
+| cad-record | 25 | 14 | 20 | 9 |  |  | 68 |
 | cad-render | 3 | 1 |  |  |  |  | 4 |
 | cad-viewer | 2 |  |  |  |  |  | 2 |
 
 ## Bead coverage
 
-445 beads from the prototype's ledger, each referenced once: 288 in an issue's `beads`, and 157 in `bead_dispositions`.
+446 beads from the prototype's ledger, each referenced once: 288 in an issue's `beads`, and 158 in `bead_dispositions`.
 
 | Bead disposition | Count |
 |---|---|
 | port-fix | 79 |
 | design-input | 3 |
 | already-covered | 13 |
-| not-applicable | 62 |
-| total | 157 |
+| not-applicable | 63 |
+| total | 158 |
 
 ## Design rules
 
@@ -104,13 +103,15 @@ The owner's standing rules. They apply everywhere.
 | RULE-27 | A known fail on an out-of-scope check blocks no gate; it shows as an information row. | handoff §4; handoff §1.3 | Not built yet; the gate scope (IR-048) carries it. |
 | RULE-28 | An overlap below the measurement tolerance is a non-blocking sub-tolerance finding, not interference. | handoff §4; handoff §1.4 | Not built yet; the collision provider (IR-021) carries it. |
 | RULE-29 | The near-support force and moment tolerance and the twist floor are recorded engineering judgement, and ductility comes from a sourced elongation-at-break field. The elongation entry carries an optional gauge, and a value with no gauge can't be compared with a ductility threshold. | decisions-while-away U-2; decisions-while-away U-3; decisions-while-away §before-leaving; pkgB 2dq3-decision; pkgB 2dq3-decision2 | Not built yet; the analysis port (Phase 4) carries the values and their recorded basis, and the material contract carries the gauge (IR-188). |
-| RULE-30 | The near-support check for metals stays behind its feature flag until a source states the elongation gauge for each shipped metal profile. | pkgB y87-decision2; decisions-while-away U-5; decisions-while-away U-8 | Not built yet; the analysis port (Phase 4) decides whether the flag survives (IR-188). |
+| RULE-30 | The near-support check for metals stays behind its feature flag until a source states the elongation gauge for each shipped metal profile. | pkgB y87-decision2; decisions-while-away U-5; decisions-while-away U-8 | Owner decision of 2026-11-27 (IR-188). The new build ships no flag; the analysis port (Phase 4) carries RULE-38. |
 | RULE-31 | A near-support check may fail a part only on a successful, cross-checked stress linearisation; otherwise it passes or abstains as unknown. | decisions-while-away §before-leaving | Not built yet; the analysis port (Phase 4) carries it. |
 | RULE-32 | A guideline value with no qualifying source is left out, so the check it feeds reports unknown (a press-fit allowance, for example). | decisions-while-away U-4; pkgB 40u-verdict | Consistent with the shipped guideline sets the Phase 1 evidence service reads; the fits port (Phase 4) keeps it. |
 | RULE-33 | A discrete set of machine values and a material range combine as joint constraints, resolving to their intersection. | decisions-while-away §before-leaving | Not built yet; guideline limit resolution is Phase 4. |
 | RULE-34 | The not_assessed result orders fail, unknown, not_assessed, pass. A packet of passes and not-assessed checks reports not_assessed, never pass. | decisions-while-away U-11; handoff §1.2 | The record contracts carry not_assessed as a result distinct from pass. |
 | RULE-35 | A stage advance is approved only by its gate's decision record, which states the transition it approves; a recheck stamp binds to that transition, not to a date. | decisions-while-away U-13; handoff §1.2 | Decision records and the stage gates are Phase 2; scoped approvals follow ADR-0019. |
 | RULE-36 | Owner direction of 2026-11-27 on bead benchhand-03vn, refined the same day. A part with nothing to freeze is an explicit not_applicable with its reason, and its gate stays open to pass. Examples are a customer envelope with no datasheet and a make_buy existing part. Unknown still never passes, and what is known about the part (its source, measured or customer-stated) is recorded. A standard ISO or DIN part needs no paywalled standard. The agent itself takes its dimensions from a standard library, in this order: (1) the bd_warehouse data tables, recording the package version and the table row; (2) the FreeCAD Fasteners workbench, run out of process as a generator with none of its data files copied, recording its version, the table and row and the hash of the generated STEP; (3) open tables such as the Onshape hole tables and BOSL2; (4) a supplier datasheet for that exact designation, frozen with reference, date, sha256 and URL. The designation and edition identify the part, and the library row is the basis for its dimensions. When no source covers the designation, that is a named finding with the search recorded, and it does not block. A part with no supplier chosen stays open as a sourcing decision. | test-project tool-issues #35; test-project tool-issues #3; handoff §1.4; findings 7.9 | Not built yet. Its home is the standards-data package from the CAD study (the bd_warehouse, Fasteners, Onshape and BOSL2 tables) and a parts.search tool, with the procurement not_applicable reason in the record contract (IR-047, IR-003), Phase 2. |
+| RULE-37 | Owner decision of 2026-11-27 (IR-026). Parallel work units allocate record ids per work unit, each from its own prefix or reserved block, and the merge step renumbers them and rewrites every reference. Two units never pick the same id. | test-project tool-issues #21; handoff §1.4 | Not built yet. The work-unit service implements the scheme; the phase is not assigned. |
+| RULE-38 | Owner decision of 2026-11-27 (IR-188). A metal counts as ductile for the near-support check only when its profile has a sourced elongation gauge. Without one, the check stays strict, and no feature flag controls it. | decisions-while-away U-5; decisions-while-away U-8; pkgB y87-decision2 | Not built yet; the analysis port (Phase 4) and the material contract carry it (RULE-30, RULE-31). |
 
 ### Conflicts with benchhand-next
 
@@ -120,16 +121,12 @@ Both positions are recorded; the register picks no winner.
   benchhand-next: ADR-0017 makes TypeSpec the single source and generates the JSON Schema, the Python models and the TypeScript types from it, with a CI drift check.
 - **RULE-17.** Prototype: The t4-t5 design decided that a designation from an unlisted standards body is kept, with an unknown identity finding that names the field.
   benchhand-next: The record/part 1.2.0 commodity designation (the prototype PR 331 port) allows only ISO, DIN, EN, ASME, ANSI and JIS in standard, so schema validation refuses any other body before a parser can record the finding.
+- **RULE-30.** Prototype: The near-support check for metals stays behind a feature flag until every shipped metal profile has a sourced gauge.
+  benchhand-next: No flag. The check is on for every metal, and a metal is ductile for it only when its gauge is sourced (RULE-38).
 
 ## For the owner to decide
 
-| Id | Issue | Recommendation |
-|---|---|---|
-| IR-025 | A loose kit item (a shipped tool or a length option) must be placed in the assembly, which puts it in the checks, the sweep and the access plan. | Add a part-level kit role that the BOM lists and the build exports alone, with no occurrence required and outside the assembly, joint and access checks; and an options list on a purchased part for length variants. Keep it apart from the tooling occurrence role. |
-| IR-026 | Parallel work units pick the same next free record ids, so a merge by id reports false conflicts or takes the wrong entry. | Units write placeholder ids, and the lead's merge step assigns the real ids and rewrites every reference in the delivery; validate refuses a placeholder id outside a work unit. |
-| IR-032 | No plan for geometry libraries and external tools that would raise model fidelity (thread and fastener libraries, supplier CAD, slicers, other modelling surfaces). | Default new parts to build123d and keep mixed records. Take a standard-only part from a pinned thread and fastener library (RULE-36), a known brand from the supplier's STEP frozen with its hash, and anything else as an envelope with a declared reason. Record a library part's package, class and table row as its source; evaluate slicers and other modelling surfaces as optional providers. |
-| IR-178 | There is no register of shipped material, printer and nozzle profiles, no personal library across projects, and no import from slicer profiles. | Defer the register and the slicer import until after Phase 7, and from the start have the record cite a profile by id and version, so the register can come later with no record change. |
-| IR-188 | The near-support check for metals stays behind a feature flag although its removal condition is met for only some metal profiles. | Ship no flag. A metal counts as ductile for the near-support check only when its profile has a sourced elongation at break with its gauge; otherwise the check abstains as unknown (RULE-30, RULE-31). |
+None.
 
 ## Needs a recheck
 

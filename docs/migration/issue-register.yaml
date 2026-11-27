@@ -331,8 +331,15 @@ design_rules:
       - pkgB y87-decision2
       - decisions-while-away U-5
       - decisions-while-away U-8
-    benchhand_next: Not built yet; the analysis port (Phase 4) decides
-      whether the flag survives (IR-188).
+    benchhand_next: Owner decision of 2026-11-27 (IR-188). The new
+      build ships no flag; the analysis port (Phase 4) carries RULE-38.
+    conflict:
+      prototype: The near-support check for metals stays behind a
+        feature flag until every shipped metal profile has a sourced
+        gauge.
+      benchhand_next: No flag. The check is on for every metal, and
+        a metal is ductile for it only when its gauge is sourced
+        (RULE-38).
   - id: RULE-31
     rule: A near-support check may fail a part only on a successful,
       cross-checked stress linearisation; otherwise it passes or
@@ -411,6 +418,28 @@ design_rules:
       not_applicable reason in the record contract (IR-047, IR-003),
       Phase 2.
     pointer: docs/design-plan.md §12
+  - id: RULE-37
+    rule: 'Owner decision of 2026-11-27 (IR-026). Parallel work
+      units allocate record ids per work unit, each from its own
+      prefix or reserved block, and the merge step renumbers them
+      and rewrites every reference. Two units never pick the same
+      id.'
+    sources:
+      - 'test-project tool-issues #21'
+      - handoff §1.4
+    benchhand_next: Not built yet. The work-unit service implements
+      the scheme; the phase is not assigned.
+  - id: RULE-38
+    rule: 'Owner decision of 2026-11-27 (IR-188). A metal counts
+      as ductile for the near-support check only when its profile
+      has a sourced elongation gauge. Without one, the check stays
+      strict, and no feature flag controls it.'
+    sources:
+      - decisions-while-away U-5
+      - decisions-while-away U-8
+      - pkgB y87-decision2
+    benchhand_next: Not built yet; the analysis port (Phase 4) and
+      the material contract carry it (RULE-30, RULE-31).
 
 issues:
   - id: IR-001
@@ -1115,19 +1144,17 @@ issues:
       - skills/cad-record/schemas/
       - skills/cad-bom/scripts/bom.py
       - skills/cad-motion/scripts/access.py
-    disposition: decide
-    recommendation: Add a part-level kit role that the BOM lists
-      and the build exports alone, with no occurrence required and
-      outside the assembly, joint and access checks; and an options
-      list on a purchased part for length variants. Keep it apart
-      from the tooling occurrence role.
+    disposition: contract
     benchhand_next:
-      action: Once decided, a record contract addition beside make_buy
-        existing and the occurrence role.
+      action: 'Owner decision, 2026-11-27: a loose kit item is placed
+        in the assembly. It takes the occurrence role `kit`, beside
+        `make_buy: existing`. A record contract addition, in Phase
+        2 with the other occurrence roles (design plan §12a).'
       phase: 2
-    acceptance: Record and BOM tests where a kit item is listed
-      in the BOM, has no placement, and raises no joint or access
-      finding.
+    acceptance: Record and BOM tests where a kit item is placed
+      with the occurrence role kit and make_buy existing, appears
+      in the BOM, and takes part in the checks, the sweep and the
+      access plan.
   - id: IR-026
     title: Parallel work units pick the same next free record ids,
       so a merge by id reports false conflicts or takes the wrong
@@ -1144,13 +1171,12 @@ issues:
     area: cad-flow
     prototype_paths:
       - skills/cad-flow/scripts/scratch.py
-    disposition: decide
-    recommendation: Units write placeholder ids, and the lead's
-      merge step assigns the real ids and rewrites every reference
-      in the delivery; validate refuses a placeholder id outside
-      a work unit.
+    disposition: design-input
     benchhand_next:
-      action: The work-unit service implements the chosen id scheme.
+      action: 'Owner decision, 2026-11-27: parallel work units allocate
+        record ids per work unit, with a prefix or a reserved block,
+        renumbered at merge (RULE-37). The work-unit service implements
+        the scheme.'
       phase: null
     acceptance: A work-unit test where two units add interfaces
       and joints from one base and merge with no collision and every
@@ -1289,18 +1315,14 @@ issues:
       - skills/cad-model/scripts/run_build123d.py
       - skills/cad-model/scripts/run_cadquery.py
       - skills/cad-model/references/
-    disposition: decide
-    recommendation: Default new parts to build123d and keep mixed
-      records. Take a standard-only part from a pinned thread and
-      fastener library (RULE-36), a known brand from the supplier's
-      STEP frozen with its hash, and anything else as an envelope
-      with a declared reason. Record a library part's package, class
-      and table row as its source; evaluate slicers and other modelling
-      surfaces as optional providers.
+    disposition: design-input
     benchhand_next:
-      action: The kernel providers' pinned environments and the
-        SDK's import allow-list follow the decision; each library
-        enters with a pin and a test.
+      action: 'Owner decision, 2026-11-27: the CAD-libraries study
+        is the plan for geometry libraries and external tools. Its
+        decisions are pending in the owner''s CAD study thread. The
+        kernel providers'' pinned environments and the SDK''s import
+        allow-list follow those decisions; each library enters with
+        a pin and a test.'
       phase: 4
     acceptance: A kernel-provider test that imports the allowed
       library objects under the pinned runtime, and an SDK test
@@ -4663,15 +4685,16 @@ issues:
     prototype_paths:
       - skills/cad-record/assets/manufacturing/
       - skills/cad-record/scripts/machine_profile.py
-    disposition: decide
-    recommendation: Defer the register and the slicer import until
-      after Phase 7, and from the start have the record cite a profile
-      by id and version, so the register can come later with no
-      record change.
+    disposition: design-input
     benchhand_next:
-      action: Waiting on the owner.
-      phase: null
-    acceptance: An owner decision recorded in the design plan.
+      action: 'Owner decision, 2026-11-27: Phase 4 ships a register
+        of material, printer and nozzle profiles, and a per-user
+        profile directory. Slicer-profile import comes later, behind
+        the slicer decision.'
+      phase: 4
+    acceptance: A provider test that resolves a shipped material,
+      printer and nozzle profile, and one that loads a profile from
+      the per-user directory.
   - id: IR-179
     title: Calibration has no recorded form, so measured limits
       can't override guideline values.
@@ -4918,16 +4941,15 @@ issues:
     area: cad-analysis
     prototype_paths:
       - skills/cad-analysis/scripts/fea_near_support.py
-    disposition: decide
-    recommendation: Ship no flag. A metal counts as ductile for
-      the near-support check only when its profile has a sourced
-      elongation at break with its gauge; otherwise the check abstains
-      as unknown (RULE-30, RULE-31).
+    disposition: design-input
     benchhand_next:
-      action: Waiting on the owner.
-      phase: null
+      action: 'Owner decision, 2026-11-27: ship no feature flag. A
+        metal counts as ductile only when its gauge is sourced;
+        otherwise the near-support check stays strict (RULE-38).'
+      phase: 4
     acceptance: An analysis test where a metal profile without a
-      sourced gauge abstains and one with it is assessed.
+      sourced gauge is checked strictly and one with it is treated
+      as ductile, and no feature flag exists.
   - id: IR-189
     title: Model code that the agent writes runs with host permissions,
       and launchers accept arguments that write shared record files.
@@ -5219,6 +5241,10 @@ bead_dispositions:
     area: agents-and-harness
     disposition: not-applicable
     reason: A prose-lint error in a prototype document.
+  - bead_id: benchhand-vcrz
+    area: agents-and-harness
+    disposition: not-applicable
+    reason: Prose-lint errors in a prototype document.
   - bead_id: benchhand-lc1
     area: agents-and-harness
     disposition: not-applicable
@@ -6172,7 +6198,7 @@ ledger_snapshot:
     benchhand-prd: closed
     benchhand-pyq: closed
     benchhand-q79: closed
-    benchhand-qfbw: in_progress
+    benchhand-qfbw: closed
     benchhand-rfwu: open
     benchhand-rp8: closed
     benchhand-rt6: in_progress
@@ -6254,6 +6280,7 @@ ledger_snapshot:
     benchhand-ubp: open
     benchhand-usww: open
     benchhand-v3x: closed
+    benchhand-vcrz: open
     benchhand-vdcb: open
     benchhand-vla: open
     benchhand-vwo: in_progress
