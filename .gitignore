@@ -13,3 +13,6 @@ contracts/tsp-output/
 
 # pi installs project packages here (.pi/settings.json)
 .pi/npm/
+
+# Local private-token patterns that `just issues` refuses in the issue register; never committed
+tools/issues/private-patterns.txt

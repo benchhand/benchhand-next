@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.dev/tools/issue-register.schema.json",
+  "title": "Migration issue register",
+  "description": "docs/migration/issue-register.yaml: every issue found in the prototype, and every bead in its ledger, with how benchhand-next addresses it. Internal tooling data, checked by tools/issues (`just issues`).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reference_commit", "design_rules", "issues", "bead_dispositions", "ledger_snapshot"],
+  "properties": {
+    "reference_commit": {
+      "description": "The prototype commit the register was written against; it must equal release.toml's reference_commit.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "design_rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/design_rule" }
+    },
+    "issues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/issue" }
+    },
+    "bead_dispositions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bead_disposition" }
+    },
+    "ledger_snapshot": { "$ref": "#/$defs/ledger_snapshot" }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "source": {
+      "description": "A citation by public name only: never a private file path or a quote.",
+      "type": "string",
+      "pattern": "^(test-project tool-issues #[0-9]+|test-project brief [a-z0-9-]+( item [0-9]+[a-z]?)?|test-project gate-v[0-9]+-blockers|handoff §[0-9.]+|findings (F-)?[0-9]+\\.(M|F)?[0-9]+|findings T[0-9]+|design (T3-scope|t4-t5|inclined-features) (§[0-9.]+|[A-Z]?[0-9]+|O[0-9]+|Q[0-9]+|R[0-9]+|RC[0-9]+|D[0-9]+)|handover-2026-11-20 §[0-9.]+|decisions-while-away [A-Za-z]+-?D?[0-9]+|decisions-while-away §[a-z-]+|pkgB [a-z0-9]+-(decision2?|verdict))$"
+    },
+    "bead_id": { "type": "string", "pattern": "^benchhand-[a-z0-9]+(\\.[0-9]+)*$" },
+    "area": {
+      "description": "A reference-map area: a skill name, `examples` or `agents-and-harness`. tools/issues checks it against reference-map.yaml.",
+      "type": "string",
+      "pattern": "^(cad-[a-z-]+|examples|agents-and-harness)$"
+    },
+    "pointer": {
+      "description": "A benchhand-next file, optionally followed by ` §section`. tools/issues checks that the file exists.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_./-]+( §.+)?$"
+    },
+    "disposition": {
+      "enum": ["port-fix", "design-input", "contract", "already-covered", "not-applicable", "decide"]
+    },
+    "disposition_fields": {
+      "allOf": [
+        {
+          "if": { "properties": { "disposition": { "const": "already-covered" } }, "required": ["disposition"] },
+          "then": { "required": ["pointer"] }
+        },
+        {
+          "if": { "properties": { "disposition": { "const": "not-applicable" } }, "required": ["disposition"] },
+          "then": { "required": ["reason"] }
+        },
+        {
+          "if": { "properties": { "disposition": { "const": "decide" } }, "required": ["disposition"] },
+          "then": { "required": ["recommendation"] }
+        }
+      ]
+    },
+    "design_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rule", "sources", "benchhand_next"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^RULE-[0-9]{2}$" },
+        "rule": { "$ref": "#/$defs/text" },
+        "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/source" } },
+        "benchhand_next": {
+          "description": "Where benchhand-next stands on the rule.",
+          "$ref": "#/$defs/text"
+        },
+        "pointer": { "$ref": "#/$defs/pointer" },
+        "conflict": {
+          "description": "Set when benchhand-next decided differently: both positions, and no winner.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prototype", "benchhand_next"],
+          "properties": {
+            "prototype": { "$ref": "#/$defs/text" },
+            "benchhand_next": { "$ref": "#/$defs/text" }
+          }
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "kind",
+        "sources",
+        "prototype_status",
+        "area",
+        "disposition",
+        "benchhand_next",
+        "acceptance"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^IR-[0-9]{3}$" },
+        "title": { "$ref": "#/$defs/text" },
+        "kind": { "enum": ["bug", "gap", "false-pass", "false-fail", "design-rule", "decision", "process"] },
+        "sources": {
+          "description": "The documents that report it. An issue known only from the ledger has none and names its beads.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/source" }
+        },
+        "beads": { "type": "array", "items": { "$ref": "#/$defs/bead_id" } },
+        "prototype_prs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "prototype_status": { "enum": ["fixed-on-main", "open-pr", "open", "wontfix", "superseded"] },
+        "prototype_ref": {
+          "description": "The PR (`#123`) or commit that fixed, carries or superseded it.",
+          "type": "string",
+          "pattern": "^(#[0-9]+|[0-9a-f]{7,40})( .+)?$"
+        },
+        "area": { "$ref": "#/$defs/area" },
+        "prototype_paths": {
+          "description": "reference-map.yaml entry paths, so the capability catalogue can join on them.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "disposition": { "$ref": "#/$defs/disposition" },
+        "also": {
+          "description": "Further dispositions, for an entry that needs both a contract change and design work (for example the owner's rule on standard parts).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["port-fix", "design-input", "contract"] }
+        },
+        "pointer": { "$ref": "#/$defs/pointer" },
+        "reason": { "$ref": "#/$defs/text" },
+        "recommendation": { "$ref": "#/$defs/text" },
+        "benchhand_next": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["action", "phase"],
+          "properties": {
+            "action": { "$ref": "#/$defs/text" },
+            "phase": {
+              "description": "The design-plan phase that owns it, or null when no phase does (not applicable, or waiting on the owner).",
+              "type": ["integer", "null"],
+              "minimum": 0,
+              "maximum": 7
+            }
+          }
+        },
+        "acceptance": { "$ref": "#/$defs/text" },
+        "needs_recheck": { "type": "boolean" }
+      },
+      "allOf": [
+        { "$ref": "#/$defs/disposition_fields" },
+        {
+          "if": {
+            "properties": { "prototype_status": { "enum": ["fixed-on-main", "open-pr", "superseded"] } },
+            "required": ["prototype_status"]
+          },
+          "then": { "required": ["prototype_ref"] }
+        },
+        {
+          "if": { "properties": { "sources": { "maxItems": 0 } }, "required": ["sources"] },
+          "then": { "required": ["beads"], "properties": { "beads": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "bead_disposition": {
+      "description": "A bead that no issue entry names: process, housekeeping, a duplicate, or closed with its fix on main.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bead_id", "area", "disposition", "reason"],
+      "properties": {
+        "bead_id": { "$ref": "#/$defs/bead_id" },
+        "area": { "$ref": "#/$defs/area" },
+        "disposition": { "enum": ["port-fix", "design-input", "contract", "already-covered", "not-applicable", "duplicate"] },
+        "duplicate_of": {
+          "description": "The issue (`IR-nnn`) or bead this one duplicates.",
+          "type": "string",
+          "pattern": "^(IR-[0-9]{3}|benchhand-[a-z0-9]+(\\.[0-9]+)*)$"
+        },
+        "pointer": { "$ref": "#/$defs/pointer" },
+        "reason": { "$ref": "#/$defs/text" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "disposition": { "const": "duplicate" } }, "required": ["disposition"] },
+          "then": { "required": ["duplicate_of"] }
+        },
+        {
+          "if": { "properties": { "disposition": { "const": "already-covered" } }, "required": ["disposition"] },
+          "then": { "required": ["pointer"] }
+        }
+      ]
+    },
+    "ledger_snapshot": {
+      "description": "Written by `just issues-sync --update-snapshot`; it must stay the last key in the file. Statuses and hashes only: no ledger or test-project text.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "statuses"],
+      "properties": {
+        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "statuses": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/bead_id" },
+          "additionalProperties": { "enum": ["open", "in_progress", "blocked", "deferred", "closed", "tombstone", "pinned", "hooked"] }
+        },
+        "tool_issue_hashes": {
+          "description": "Per test-project tool-issues number, a SHA-256 prefix of its sections' text: each heading and the body under it.",
+          "type": "object",
+          "propertyNames": { "pattern": "^[0-9]+$" },
+          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+        }
+      }
+    }
+  }
+}

@@ -15,7 +15,7 @@ _need tool:
 # Lint, type-check and test everything, and check the generated contract code. The git hooks
 # (.pre-commit-config.yaml) call the same recipes. `audit`, `secrets-history` and `lint-workflows-online`
 # need the network and run in CI.
-check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map inventory
+check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map inventory issues
 
 lint:
     uv run ruff check .
@@ -218,6 +218,20 @@ reference-map *args:
 # reference-map.yaml and the Markdown against the JSON. With CI=true the copy is required.
 inventory *args:
     PYTHONPATH=tools/inventory:tools/map uv run python -m prototype_inventory {{args}}
+
+# Check docs/migration/issue-register.yaml against tools/issues/issue-register.schema.json and the reference map, and
+# with `--write` regenerate docs/migration/issue-register.md from it. Offline and fast. It refuses home-directory
+# paths, and the private tokens listed one regular expression per line in tools/issues/private-patterns.txt (git
+# ignores it) or in the file BENCHHAND_PRIVATE_PATTERNS names; CI has neither file.
+issues *args:
+    PYTHONPATH=tools/issues:tools/map uv run python -m issue_register check {{args}}
+
+# Local only (CI has no ledger): compare the register with the prototype's ledger (`--ledger` or
+# BENCHHAND_PROTOTYPE_LEDGER) and the test project's tool-issues log (`--lead` or BENCHHAND_TEST_PROJECT_LEAD); both
+# are required. Exits 1 when something needs triage. `--update-snapshot --acknowledge` records bead statuses, a date
+# and per-issue hashes once the report is triaged; the new file must pass `just issues` before it is written.
+issues-sync *args:
+    PYTHONPATH=tools/issues:tools/map uv run python -m issue_register sync {{args}}
 
 # Install the git hooks (.pre-commit-config.yaml) for pre-commit and pre-push. Run `mise install` first: the
 # hooks call the tools pinned in mise.toml. Git keeps hooks per clone, so every worktree of it shares them.

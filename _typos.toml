@@ -22,6 +22,10 @@ extend-exclude = [
   "tools/equiv/results/",
 ]
 
+[default]
+# Ledger bead ids (benchhand-<random>) and the heading hashes in docs/migration/issue-register.yaml.
+extend-ignore-re = ["benchhand-[a-z0-9]+(\\.[0-9]+)*", "\\b[0-9a-f]{16}\\b"]
+
 [default.extend-words]
 # PN is a part number, PN-prefixed ids and `pn` as its short name.
 PN = "PN"
