@@ -10,19 +10,113 @@ One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, pro
 
 ### 1. `part`
 
-![Diagram 1 of record/part](part/01-part.svg)
+![Diagram 1 of record/part, part: the table below lists its relationships](part/01-part.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| part | association via `procurement` | procurement (record/drawing) | 0..1 |
+| part | association via `drawing` | part_drawing (record/drawing) | 0..1 |
+| part.manufacture | composition via `mesh` | part.manufacture.mesh | 0..1 |
+| part | composition via `manufacture` | part.manufacture | 0..1 |
+| intent | association via `functions` | function_entry (record/common) | 0..* |
+| intent | association via `functions` | fact_unknown (record/common) | 0..1 |
+| intent | association via `material_profile` | fact_open (record/common) | 0..1 |
+| intent.service.1 | association via `life` | quantity_fact (record/common) | 0..1 |
+| intent.service | inheritance (the source is the parent) | intent.service.1 | — |
+| intent.service | inheritance (the source is the parent) | fact_open (record/common) | — |
+| intent | composition via `service` | intent.service | 1 |
+| component | association via `locator` | target (record/common) | 0..1 |
+| component | association via `material_profile` | fact_open (record/common) | 0..1 |
+| component | association via `functions` | function_entry (record/common) | 0..* |
+| intent | composition via `components` | component | 0..* |
+| critical_surface | association via `criteria` | criterion (record/common) | 0..* |
+| intent | composition via `critical_surfaces` | critical_surface | 0..* |
+| intent | association via `critical_surfaces` | fact_open (record/common) | 0..1 |
+| intent | composition via `route` | operation | 0..* |
+| intent | association via `route` | fact_unknown (record/common) | 0..1 |
+| intent | composition via `rationale` | intent.rationale | 0..1 |
+| part | composition via `intent` | intent | 0..1 |
 
 ### 2. `operation`
 
-![Diagram 2 of record/part](part/02-operation.svg)
+![Diagram 2 of record/part, operation: the table below lists its relationships](part/02-operation.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| operation | association via `capability` | fact_unknown (record/common) | 0..1 |
+| operation | association via `targets` | target (record/common) | 0..* |
+| operation | composition via `setup` | setup | 0..1 |
+| orientation.rotation | inheritance (the source is the parent) | orientation.rotation.1 | — |
+| orientation.rotation | inheritance (the source is the parent) | orientation.rotation.2 | — |
+| orientation | composition via `rotation` | orientation.rotation | 1 |
+| operation.orientation | inheritance (the source is the parent) | orientation | — |
+| operation.orientation | inheritance (the source is the parent) | fact_open (record/common) | — |
+| operation | composition via `orientation` | operation.orientation | 0..1 |
+| supports | association via `start_regions` | target (record/common) | 0..* |
+| supports | association via `contact_regions` | target (record/common) | 0..* |
+| supports | composition via `removal` | supports.removal | 0..1 |
+| supports | association via `affected_surfaces` | target (record/common) | 0..* |
+| supports | association via `allowance` | quantity (record/common) | 0..1 |
+| operation.supports | inheritance (the source is the parent) | supports | — |
+| operation.supports | inheritance (the source is the parent) | fact_open (record/common) | — |
+| operation | composition via `supports` | operation.supports | 0..1 |
+| allowance | association via `amount` | quantity (record/common) | 1 |
+| allowance | association via `source` | source (record/common) | 1 |
+| operation | composition via `allowances` | allowance | 0..* |
+| inspection | association via `criterion` | criterion (record/common) | 0..1 |
+| operation | composition via `inspection` | inspection | 0..* |
+| operation | association via `criteria` | criterion (record/common) | 0..* |
+| operation | composition via `purchase` | purchase | 0..1 |
 
 ### 3. `purchase`
 
-![Diagram 3 of record/part](part/03-purchase.svg)
+![Diagram 3 of record/part, purchase: the table below lists its relationships](part/03-purchase.svg)
+
+Relationships in diagram 3:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| purchase | association via `identity` | text_fact (record/common) | 0..1 |
+| designation | inheritance (the source is the parent) | designation.standard_designation | — |
+| designation | inheritance (the source is the parent) | designation.family_designation | — |
+| purchase | composition via `designation` | designation | 0..1 |
+| purchase | composition via `reference_catalogue` | purchase.reference_catalogue | 0..* |
+| purchase | association via `specification` | text_fact (record/common) | 1 |
+| purchase | association via `ratings` | text_fact (record/common) | 1 |
+| purchase | association via `optical` | text_fact (record/common) | 0..1 |
+| purchase | association via `thickness` | quantity_fact (record/common) | 0..1 |
+| purchase | association via `availability` | text_fact (record/common) | 0..1 |
+| purchase | association via `supplier_evidence` | source (record/common) | 0..* |
 
 ### 4. `setup`
 
-![Diagram 4 of record/part](part/04-setup.svg)
+![Diagram 4 of record/part, setup: the table below lists its relationships](part/04-setup.svg)
+
+Relationships in diagram 4:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| setup.stock | association via `material_profile` | fact_open (record/common) | 0..1 |
+| setup.stock | association via `grade` | text_fact (record/common) | 0..1 |
+| setup.stock | association via `form` | text_fact (record/common) | 0..1 |
+| setup.stock | association via `dimensions` | text_fact (record/common) | 0..1 |
+| setup.stock | association via `thickness` | quantity_fact (record/common) | 0..1 |
+| setup | composition via `stock` | setup.stock | 0..1 |
+| setup.workholding | association via `method` | text_fact (record/common) | 1 |
+| setup.workholding | association via `contact_regions` | target (record/common) | 0..* |
+| setup.workholding | association via `clamping_force` | quantity_fact (record/common) | 0..1 |
+| setup.workholding | association via `allowable_deformation` | quantity_fact (record/common) | 0..1 |
+| setup | composition via `workholding` | setup.workholding | 0..1 |
+| setup.access.tools | association via `diameter` | quantity_fact (record/common) | 0..1 |
+| setup.access.tools | association via `reach` | quantity_fact (record/common) | 0..1 |
+| setup.access.tools | association via `holder` | text_fact (record/common) | 0..1 |
+| setup.access | composition via `tools` | setup.access.tools | 0..* |
+| setup | composition via `access` | setup.access | 0..1 |
+| setup | association via `inspection_access` | text_fact (record/common) | 0..1 |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/drawing`](drawing.md).
 

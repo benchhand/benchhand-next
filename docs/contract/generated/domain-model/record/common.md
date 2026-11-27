@@ -10,15 +10,116 @@ Record version 3 contracts. A fact is known (with sources and a basis), unknown 
 
 ### 1. `finding`
 
-![Diagram 1 of record/common](common/01-finding.svg)
+![Diagram 1 of record/common, finding: the table below lists its relationships](common/01-finding.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| quantity_fact | inheritance (the source is the parent) | fact_unknown | — |
+| text_fact | inheritance (the source is the parent) | fact_unknown | — |
+| criterion | composition via `source` | source | 1 |
+| criterion | inheritance (the source is the parent) | assembly_operation.edge_distance.criterion (record/assembly) | — |
+| fact_open | inheritance (the source is the parent) | fact_unknown | — |
+| fact | inheritance (the source is the parent) | fact_unknown | — |
+| texts_fact | inheritance (the source is the parent) | fact_unknown | — |
+| boolean_fact | inheritance (the source is the parent) | fact_unknown | — |
+| money_fact | inheritance (the source is the parent) | fact_unknown | — |
+| criterion_or_unknown | inheritance (the source is the parent) | criterion | — |
+| criterion_or_unknown | inheritance (the source is the parent) | fact_unknown | — |
+| finding | composition via `subject` | subject | 1 |
+| finding.measured | inheritance (the source is the parent) | quantity | — |
+| finding.measured | inheritance (the source is the parent) | finding.measured.2 | — |
+| finding.measured | inheritance (the source is the parent) | fact_unknown | — |
+| finding | composition via `measured` | finding.measured | 1 |
+| finding | composition via `criterion` | criterion_or_unknown | 1 |
+| finding.method | composition via `evidence` | file_hash | 0..* |
+| finding | composition via `method` | finding.method | 1 |
+| finding | composition via `alternatives` | finding.alternatives | 0..* |
+| finding.recheck | composition via `scope` | subject | 0..* |
+| finding | composition via `recheck` | finding.recheck | 1 |
+| use_case.service_class (record/product) | inheritance (the source is the parent) | fact_unknown | — |
+| use_case.consequences.severity (record/product) | inheritance (the source is the parent) | fact_unknown | — |
+| use_case.evidence_policy (record/product) | inheritance (the source is the parent) | fact_unknown | — |
 
 ### 2. `fact`
 
-![Diagram 2 of record/common](common/02-fact.svg)
+![Diagram 2 of record/common, fact: the table below lists its relationships](common/02-fact.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| fact_known | composition via `sources` | source | 1..* |
+| fact_known | composition via `uncertainty` | uncertainty | 0..1 |
+| fact_known | inheritance (the source is the parent) | quantity_fact.known | — |
+| quantity_fact | inheritance (the source is the parent) | quantity_fact.known | — |
+| quantity_fact | inheritance (the source is the parent) | fact_unknown | — |
+| quantity_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | text_fact.known | — |
+| text_fact | inheritance (the source is the parent) | text_fact.known | — |
+| text_fact | inheritance (the source is the parent) | fact_unknown | — |
+| text_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_open | inheritance (the source is the parent) | fact_unknown | — |
+| fact_open | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact | inheritance (the source is the parent) | fact_known | — |
+| fact | inheritance (the source is the parent) | fact_unknown | — |
+| fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | texts_fact.known | — |
+| texts_fact | inheritance (the source is the parent) | texts_fact.known | — |
+| texts_fact | inheritance (the source is the parent) | fact_unknown | — |
+| texts_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | boolean_fact.known | — |
+| boolean_fact | inheritance (the source is the parent) | boolean_fact.known | — |
+| boolean_fact | inheritance (the source is the parent) | fact_unknown | — |
+| boolean_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | money_fact.known | — |
+| money_fact.known | composition via `value` | money | 1 |
+| money_fact | inheritance (the source is the parent) | money_fact.known | — |
+| money_fact | inheritance (the source is the parent) | fact_unknown | — |
+| money_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| load | composition via `magnitude` | quantity_fact | 1 |
+| load | composition via `application` | subject | 0..1 |
+| load | composition via `duration` | quantity_fact | 0..1 |
+| load | composition via `frequency` | quantity_fact | 0..1 |
+| load | composition via `cycles` | quantity_fact | 0..1 |
+| intent.service (record/part) | inheritance (the source is the parent) | fact_open | — |
+| operation.orientation (record/part) | inheritance (the source is the parent) | fact_open | — |
+| operation.supports (record/part) | inheritance (the source is the parent) | fact_open | — |
+| fact_known | inheritance (the source is the parent) | use_case.service_class.known (record/product) | — |
+| fact_known | inheritance (the source is the parent) | use_case.consequences.severity.known (record/product) | — |
 
 ### 3. `function_entry`
 
-![Diagram 3 of record/common](common/03-function-entry.svg)
+![Diagram 3 of record/common, function_entry: the table below lists its relationships](common/03-function-entry.svg)
+
+Relationships in diagram 3:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| fact_known | inheritance (the source is the parent) | quantity_fact.known | — |
+| quantity_fact.known | composition via `value` | quantity | 1 |
+| quantity_fact | inheritance (the source is the parent) | quantity_fact.known | — |
+| quantity_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | text_fact.known | — |
+| text_fact | inheritance (the source is the parent) | text_fact.known | — |
+| text_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_open | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | texts_fact.known | — |
+| texts_fact | inheritance (the source is the parent) | texts_fact.known | — |
+| texts_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| fact_known | inheritance (the source is the parent) | boolean_fact.known | — |
+| boolean_fact | inheritance (the source is the parent) | boolean_fact.known | — |
+| boolean_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| money_fact | inheritance (the source is the parent) | fact_not_applicable | — |
+| obligation | composition via `subject` | subject | 1 |
+| finding.measured | inheritance (the source is the parent) | quantity | — |
+| obligation_outcome | composition via `source` | source | 0..1 |
+| waiver | composition via `subject` | subject | 1 |
+| quantity | inheritance (the source is the parent) | scope.nozzle_diameter (record/manufacturing-guideline) | — |
+| quantity | inheritance (the source is the parent) | relative.floor (record/manufacturing-guideline) | — |
+| quantity | inheritance (the source is the parent) | limit.quantities (record/manufacturing-guideline) | — |
 
 Types of other contracts, drawn as stubs: [`record/assembly`](assembly.md), [`record/manufacturing-guideline`](manufacturing-guideline.md), [`record/part`](part.md), [`record/product`](product.md).
 

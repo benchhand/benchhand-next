@@ -10,7 +10,9 @@ One hw/verification.csv row; the column order is the property order
 
 ### 1. `verification-row`
 
-![Diagram 1 of record/verification-row](verification-row/01-verification-row.svg)
+![Diagram 1 of record/verification-row, verification-row: the table below lists its relationships](verification-row/01-verification-row.svg)
+
+Diagram 1 has no relationships.
 
 ## Types
 

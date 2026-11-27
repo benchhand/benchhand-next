@@ -10,7 +10,21 @@ The evidence of one built record version: the status of every obligation the rec
 
 ### 1. `evidence-assessment`
 
-![Diagram 1 of record/evidence-assessment](evidence-assessment/01-evidence-assessment.svg)
+![Diagram 1 of record/evidence-assessment, evidence-assessment: the table below lists its relationships](evidence-assessment/01-evidence-assessment.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| obligation_status | association via `obligation` | obligation (record/common) | 1 |
+| obligation_status | association via `waiver` | waiver (record/common) | 0..1 |
+| evidence-assessment | composition via `statuses` | obligation_status | 0..* |
+| evidence-assessment | composition via `facets` | facets | 0..* |
+| evidence-assessment | association via `findings` | finding (common/finding) | 0..* |
+| evidence-assessment | composition via `critical` | critical_finding | 0..* |
+| evidence-assessment.acceptance | inheritance (the source is the parent) | acceptance_formed | — |
+| evidence-assessment.acceptance | inheritance (the source is the parent) | acceptance_refused | — |
+| evidence-assessment | composition via `acceptance` | evidence-assessment.acceptance | 1 |
 
 Types of other contracts, drawn as stubs: [`common/finding`](../common/finding.md), [`record/common`](common.md).
 

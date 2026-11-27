@@ -10,7 +10,18 @@ A long-running job of the job service. JobRecord is the run record kept at <proj
 
 ### 1. `job`
 
-![Diagram 1 of jobs/job](job/01-job.svg)
+![Diagram 1 of jobs/job, job: the table below lists its relationships](job/01-job.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| JobHandle | composition via `progress` | JobProgress | 1 |
+| JobRecord | composition via `progress` | JobProgress | 1 |
+| JobRecord | composition via `owner` | ProcessIdentity | 1 |
+| JobRecord | composition via `process` | ProcessIdentity | 0..1 |
+| job | inheritance (the source is the parent) | JobRecord | — |
+| job | inheritance (the source is the parent) | JobHandle | — |
 
 ## Types
 

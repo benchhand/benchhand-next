@@ -10,7 +10,28 @@ One file of published design-for-manufacturing guidance for a process. A guideli
 
 ### 1. `manufacturing-guideline`
 
-![Diagram 1 of record/manufacturing-guideline](manufacturing-guideline/01-manufacturing-guideline.svg)
+![Diagram 1 of record/manufacturing-guideline, manufacturing-guideline: the table below lists its relationships](manufacturing-guideline/01-manufacturing-guideline.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| quantity (record/common) | inheritance (the source is the parent) | scope.nozzle_diameter | — |
+| qty_nozzle_diameter (record/manufacturing-capabilities) | inheritance (the source is the parent) | scope.nozzle_diameter | — |
+| scope | composition via `nozzle_diameter` | scope.nozzle_diameter | 0..1 |
+| manufacturing-guideline | composition via `scope` | scope | 1 |
+| limit | association via `quantity` | quantity (record/common) | 0..1 |
+| quantity (record/common) | inheritance (the source is the parent) | relative.floor | — |
+| relative | composition via `floor` | relative.floor | 1 |
+| limit | composition via `relative` | relative | 0..1 |
+| quantity (record/common) | inheritance (the source is the parent) | limit.quantities | — |
+| qty_nozzle_diameter (record/manufacturing-capabilities) | inheritance (the source is the parent) | limit.quantities | — |
+| limit | composition via `quantities` | limit.quantities | 0..* |
+| limit | composition via `applies_to` | applies_to | 0..1 |
+| relaxes | association via `citation` | source (record/common) | 1 |
+| limit | composition via `relaxes` | relaxes | 0..1 |
+| limit | association via `citations` | source (record/common) | 1..* |
+| manufacturing-guideline | composition via `limits` | limit | 0..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/manufacturing-capabilities`](manufacturing-capabilities.md).
 

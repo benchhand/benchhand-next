@@ -10,15 +10,70 @@ What the user's actual machines, operators and suppliers can do, kept apart from
 
 ### 1. `manufacturing-capabilities`
 
-![Diagram 1 of record/manufacturing-capabilities](manufacturing-capabilities/01-manufacturing-capabilities.svg)
+![Diagram 1 of record/manufacturing-capabilities, manufacturing-capabilities: the table below lists its relationships](manufacturing-capabilities/01-manufacturing-capabilities.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| profile | association via `supplier` | text_fact (record/common) | 0..1 |
+| profile | association via `operator` | text_fact (record/common) | 0..1 |
+| profile.machine | association via `identity` | text_fact (record/common) | 1 |
+| profile | composition via `machine` | profile.machine | 0..1 |
+| profile.envelope | association via `x` | quantity_fact (record/common) | 1 |
+| profile.envelope | association via `y` | quantity_fact (record/common) | 1 |
+| profile.envelope | association via `z` | quantity_fact (record/common) | 1 |
+| profile | composition via `envelope` | profile.envelope | 0..1 |
+| material_approval | association via `thickness` | quantity_fact (record/common) | 0..1 |
+| material_approval | association via `coating` | text_fact (record/common) | 0..1 |
+| material_approval | association via `extraction` | text_fact (record/common) | 0..1 |
+| material_approval | association via `source` | source (record/common) | 1 |
+| profile | composition via `materials` | material_approval | 0..* |
+| profile | association via `materials` | fact_open (record/common) | 0..1 |
+| parameters | association via `nozzle_diameter` | fact (record/common) | 0..1 |
+| parameters | association via `layer_height` | fact (record/common) | 0..1 |
+| parameters | association via `hotend_max_temperature` | fact (record/common) | 0..1 |
+| parameters | association via `bed_max_temperature` | fact (record/common) | 0..1 |
+| parameters | association via `max_speed` | fact (record/common) | 0..1 |
+| parameters | association via `travel_x` | fact (record/common) | 0..1 |
+| parameters | association via `travel_y` | fact (record/common) | 0..1 |
+| parameters | association via `travel_z` | fact (record/common) | 0..1 |
+| parameters | association via `spindle_max_speed` | fact (record/common) | 0..1 |
+| parameters | association via `power` | fact (record/common) | 0..1 |
+| parameters | association via `pump_pressure` | fact (record/common) | 0..1 |
+| parameters | association via `press_brake_force` | fact (record/common) | 0..1 |
+| parameters | association via `[key]` | fact (record/common) | 0..* |
+| profile | composition via `parameters` | parameters | 1 |
+| profile.tools | composition via `parameters` | parameters | 1 |
+| profile | composition via `tools` | profile.tools | 0..* |
+| profile | association via `workholding` | text_fact (record/common) | 0..1 |
+| calibration.scope | association via `size` | quantity (record/common) | 0..1 |
+| calibration.scope | association via `thickness` | quantity (record/common) | 0..1 |
+| calibration | composition via `scope` | calibration.scope | 1 |
+| calibration.result | association via `limits` | quantity (record/common) | 1 |
+| calibration.result | association via `uncertainty` | quantity (record/common) | 0..1 |
+| calibration | composition via `result` | calibration.result | 1 |
+| calibration | association via `source` | source (record/common) | 1 |
+| profile | composition via `calibrations` | calibration | 0..* |
+| profile | association via `source` | source (record/common) | 0..1 |
+| manufacturing-capabilities | composition via `profiles` | profile | 0..* |
 
 ### 2. `qty_nozzle_diameter`
 
-![Diagram 2 of record/manufacturing-capabilities](manufacturing-capabilities/02-qty-nozzle-diameter.svg)
+![Diagram 2 of record/manufacturing-capabilities, qty_nozzle_diameter: the table below lists its relationships](manufacturing-capabilities/02-qty-nozzle-diameter.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| qty_nozzle_diameter | inheritance (the source is the parent) | scope.nozzle_diameter (record/manufacturing-guideline) | — |
+| qty_nozzle_diameter | inheritance (the source is the parent) | limit.quantities (record/manufacturing-guideline) | — |
 
 ### 3. `qty_bridge_span`
 
-![Diagram 3 of record/manufacturing-capabilities](manufacturing-capabilities/03-qty-bridge-span.svg)
+![Diagram 3 of record/manufacturing-capabilities, qty_bridge_span: the table below lists its relationships](manufacturing-capabilities/03-qty-bridge-span.svg)
+
+Diagram 3 has no relationships.
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/manufacturing-guideline`](manufacturing-guideline.md).
 

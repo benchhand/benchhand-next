@@ -15,8 +15,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from contracts_gen.domain import MAX_ENUM_VALUES, DomainModel, build_model, class_id
-from contracts_gen.domain_d2 import D2_COMMAND, MAX_DIAGRAM_NODES, plan_diagrams
+from contracts_gen.domain import MAX_ENUM_VALUES, DomainModel, build_model, class_id, ref_counts
+from contracts_gen.domain_d2 import (
+    D2_COMMAND,
+    MAX_DIAGRAM_NODES,
+    overview_rows,
+    plan_diagrams,
+    relationship_rows,
+)
 from contracts_gen.domain_docs import (
     MODEL_DIR,
     README_PATH,
@@ -123,6 +129,52 @@ def test_the_readme_indexes_every_contract_and_shows_the_overview(
         assert f"{MODEL_DIR}/{contract.stem}.md" in files
     assert "](overview.svg)" in readme
     assert "**Enums have no colour.**" in readme
+
+
+def test_every_diagram_is_followed_by_a_table_of_its_relationships(
+    published: tuple[list[Contract], DomainModel, dict[str, str]],
+) -> None:
+    """A diagram's text alternative (WCAG 1.1.1): one row for each arrow it draws."""
+    _, model, files = published
+    plan = plan_diagrams(model)
+    tables = 0
+    for stem, diagrams in plan.diagrams.items():
+        page = files[_page(stem)]
+        for diagram in diagrams:
+            section = page.split(f"### {diagram.number}. `{diagram.title}`", 1)[1].split("\n### ", 1)[0]
+            assert section.lstrip().startswith(f"![Diagram {diagram.number} of {stem}"), stem
+            rows = relationship_rows(model, diagram)
+            if not rows:
+                assert f"Diagram {diagram.number} has no relationships." in section
+                continue
+            assert f"Relationships in diagram {diagram.number}:" in section
+            table = [line for line in section.splitlines() if line.startswith("| ") and " | " in line]
+            assert table[0] == "| Source | Relation | Target | Cardinality |"
+            assert len(table) == len(rows) + 1, f"{stem} diagram {diagram.number}"  # the header and a row each
+            tables += 1
+    assert tables > 20
+
+
+def test_the_readme_lists_each_arrow_of_the_overview_in_a_table() -> None:
+    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
+    readme = domain_model_files(contracts)[README_PATH]
+    section = readme.split("### Relationships in the overview", 1)[1].split("\n## ", 1)[0]
+    rows = [line for line in section.splitlines() if line.startswith("| ")]
+    assert rows[0] == "| Source | Relation | Target | Cardinality |"
+    assert len(rows) - 1 == len(overview_rows(build_model(contracts), ref_counts(contracts)))
+    assert "| assembly | references | common (library) | 31 refs |" in rows
+
+
+def test_every_committed_svg_has_a_title_and_a_description() -> None:
+    root = REPO_ROOT / DOCS_OUT / MODEL_DIR
+    svgs = sorted(root.rglob("*.svg"))
+    assert len(svgs) > 40
+    for svg in svgs:
+        text = svg.read_text(encoding="utf-8")
+        assert 'role="img" aria-labelledby="diagram-title diagram-desc"' in text, svg.name
+        assert re.search(
+            r'<title id="diagram-title">[^<]+</title><desc id="diagram-desc">[^<]+</desc>', text
+        ), svg.name
 
 
 def test_the_old_page_is_a_stub_that_links_to_the_readme(

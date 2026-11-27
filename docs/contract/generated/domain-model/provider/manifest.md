@@ -10,7 +10,20 @@ A provider's manifest, benchhand-provider.toml: its name and version, the protoc
 
 ### 1. `manifest`
 
-![Diagram 1 of provider/manifest](manifest/01-manifest.svg)
+![Diagram 1 of provider/manifest, manifest: the table below lists its relationships](manifest/01-manifest.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| manifest | composition via `protocol` | manifest.protocol | 1 |
+| manifest | association via `hooks` | HookDecl (provider/protocol) | 1..* |
+| manifest.environment | inheritance (the source is the parent) | manifest.environment.uv | — |
+| manifest.environment | inheritance (the source is the parent) | manifest.environment.freecad | — |
+| manifest.environment | inheritance (the source is the parent) | manifest.environment.system | — |
+| manifest | composition via `environment` | manifest.environment | 1 |
+| manifest | association via `needs` | Needs (provider/protocol) | 1 |
+| manifest | composition via `cli` | manifest.cli | 0..* |
 
 Types of other contracts, drawn as stubs: [`provider/protocol`](protocol.md).
 

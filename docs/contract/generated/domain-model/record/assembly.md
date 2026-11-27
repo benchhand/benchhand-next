@@ -10,15 +10,61 @@ The assembly record, hw/assembly.yaml: subassemblies and the joints between thei
 
 ### 1. `assembly`
 
-![Diagram 1 of record/assembly](assembly/01-assembly.svg)
+![Diagram 1 of record/assembly, assembly: the table below lists its relationships](assembly/01-assembly.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| assembly | composition via `operations` | assembly_operation | 0..* |
+| assembly | association via `operations` | fact_unknown (record/common) | 0..1 |
+| placement | composition via `rotation` | placement.rotation | 0..1 |
+| assembly.occurrences | composition via `placement` | placement | 0..1 |
+| assembly | composition via `occurrences` | assembly.occurrences | 0..* |
+| assembly | composition via `profiles` | profile | 0..* |
+| assembly | composition via `mechanisms` | mechanism | 0..* |
+| assembly | composition via `subassemblies` | assembly.subassemblies | 1..* |
+| assembly | composition via `joints` | assembly.joints | 0..* |
+| assembly_drawing | composition via `views` | assembly_drawing.views | 1..* |
+| assembly_drawing | composition via `explode` | assembly_drawing.explode | 0..* |
+| assembly_drawing | composition via `items` | drawing_item | 1..* |
+| assembly | composition via `drawing` | assembly_drawing | 0..1 |
 
 ### 2. `assembly_operation`
 
-![Diagram 2 of record/assembly](assembly/02-assembly-operation.svg)
+![Diagram 2 of record/assembly, assembly_operation: the table below lists its relationships](assembly/02-assembly-operation.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| assembly_operation | composition via `acceptance` | assembly_operation.acceptance | 0..1 |
+| assembly_operation.tool_access | association via `reach` | quantity_fact (record/common) | 0..1 |
+| assembly_operation.tool_access | association via `envelope` | text_fact (record/common) | 0..1 |
+| assembly_operation | composition via `tool_access` | assembly_operation.tool_access | 0..* |
+| assembly_operation | association via `engagement` | quantity_fact (record/common) | 0..1 |
+| assembly_operation | association via `torque` | quantity_fact (record/common) | 0..1 |
+| assembly_operation | association via `retention` | text_fact (record/common) | 0..1 |
+| assembly_operation | association via `service_access` | text_fact (record/common) | 0..1 |
+| criterion (record/common) | inheritance (the source is the parent) | assembly_operation.edge_distance.criterion | — |
+| assembly_operation.edge_distance | composition via `criterion` | assembly_operation.edge_distance.criterion | 1 |
+| assembly_operation.edge_distance | association via `distance` | quantity_fact (record/common) | 1 |
+| assembly_operation | composition via `edge_distance` | assembly_operation.edge_distance | 0..1 |
+| assembly_operation | composition via `path` | assembly_operation.path | 0..1 |
 
 ### 3. `assembly.joints`
 
-![Diagram 3 of record/assembly](assembly/03-assembly-joints.svg)
+![Diagram 3 of record/assembly, assembly.joints: the table below lists its relationships](assembly/03-assembly-joints.svg)
+
+Relationships in diagram 3:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| coupling | inheritance (the source is the parent) | coupling.linear | — |
+| coupling | inheritance (the source is the parent) | coupling.periodic_table | — |
+| coupling | inheritance (the source is the parent) | coupling.slider_crank | — |
+| assembly.joints | composition via `coupling` | coupling | 0..1 |
+| assembly.joints | composition via `torque_path` | torque_path | 0..1 |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md).
 

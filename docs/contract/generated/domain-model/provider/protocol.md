@@ -10,15 +10,47 @@ Message shapes of the benchhand provider protocol. Prose rules: docs/contract/pr
 
 ### 1. `protocol`
 
-![Diagram 1 of provider/protocol](protocol/01-protocol.svg)
+![Diagram 1 of provider/protocol, protocol: the table below lists its relationships](protocol/01-protocol.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| protocol | inheritance (the source is the parent) | Request | — |
+| protocol | inheritance (the source is the parent) | Notification | — |
+| protocol | inheritance (the source is the parent) | SuccessResponse | — |
+| ErrorObject.data | composition via `supported` | ErrorObject.data.supported | 0..1 |
+| ErrorObject | composition via `data` | ErrorObject.data | 1 |
+| ErrorResponse | composition via `error` | ErrorObject | 1 |
+| protocol | inheritance (the source is the parent) | ErrorResponse | — |
 
 ### 2. `InitializeResult`
 
-![Diagram 2 of provider/protocol](protocol/02-initializeresult.svg)
+![Diagram 2 of provider/protocol, InitializeResult: the table below lists its relationships](protocol/02-initializeresult.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| InitializeResult | composition via `provider` | InitializeResult.provider | 1 |
+| InitializeResult | composition via `hooks` | HookDecl | 1..* |
+| InitializeResult | composition via `features` | InitializeResult.features | 1 |
+| InitializeResult | composition via `limits` | Limits | 1 |
+| InitializeResult | composition via `needs` | Needs | 1 |
 
 ### 3. `InitializeParams`
 
-![Diagram 3 of provider/protocol](protocol/03-initializeparams.svg)
+![Diagram 3 of provider/protocol, InitializeParams: the table below lists its relationships](protocol/03-initializeparams.svg)
+
+Relationships in diagram 3:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| InitializeParams | composition via `host` | InitializeParams.host | 1 |
+| InitializeParams | composition via `capabilities` | InitializeParams.capabilities | 1 |
+| InitializeParams | composition via `limits` | Limits | 1 |
+| HookResultBase | composition via `coverage` | Coverage | 1 |
+| HookResultBase | composition via `artifacts` | Artifact | 0..* |
 
 ## Types
 

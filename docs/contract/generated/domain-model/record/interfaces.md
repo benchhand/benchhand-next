@@ -10,11 +10,58 @@ The interfaces record, hw/interfaces.yaml: each interface between two parts, fro
 
 ### 1. `interfaces`
 
-![Diagram 1 of record/interfaces](interfaces/01-interfaces.svg)
+![Diagram 1 of record/interfaces, interfaces: the table below lists its relationships](interfaces/01-interfaces.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| interfaces.interfaces.limits | association via `press_fit` | fit (record/drawing) | 0..1 |
+| interfaces.interfaces.limits | association via `running_fit` | fit (record/drawing) | 0..1 |
+| interfaces.interfaces.limits | association via `locating_fit` | fit (record/drawing) | 0..1 |
+| interfaces.interfaces.limits | association via `heat_set` | heat_set (record/drawing) | 0..* |
+| interfaces.interfaces | composition via `limits` | interfaces.interfaces.limits | 0..1 |
+| interfaces.interfaces | composition via `functional` | functional | 0..1 |
+| interfaces | composition via `interfaces` | interfaces.interfaces | 0..* |
 
 ### 2. `functional`
 
-![Diagram 2 of record/interfaces](interfaces/02-functional.svg)
+![Diagram 2 of record/interfaces, functional: the table below lists its relationships](interfaces/02-functional.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| functional | association via `critical` | boolean_fact (record/common) | 1 |
+| functional | association via `functions` | function_entry (record/common) | 0..* |
+| functional | association via `functions` | fact_unknown (record/common) | 0..1 |
+| functional | association via `failure_consequence` | text_fact (record/common) | 0..1 |
+| functional.surfaces | association via `source` | source (record/common) | 0..1 |
+| functional | composition via `surfaces` | functional.surfaces | 0..* |
+| functional.acceptance | association via `criterion` | criterion (record/common) | 1 |
+| functional.acceptance | composition via `verification` | functional.acceptance.verification | 1 |
+| functional | composition via `acceptance` | functional.acceptance | 0..* |
+| functional | composition via `variation` | functional.variation | 0..1 |
+| functional.contact | association via `materials` | fact_open (record/common) | 0..2 |
+| functional.contact | association via `finish` | text_fact (record/common) | 0..1 |
+| functional.contact | association via `lubrication` | text_fact (record/common) | 0..1 |
+| functional.contact | association via `load` | quantity_fact (record/common) | 0..1 |
+| functional.contact | association via `speed` | quantity_fact (record/common) | 0..1 |
+| functional.contact | association via `duty` | text_fact (record/common) | 0..1 |
+| functional.contact | association via `life` | quantity_fact (record/common) | 0..1 |
+| functional | composition via `contact` | functional.contact | 0..1 |
+| functional.play | association via `axial` | quantity_fact (record/common) | 0..1 |
+| functional.play | association via `radial` | quantity_fact (record/common) | 0..1 |
+| functional.play | association via `angular` | quantity_fact (record/common) | 0..1 |
+| functional.play | association via `backlash` | quantity_fact (record/common) | 0..1 |
+| functional.play.compliance | association via `axial` | quantity_fact (record/common) | 0..1 |
+| functional.play.compliance | association via `radial` | quantity_fact (record/common) | 0..1 |
+| functional.play.compliance | association via `angular` | quantity_fact (record/common) | 0..1 |
+| functional.play | composition via `compliance` | functional.play.compliance | 0..1 |
+| functional | composition via `play` | functional.play | 0..1 |
+| functional.print_in_place | composition via `gap_features` | face | 2..* |
+| functional.print_in_place | composition via `break_free` | functional.print_in_place.break_free | 1 |
+| functional | composition via `print_in_place` | functional.print_in_place | 0..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/drawing`](drawing.md).
 

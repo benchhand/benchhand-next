@@ -10,7 +10,13 @@ How each flow gate asks for approval (ADR-0003): ask (the default) asks the user
 
 ### 1. `policy`
 
-![Diagram 1 of record/policy](policy/01-policy.svg)
+![Diagram 1 of record/policy, policy: the table below lists its relationships](policy/01-policy.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| policy | composition via `gates` | gate | 0..* |
 
 ## Types
 

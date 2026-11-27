@@ -27,10 +27,16 @@ from .domain_d2 import (
     CLASSES_FILE,
     MAX_DIAGRAM_NODES,
     OVERVIEW_FILE,
+    Caption,
     Diagram,
     DiagramPlan,
+    RelationshipRow,
     check_d2_version,
+    diagram_caption,
+    overview_caption,
+    overview_rows,
     plan_diagrams,
+    relationship_rows,
     render_d2,
     render_diagram,
     render_overview,
@@ -45,6 +51,26 @@ RENDER_WORKERS = 8
 
 _FIELD_HEADER = ("| Field | Type | Required | Description |", "|---|---|---|---|")
 _ENUM_HEADER = ("| Enum | Values | Description |", "|---|---|---|")
+_RELATIONSHIP_HEADER = ("| Source | Relation | Target | Cardinality |", "|---|---|---|---|")
+
+
+def diagram_captions(model: DomainModel, plan: DiagramPlan, contracts: list[Contract]) -> dict[str, Caption]:
+    """The text alternative of every SVG, by the path of its ``.d2`` source."""
+    captions = {
+        f"{MODEL_DIR}/{OVERVIEW_FILE}.d2": overview_caption(model, ref_counts(contracts)),
+    }
+    for diagrams in plan.diagrams.values():
+        for diagram in diagrams:
+            captions[f"{MODEL_DIR}/{diagram.path}.d2"] = diagram_caption(model, diagram)
+    return captions
+
+
+def _relationship_table(rows: list[RelationshipRow]) -> list[str]:
+    lines: list[str] = list(_RELATIONSHIP_HEADER)
+    for row in rows:
+        cells = (row.source, row.relation, row.target, row.cardinality)
+        lines.append("| " + " | ".join(_cell(cell) for cell in cells) + " |")
+    return [*lines, ""]
 
 
 def domain_model_files(contracts: list[Contract]) -> dict[str, str]:
@@ -78,9 +104,18 @@ def write_domain_model(contracts: list[Contract], docs_dir: Path) -> None:
         path = docs_dir / rel_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
+    model = build_model(contracts)
+    captions = diagram_captions(model, plan_diagrams(model), contracts)
     sources = [docs_dir / rel_path for rel_path in diagram_sources(files)]
     with ThreadPoolExecutor(max_workers=RENDER_WORKERS) as pool:
-        list(pool.map(lambda source: render_d2(source, source.with_suffix(".svg")), sources))
+        list(
+            pool.map(
+                lambda source: render_d2(
+                    source, source.with_suffix(".svg"), captions[source.relative_to(docs_dir).as_posix()]
+                ),
+                sources,
+            )
+        )
 
 
 def render_stub() -> str:
@@ -108,6 +143,11 @@ def render_readme(model: DomainModel, plan: DiagramPlan, contracts: list[Contrac
         "",
         f"![The record documents and libraries, with the number of `$ref`s between them]({OVERVIEW_FILE}.svg)",
         "",
+        "### Relationships in the overview",
+        "",
+        "Each arrow of the overview as a row. The cardinality is the number of `$ref`s from the source to the target.",
+        "",
+        *_relationship_table(overview_rows(model, ref_counts(contracts))),
     ]
     lines += _legend()
     lines += _index(model, plan, contracts)
@@ -139,6 +179,9 @@ def _legend() -> list[str]:
         "a string bare.",
         "- In the overview, blue is a record document, amber is a library (shared definitions and no "
         "document of its own), and an arrow counts the `$ref`s from one record contract to another.",
+        "- Every diagram has a text alternative: a table of its relationships follows it, with the source, the "
+        "relation, the target and the cardinality of each arrow, and its `.svg` file has a title and a "
+        "description that spell out the same arrows.",
         "- A diagram is also a link target: in the `.svg` file, a stub and an overview node link to the "
         "diagram that owns the type. In a Markdown page the image is static, so the contract pages "
         "list the related contracts.",
@@ -198,8 +241,9 @@ def _diagram_section(
         lines += [
             f"### {diagram.number}. `{diagram.title}`",
             "",
-            f"![Diagram {diagram.number} of {stem}]({image})",
+            f"![Diagram {diagram.number} of {stem}, {diagram.title}: the table below lists its relationships]({image})",
             "",
+            *_diagram_relationships(model, diagram),
         ]
     related = sorted(
         {
@@ -216,6 +260,14 @@ def _diagram_section(
         )
         lines += [f"Types of other contracts, drawn as stubs: {links}.", ""]
     return lines
+
+
+def _diagram_relationships(model: DomainModel, diagram: Diagram) -> list[str]:
+    """The text alternative of a diagram's arrows: a table of its relationships, or a line saying it has none."""
+    rows = relationship_rows(model, diagram)
+    if not rows:
+        return [f"Diagram {diagram.number} has no relationships.", ""]
+    return [f"Relationships in diagram {diagram.number}:", "", *_relationship_table(rows)]
 
 
 def _type_section(nodes: list[ClassNode], diagrams: list[Diagram], shown: set[str]) -> list[str]:

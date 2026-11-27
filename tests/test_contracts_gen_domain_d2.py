@@ -24,14 +24,21 @@ from contracts_gen.domain_d2 import (
     D2_VERSION,
     MAX_DIAGRAM_NODES,
     MAX_TYPE_CHARS,
+    Caption,
     D2VersionError,
+    add_caption,
     check_d2_version,
+    diagram_caption,
+    overview_caption,
+    overview_rows,
     parse_d2_version,
     plan_diagrams,
+    relationship_rows,
     render_d2,
     render_diagram,
     render_env,
     render_overview,
+    shown_relations,
     stubs_of,
     svg_link,
 )
@@ -277,6 +284,95 @@ def test_a_class_with_a_stereotype_is_drawn_as_a_union() -> None:
     source = render_diagram(model, plan, plan.home[node.id])
     assert f'label: "{node.label}  «{node.stereotype}»"' in source
     assert "class: union" in source
+
+
+def test_every_arrow_of_a_diagram_is_a_relationship_row() -> None:
+    model = _model(PERSON, SHOP)
+    plan = plan_diagrams(model)
+    shop = plan.home["record_shop"]
+    rows = relationship_rows(model, shop)
+    assert [row.source for row in rows if row.target == "name (common/person)"] == ["shop"]
+    stock = next(row for row in rows if row.relation == "composition via `stock`")
+    assert (stock.source, stock.target, stock.cardinality) == ("shop", "shelf", "1..*")
+    drawn = shown_relations(model, set(shop.owned))
+    assert len(rows) == len(drawn)
+    assert {row.cardinality for row in rows} <= {"1", "1..*", "0..1", "0..*"}
+
+
+def test_the_published_diagrams_list_as_many_relationships_as_they_draw() -> None:
+    model = build_model(_published())
+    plan = plan_diagrams(model)
+    total = 0
+    for diagrams in plan.diagrams.values():
+        for diagram in diagrams:
+            rows = relationship_rows(model, diagram)
+            assert len(rows) == len(shown_relations(model, set(diagram.owned))), diagram.path
+            assert all(all(cell for cell in vars(row).values()) for row in rows), diagram.path
+            total += len(rows)
+    assert total > 100
+
+
+def test_an_inheritance_row_says_which_end_is_the_parent_and_has_no_cardinality() -> None:
+    model = _model(_flat_union(3))
+    plan = plan_diagrams(model)
+    rows = relationship_rows(model, plan.home["record_wide__item"])
+    inheritance = [row for row in rows if row.relation.startswith("inheritance")]
+    assert len(inheritance) == 3
+    assert all(row.source == "item" and row.cardinality == "\u2014" for row in inheritance)
+
+
+def test_the_overview_lists_every_arrow_it_draws() -> None:
+    contracts = _published()
+    model = build_model(contracts)
+    plan = plan_diagrams(model)
+    refs = ref_counts(contracts)
+    rows = overview_rows(model, refs)
+    source = render_overview(model, plan, refs)
+    assert len(rows) == len(re.findall(r"^\S.* -> ", source, re.MULTILINE)) == 27
+    assert any(row.target.endswith("(library)") for row in rows)
+    assert all(re.fullmatch(r"\d+ refs?", row.cardinality) for row in rows)
+    assert len(re.findall(r'"1 ref"', source)) == sum(1 for row in rows if row.cardinality == "1 ref")
+
+
+def test_a_caption_names_the_diagram_and_spells_out_its_arrows() -> None:
+    model = _model(PERSON, SHOP)
+    plan = plan_diagrams(model)
+    caption = diagram_caption(model, plan.home["record_shop"])
+    assert caption.title == "record/shop, diagram 1: shop"
+    assert "Types: shop, shelf, item, door" in caption.description
+    assert "shop to shelf: composition via stock, 1..*" in caption.description
+    contracts = [PERSON, SHOP]
+    overview = overview_caption(model, ref_counts(contracts))
+    assert overview.title and "documents" in overview.description
+
+
+def test_a_caption_goes_into_the_outermost_svg_as_role_title_and_desc() -> None:
+    svg = b'<?xml version="1.0"?><svg xmlns="x" viewBox="0 0 1 1"><svg class="d2" width="1"></svg></svg>'
+    out = add_caption(svg, Caption("A & B", "x < y")).decode()
+    assert out.startswith(
+        '<?xml version="1.0"?><svg xmlns="x" viewBox="0 0 1 1" role="img" aria-labelledby="'
+    )
+    assert (
+        '<title id="diagram-title">A &amp; B</title><desc id="diagram-desc">x &lt; y</desc><svg class="d2"'
+        in out
+    )
+    assert out.count("<title") == 1
+
+
+@needs_d2
+def test_a_rendered_svg_has_the_title_and_description_of_its_caption(tmp_path: Path) -> None:
+    model = _model(PERSON, SHOP)
+    plan = plan_diagrams(model)
+    diagram = plan.home["record_shop"]
+    (tmp_path / "classes.d2").write_text(CLASSES_D2, encoding="utf-8")
+    source = tmp_path / f"{diagram.path}.d2"
+    source.parent.mkdir(parents=True)
+    source.write_text(render_diagram(model, plan, diagram), encoding="utf-8")
+    caption = diagram_caption(model, diagram)
+    svg = render_d2(source, tmp_path / "a.svg", caption).decode()
+    assert 'role="img"' in svg.split(">", 2)[1] + svg.split(">", 2)[0]
+    assert f'<title id="diagram-title">{caption.title}</title>' in svg
+    assert svg == render_d2(source, tmp_path / "b.svg", caption).decode()
 
 
 # --- the D2 version

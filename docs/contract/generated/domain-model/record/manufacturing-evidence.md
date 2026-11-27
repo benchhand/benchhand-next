@@ -10,7 +10,21 @@ Accepted evidence per requirement, part, component, interface or operation, one 
 
 ### 1. `manufacturing-evidence`
 
-![Diagram 1 of record/manufacturing-evidence](manufacturing-evidence/01-manufacturing-evidence.svg)
+![Diagram 1 of record/manufacturing-evidence, manufacturing-evidence: the table below lists its relationships](manufacturing-evidence/01-manufacturing-evidence.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| entry | association via `subject` | subject (record/common) | 1 |
+| entry | association via `criterion` | criterion (record/common) | 0..1 |
+| entry | association via `source` | source (record/common) | 0..1 |
+| entry | composition via `configuration` | entry.configuration | 0..1 |
+| entry | association via `artifacts` | file_hash (record/common) | 0..* |
+| entry | composition via `bundle` | entry.bundle | 0..1 |
+| entry | composition via `physical` | entry.physical | 0..1 |
+| entry | association via `waiver` | waiver (record/common) | 0..1 |
+| manufacturing-evidence | composition via `entries` | entry | 0..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md).
 

@@ -10,7 +10,27 @@ Material identity and properties with their conditions. A family profile (PLA+, 
 
 ### 1. `manufacturing-materials`
 
-![Diagram 1 of record/manufacturing-materials](manufacturing-materials/01-manufacturing-materials.svg)
+![Diagram 1 of record/manufacturing-materials, manufacturing-materials: the table below lists its relationships](manufacturing-materials/01-manufacturing-materials.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| profile | composition via `material_family` | text_fact (record/common) | 0..1 |
+| profile | composition via `filler` | text_fact (record/common) | 0..1 |
+| profile | composition via `shore` | text_fact (record/common) | 0..1 |
+| profile | association via `grade` | text_fact (record/common) | 1 |
+| profile | association via `manufacturer` | text_fact (record/common) | 0..1 |
+| profile | association via `specification` | text_fact (record/common) | 0..1 |
+| profile.process_state | association via `process` | fact_open (record/common) | 0..1 |
+| profile | composition via `process_state` | profile.process_state | 1 |
+| property | association via `value` | quantity_fact (record/common) | 1 |
+| property.conditions | association via `test_standard` | text_fact (record/common) | 1 |
+| property.conditions | association via `temperature` | quantity_fact (record/common) | 1 |
+| property.conditions | association via `orientation` | text_fact (record/common) | 0..1 |
+| property | composition via `conditions` | property.conditions | 1 |
+| profile | composition via `properties` | property | 0..* |
+| manufacturing-materials | composition via `profiles` | profile | 0..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md).
 

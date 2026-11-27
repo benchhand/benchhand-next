@@ -10,7 +10,32 @@ Whole candidate routes compared together: architecture, per-part material profil
 
 ### 1. `manufacturing-selection`
 
-![Diagram 1 of record/manufacturing-selection](manufacturing-selection/01-manufacturing-selection.svg)
+![Diagram 1 of record/manufacturing-selection, manufacturing-selection: the table below lists its relationships](manufacturing-selection/01-manufacturing-selection.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| manufacturing-selection | composition via `assessment` | manufacturing-selection.assessment | 0..1 |
+| candidate_part | association via `material_profile` | fact_open (record/common) | 0..1 |
+| step | association via `capability` | fact_open (record/common) | 0..1 |
+| step | association via `purchase` | purchase (record/part) | 0..1 |
+| candidate_part | composition via `route` | step | 1..* |
+| proposed_part | association via `functions` | function_entry (record/common) | 0..* |
+| candidate_part | composition via `proposed` | proposed_part | 0..1 |
+| candidate | composition via `parts` | candidate_part | 1..* |
+| candidate.evaluations | association via `criterion` | criterion (record/common) | 0..1 |
+| candidate.evaluations | association via `value` | quantity (record/common) | 0..1 |
+| candidate.evaluations | association via `source` | source (record/common) | 0..1 |
+| candidate | composition via `evaluations` | candidate.evaluations | 0..* |
+| candidate | composition via `changes` | candidate.changes | 0..1 |
+| candidate | association via `quantity` | quantity_fact (record/common) | 0..1 |
+| candidate | association via `cost` | money_fact (record/common) | 0..1 |
+| candidate | association via `lead_time` | quantity_fact (record/common) | 0..1 |
+| candidate | association via `maintenance` | text_fact (record/common) | 0..1 |
+| candidate | composition via `preference_scores` | candidate.preference_scores | 0..* |
+| manufacturing-selection | composition via `candidates` | candidate | 0..* |
+| manufacturing-selection | composition via `recommendation` | recommendation | 0..1 |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/part`](part.md).
 

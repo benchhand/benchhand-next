@@ -15,6 +15,11 @@ Every class is in exactly one diagram. ``render_diagram`` writes the D2 of one, 
 overview of the record contracts, and ``CLASSES_D2`` holds the colours the diagrams import. ``render_d2``
 lays a diagram out with ``d2 --layout elk``, which this module pins to ``D2_VERSION``; the same source and
 version give the same SVG bytes, so the SVGs are committed and checked for drift.
+
+D2 draws nothing a screen reader can read, so a diagram also yields its text alternative from the same
+model: ``relationship_rows`` and ``overview_rows`` list every arrow as a row, ``diagram_caption`` and
+``overview_caption`` name the diagram and describe it, and ``render_d2`` writes the caption into the SVG as
+its ``<title>`` and ``<desc>``.
 """
 
 from __future__ import annotations
@@ -27,6 +32,7 @@ from collections import Counter, deque
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from .domain import ClassNode, DomainModel, Relation, class_id
 
@@ -45,6 +51,8 @@ SMALL_AGGREGATE = 3
 """An aggregate this small, with no relation to a diagram that has room, shares a diagram with its kind."""
 MAX_TYPE_CHARS = 60
 """A table cell holds one line, so a longer type, such as an enum of many values, is cut here and ends in an ellipsis."""
+CAPTION_TITLE_ID = "diagram-title"
+CAPTION_DESC_ID = "diagram-desc"
 OVERVIEW_GROUP = "record"
 """The contract directory whose documents and libraries the overview shows."""
 
@@ -115,15 +123,42 @@ def render_env(environ: Mapping[str, str] | None = None) -> dict[str, str]:
     }
 
 
-def render_d2(source: Path, target: Path) -> bytes:
-    """Lay ``source`` out with ELK into ``target``; return the SVG."""
+def render_d2(source: Path, target: Path, caption: Caption | None = None) -> bytes:
+    """Lay ``source`` out with ELK into ``target``; return the SVG, titled and described when ``caption`` is given."""
     command = [D2_COMMAND, "--layout", D2_LAYOUT, "--pad", str(D2_PAD), str(source), str(target)]
     result = subprocess.run(
         command, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS, check=False, env=render_env()
     )
     if result.returncode:
         raise RuntimeError(f"d2 failed on {source}:\n{result.stderr}")
+    if caption is not None:
+        target.write_bytes(add_caption(target.read_bytes(), caption))
     return target.read_bytes()
+
+
+@dataclass(frozen=True)
+class Caption:
+    """The text alternative of a diagram: a short name, and a description that spells out its arrows."""
+
+    title: str
+    description: str
+
+
+def add_caption(svg: bytes, caption: Caption) -> bytes:
+    """``svg`` with ``role="img"``, a ``<title>`` and a ``<desc>`` on its outermost element.
+
+    D2 writes none of them. The ``<title>`` and ``<desc>`` are the element's first children, where an
+    assistive technology looks, and ``aria-labelledby`` names both.
+    """
+    text = svg.decode("utf-8")
+    start = text.index("<svg ")
+    end = text.index(">", start)
+    labelled = f' role="img" aria-labelledby="{CAPTION_TITLE_ID} {CAPTION_DESC_ID}"'
+    children = (
+        f'<title id="{CAPTION_TITLE_ID}">{escape(caption.title)}</title>'
+        f'<desc id="{CAPTION_DESC_ID}">{escape(caption.description)}</desc>'
+    )
+    return (text[:end] + labelled + ">" + children + text[end + 1 :]).encode("utf-8")
 
 
 # --- aggregates and diagrams
@@ -375,6 +410,94 @@ def stubs_of(model: DomainModel, diagram: Diagram) -> list[str]:
     return sorted(ends - owned)
 
 
+# --- the text alternative
+
+
+@dataclass(frozen=True)
+class RelationshipRow:
+    """One arrow of a diagram, as text: the same relation that D2 draws."""
+
+    source: str
+    relation: str
+    target: str
+    cardinality: str
+
+
+def _described(node: ClassNode, stem: str) -> str:
+    """A class as a table row names it: its label, and its contract when that is not the diagram's."""
+    return node.label if node.stem == stem else f"{node.label} ({node.stem})"
+
+
+def _relation_text(relation: Relation) -> str:
+    if relation.kind == "inheritance":
+        return "inheritance (the source is the parent)"
+    return f"{relation.kind} via `{relation.label}`" if relation.label else relation.kind
+
+
+def relationship_rows(model: DomainModel, diagram: Diagram) -> list[RelationshipRow]:
+    """Every arrow of ``diagram`` as a row, in the order of ``shown_relations``."""
+    return [
+        RelationshipRow(
+            _described(model.classes[relation.source], diagram.stem),
+            _relation_text(relation),
+            _described(model.classes[relation.target], diagram.stem),
+            relation.cardinality or "\u2014",
+        )
+        for relation in shown_relations(model, set(diagram.owned))
+    ]
+
+
+def _spelled_out(rows: list[RelationshipRow]) -> str:
+    return "; ".join(
+        f"{row.source} to {row.target}: {row.relation.replace('`', '')}, {row.cardinality}" for row in rows
+    )
+
+
+def _refs_label(count: int) -> str:
+    return f"{count} ref" if count == 1 else f"{count} refs"
+
+
+def diagram_caption(model: DomainModel, diagram: Diagram) -> Caption:
+    """The title and description of one diagram's SVG: its types, then each relationship."""
+    title = f"{diagram.stem}, diagram {diagram.number}: {diagram.title}"
+    types = ", ".join(model.classes[member].label for member in diagram.owned)
+    rows = relationship_rows(model, diagram)
+    arrows = f"{len(rows)} relationships: {_spelled_out(rows)}." if rows else "No relationships."
+    return Caption(title, f"Types: {types}. {arrows}")
+
+
+def _overview_name(stem: str, libraries: list[str]) -> str:
+    name = stem.rsplit("/", 1)[-1]
+    return f"{name} (library)" if stem in libraries else name
+
+
+def overview_rows(model: DomainModel, refs: Counter[tuple[str, str]]) -> list[RelationshipRow]:
+    """Every arrow of the overview as a row: the documents or libraries it joins, and its ``$ref`` count."""
+    documents, libraries = overview_nodes(model, refs)
+    shown = set(documents) | set(libraries)
+    return [
+        RelationshipRow(
+            _overview_name(source, libraries),
+            "references",
+            _overview_name(target, libraries),
+            _refs_label(count),
+        )
+        for (source, target), count in sorted(refs.items())
+        if source in shown and target in shown
+    ]
+
+
+def overview_caption(model: DomainModel, refs: Counter[tuple[str, str]]) -> Caption:
+    """The title and description of the overview's SVG."""
+    documents, libraries = overview_nodes(model, refs)
+    rows = overview_rows(model, refs)
+    return Caption(
+        "The record documents and libraries",
+        f"{len(documents)} record documents and {len(libraries)} libraries. {len(rows)} arrows, each counting "
+        f"the $refs from one to another: {_spelled_out(rows)}.",
+    )
+
+
 def render_diagram(model: DomainModel, plan: DiagramPlan, diagram: Diagram) -> str:
     """The D2 source of ``diagram``; it imports ``classes.d2`` from the root of the output."""
     depth = diagram.path.count("/")
@@ -466,6 +589,6 @@ def render_overview(model: DomainModel, plan: DiagramPlan, refs: Counter[tuple[s
     for (source, target), count in sorted(refs.items()):
         if source in shown and target in shown:
             lines.append(
-                f"{_quote(source)} -> {_quote(target)}: {_quote(f'{count} refs')} {{ class: reference }}"
+                f"{_quote(source)} -> {_quote(target)}: {_quote(_refs_label(count))} {{ class: reference }}"
             )
     return "\n".join(lines) + "\n"

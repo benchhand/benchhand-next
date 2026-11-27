@@ -10,31 +10,106 @@ A library of definitions, with no document of its own: the drawing intent that t
 
 ### 1. `part_drawing`
 
-![Diagram 1 of record/drawing](drawing/01-part-drawing.svg)
+![Diagram 1 of record/drawing, part_drawing: the table below lists its relationships](drawing/01-part-drawing.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| sheet | inheritance (the source is the parent) | product_drawing.default_sheet | — |
+| part_drawing | composition via `datum_features` | part_drawing.datum_features | 0..* |
+| part_drawing | composition via `coordinate_frame` | part_drawing.coordinate_frame | 0..1 |
+| part_drawing | composition via `views` | view | 0..* |
+| part_drawing | composition via `features` | feature_intent | 0..* |
+| part_drawing | composition via `dimensions` | dimension_request | 0..* |
+| part_drawing | composition via `geometric_tolerances` | geometric_tolerance | 0..* |
+| edges | inheritance (the source is the parent) | part_drawing.edges | — |
+| part_drawing | composition via `edges` | part_drawing.edges | 0..1 |
+| part_drawing.surface_texture | inheritance (the source is the parent) | texture_requirement | — |
+| part_drawing.surface_texture | inheritance (the source is the parent) | part_drawing.surface_texture.2 | — |
+| part_drawing | composition via `surface_texture` | part_drawing.surface_texture | 0..1 |
+| part_drawing | composition via `notes` | part_drawing.notes | 0..* |
+| part_drawing.manufacturing | composition via `build_direction` | direction | 0..1 |
+| part_drawing | composition via `manufacturing` | part_drawing.manufacturing | 0..1 |
+| part_drawing | composition via `sheet` | sheet | 0..1 |
 
 ### 2. `part_drawing.coordinate_frame`
 
-![Diagram 2 of record/drawing](drawing/02-part-drawing-coordinate-frame.svg)
+![Diagram 2 of record/drawing, part_drawing.coordinate_frame: the table below lists its relationships](drawing/02-part-drawing-coordinate-frame.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| part_drawing.coordinate_frame.origin | inheritance (the source is the parent) | part_drawing.coordinate_frame.origin.1 | — |
+| part_drawing.coordinate_frame.origin | inheritance (the source is the parent) | part_drawing.coordinate_frame.origin.2 | — |
+| part_drawing.coordinate_frame | composition via `origin` | part_drawing.coordinate_frame.origin | 1 |
+| part_drawing.coordinate_frame | composition via `x` | direction | 0..1 |
+| part_drawing.coordinate_frame | composition via `y` | direction | 0..1 |
+| part_drawing.coordinate_frame | composition via `z` | direction | 0..1 |
 
 ### 3. `product_drawing`
 
-![Diagram 3 of record/drawing](drawing/03-product-drawing.svg)
+![Diagram 3 of record/drawing, product_drawing: the table below lists its relationships](drawing/03-product-drawing.svg)
+
+Relationships in diagram 3:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| tolerance_policy | inheritance (the source is the parent) | tolerance_policy.standard | — |
+| tolerance_policy | inheritance (the source is the parent) | tolerance_policy.limits | — |
+| product_drawing | composition via `default_sheet` | product_drawing.default_sheet | 1 |
+| product_drawing | composition via `tolerance_policies` | tolerance_policy | 1..* |
 
 ### 4. `feature_intent`
 
-![Diagram 4 of record/drawing](drawing/04-feature-intent.svg)
+![Diagram 4 of record/drawing, feature_intent: the table below lists its relationships](drawing/04-feature-intent.svg)
+
+Relationships in diagram 4:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| feature_intent | composition via `thread` | thread | 0..1 |
+| feature_intent | composition via `surface_texture` | texture_requirement | 0..1 |
+| feature_intent | composition via `edges` | edges | 0..1 |
+| edges | inheritance (the source is the parent) | part_drawing.edges | — |
+| part_drawing.surface_texture | inheritance (the source is the parent) | texture_requirement | — |
 
 ### 5. `dimension_request`
 
-![Diagram 5 of record/drawing](drawing/05-dimension-request.svg)
+![Diagram 5 of record/drawing, dimension_request: the table below lists its relationships](drawing/05-dimension-request.svg)
+
+Relationships in diagram 5:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| tolerance | inheritance (the source is the parent) | tolerance.1 | — |
+| tolerance | inheritance (the source is the parent) | tolerance.2 | — |
+| dimension_request | composition via `tolerance` | tolerance | 0..1 |
 
 ### 6. `procurement`
 
-![Diagram 6 of record/drawing](drawing/06-procurement.svg)
+![Diagram 6 of record/drawing, procurement: the table below lists its relationships](drawing/06-procurement.svg)
+
+Relationships in diagram 6:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| procurement | composition via `specification` | procurement.specification | 0..1 |
+| procurement | composition via `open` | procurement.open | 0..1 |
+| procurement | composition via `approved_sources` | procurement.approved_sources | 0..* |
 
 ### 7. `fit`
 
-![Diagram 7 of record/drawing](drawing/07-fit.svg)
+![Diagram 7 of record/drawing, fit: the table below lists its relationships](drawing/07-fit.svg)
+
+Relationships in diagram 7:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| fit | composition via `hole` | fit_endpoint | 0..1 |
+| fit | composition via `shaft` | fit_endpoint | 0..1 |
+| fit | composition via `axial_retainer` | axial_retainer | 0..1 |
 
 ## Types
 

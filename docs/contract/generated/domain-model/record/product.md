@@ -10,19 +10,112 @@ The product record, hw/product.yaml: the product's identity, units, regime and g
 
 ### 1. `product`
 
-![Diagram 1 of record/product](product/01-product.svg)
+![Diagram 1 of record/product, product: the table below lists its relationships](product/01-product.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| product | association via `general_tolerance` | fact_unknown (record/common) | 0..1 |
+| product | composition via `license` | product.license | 0..1 |
+| product | composition via `flow` | product.flow | 1 |
+| product | composition via `build_volume` | product.build_volume | 0..1 |
+| product | composition via `design` | product.design | 0..1 |
+| product.manufacturing | composition via `min_wall_mm` | product.manufacturing.min_wall_mm | 0..1 |
+| product | composition via `manufacturing` | product.manufacturing | 0..1 |
+| product | composition via `storage` | product.storage | 0..1 |
+| product | association via `drawing` | product_drawing (record/drawing) | 0..1 |
+| product | composition via `use_case` | use_case | 1 |
 
 ### 2. `use_case`
 
-![Diagram 2 of record/product](product/02-use-case.svg)
+![Diagram 2 of record/product, use_case: the table below lists its relationships](product/02-use-case.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| fact_known (record/common) | inheritance (the source is the parent) | use_case.service_class.known | — |
+| use_case.service_class | inheritance (the source is the parent) | use_case.service_class.known | — |
+| use_case.service_class | inheritance (the source is the parent) | fact_unknown (record/common) | — |
+| use_case | composition via `service_class` | use_case.service_class | 1 |
+| use_case | association via `purpose` | text_fact (record/common) | 1 |
+| use_case | association via `users` | text_fact (record/common) | 1 |
+| use_case.environment | association via `temperature` | quantity_fact (record/common) | 1 |
+| use_case.environment | association via `heat_sources` | text_fact (record/common) | 1 |
+| use_case.environment | association via `moisture` | text_fact (record/common) | 1 |
+| use_case.environment | association via `chemicals` | text_fact (record/common) | 1 |
+| use_case.environment | association via `uv` | text_fact (record/common) | 1 |
+| use_case.environment | association via `corrosion` | text_fact (record/common) | 1 |
+| use_case | composition via `environment` | use_case.environment | 1 |
+| use_case | association via `loads` | load (record/common) | 0..* |
+| use_case | association via `loads` | fact_open (record/common) | 0..1 |
+| use_case.motion | association via `speed` | quantity_fact (record/common) | 1 |
+| use_case.motion | association via `range` | quantity_fact (record/common) | 1 |
+| use_case.motion | association via `duty_cycle` | text_fact (record/common) | 1 |
+| use_case.motion | association via `friction` | text_fact (record/common) | 1 |
+| use_case.motion | association via `wear` | text_fact (record/common) | 1 |
+| use_case.motion | association via `service_life` | quantity_fact (record/common) | 1 |
+| use_case | composition via `motion` | use_case.motion | 1 |
+| use_case.accuracy | association via `tolerance` | text_fact (record/common) | 1 |
+| use_case.accuracy | association via `repeatability` | text_fact (record/common) | 1 |
+| use_case.accuracy | association via `surface_finish` | text_fact (record/common) | 1 |
+| use_case.accuracy | association via `dimensional_stability` | text_fact (record/common) | 1 |
+| use_case | composition via `accuracy` | use_case.accuracy | 1 |
+| use_case | composition via `consequences` | use_case.consequences | 1 |
+| use_case.logistics | association via `quantity` | quantity_fact (record/common) | 1 |
+| use_case.logistics | association via `budget` | money_fact (record/common) | 1 |
+| use_case.logistics | association via `lead_time` | quantity_fact (record/common) | 1 |
+| use_case.logistics | association via `maintenance` | text_fact (record/common) | 1 |
+| use_case.logistics | association via `repair` | text_fact (record/common) | 1 |
+| use_case | composition via `logistics` | use_case.logistics | 1 |
+| use_case.capability | association via `equipment` | fact_open (record/common) | 0..1 |
+| use_case.capability | association via `operator` | text_fact (record/common) | 1 |
+| use_case.capability | association via `outsourcing` | text_fact (record/common) | 1 |
+| use_case | composition via `capability` | use_case.capability | 1 |
+| use_case.release_scope | association via `purpose` | text_fact (record/common) | 1 |
+| use_case.release_scope | association via `operating_limits` | texts_fact (record/common) | 1 |
+| use_case.release_scope | association via `exclusions` | texts_fact (record/common) | 1 |
+| use_case | composition via `release_scope` | use_case.release_scope | 1 |
+| use_case.evidence_policy | inheritance (the source is the parent) | fact_unknown (record/common) | — |
+| use_case.evidence_policy.2.obligations | association via `subject` | subject (record/common) | 0..1 |
+| use_case.evidence_policy.2 | composition via `obligations` | use_case.evidence_policy.2.obligations | 1..* |
+| use_case.evidence_policy | inheritance (the source is the parent) | use_case.evidence_policy.2 | — |
+| use_case | composition via `evidence_policy` | use_case.evidence_policy | 1 |
 
 ### 3. `product.flow`
 
-![Diagram 3 of record/product](product/03-product-flow.svg)
+![Diagram 3 of record/product, product.flow: the table below lists its relationships](product/03-product-flow.svg)
+
+Relationships in diagram 3:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| product.flow | composition via `frozen` | frozen | 0..1 |
+| product.flow | composition via `change` | change | 0..1 |
+| profile | composition via `fea` | fea | 1 |
+| fdm_profile | composition via `pip_clearance_mm` | fdm_profile.pip_clearance_mm | 1 |
+| profile.processes | composition via `fdm` | fdm_profile | 0..1 |
+| profile | composition via `processes` | profile.processes | 1 |
+| product.flow | composition via `profile` | profile | 0..1 |
 
 ### 4. `use_case.consequences`
 
-![Diagram 4 of record/product](product/04-use-case-consequences.svg)
+![Diagram 4 of record/product, use_case.consequences: the table below lists its relationships](product/04-use-case-consequences.svg)
+
+Relationships in diagram 4:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| use_case.consequences | association via `failure` | text_fact (record/common) | 1 |
+| fact_known (record/common) | inheritance (the source is the parent) | use_case.consequences.severity.known | — |
+| use_case.consequences.severity | inheritance (the source is the parent) | use_case.consequences.severity.known | — |
+| use_case.consequences.severity | inheritance (the source is the parent) | fact_unknown (record/common) | — |
+| use_case.consequences | composition via `severity` | use_case.consequences.severity | 1 |
+| use_case.consequences | association via `forbidden_outcomes` | texts_fact (record/common) | 1 |
+| use_case.consequences | association via `standards` | texts_fact (record/common) | 1 |
+| use_case.consequences | association via `supervision` | text_fact (record/common) | 1 |
+| use_case.consequences | association via `approval_authority` | text_fact (record/common) | 1 |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/drawing`](drawing.md).
 

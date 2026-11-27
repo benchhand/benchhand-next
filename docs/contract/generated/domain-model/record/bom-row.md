@@ -10,7 +10,9 @@ One hw/bom.csv row. The column order is the property order: the required columns
 
 ### 1. `bom-row`
 
-![Diagram 1 of record/bom-row](bom-row/01-bom-row.svg)
+![Diagram 1 of record/bom-row, bom-row: the table below lists its relationships](bom-row/01-bom-row.svg)
+
+Diagram 1 has no relationships.
 
 ## Types
 

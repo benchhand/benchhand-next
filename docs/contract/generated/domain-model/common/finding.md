@@ -10,7 +10,9 @@ One problem a service reports, such as a record validation finding. code is stab
 
 ### 1. `finding`
 
-![Diagram 1 of common/finding](finding/01-finding.svg)
+![Diagram 1 of common/finding, finding: the table below lists its relationships](finding/01-finding.svg)
+
+Diagram 1 has no relationships.
 
 ## Types
 

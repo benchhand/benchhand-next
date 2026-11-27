@@ -10,7 +10,18 @@ Provisional: what one policy provider adds to the flow (ADR-0014): rule-list fil
 
 ### 1. `contribution`
 
-![Diagram 1 of policy/contribution](contribution/01-contribution.svg)
+![Diagram 1 of policy/contribution, contribution: the table below lists its relationships](contribution/01-contribution.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| PolicyRuleLists | association via `checks_by_iteration` | RuleListReference (flow/rules) | 0..1 |
+| PolicyRuleLists | association via `dispatch` | RuleListReference (flow/rules) | 0..1 |
+| PolicyRuleLists | association via `fidelity` | RuleListReference (flow/rules) | 0..1 |
+| PolicyRuleLists | association via `rigor` | RuleListReference (flow/rules) | 0..1 |
+| contribution | composition via `rules` | PolicyRuleLists | 0..1 |
+| contribution | composition via `gates` | PolicyGateRequirements | 0..* |
 
 Types of other contracts, drawn as stubs: [`flow/rules`](../flow/rules.md).
 

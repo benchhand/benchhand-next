@@ -10,7 +10,13 @@ Provisional: the manifest.json of a sealed directory, a built version (hw/versio
 
 ### 1. `bundle-manifest`
 
-![Diagram 1 of record/bundle-manifest](bundle-manifest/01-bundle-manifest.svg)
+![Diagram 1 of record/bundle-manifest, bundle-manifest: the table below lists its relationships](bundle-manifest/01-bundle-manifest.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| bundle-manifest | composition via `parts` | version_part | 0..* |
 
 ## Types
 

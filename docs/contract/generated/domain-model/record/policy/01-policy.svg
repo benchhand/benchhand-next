@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" viewBox="0 0 1167 492"><svg class="d2-4086833902 d2-svg" width="1167" height="492" viewBox="-29 -29 1167 492"><rect x="-29" y="-29" width="1167" height="492" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
+<?xml version="1.0" encoding="utf-8"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-d2-version="v0.9.0" preserveAspectRatio="xMinYMin meet" viewBox="0 0 1167 492" role="img" aria-labelledby="diagram-title diagram-desc"><title id="diagram-title">record/policy, diagram 1: policy</title><desc id="diagram-desc">Types: policy, gate. 1 relationships: policy to gate: composition via gates, 0..*.</desc><svg class="d2-4086833902 d2-svg" width="1167" height="492" viewBox="-29 -29 1167 492"><rect x="-29" y="-29" width="1167" height="492" rx="0" fill="#FFFFFF" class=" fill-N7" stroke-width="0" /><style type="text/css"><![CDATA[
 .d2-4086833902 .text {
 	font-family: "d2-4086833902-font-regular";
 }

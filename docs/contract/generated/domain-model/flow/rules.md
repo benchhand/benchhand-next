@@ -10,7 +10,18 @@ Provisional: one rule-list file, flow/<name>.celpolicy, in the restricted cel-po
 
 ### 1. `rules`
 
-![Diagram 1 of flow/rules](rules/01-rules.svg)
+![Diagram 1 of flow/rules, rules: the table below lists its relationships](rules/01-rules.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| FlowRuleLists | composition via `checks_by_iteration` | RuleListReference | 1 |
+| FlowRuleLists | composition via `dispatch` | RuleListReference | 1 |
+| FlowRuleLists | composition via `fidelity` | RuleListReference | 1 |
+| FlowRuleLists | composition via `rigor` | RuleListReference | 1 |
+| Rule | composition via `match` | RuleMatch | 1..* |
+| rules | composition via `rule` | Rule | 1 |
 
 ## Types
 

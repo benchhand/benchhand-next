@@ -10,7 +10,16 @@ Provisional: the result of every benchhand MCP tool call, carried as structuredC
 
 ### 1. `envelope`
 
-![Diagram 1 of envelope/envelope](envelope/01-envelope.svg)
+![Diagram 1 of envelope/envelope, envelope: the table below lists its relationships](envelope/01-envelope.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| envelope | association via `findings` | finding (common/finding) | 0..* |
+| envelope | composition via `next_actions` | EnvelopeNextAction | 0..* |
+| envelope | association via `artifacts` | Artifact (provider/protocol) | 0..* |
+| envelope | association via `job` | JobHandle (jobs/job) | 0..1 |
 
 Types of other contracts, drawn as stubs: [`common/finding`](../common/finding.md), [`jobs/job`](../jobs/job.md), [`provider/protocol`](../provider/protocol.md).
 

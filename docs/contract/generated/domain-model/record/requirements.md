@@ -10,7 +10,28 @@ Requirements, preferences, assumptions and open questions, kept apart: a mandato
 
 ### 1. `requirements`
 
-![Diagram 1 of record/requirements](requirements/01-requirements.svg)
+![Diagram 1 of record/requirements, requirements: the table below lists its relationships](requirements/01-requirements.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| requirements.preferences | association via `source` | source (record/common) | 1 |
+| requirements.preferences | association via `criterion` | criterion (record/common) | 0..1 |
+| requirements.preferences | association via `subjects` | subject (record/common) | 0..* |
+| requirements | composition via `preferences` | requirements.preferences | 0..* |
+| requirements.assumptions | association via `bounds` | quantity (record/common) | 0..1 |
+| requirements | composition via `assumptions` | requirements.assumptions | 0..* |
+| requirements.open_questions | association via `subjects` | subject (record/common) | 0..* |
+| requirements.open_questions.resolution | association via `source` | source (record/common) | 0..1 |
+| requirements.open_questions | composition via `resolution` | requirements.open_questions.resolution | 0..1 |
+| requirements | composition via `open_questions` | requirements.open_questions | 0..* |
+| requirements.requirements | composition via `verification` | requirements.requirements.verification | 1 |
+| requirements.requirements | association via `subjects` | subject (record/common) | 0..* |
+| requirements.requirements | association via `acceptance` | criterion (record/common) | 0..* |
+| requirements.requirements | composition via `risk` | requirements.requirements.risk | 0..1 |
+| requirements.requirements | composition via `visibility` | requirements.requirements.visibility | 0..* |
+| requirements | composition via `requirements` | requirements.requirements | 1..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md).
 

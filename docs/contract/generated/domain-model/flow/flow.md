@@ -10,11 +10,44 @@ Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph
 
 ### 1. `flow`
 
-![Diagram 1 of flow/flow](flow/01-flow.svg)
+![Diagram 1 of flow/flow, flow: the table below lists its relationships](flow/01-flow.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| FlowStage | composition via `guides` | FlowGuides | 1 |
+| FlowStages | composition via `ground` | FlowStage | 1 |
+| FlowStages | composition via `intent` | FlowStage | 1 |
+| FlowStages | composition via `specify` | FlowStage | 1 |
+| FlowStages | composition via `concept` | FlowStage | 1 |
+| FlowStages | composition via `layout` | FlowStage | 1 |
+| FlowStages | composition via `parts` | FlowStage | 1 |
+| FlowStages | composition via `detail` | FlowStage | 1 |
+| FlowStages | composition via `bom` | FlowStage | 1 |
+| FlowStages | composition via `analysis` | FlowStage | 1 |
+| FlowStages | composition via `critique` | FlowStage | 1 |
+| FlowStages | composition via `reconcile` | FlowStage | 1 |
+| FlowStages | composition via `design_freeze` | FlowStage | 1 |
+| FlowStages | composition via `release` | FlowStage | 1 |
+| flow | composition via `stages` | FlowStages | 1 |
+| FlowSingleHumanGate | composition via `requires` | FlowSingleHumanGate.requires | 1 |
+| FlowGate | inheritance (the source is the parent) | FlowSingleHumanGate | — |
+| FlowStagedGate | composition via `requires` | FlowStagedGate.requires | 1 |
+| FlowGate | inheritance (the source is the parent) | FlowStagedGate | — |
+| flow | composition via `gates` | FlowGate | 1..* |
+| flow | composition via `edges` | FlowEdge | 1..* |
+| flow | association via `rules` | FlowRuleLists (flow/rules) | 1 |
 
 ### 2. `ApprovalScope`
 
-![Diagram 2 of flow/flow](flow/02-approvalscope.svg)
+![Diagram 2 of flow/flow, ApprovalScope: the table below lists its relationships](flow/02-approvalscope.svg)
+
+Relationships in diagram 2:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| ApprovalScope | composition via `items` | ApprovedItem | 1..* |
 
 Types of other contracts, drawn as stubs: [`flow/rules`](rules.md).
 

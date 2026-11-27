@@ -10,7 +10,16 @@ One producer's required-check packet for one version: the obligations it was ask
 
 ### 1. `manufacturing-check-result`
 
-![Diagram 1 of record/manufacturing-check-result](manufacturing-check-result/01-manufacturing-check-result.svg)
+![Diagram 1 of record/manufacturing-check-result, manufacturing-check-result: the table below lists its relationships](manufacturing-check-result/01-manufacturing-check-result.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| manufacturing-check-result | association via `scope` | subject (record/common) | 1..* |
+| manufacturing-check-result | association via `expected` | obligation (record/common) | 0..* |
+| manufacturing-check-result | association via `outcomes` | obligation_outcome (record/common) | 0..* |
+| manufacturing-check-result | association via `findings` | finding (record/common) | 0..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md).
 

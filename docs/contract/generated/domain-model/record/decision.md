@@ -10,7 +10,15 @@ The YAML front matter between the two --- lines at the top of a decision record;
 
 ### 1. `decision`
 
-![Diagram 1 of record/decision](decision/01-decision.svg)
+![Diagram 1 of record/decision, decision: the table below lists its relationships](decision/01-decision.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| gate_decision | composition via `approval` | approval | 0..1 |
+| decision | inheritance (the source is the parent) | gate_decision | — |
+| decision | inheritance (the source is the parent) | design_decision | — |
 
 ## Types
 

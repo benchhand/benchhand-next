@@ -10,7 +10,15 @@ The lead's dispositions of immutable producer findings. Each names the finding i
 
 ### 1. `manufacturing-findings`
 
-![Diagram 1 of record/manufacturing-findings](manufacturing-findings/01-manufacturing-findings.svg)
+![Diagram 1 of record/manufacturing-findings, manufacturing-findings: the table below lists its relationships](manufacturing-findings/01-manufacturing-findings.svg)
+
+Relationships in diagram 1:
+
+| Source | Relation | Target | Cardinality |
+|---|---|---|---|
+| disposition | composition via `producer` | disposition.producer | 1 |
+| disposition | association via `waiver` | waiver (record/common) | 0..1 |
+| manufacturing-findings | composition via `dispositions` | disposition | 0..* |
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md).
 
