@@ -20,7 +20,7 @@ Types of other contracts, drawn as stubs: [`common/finding`](../common/finding.m
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `status` | `enum ok\|refused\|pending\|error` | yes |  |
+| `status` | `EnvelopeStatus = ok\|refused\|pending\|error` | yes |  |
 | `verdict` | `enum pass\|fail\|unknown` | no | A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result |
 | `reason` | `string` | no | Why the call was refused, for a refused result |
 | `payload` | `any` | no | The tool's own result. Each tool's output schema narrows it |
@@ -40,3 +40,11 @@ A tool call the agent can make next. arguments holds the arguments the server al
 | `arguments` | `object` | no |  |
 | `reason` | `string` | yes |  |
 | `needs_user` | `boolean` | yes |  |
+
+## Enums
+
+Named enum definitions, and the enums of fields that have more than 6 values, which the field's type does not spell out. Enums have no colour in the diagrams.
+
+| Enum | Values | Description |
+|---|---|---|
+| `EnvelopeStatus` | `ok`, `refused`, `pending`, `error` |  |

@@ -263,7 +263,7 @@ Type: object
 | Property | Type | Required | Description |
 |---|---|---|---|
 | `gate` | [`gate_id`](../record/common.md#gate_id) | yes |  |
-| `status` | one of `"approved"`, `"void"` | yes |  |
+| `status` | [`GateDecisionStatus`](#gatedecisionstatus) | yes |  |
 | `version` | [`version`](../record/common.md#version) | no | The built version the decision is on |
 | `channel` | [`channel`](../record/decision.md#channel) | yes | `not: {"const": "form"}` |
 | `by` | [`text`](../record/common.md#text) | no |  |
@@ -409,6 +409,14 @@ Type: object
 
 No other properties are allowed.
 
+### `GateDecisionStatus`
+
+Type: one of `"approved"`, `"void"`
+
+### `ApprovedItemStatus`
+
+Type: one of `"approved"`, `"changed_since_approval"`
+
 ### `ApprovedItemKind`
 
 Type: one of `"concept"`, `"envelope"`, `"interface"`, `"joint"`, `"part"`
@@ -424,7 +432,7 @@ Type: object
 | `kind` | [`ApprovedItemKind`](#approveditemkind) | yes |  |
 | `id` | string | yes | `minLength: 1` |
 | `decision` | [`decision`](../record/common.md#decision) | yes | The decision that approved it |
-| `status` | one of `"approved"`, `"changed_since_approval"` | yes |  |
+| `status` | [`ApprovedItemStatus`](#approveditemstatus) | yes |  |
 | `fingerprint` | [`sha256`](../record/common.md#sha256) | yes | The item's fingerprint now |
 
 No other properties are allowed.

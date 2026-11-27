@@ -40,7 +40,7 @@ namespace Envelope.Envelope;
   ]
 )
 model Envelope {
-  status: "ok" | "refused" | "pending" | "error";
+  status: EnvelopeStatus;
 
   /** A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result */
   verdict?: "pass" | "fail" | "unknown";
@@ -66,6 +66,13 @@ model Envelope {
 
   /** The job that carries a long call's work, for a pending result */
   job?: Jobs.Job.JobHandle;
+}
+
+union EnvelopeStatus {
+  "ok",
+  "refused",
+  "pending",
+  "error",
 }
 
 /** A tool call the agent can make next. arguments holds the arguments the server already knows; the agent supplies the rest. needs_user is true when the call must wait for the user, such as recording a human-gate decision */

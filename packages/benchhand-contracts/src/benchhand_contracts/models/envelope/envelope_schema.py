@@ -12,13 +12,6 @@ from ..provider import protocol_schema
 from ..jobs import job_schema
 
 
-class Status(Enum):
-    ok = "ok"
-    refused = "refused"
-    pending = "pending"
-    error = "error"
-
-
 class Verdict(Enum):
     """
     A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result
@@ -27,6 +20,13 @@ class Verdict(Enum):
     pass_ = "pass"
     fail = "fail"
     unknown = "unknown"
+
+
+class EnvelopeStatus(Enum):
+    ok = "ok"
+    refused = "refused"
+    pending = "pending"
+    error = "error"
 
 
 class EnvelopeNextAction(ContractModel):
@@ -56,7 +56,7 @@ class BenchhandMcpToolResultEnvelopeProvisional(ContractModel):
         extra="forbid",
         populate_by_name=True,
     )
-    status: Status
+    status: EnvelopeStatus
     verdict: Verdict | None = None
     """
     A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result

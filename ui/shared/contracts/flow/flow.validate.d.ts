@@ -15,5 +15,7 @@ export declare const validateFlowEdge: ValidateFunction;
 export declare const validateGateDecisionRequest: ValidateFunction;
 export declare const validateApprovalScope: ValidateFunction;
 export declare const validateApprovedItem: ValidateFunction;
+export declare const validateGateDecisionStatus: ValidateFunction;
+export declare const validateApprovedItemStatus: ValidateFunction;
 export declare const validateApprovedItemKind: ValidateFunction;
 export declare const validateApprovedItemState: ValidateFunction;

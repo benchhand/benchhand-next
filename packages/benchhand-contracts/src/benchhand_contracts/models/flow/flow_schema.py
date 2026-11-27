@@ -107,9 +107,14 @@ class FlowEdge(ContractModel):
     """
 
 
-class Status(Enum):
+class GateDecisionStatus(Enum):
     approved = "approved"
     void = "void"
+
+
+class ApprovedItemStatus(Enum):
+    approved = "approved"
+    changed_since_approval = "changed_since_approval"
 
 
 class ApprovedItemKind(Enum):
@@ -118,11 +123,6 @@ class ApprovedItemKind(Enum):
     interface = "interface"
     joint = "joint"
     part = "part"
-
-
-class Status4(Enum):
-    approved = "approved"
-    changed_since_approval = "changed_since_approval"
 
 
 class ApprovedItemState(ContractModel):
@@ -140,7 +140,7 @@ class ApprovedItemState(ContractModel):
     """
     The decision that approved it
     """
-    status: Status4
+    status: ApprovedItemStatus
     fingerprint: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
     """
     The item's fingerprint now
@@ -188,7 +188,7 @@ class GateDecisionRequest(ContractModel):
     """
     A flow gate id; flow.yaml names the gates
     """
-    status: Status
+    status: GateDecisionStatus
     version: Annotated[str | None, Field(pattern="^v[1-9][0-9]*$")] = None
     """
     The built version the decision is on

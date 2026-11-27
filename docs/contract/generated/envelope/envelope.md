@@ -13,7 +13,7 @@ Type: object
 
 | Property | Type | Required | Description |
 |---|---|---|---|
-| `status` | one of `"ok"`, `"refused"`, `"pending"`, `"error"` | yes |  |
+| `status` | [`EnvelopeStatus`](#envelopestatus) | yes |  |
 | `verdict` | one of `"pass"`, `"fail"`, `"unknown"` | no | A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result |
 | `reason` | string | no | Why the call was refused, for a refused result `minLength: 1` |
 | `payload` | any | no | The tool's own result. Each tool's output schema narrows it |
@@ -233,6 +233,10 @@ Example:
 ```
 
 ## Definitions
+
+### `EnvelopeStatus`
+
+Type: one of `"ok"`, `"refused"`, `"pending"`, `"error"`
 
 ### `EnvelopeNextAction`
 

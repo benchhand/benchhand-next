@@ -392,10 +392,7 @@
           "$ref": "../record/common.schema.json#/$defs/gate_id"
         },
         "status": {
-          "enum": [
-            "approved",
-            "void"
-          ]
+          "$ref": "#/$defs/GateDecisionStatus"
         },
         "version": {
           "description": "The built version the decision is on",
@@ -550,6 +547,18 @@
         }
       }
     },
+    "GateDecisionStatus": {
+      "enum": [
+        "approved",
+        "void"
+      ]
+    },
+    "ApprovedItemStatus": {
+      "enum": [
+        "approved",
+        "changed_since_approval"
+      ]
+    },
     "ApprovedItemKind": {
       "enum": [
         "concept",
@@ -584,10 +593,7 @@
           "$ref": "../record/common.schema.json#/$defs/decision"
         },
         "status": {
-          "enum": [
-            "approved",
-            "changed_since_approval"
-          ]
+          "$ref": "#/$defs/ApprovedItemStatus"
         },
         "fingerprint": {
           "description": "The item's fingerprint now",

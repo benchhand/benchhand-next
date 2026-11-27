@@ -135,7 +135,7 @@ model FlowEdge {
 )
 model GateDecisionRequest {
   gate: Records.Common.gate_id;
-  status: "approved" | "void";
+  status: GateDecisionStatus;
 
   /** The built version the decision is on */
   version?: Records.Common.version;
@@ -172,6 +172,16 @@ model ApprovedItem {
   fingerprint: Records.Common.sha256;
 }
 
+union GateDecisionStatus {
+  "approved",
+  "void",
+}
+
+union ApprovedItemStatus {
+  "approved",
+  "changed_since_approval",
+}
+
 union ApprovedItemKind {
   "concept",
   "envelope",
@@ -191,7 +201,7 @@ model ApprovedItemState {
   /** The decision that approved it */
   decision: Records.Common.decision;
 
-  status: "approved" | "changed_since_approval";
+  status: ApprovedItemStatus;
 
   /** The item's fingerprint now */
   fingerprint: Records.Common.sha256;

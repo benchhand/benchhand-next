@@ -14,12 +14,7 @@
   ],
   "properties": {
     "status": {
-      "enum": [
-        "ok",
-        "refused",
-        "pending",
-        "error"
-      ]
+      "$ref": "#/$defs/EnvelopeStatus"
     },
     "verdict": {
       "description": "A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result",
@@ -239,6 +234,14 @@
     }
   ],
   "$defs": {
+    "EnvelopeStatus": {
+      "enum": [
+        "ok",
+        "refused",
+        "pending",
+        "error"
+      ]
+    },
     "EnvelopeNextAction": {
       "description": "A tool call the agent can make next. arguments holds the arguments the server already knows; the agent supplies the rest. needs_user is true when the call must wait for the user, such as recording a human-gate decision",
       "type": "object",

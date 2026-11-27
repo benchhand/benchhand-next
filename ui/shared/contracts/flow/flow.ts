@@ -22,7 +22,9 @@ export type CelExpressions = [string, ...string[]];
  * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
 export type CelExpressions1 = [string, ...string[]];
+export type GateDecisionStatus = "approved" | "void";
 export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | "part";
+export type ApprovedItemStatus = "approved" | "changed_since_approval";
 
 /**
  * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
@@ -212,7 +214,7 @@ export interface GateDecisionRequest {
    * A flow gate id; flow.yaml names the gates
    */
   gate: string;
-  status: "approved" | "void";
+  status: GateDecisionStatus;
   /**
    * The built version the decision is on
    */
@@ -258,7 +260,7 @@ export interface ApprovedItemState {
    * A decision record id; hw/decisions/DR-###-<slug>.md holds it
    */
   decision: string;
-  status: "approved" | "changed_since_approval";
+  status: ApprovedItemStatus;
   /**
    * The item's fingerprint now
    */

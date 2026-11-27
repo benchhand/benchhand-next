@@ -8,7 +8,7 @@ direction: right
     class: document
     label: "envelope"
     shape: sql_table
-    "status": "enum ok|refused|pending|error" { constraint: "req" }
+    "status": "EnvelopeStatus = ok|refused|pending|error" { constraint: "req" }
     "verdict": "enum pass|fail|unknown"
     "reason": "string"
     "payload": "any"

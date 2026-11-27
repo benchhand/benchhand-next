@@ -24,7 +24,7 @@ direction: right
   label: "GateDecisionRequest"
   shape: sql_table
   "gate": "gate_id" { constraint: "req" }
-  "status": "enum approved|void" { constraint: "req" }
+  "status": "GateDecisionStatus = approved|void" { constraint: "req" }
   "version": "version"
   "channel": "channel = app|form|chat|auto" { constraint: "req" }
   "by": "text"
@@ -38,7 +38,7 @@ direction: right
   "kind": "ApprovedItemKind = concept|envelope|interface|joint|part" { constraint: "req" }
   "id": "string" { constraint: "req" }
   "decision": "decision" { constraint: "req" }
-  "status": "enum approved|changed_since_approval" { constraint: "req" }
+  "status": "ApprovedItemStatus = approved|changed_since_approval" { constraint: "req" }
   "fingerprint": "sha256" { constraint: "req" }
 }
 

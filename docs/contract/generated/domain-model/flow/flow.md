@@ -171,7 +171,7 @@ What the flow engine takes to record a human-gate decision, from the gate card (
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `gate` | `gate_id` | yes |  |
-| `status` | `enum approved\|void` | yes |  |
+| `status` | `GateDecisionStatus = approved\|void` | yes |  |
 | `version` | `version` | no | The built version the decision is on |
 | `channel` | `channel = app\|form\|chat\|auto` | yes |  |
 | `by` | `text` | no |  |
@@ -189,7 +189,7 @@ Provisional (ADR-0019): an approved item now. approved: its fingerprint is the o
 | `kind` | `ApprovedItemKind = concept\|envelope\|interface\|joint\|part` | yes |  |
 | `id` | `string` | yes |  |
 | `decision` | `decision` | yes | The decision that approved it |
-| `status` | `enum approved\|changed_since_approval` | yes |  |
+| `status` | `ApprovedItemStatus = approved\|changed_since_approval` | yes |  |
 | `fingerprint` | `sha256` | yes | The item's fingerprint now |
 
 ## Enums
@@ -198,4 +198,6 @@ Named enum definitions, and the enums of fields that have more than 6 values, wh
 
 | Enum | Values | Description |
 |---|---|---|
+| `GateDecisionStatus` | `approved`, `void` |  |
+| `ApprovedItemStatus` | `approved`, `changed_since_approval` |  |
 | `ApprovedItemKind` | `concept`, `envelope`, `interface`, `joint`, `part` |  |

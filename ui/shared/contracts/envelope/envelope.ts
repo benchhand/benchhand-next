@@ -5,9 +5,10 @@
  * Provisional: the result of every benchhand MCP tool call, carried as structuredContent. status is the call outcome: ok (the call did what was asked), refused (a guided refusal, such as an out-of-order transition, with a reason and at least one next action), pending (the work runs as a job, and job is its handle) or error (the tool failed, with at least one finding). verdict is the outcome of a check and is set only on an ok result of a check-type tool. Each tool's own result is the payload. The flow engine fills next_actions, so the agent rarely needs flow.guide again
  */
 export type BenchhandMCPToolResultEnvelopeProvisional = BenchhandMCPToolResultEnvelopeProvisional1;
+export type EnvelopeStatus = "ok" | "refused" | "pending" | "error";
 
 export interface BenchhandMCPToolResultEnvelopeProvisional1 {
-  status: "ok" | "refused" | "pending" | "error";
+  status: EnvelopeStatus;
   /**
    * A check's outcome: pass, fail, or unknown when coverage is missing. Never on a refused, pending or error result
    */
