@@ -1,5 +1,6 @@
-# Git hooks, run by prek (pinned in mise.toml). `just hooks-install` installs them; CI runs every one on every
-# file (`just hooks`). Each hook that checks the project calls the `just` recipe CI calls, so the two can't
+# Git hooks, run by prek (pinned in mise.toml). `just hooks-install` installs them. CI runs them on every file
+# (`just hooks`) except `reuse`, `gitleaks` and `tests`, which CI covers another way (see `just hooks`). Each
+# hook that checks the project calls the `just` recipe CI calls, so the two can't
 # diverge; the generic ones below are prek's built-in versions of pre-commit-hooks.
 #
 # Pre-commit stays fast (no tests, no type check, no contract regeneration). Pre-push runs pyright and the
