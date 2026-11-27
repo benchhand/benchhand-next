@@ -17,9 +17,12 @@ tracking down every contributor. Your contribution stays available under the pro
 ## Licence headers
 
 Each source file carries an SPDX header, and files that cannot carry a comment are covered by
-[REUSE.toml](REUSE.toml). `reuse lint` checks both, in `just check`, in the pre-commit hook and in CI. Add a
-header to a new file with:
+[REUSE.toml](REUSE.toml). `reuse lint` checks both, in `just check`, in the pre-commit hook and in CI. The
+CLA grants the maintainer a licence and leaves the copyright with you, so name the rights holder of the new file,
+yourself or your employer, and the year you wrote it. Add a header to a new file with:
 
 ```sh
-reuse annotate --license MPL-2.0 --copyright "Sjors Robroek" --year 2026 <file>
+reuse annotate --license MPL-2.0 --copyright "<rights holder>" --year <year> <file>
 ```
+
+The maintainer's own files use `--copyright "Sjors Robroek"`.
