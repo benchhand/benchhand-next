@@ -38,7 +38,7 @@ The file doesn't say which list it is. `flow.yaml` names one file of each kind u
 
 A check that runs only under its own condition, such as "only when stale" or "once a joint exists", is concatenated into the output as `cond ? ["id"] : []`. A dispatch handler id is the obligation family that it judges, such as `process.fdm.orientation`. The dispatch list sees only the obligations that the process-check producer owns. The producer selects them, and the list has no rule for ownership.
 
-Three values are reserved as no-match values for [contributed lists](policy.md#provider-contributions): `[]`, `"unknown"` and `"none"`. A flow's own list gives `[]` or `"unknown"` only from its last item, and never gives `"none"`. The loader refuses a flow fidelity list that gives `"none"`.
+Three values are reserved as no-match values for [contributed lists](policy.md#provider-contributions): `[]`, `"unknown"` and `"none"`. A flow's own list gives `[]` or `"unknown"` only from its last item, and never gives `"none"`. The flow loader refuses a fidelity list in `flow.yaml` that gives `"none"`.
 
 ## Gate decisions
 
@@ -63,7 +63,7 @@ The decision contract doesn't refer to `ApprovalScope` yet. Phase 2 adds the ref
 
 `tests/fixtures/flow/prototype-412b5d9/` writes the prototype's flow at the reference commit in these shapes:
 
-- `flow.yaml`: every stage and its guides, the four single human gates, the three-step gates at L1 to L4, and the VOID cascade scope. Every human gate needs the user's explicit approval. At L1 to L4 the human gate also needs the sweep to leave no unproved between-sample intervals, or a decision on the same version that accepts them, because the full sweep runs at each of those stages.
+- `flow.yaml`: every stage and its guides, the four single human gates, the three-step gates at L1 to L4, and the VOID cascade scope. Every human gate needs the user's explicit approval. The full sweep runs at each of L1 to L4. Each of those human gates therefore also needs the sweep to leave no unproved between-sample intervals, or a decision on the same version that accepts them.
 - one `*.rules.yaml` file per rule list, with the checks-by-iteration table among them
 
 The fixture holds the prototype's rules only. benchhand's `policy.mode == "auto"`, ADR-0019's `reapproval_scope` and the veto on an item that is `changed_since_approval` came after the prototype, so the schema's example shows them instead.
