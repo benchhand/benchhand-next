@@ -4,7 +4,8 @@
 
 name: trivy
 # Misconfiguration in Dockerfiles, Kubernetes manifests, Terraform and the like, uploaded to code scanning.
-# Trivy's vulnerability and secret scanners are off on purpose: osv-scanner and gitleaks (security.yml)
+# Trivy's vulnerability and secret scanners are off on purpose: osv-scanner and gitleaks (security.yml and
+# secrets.yml)
 # already cover those, and running both would report each finding twice. docs/tooling.md has the comparison.
 # The repo holds no such file yet; the scan starts finding things when the Phase 7 image lands.
 on:
