@@ -8,27 +8,27 @@ version = 1
 # Data, documents, lockfiles and binaries, by extension.
 [[annotations]]
 path = [
-    "**/*.json",
-    "**/*.jsonl",
-    "**/*.yaml",
-    "**/*.yml",
-    "**/*.toml",
-    "**/*.csv",
-    "**/*.txt",
-    "**/*.md",
-    "**/*.lock",
-    "**/*.sum",
-    "**/*.mod",
-    "**/*.svg",
-    "**/*.d2",
-    "**/*.proto",
-    "**/*.binpb",
-    "**/*.celpolicy",
-    "**/.gitignore",
-    "**/.python-version",
-    "NOTICE",
-    "ui/**/pnpm-lock.yaml",
-    "contracts/pnpm-lock.yaml",
+  "**/*.json",
+  "**/*.jsonl",
+  "**/*.yaml",
+  "**/*.yml",
+  "**/*.toml",
+  "**/*.csv",
+  "**/*.txt",
+  "**/*.md",
+  "**/*.lock",
+  "**/*.sum",
+  "**/*.mod",
+  "**/*.svg",
+  "**/*.d2",
+  "**/*.proto",
+  "**/*.binpb",
+  "**/*.celpolicy",
+  "**/.gitignore",
+  "**/.python-version",
+  "NOTICE",
+  "ui/**/pnpm-lock.yaml",
+  "contracts/pnpm-lock.yaml",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Sjors Robroek"
@@ -39,12 +39,12 @@ SPDX-License-Identifier = "MPL-2.0"
 # emit in Python, TypeScript, JavaScript and Markdown. A hand-written file added here gets no lint error.
 [[annotations]]
 path = [
-    "packages/benchhand-contracts/src/benchhand_contracts/models/**",
-    "packages/benchhand-contracts/src/benchhand_contracts/schemas/**",
-    "packages/benchhand-contracts/src/benchhand_contracts/examples/**",
-    "ui/shared/contracts/**",
-    "docs/contract/generated/**",
-    "research/cel-neutral/generated/**",
+  "packages/benchhand-contracts/src/benchhand_contracts/models/**",
+  "packages/benchhand-contracts/src/benchhand_contracts/schemas/**",
+  "packages/benchhand-contracts/src/benchhand_contracts/examples/**",
+  "ui/shared/contracts/**",
+  "docs/contract/generated/**",
+  "research/cel-neutral/generated/**",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Sjors Robroek"
@@ -61,8 +61,8 @@ SPDX-License-Identifier = "MPL-2.0"
 # Third-party files keep their own copyright and licence (NOTICE). Later tables win.
 [[annotations]]
 path = [
-    "reference/skills/cad-model/tests/fixtures/3mf-schema/3mf-core.xsd",
-    "reference/skills/cad-model/tests/fixtures/3mf-schema/LICENSE.spec_core",
+  "reference/skills/cad-model/tests/fixtures/3mf-schema/3mf-core.xsd",
+  "reference/skills/cad-model/tests/fixtures/3mf-schema/LICENSE.spec_core",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Copyright (c) 2018, 3MF Consortium"
@@ -70,9 +70,9 @@ SPDX-License-Identifier = "BSD-2-Clause"
 
 [[annotations]]
 path = [
-    "reference/skills/cad-model/tests/fixtures/3mf-schema/opc-contentTypes.xsd",
-    "reference/skills/cad-model/tests/fixtures/3mf-schema/opc-relationships.xsd",
-    "reference/skills/cad-model/tests/fixtures/3mf-schema/LICENSE.test_suites",
+  "reference/skills/cad-model/tests/fixtures/3mf-schema/opc-contentTypes.xsd",
+  "reference/skills/cad-model/tests/fixtures/3mf-schema/opc-relationships.xsd",
+  "reference/skills/cad-model/tests/fixtures/3mf-schema/LICENSE.test_suites",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Copyright (c) 2021, 3MF Consortium"
@@ -89,13 +89,7 @@ SPDX-License-Identifier = "LicenseRef-W3C-Document-2023"
 # cel-spec's simple conformance tests in protobuf JSON, exported from @bufbuild/cel-spec 0.6.2 by
 # research/cel-neutral/ts/export_suite.ts. The summary of what the export dropped is derived from it.
 [[annotations]]
-path = [
-    "research/cel-neutral/conformance/suite.json",
-    "research/cel-neutral/conformance/suite-summary.txt",
-]
+path = ["research/cel-neutral/conformance/suite.json", "research/cel-neutral/conformance/suite-summary.txt"]
 precedence = "override"
-SPDX-FileCopyrightText = [
-    "Google LLC",
-    "2024-2026 Buf Technologies, Inc.",
-]
+SPDX-FileCopyrightText = ["Google LLC", "2024-2026 Buf Technologies, Inc."]
 SPDX-License-Identifier = "Apache-2.0"

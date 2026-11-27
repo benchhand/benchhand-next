@@ -26,7 +26,7 @@ repos:
       # The fixers rewrite a file and fail once. Files written by a tool, or kept verbatim, are left out: a
       # fixed copy would differ from a fresh run and fail `just contracts-drift`, or stop matching its source.
       - id: trailing-whitespace
-        exclude: &verbatim ^(reference/|research/|ui/shared/contracts/|packages/benchhand-contracts/src/benchhand_contracts/(schemas|models|examples)/|docs/contract/generated/|tools/probe/runs/|tools/equiv/results/|\.pi/|packages/benchhand-core/tests/record/evidence/lamp_arm_[a-z_]*\.412b5d9\.json$|uv\.lock$|mise\.lock$|pnpm-lock\.yaml$)
+        exclude: &verbatim ^(LICENSE$|LICENSES/|reference/|research/|ui/shared/contracts/|packages/benchhand-contracts/src/benchhand_contracts/(schemas|models|examples)/|docs/contract/generated/|tools/probe/runs/|tools/equiv/results/|\.pi/|packages/benchhand-core/tests/record/evidence/lamp_arm_[a-z_]*\.412b5d9\.json$|uv\.lock$|mise\.lock$|pnpm-lock\.yaml$)
       - id: end-of-file-fixer
         exclude: *verbatim
 
