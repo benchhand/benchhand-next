@@ -1,6 +1,6 @@
 # benchhand provider protocol v1
 
-Status: contract for benchhand 1.0. Decisions: [ADR-0013](../adr/0013-provider-protocol.md), [ADR-0017](../adr/0017-contracts.md). Schema: [`contracts/provider/protocol.schema.json`](../../contracts/provider/protocol.schema.json). The schema is the source of truth for every message shape. The rules below cover what a schema can't express: ordering, timing and process handling.
+Status: contract for benchhand 1.0. Decisions: [ADR-0013](../adr/0013-provider-protocol.md), [ADR-0017](../adr/0017-contracts.md). Schema: [`protocol.schema.json`](../../packages/benchhand-contracts/src/benchhand_contracts/schemas/provider/protocol.schema.json), generated from [`contracts/provider/protocol.tsp`](../../contracts/provider/protocol.tsp). The schema is the source of truth for every message shape. The rules below cover what a schema can't express: ordering, timing and process handling.
 
 This protocol is modelled on the slopvac 3.0 plugin protocol (`slopvac/docs/contract/plugin-protocol.md`). Where this document doesn't say otherwise, slopvac's framing rules apply. It adds progress and artifact messages for long CAD jobs and resident providers, and it drops slopvac's trust step, because benchhand isn't a security boundary ([ADR-0003](../adr/0003-gates-guide.md)).
 

@@ -7,13 +7,6 @@ import starlightLinksValidator from "starlight-links-validator";
 import { base, repoUrl, site } from "./site-url.mjs";
 import remarkBaseLinks from "./src/remark-base-links.mjs";
 
-// Links that are broken in the synced sources and must be fixed there, each excluded exactly.
-const KNOWN_BROKEN_LINKS = new Set([
-  // tools/gen links manufacturing-selection's `transparency` property to a part.md heading that
-  // doesn't exist: part.md declares transparency as an inline enum, not a definition.
-  `${base}reference/contracts/record/part/#transparency`,
-]);
-
 export default defineConfig({
   site,
   base,
@@ -29,9 +22,7 @@ export default defineConfig({
       editLink: { baseUrl: `${repoUrl}/edit/main/site/` },
       // Adds the "Planned" aside to pages that set `phase` (src/content.config.ts).
       components: { MarkdownContent: "./src/components/MarkdownContent.astro" },
-      plugins: [
-        starlightLinksValidator({ exclude: ({ link }) => KNOWN_BROKEN_LINKS.has(link) }),
-      ],
+      plugins: [starlightLinksValidator()],
       sidebar: [
         { label: "Home", link: "/" },
         { label: "Getting started", items: [{ autogenerate: { directory: "getting-started" } }] },

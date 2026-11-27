@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 from benchhand_contracts import ContractViolation, validate
 from benchhand_contracts.validation import ContractValidator
-from contracts_gen.docs import write_docs
+from contracts_gen.docs import type_expr, write_docs
 from contracts_gen.emit import TSP, TypeSpecError, read_source, write_published_schemas
 from contracts_gen.examples import ExampleError, contract_registry, write_examples
 from contracts_gen.generate import drift, generate
@@ -350,6 +350,19 @@ def test_docs_render_each_contract_and_an_index(schemas_dir: Path, tmp_path: Pat
     assert "Type: object\n" in page  # the allOf of conditions doesn't hide the type
     assert 'Condition:\n\n```json\n{\n  "if": {\n    "required": [\n      "kind"' in page
     assert f"[widget]({SYNTHETIC_DIR}/widget.md)" in (tmp_path / "README.md").read_text()
+
+
+@pytest.mark.parametrize(
+    ("ref", "expected"),
+    [
+        ("common.schema.json#/$defs/Decision", "[`Decision`](common.md#decision)"),
+        # A property has a table row, not a heading, so its link has no anchor.
+        ("part.schema.json#/properties/transparency", "[`part.transparency`](part.md)"),
+        ("#/properties/transparency", "`transparency`"),
+    ],
+)
+def test_docs_link_a_ref_only_to_an_anchor_that_exists(ref: str, expected: str) -> None:
+    assert type_expr({"$ref": ref}, None) == expected  # pyright: ignore[reportArgumentType]
 
 
 def _descriptions(node: Any, pointer: str = "") -> list[tuple[str, str]]:

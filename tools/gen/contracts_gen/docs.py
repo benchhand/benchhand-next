@@ -183,6 +183,10 @@ def _ref(schema: dict[str, Any], contract: Contract) -> str:
     page = ""
     if target:
         page = target.removesuffix(SCHEMA_SUFFIX) + ".md"
+    if fragment.startswith("/properties/"):
+        # A property has a row in its page's table, not a heading, so there is no anchor to link.
+        label = f"{posixpath.basename(target).removesuffix(SCHEMA_SUFFIX)}.{name}".removeprefix(".")
+        return f"[`{label}`]({page})" if page else f"`{label}`"
     label = name or posixpath.basename(target) or "root"
     return f"[`{label}`]({page}#{name.lower()})" if name else f"[`{label}`]({page})"
 

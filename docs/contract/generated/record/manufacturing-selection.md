@@ -383,7 +383,7 @@ Type: object
 | `sourcing` | one of `"make"`, `"made_to_drawing"`, `"catalogue"` | yes | make, made_to_drawing (bought to this drawing) or catalogue (bought as listed) |
 | `reason` | [`text`](common.md#text) | yes | why the candidate needs the new part |
 | `functions` | array of [`function_entry`](common.md#function_entry) | no | what the new part does, so function-driven constraints (optical, structural) apply to it `minItems: 1` |
-| `transparency` | [`transparency`](part.md#transparency) | no |  |
+| `transparency` | [`part.transparency`](part.md) | no |  |
 
 No other properties are allowed.
 

@@ -36,13 +36,8 @@ const ASSET_EXTENSIONS = new Set([".svg", ".png"]);
 // The gitignored outputs (site/.gitignore), cleared before each sync.
 const OUTPUTS = ["src/content/docs/architecture", "src/content/docs/adr", "src/content/docs/reference/contracts", "public/contracts"];
 
-// Link targets that are missing in the source docs and must be fixed there. Each is still
-// rewritten to GitHub; any other missing target fails the sync.
-const KNOWN_MISSING_TARGETS = new Set([
-  // docs/contract/provider-protocol.md links the schema where the TypeSpec source sits; the
-  // published schema is packages/benchhand-contracts/src/benchhand_contracts/schemas/provider/protocol.schema.json.
-  "contracts/provider/protocol.schema.json",
-]);
+// Rewritten to GitHub when the target is not a synced page. A link to a file that doesn't exist
+// fails the sync: fix the source doc.
 
 const toPosix = (p) => p.split(path.sep).join("/");
 
@@ -110,10 +105,10 @@ function rewriteUrl(url, source, kind, plan) {
 function githubTarget(resolved, suffix, kind, context) {
   const absolute = path.join(repoRoot, resolved);
   const exists = existsSync(absolute);
-  if (!exists && !KNOWN_MISSING_TARGETS.has(resolved)) throw new Error(`${context} points to ${resolved}, which doesn't exist`);
+  if (!exists) throw new Error(`${context} points to ${resolved}, which doesn't exist`);
   if (kind === "image") return { rule: "image outside the synced directories \u2192 GitHub raw", url: `${repoUrl}/raw/main/${resolved}${suffix}` };
-  const isDir = exists && statSync(absolute).isDirectory();
-  const rule = exists ? "repo file \u2192 GitHub" : "missing in repo (known) \u2192 GitHub";
+  const isDir = statSync(absolute).isDirectory();
+  const rule = "repo file \u2192 GitHub";
   return { rule, url: `${repoUrl}/${isDir ? "tree" : "blob"}/main/${resolved.replace(/\/$/, "")}${suffix}` };
 }
 

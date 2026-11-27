@@ -64,13 +64,13 @@ Edit the sources, not the copies. Each synced page's edit link points at its sou
 - The first H1 becomes the front matter `title`. Each `README.md` becomes its directory's index page.
 - A relative link to a synced page becomes its site route, for example `../adr/0017-contracts.md` becomes `/adr/0017-contracts/`. The heading anchor stays.
 - A relative link to any other file in the repository becomes its GitHub URL on `main`, for example `../design-plan.md` and `contracts/record/part.tsp`. An image becomes its raw URL.
-- A relative link to a file that doesn't exist fails the sync. `KNOWN_MISSING_TARGETS` lists the known exceptions, each with its reason. They are still rewritten to GitHub.
+- A relative link to a file that doesn't exist fails the sync. Fix the link in the source doc; the sync has no exception list.
 - Links inside code and Mermaid blocks are left alone.
 
 The sync prints a count per rule and writes every rewrite to `.cache/link-rewrites.tsv`.
 
 `src/remark-base-links.mjs` then prefixes the base to every root-relative link, so pages write `/reference/` under any base.
-`astro.config.mjs` `KNOWN_BROKEN_LINKS` excludes the broken anchors that the synced sources contain, one by one.
+The links validator then fails the build on any broken page link or anchor, and has no exclusions.
 
 ## Placeholder pages
 
