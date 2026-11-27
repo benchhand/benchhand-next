@@ -78,19 +78,25 @@ No path a rule can reach is typed `dyn`, and there is no exception list. A real 
 
 ### Presence semantics
 
-A record enters the activation through cel-expr-python's protobuf JSON parser against the descriptor set, with unknown fields ignored. What a rule then sees depends on the field's kind:
+A record enters the activation through cel-expr-python's protobuf JSON parser against the descriptor set, with unknown fields ignored. What a rule then sees depends on the field's kind. The table restates the one the research measured on four engines through the activation path (`research/cel-neutral/REPORT.md`, "Presence: missing, explicit null and zero"):
 
-| Field kind | Missing | Explicit `null` | Zero (`""`, `0`, `false`, `{}`) |
-|---|---|---|---|
-| Nullable scalar | reads `null`; `has()` is false | the same as missing | `has()` is true; reads the zero |
-| Optional scalar | reads the zero; `has()` is false | loads as missing | `has()` is true |
-| Required scalar | reads the zero; `has()` is false | loads as missing | `has()` is **false** |
-| Message | `has()` is false; selecting through it reads defaults | the same as missing | `has()` is true |
+| Field kind | proto3 | Missing | Explicit `null` | Zero (`""`, `0`, `false`, `{}`) |
+|---|---|---|---|---|
+| Nullable scalar | `google.protobuf.*Value` | reads `null`; `has()` is false; arithmetic on it is an evaluation error | the same as missing: `has()` is false, `== null` is true | `has()` is true; reads the zero |
+| Optional scalar | `optional T` | reads the zero; `has()` is false | the parser loads it as missing: `has()` is false | `has()` is true |
+| Required scalar | plain `T` | reads the zero; `has()` is false | the parser loads it as missing: `has()` is false | `has()` is **false**: proto3 can't tell zero from missing |
+| Message | message | `has()` is false; selecting through it reads defaults | the same as missing | `{}` is present: `has()` is true |
 
-Three cells lose information by design. A required scalar at its zero value looks missing to `has()`. A missing optional scalar reads as its zero. An explicit `null` on an optional or required scalar loads as missing. So:
+What `has()` can tell apart:
+
+- **Missing from zero:** a nullable scalar, an optional scalar and a message. For a message, `{}` is present and missing isn't. A required scalar can't: at its zero value it looks missing.
+- **Missing from explicit `null`:** no kind. For a nullable scalar and a message the two collapse by design, and both mean absent. For an optional or a required scalar the parser loads a `null` as missing, although the schema may forbid that `null`.
+- **A missing value's reading:** a nullable scalar reads `null`, an optional or a required scalar reads its zero, and selecting through a missing message reads defaults.
+
+So:
 
 - The host validates every record against its JSON Schema before activation. A `null` the schema forbids then fails validation instead of reaching a rule as "missing".
-- A rule that must tell a value from its absence guards the read with `has()`. Only an optional or a nullable field can be told apart.
+- A rule that must tell a value from its absence guards the read with `has()`. That works for a nullable scalar, an optional scalar and a message, and never for a required scalar at its zero value.
 - The loader's presence lint flags a bare read of an optional or nullable field outside a `has()` guard, and a `has()` on a required scalar.
 
 ### The restricted cel-policy profile
