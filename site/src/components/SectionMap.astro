@@ -1,0 +1,139 @@
+---
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+// The home page's map of the documentation, drawn as a parts list: a numbered BOM balloon, the group's
+// title, a dashed leader to its one-line description, and an arrow. Each row is one link; its `link` goes
+// through siteLink like the hero's actions. scripts/home-links.test.mjs checks every link resolves.
+import { siteLink } from "../site-link";
+
+interface Props {
+  items: { title: string; link: string; description: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+<section class="bh-map not-content" aria-labelledby="the-documentation">
+  <h2 id="the-documentation">The documentation</h2>
+  <ol>
+    {
+      items.map(({ title, link, description }, index) => (
+        <li>
+          <a href={siteLink(link)}>
+            <span class="bh-balloon" aria-hidden="true">
+              {index + 1}
+            </span>
+            <span class="bh-map-title">{title}</span>
+            <span class="bh-map-desc">{description}</span>
+            <span class="bh-map-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .bh-map {
+    max-width: 76rem;
+    margin: 0 auto;
+    padding: 3rem 0 4.5rem;
+  }
+  h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    font: 600 0.8rem/1.4 var(--__sl-font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--bh-color-hairline);
+  }
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--sl-color-white);
+  }
+  li {
+    margin: 0;
+    border-bottom: 1px solid var(--bh-color-hairline);
+  }
+  a {
+    display: grid;
+    grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+    grid-template-areas: "balloon title arrow" "balloon desc arrow";
+    align-items: center;
+    gap: 0.2rem 1rem;
+    padding: 1rem 0;
+    color: var(--sl-color-white);
+    text-decoration: none;
+  }
+  a:hover {
+    background: var(--sl-color-gray-6);
+  }
+  a:hover .bh-map-title {
+    color: var(--sl-color-text-accent);
+  }
+  .bh-balloon {
+    grid-area: balloon;
+    align-self: start;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border: 1.5px solid var(--sl-color-white);
+    border-radius: 50%;
+    font: 600 0.8rem/1 var(--__sl-font-mono);
+  }
+  .bh-map-title {
+    grid-area: title;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font: 650 1.2rem/1.2 var(--__sl-font);
+    letter-spacing: -0.01em;
+  }
+  .bh-map-desc {
+    grid-area: desc;
+    max-width: 60ch;
+    color: var(--sl-color-gray-3);
+  }
+  .bh-map-arrow {
+    grid-area: arrow;
+    font: 500 1rem var(--__sl-font-mono);
+    color: var(--sl-color-text-accent);
+  }
+  @media (min-width: 50rem) {
+    a {
+      grid-template-columns: 3rem 13rem minmax(0, 1fr) auto;
+      grid-template-areas: "balloon title desc arrow";
+      padding: 1.5rem 0.5rem;
+    }
+    .bh-balloon {
+      align-self: center;
+    }
+    .bh-map-title::after {
+      content: "";
+      flex: 1;
+      min-width: 1rem;
+      border-top: 1px dashed var(--bh-color-border);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    a,
+    .bh-map-title {
+      transition:
+        background-color 0.12s,
+        color 0.12s;
+    }
+  }
+</style>

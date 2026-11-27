@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Sjors Robroek
 //
 // SPDX-License-Identifier: MPL-2.0
-// Starlight's Hero, with each action's `link` passed through siteLink, so the front matter can name
-// a site route ("/reference/contracts/") or a repository file ("repo:docs/design-plan.md") and the
-// built link is right under any DOCS_URL. Only the splash home page has a hero.
+// Starlight's Hero as a drawing sheet: a blueprint grid under a zone ruler, the line and its actions on
+// the left, and a title block on the right that says who drew, checked and approved the design. Each
+// action's `link` passes through siteLink, so the front matter can name a site route ("/reference/") or a
+// repository file ("repo:docs/design-plan.md") and the built link is right under any DOCS_URL.
+// Only the splash home page has a hero.
 import { LinkButton } from "@astrojs/starlight/components";
 
 import { siteLink } from "../site-link";
@@ -12,59 +14,153 @@ import { siteLink } from "../site-link";
 // Starlight's PAGE_TITLE_ID, which its skip link and "Overview" table-of-contents entry target.
 // The package doesn't export its constants.
 const PAGE_TITLE_ID = "_top";
+const ZONES = [1, 2, 3, 4, 5, 6, 7, 8];
+const TITLE_BLOCK = [
+  ["Drawn by", "your coding agent, over MCP"],
+  ["Checked by", "gates, rule lists and providers"],
+  ["Approved by", "you, at each human gate"],
+  ["Kernels", "build123d · CadQuery · FreeCAD"],
+  ["Deliverable", "STEP AP242"],
+];
 
 const { data } = Astro.locals.starlightRoute.entry;
-const { title = data.title, tagline, actions = [] } = data.hero || {};
-const eyebrow = "Agent-driven CAD over MCP";
+const { title = data.title, actions = [] } = data.hero || {};
 ---
 
 <div class="bh-hero">
-  <p class="bh-eyebrow">{eyebrow}</p>
-  <h1 id={PAGE_TITLE_ID} data-page-title set:html={title} />
-  {tagline && <p class="bh-tagline" set:html={tagline} />}
-  {
-    actions.length > 0 && (
-      <div class="bh-actions">
-        {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link, text, variant }) => (
-          <LinkButton href={siteLink(link)} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
-            {text}
-          </LinkButton>
-        ))}
-      </div>
-    )
-  }
+  <div class="bh-zones" aria-hidden="true">{ZONES.map((zone) => <span>{zone}</span>)}</div>
+  <div class="bh-hero-sheet">
+    <div class="bh-hero-line">
+      <h1 id={PAGE_TITLE_ID} data-page-title set:html={title} />
+      {
+        actions.length > 0 && (
+          <div class="bh-actions">
+            {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link, text, variant }) => (
+              <LinkButton href={siteLink(link)} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+                {text}
+              </LinkButton>
+            ))}
+          </div>
+        )
+      }
+    </div>
+    <table class="bh-titleblock">
+      <caption><span>benchhand</span><span>hw/</span></caption>
+      <tbody>
+        {
+          TITLE_BLOCK.map(([label, value]) => (
+            <tr>
+              <th scope="row">{label}</th>
+              <td>{value}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <style>
+  /* The grid is full-bleed behind the hero only (theme.css clips the sideways overflow); the content panel's
+   * top padding is taken back so the zone ruler meets the header's rule. */
   .bh-hero {
-    padding-block: clamp(2rem, 1rem + 6vmin, 5rem) clamp(1rem, 0.5rem + 3vmin, 2.5rem);
-    max-width: 46rem;
+    margin-block-start: calc(-1 * var(--bh-panel-pad-top, 1.5rem));
+    margin-inline: calc(50% - 50vw);
+    border-bottom: 1px solid var(--bh-color-hairline);
+    background-image:
+      linear-gradient(var(--bh-grid-major) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bh-grid-major) 1px, transparent 1px),
+      linear-gradient(var(--bh-grid-minor) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bh-grid-minor) 1px, transparent 1px);
+    background-size:
+      80px 80px,
+      80px 80px,
+      16px 16px,
+      16px 16px;
+    background-position: -1px -1px;
   }
-  .bh-eyebrow {
-    font-family: var(--__sl-font-mono);
-    font-size: var(--sl-text-sm);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--sl-color-text-accent);
+  .bh-zones {
+    display: flex;
+    justify-content: space-between;
+    padding-inline: 1.5rem;
+    height: 1.4rem;
+    border-bottom: 1px solid var(--bh-color-hairline);
+    background: var(--sl-color-bg);
+    font: 500 0.72rem/1.4rem var(--__sl-font-mono);
+    color: var(--sl-color-gray-3);
+  }
+  .bh-hero-sheet {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    box-sizing: content-box;
+    max-width: var(--sl-content-width);
+    margin-inline: auto;
+    padding: 3rem var(--sl-content-pad-x) 2.5rem;
   }
   h1 {
-    margin-top: 0.75rem;
-    font-size: clamp(var(--sl-text-4xl), calc(1rem + 5vw), var(--sl-text-6xl));
-    line-height: var(--sl-line-height-headings);
-    font-weight: 700;
+    margin: 0 0 1.5rem;
+    max-width: 30ch;
+    font: 650 clamp(1.6rem, 1.2rem + 1.6vw, 2.35rem) / 1.18 var(--__sl-font);
     letter-spacing: -0.02em;
     color: var(--sl-color-white);
-  }
-  .bh-tagline {
-    margin-top: 1rem;
-    font-size: clamp(var(--sl-text-lg), calc(0.75rem + 1.2vw), var(--sl-text-2xl));
-    line-height: 1.45;
-    color: var(--sl-color-gray-2);
   }
   .bh-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
-    margin-top: 2rem;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+  }
+  .bh-titleblock {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid var(--sl-color-white);
+    background: var(--sl-color-bg);
+    font: 400 0.8rem/1.5 var(--__sl-font-mono);
+    color: var(--sl-color-white);
+  }
+  caption {
+    padding: 0.55rem 0.75rem;
+    border: 1.5px solid var(--sl-color-white);
+    border-bottom: 0;
+    background: var(--sl-color-bg);
+    font-weight: 600;
+    text-align: start;
+  }
+  caption span + span {
+    float: inline-end;
+  }
+  th,
+  td {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--bh-color-hairline);
+    text-align: start;
+    vertical-align: top;
+  }
+  tr:first-child :is(th, td) {
+    border-top: 1.5px solid var(--sl-color-white);
+  }
+  th {
+    width: 6.5rem;
+    border-inline-end: 1px solid var(--bh-color-hairline);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  @media (min-width: 50rem) {
+    .bh-hero-sheet {
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+      gap: 3rem;
+      align-items: end;
+      padding: 4.5rem var(--sl-content-pad-x) 3rem;
+    }
+    h1 {
+      margin-bottom: 2rem;
+    }
+    th {
+      width: 8.5rem;
+    }
   }
 </style>

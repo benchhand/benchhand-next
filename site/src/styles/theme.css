@@ -107,6 +107,276 @@
   letter-spacing: -0.01em;
 }
 
+/* The mono label: uppercase, tracked, never under 0.72rem (11.5px). */
+:root {
+  --bh-label: 500 0.72rem/1.4 var(--__sl-font-mono);
+}
+
+/* Header: the paper ground with a double rule below it, an ink line over a hairline, like a sheet border.
+ * A square-cornered search box. The section links are in components/SocialIcons.astro. */
+header.header {
+  border-bottom: 1px solid var(--sl-color-white);
+  box-shadow: 0 3px 0 -2px var(--bh-color-hairline);
+}
+@media (min-width: 50rem) {
+  site-search button[data-open-modal] {
+    border-color: var(--bh-color-border);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+  }
+  site-search button[data-open-modal]:hover {
+    border-color: var(--sl-color-white);
+    color: var(--sl-color-white);
+  }
+}
+site-search button[data-open-modal] > kbd {
+  border-radius: 2px;
+  background: transparent;
+  color: var(--sl-color-gray-3);
+}
+
+/* Sidebar: each group is mono uppercase with a red-pencil number (CSS counters, so the numbers follow the
+ * order of astro.config.mjs). Items hang off a hairline spine; the current page has a 2px ink-blue bar, the
+ * surface fill and the accent. */
+.sidebar-content .top-level {
+  counter-reset: bh-group;
+}
+.sidebar-content .top-level > li {
+  counter-increment: bh-group;
+}
+.sidebar-content .top-level > li > details > summary .large {
+  font: var(--bh-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+.sidebar-content .top-level > li > details > summary .large::before {
+  content: counter(bh-group);
+  margin-inline-end: 0.6rem;
+  font-weight: 600;
+  color: var(--bh-color-pencil);
+}
+.sidebar-content ul ul .large {
+  font: 500 0.8rem/1.4 var(--__sl-font-mono);
+  color: var(--sl-color-gray-3);
+}
+.sidebar-content summary:hover .large {
+  color: var(--sl-color-white);
+}
+.sidebar-content ul ul li {
+  padding-inline-start: 0;
+}
+.sidebar-content a {
+  border-radius: 0;
+  padding-inline: 0.75rem 0.5rem;
+}
+.sidebar-content a:hover {
+  color: var(--sl-color-text-accent);
+}
+.sidebar-content ul ul li:has(> a[aria-current="page"]) {
+  border-inline-start-color: var(--sl-color-text-accent);
+}
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:is(:hover, :focus) {
+  color: var(--sl-color-text-accent);
+  background-color: var(--sl-color-gray-6);
+  box-shadow: inset 1px 0 0 var(--sl-color-text-accent);
+}
+
+/* On this page: a mono label, and the current entry in the accent. */
+:is(starlight-toc, mobile-starlight-toc) h2 {
+  font: var(--bh-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+
+/* Content links: ink blue, underlined 1px, thickening to 2px on hover. */
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--sl-color-text-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+  color: var(--sl-color-text-accent);
+  text-decoration-thickness: 2px;
+}
+
+/* Buttons: square-cornered. The primary is the accent with the paper or navy label; the secondary is an
+ * ink outline; the minimal one is a small mono link. */
+.sl-link-button {
+  border-radius: 3px;
+}
+.sl-link-button.secondary {
+  border-color: var(--sl-color-white);
+  color: var(--sl-color-white);
+}
+.sl-link-button.secondary:hover {
+  background: var(--sl-color-gray-6);
+}
+.sl-link-button.minimal {
+  padding-inline: 0;
+  font: 500 0.85rem var(--__sl-font-mono);
+  color: var(--sl-color-text-accent);
+  text-decoration: underline 1px;
+  text-underline-offset: 3px;
+}
+.sl-link-button.minimal:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Tables: a mono uppercase header over a 1.5px ink rule, hairline row rules and a mono first column. */
+.sl-markdown-content th:not(:where(.not-content *)) {
+  font: var(--bh-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+  vertical-align: bottom;
+  border-bottom: 1.5px solid var(--sl-color-white);
+}
+.sl-markdown-content td:not(:where(.not-content *)) {
+  border-bottom-color: var(--bh-color-hairline);
+}
+.sl-markdown-content td:first-child:not(:where(.not-content *)) {
+  font-family: var(--__sl-font-mono);
+  font-size: 0.92em;
+}
+
+/* Asides: a tinted box with a 3px start border and a mono uppercase label. Note and tip are ink blue;
+ * caution and danger are the red pencil. The label names the kind, so colour is not the only cue. */
+.starlight-aside {
+  --bh-aside: var(--sl-color-text-accent);
+  --sl-color-asides-text-accent: var(--bh-aside);
+  --sl-color-asides-border: var(--bh-aside);
+  border: 1px solid var(--bh-aside);
+  border-inline-start-width: 3px;
+  background: color-mix(in srgb, var(--bh-aside) 6%, var(--sl-color-bg));
+  color: var(--sl-color-white);
+}
+.starlight-aside:is(.starlight-aside--caution, .starlight-aside--danger) {
+  --bh-aside: var(--bh-color-pencil);
+}
+.starlight-aside__title {
+  font: 600 0.72rem/1.4 var(--__sl-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.starlight-aside__icon {
+  display: none;
+}
+.sl-markdown-content .starlight-aside a:not(:where(.not-content *)) {
+  color: var(--sl-color-text-accent);
+}
+
+/* Code blocks: a bordered sheet (astro.config.mjs expressiveCode) with a mono header strip that gives the
+ * language, and the file name when the block has a title. */
+.expressive-code .frame {
+  --bh-strip: 2rem;
+  --button-spacing: calc(var(--bh-strip) + 0.4rem);
+}
+.expressive-code .frame .header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  height: var(--bh-strip);
+  padding: 0 0.9rem;
+  border: 1px solid var(--bh-color-border);
+  border-bottom-color: var(--bh-color-hairline);
+  background: var(--sl-color-bg);
+  font: 500 0.75rem/1 var(--__sl-font-mono);
+  color: var(--sl-color-gray-3);
+}
+.expressive-code .frame .header::before,
+.expressive-code .frame .header::after,
+.expressive-code .frame .title::after {
+  display: none;
+}
+.expressive-code .frame .title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+.expressive-code .frame pre {
+  border-top: none;
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+.expressive-code pre[data-language]::before {
+  content: attr(data-language);
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0.9rem;
+  z-index: 1;
+  height: var(--bh-strip);
+  font: 500 0.75rem/2rem var(--__sl-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+  pointer-events: none;
+}
+
+/* Inline code: mono on the surface, with a hairline edge. */
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+  border: 1px solid var(--bh-color-hairline);
+  border-radius: 2px;
+}
+
+/* Previous and next: square boxes with a small mono label over the page title. */
+.pagination-links a {
+  border-color: var(--bh-color-border);
+  border-radius: 2px;
+  box-shadow: none;
+  font: var(--bh-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sl-color-gray-3);
+}
+.pagination-links a:hover {
+  border-color: var(--sl-color-text-accent);
+}
+.pagination-links .link-title {
+  font: 600 var(--sl-text-lg) / 1.3 var(--__sl-font);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--sl-color-text-accent);
+}
+
+/* The home page's hero is full-bleed (components/Hero.astro); the clip keeps its sideways overflow, the
+ * width of a classic scrollbar, from scrolling the page. */
+.main-frame:has(.bh-hero) {
+  overflow-x: clip;
+}
+
+/* Diagram frames: a sheet with crop marks on two corners. */
+.sl-markdown-content pre.mermaid {
+  position: relative;
+}
+.sl-markdown-content pre.mermaid::before,
+.sl-markdown-content pre.mermaid::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid var(--sl-color-white);
+  pointer-events: none;
+}
+.sl-markdown-content pre.mermaid::before {
+  inset-block-start: 5px;
+  inset-inline-start: 5px;
+  border-block-start-width: 1.5px;
+  border-inline-start-width: 1.5px;
+}
+.sl-markdown-content pre.mermaid::after {
+  inset-block-end: 5px;
+  inset-inline-end: 5px;
+  border-block-end-width: 1.5px;
+  border-inline-end-width: 1.5px;
+}
+
 /* D2 diagrams are rendered SVGs with a white page baked in. They sit on a framed panel in both
  * themes, so in dark the white page reads as a drawing sheet rather than a hole in the page. */
 .sl-markdown-content img[src*=".svg"] {
@@ -121,8 +391,8 @@
  * (astro.config.mjs turns off Mermaid's useMaxWidth). astro-mermaid centres the SVG with justify-content,
  * which hides the overflowing left edge; an auto margin centres a narrow SVG and keeps a wide one scrollable. */
 .sl-markdown-content pre.mermaid {
-  padding: 1rem;
-  border: 1px solid var(--sl-color-hairline-light);
+  padding: 1.5rem;
+  border: 1px solid var(--bh-color-border);
   background: var(--sl-color-bg);
   overflow-x: auto;
   justify-content: flex-start;

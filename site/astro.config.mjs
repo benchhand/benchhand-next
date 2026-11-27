@@ -83,8 +83,11 @@ export default defineConfig({
       social: [{ icon: "github", label: "GitHub", href: repoUrl }],
       editLink: { baseUrl: `${repoUrl}/edit/main/site/` },
       components: {
-        // Resolves the home page's action links against the site base and the repository.
+        // Resolves the home page's action links against the site base and the repository, and draws the
+        // grid, the zone ruler and the title block.
         Hero: "./src/components/Hero.astro",
+        // Adds the header's section links before the GitHub icon.
+        SocialIcons: "./src/components/SocialIcons.astro",
       },
       plugins: [starlightLinksValidator()],
       sidebar: [

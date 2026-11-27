@@ -3,7 +3,7 @@ title: benchhand
 description: benchhand guides an AI coding agent through a mechanical design over MCP, and keeps every decision, check and approval in a design record.
 template: splash
 hero:
-  tagline: benchhand guides your AI coding agent through a mechanical design, from requirements to a released part, and keeps every decision, check and approval in a record you can audit.
+  title: benchhand guides your AI coding agent through a mechanical design, from requirements to a released part, and keeps every decision, check and approval in a record you can audit.
   actions:
     - text: Get started
       link: /getting-started/install/
@@ -11,12 +11,13 @@ hero:
       variant: primary
     - text: Reference
       link: /reference/
-      icon: document
       variant: secondary
     - text: Contribute
       link: /contributing/
       variant: minimal
 ---
+
+import SectionMap from "../../components/SectionMap.astro";
 
 {/*
 SPDX-FileCopyrightText: 2026 Sjors Robroek
@@ -24,10 +25,34 @@ SPDX-FileCopyrightText: 2026 Sjors Robroek
 SPDX-License-Identifier: MPL-2.0
 */}
 
-## The documentation
-
-- [Get started](/getting-started/install/): install benchhand, start a first project and take a first part to a STEP file.
-- [Guides](/guides/tutorials/bracket/): worked tutorials, and the tasks of migrating a prototype record, writing and testing rules, adding providers and troubleshooting.
-- [Concepts](/concepts/process/overview/): the design process and its gates, the record, policy, providers, manufacturing and the clients.
-- [Reference](/reference/): the MCP tools, the CLI, the flow, the contracts and their JSON Schemas, and the Python API.
-- [Contributing](/contributing/): set up the repository, run the checks, and find the design plan and the decision records.
+<SectionMap
+  items={[
+    {
+      title: "Get started",
+      link: "/getting-started/install/",
+      description: "Install benchhand, start a first project and take a first part to a STEP file.",
+    },
+    {
+      title: "Guides",
+      link: "/guides/tutorials/bracket/",
+      description:
+        "Worked tutorials, and the tasks of migrating a prototype record, writing and testing rules, adding providers and troubleshooting.",
+    },
+    {
+      title: "Concepts",
+      link: "/concepts/process/overview/",
+      description:
+        "The design process and its gates, the record, policy, providers, manufacturing and the clients.",
+    },
+    {
+      title: "Reference",
+      link: "/reference/",
+      description: "The MCP tools, the CLI, the flow, the contracts and their JSON Schemas, and the Python API.",
+    },
+    {
+      title: "Contributing",
+      link: "/contributing/",
+      description: "Set up the repository, run the checks, and find the design plan and the decision records.",
+    },
+  ]}
+/>
