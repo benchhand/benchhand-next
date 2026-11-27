@@ -1,0 +1,5 @@
+# Tools the generators run. CI installs them the same way (jdx/mise-action); `mise install` does it locally.
+[tools]
+# The domain-model diagrams are laid out by D2, and its layout is part of the committed SVGs. The generator
+# refuses any other version (tools/gen/contracts_gen/domain_d2.py, D2_VERSION).
+d2 = "0.9.0"

@@ -38,6 +38,12 @@ jobs:
             ui/pnpm-lock.yaml
             contracts/pnpm-lock.yaml
       - uses: extractions/setup-just@v3
+      - name: D2 as pinned in mise.toml, for the domain diagrams
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          version: 2026.11.6
+          install_args: d2
+          cache: false
       - run: uv sync --all-packages --locked
       - name: Prototype at release.toml's reference_commit (ADR-0015)
         run: |

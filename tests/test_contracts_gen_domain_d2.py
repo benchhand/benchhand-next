@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import posixpath
 import re
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +31,11 @@ from contracts_gen.domain_d2 import (
 from contracts_gen.domain_preview import render_d2
 from contracts_gen.sources import REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
 
-needs_d2 = pytest.mark.skipif(shutil.which(D2_COMMAND) is None, reason="needs d2 on PATH (mise)")
+IN_CI = os.environ.get("CI") == "true"
+needs_d2 = pytest.mark.skipif(
+    shutil.which(D2_COMMAND) is None and not IN_CI, reason="needs d2 on PATH (`mise install`)"
+)
+"""Skip a render test locally when d2 is missing; in CI it runs, and fails without it."""
 
 
 def _contract(stem: str, schema: dict[str, Any]) -> Contract:
@@ -294,6 +300,11 @@ def test_a_missing_d2_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, "run", missing)
     with pytest.raises(D2VersionError, match="can't run"):
         check_d2_version()
+
+
+def test_mise_pins_the_version_the_generator_requires() -> None:
+    tools = tomllib.loads((REPO_ROOT / "mise.toml").read_text(encoding="utf-8"))["tools"]
+    assert tools["d2"] == D2_VERSION
 
 
 @needs_d2
