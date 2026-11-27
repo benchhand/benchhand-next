@@ -1,0 +1,39 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# The CLA workflow's repository secrets (.github/workflows/cla.yml), kept in 1Password and written to GitHub by
+# `fnox push`, which writes repository secrets only. The owner runs it; nothing here holds a value.
+#
+#   fnox push --dry-run     preview
+#   fnox push               asks to confirm, then calls `gh secret set` for each secret below
+#
+# Needs `gh` logged in as someone who can manage this repository's secrets. GitHub keeps a secret write-only, so
+# push again after a rotation.
+#
+# The two `TODO-` values are placeholders. Replace them with the 1Password item and field that hold each value
+# (`<item>/<field>`, or a full op://vault/item/field, which ignores the provider's vault) before the first push.
+
+[providers.benchhand]
+type = "1password"
+vault = "TODO-VAULT"
+
+[targets.gh]
+type = "github-actions"
+repo = "benchhand/benchhand-next"
+
+# The GitHub App's Client ID (its settings page), not the numeric App ID.
+[secrets.CLA_APP_CLIENT_ID]
+provider = "benchhand"
+value = "TODO-ITEM/TODO-FIELD"
+env = "exec"
+if_missing = "warn"
+push = ["gh"]
+
+# The whole .pem of a private key generated for that App.
+[secrets.CLA_APP_PRIVATE_KEY]
+provider = "benchhand"
+value = "TODO-ITEM/TODO-FIELD"
+env = "exec"
+if_missing = "warn"
+push = ["gh"]
