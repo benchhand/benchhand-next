@@ -1,0 +1,77 @@
+# Each action is pinned to a full SHA with its version as a comment,
+# which zizmor and Dependabot read; those lines exceed 80 columns.
+# yamllint disable rule:line-length
+name: docs-site
+on:
+  pull_request:
+    paths:
+      - "site/**"
+      - "docs/**"
+      # The published schemas and the Python API source feed the site too.
+      - "packages/benchhand-contracts/**"
+      - "release.toml"
+      - ".github/workflows/docs-site.yml"
+  # Deploys run by hand until the owner enables GitHub Pages for the repository.
+  workflow_dispatch:
+
+concurrency:
+  group: docs-site-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The schemas' $ids are https://benchhand.github.io/benchhand/contracts/...,
+  # so these defaults serve each schema at its $id.
+  # Repository variables override them.
+  DOCS_SITE: ${{ vars.DOCS_SITE || 'https://benchhand.github.io' }}
+  DOCS_BASE: ${{ vars.DOCS_BASE || '/benchhand' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: site/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: site/package.json
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
+      - name: uv, for griffe in the Python API step
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - run: pnpm install --frozen-lockfile
+        working-directory: site
+      - name: Sync the docs and schemas, build, and validate the links
+        run: pnpm build
+        working-directory: site
+      - name: Each schema's $id is served by the build
+        run: pnpm test
+        working-directory: site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/dist
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
