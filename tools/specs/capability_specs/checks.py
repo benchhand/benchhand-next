@@ -13,11 +13,14 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from .specs import INDEX_FILE, PAGE_FILE, PHASE, SPECS_DIR, Index, Sources, Spec
+from .specs import INDEX_FILE, PAGE_FILE, PHASE, REQUIREMENTS_HEADING, SPECS_DIR, Index, Sources, Spec
 
 _SPAN = re.compile(r"`([^`\s]+)`")
 _POINTER = re.compile(r"^(?P<path>[A-Za-z0-9_.][A-Za-z0-9_./-]*):(?P<first>[0-9]+)(?:-(?P<last>[0-9]+))?$")
-_SOURCE = re.compile(r"\bIR-[0-9]{3}\b|\bRULE-[0-9]{2}\b|\*\*Proposal\*\*")
+_CITATION_SHAPED = re.compile(r"^[^\s:]+:[0-9]")
+"""A span that reads as a pointer, a path then a colon and a digit, whether or not it is a well-formed one."""
+_ID = re.compile(r"\b(?:IR|RULE)-[0-9]+\b")
+PROPOSAL = "**Proposal**"
 QUESTION = "question:"
 CAPABILITY = "capability:"
 
@@ -31,10 +34,13 @@ def check_specs(index: Index, specs: list[Spec], sources: Sources, repo_root: Pa
         *_block_ids(specs),
         *_dependencies(specs, sources),
         *_cycles(specs),
-        *_requirements(specs),
+        *_requirements(specs, sources, repo_root),
+        *_malformed_requirements(specs),
         *_block_sections(specs),
         *_issue_entries(specs, sources),
+        *_deferrals(specs),
         *_joined_issues(specs, sources),
+        *_body_ids(specs, sources),
         *_pointers(specs, repo_root),
     ]
 
@@ -157,19 +163,21 @@ def _cycle_from(node: str, edges: dict[str, list[str]], trail: list[str], done: 
     return []
 
 
-def _requirements(specs: list[Spec]) -> Iterator[str]:
-    """REQ ids are unique and cite a source; every block's REQ exists, and every REQ has a block."""
+def _requirements(specs: list[Spec], sources: Sources, repo_root: Path) -> Iterator[str]:
+    """REQ ids are unique and cite a source that exists; every block's REQ exists, and every REQ has a block."""
     for spec in specs:
+        if spec.requirements_section() is None:
+            yield f"{spec.path}: no `{REQUIREMENTS_HEADING}` section"
         requirements = spec.requirements()
         counts = Counter(requirement.id for requirement in requirements)
         yield from (
             f"{spec.path}: {req} is defined {count} times" for req, count in counts.items() if count > 1
         )
         for requirement in requirements:
-            if not _SOURCE.search(requirement.text) and not _has_pointer(requirement.text):
+            if not _sourced(requirement.text, sources, repo_root):
                 yield (
                     f"{spec.path}:{requirement.line}: {requirement.id} cites no source "
-                    "(a `path:line`, an IR or RULE id, or **Proposal**)"
+                    "(a `path:line` that resolves, an IR or RULE id of the register, or **Proposal**)"
                 )
         claimed = {req for block in spec.blocks for req in block["requirements"]}
         for block in spec.blocks:
@@ -181,20 +189,43 @@ def _requirements(specs: list[Spec]) -> Iterator[str]:
                 yield f"{spec.path}:{requirement.line}: {requirement.id} is in no block"
 
 
-def _has_pointer(text: str) -> bool:
-    return any(_POINTER.match(span) for span in _SPAN.findall(text))
+def _sourced(text: str, sources: Sources, repo_root: Path) -> bool:
+    """Whether `text` cites a register id that exists, a pointer that resolves, or marks itself a proposal."""
+    if PROPOSAL in text or any(_known_id(token, sources) for token in _ID.findall(text)):
+        return True
+    return any(
+        _POINTER.match(span) and pointer_problem(repo_root, span) is None for span in _SPAN.findall(text)
+    )
+
+
+def _known_id(token: str, sources: Sources) -> bool:
+    return token in sources.issues or token in sources.rules
+
+
+def _malformed_requirements(specs: list[Spec]) -> Iterator[str]:
+    """A bullet in the Requirements section is a REQ bullet, and no REQ bullet sits outside it."""
+    for spec in specs:
+        for line, _ in spec.malformed_requirements():
+            yield (
+                f"{spec.path}:{line}: not a requirement bullet: a requirement starts `- **REQ-n.**` and sits "
+                f"in the `{REQUIREMENTS_HEADING}` section"
+            )
 
 
 def _block_sections(specs: list[Spec]) -> Iterator[str]:
-    """Each block has one `### <id>` section with its scope and acceptance tests, and each section a block."""
+    """Each block has exactly one `### <id>` section with its scope and acceptance, and each section a block."""
     for spec in specs:
         sections = spec.block_sections()
         blocks = {block["id"] for block in spec.blocks}
         for block in spec.blocks:
-            section = "\n".join(sections.get(block["id"], []))
-            if not section:
+            found = sections.get(block["id"], [])
+            if not found:
                 yield f"{spec.path}: block {block['id']} has no `### {block['id']}` section"
                 continue
+            if len(found) > 1:
+                yield f"{spec.path}: block {block['id']} has {len(found)} `### {block['id']}` sections, not one"
+                continue
+            section = "\n".join(found[0])
             for part in ("**Scope.**", "**Acceptance.**"):
                 if part not in section:
                     yield f"{spec.path}: the section of block {block['id']} has no {part}"
@@ -253,7 +284,8 @@ def _joined_issues(specs: list[Spec], sources: Sources) -> Iterator[str]:
 
 
 def _pointers(specs: list[Spec], repo_root: Path) -> Iterator[str]:
-    """Every `path:line` and `path:first-last` in a spec's body names a file of the repository and lines in it."""
+    """Every span in a spec's body that reads as a pointer is a `path:line` or `path:first-last` that names a
+    file of the repository and lines in it."""
     for spec in specs:
         for offset, line in enumerate(spec.body):
             for span in _SPAN.findall(line):
@@ -262,13 +294,47 @@ def _pointers(specs: list[Spec], repo_root: Path) -> Iterator[str]:
                     yield f"{spec.path}:{spec.body_line + offset}: {problem}"
 
 
+def _body_ids(specs: list[Spec], sources: Sources) -> Iterator[str]:
+    """Every IR and RULE id in a spec's body is an entry of the issue register."""
+    for spec in specs:
+        for offset, line in enumerate(spec.body):
+            for token in _ID.findall(line):
+                if not _known_id(token, sources):
+                    yield f"{spec.path}:{spec.body_line + offset}: {token} is not in the issue register"
+
+
+def _deferrals(specs: list[Spec]) -> Iterator[str]:
+    """Specs that defer one entry agree on where it goes, and an entry deferred to a capability no spec covers
+    isn't closed by another spec (a deferral to a covered capability is checked in _issue_entries)."""
+    targets: dict[str, set[str]] = {}
+    for spec in specs:
+        for entry in spec.defers:
+            targets.setdefault(entry["id"], set()).add(entry["to"])
+    for issue, where in targets.items():
+        if len(where) > 1:
+            yield f"{issue} is deferred to {len(where)} capabilities: {', '.join(sorted(where))}"
+    covered = {capability for spec in specs for capability in spec.capabilities}
+    closing = {entry["id"]: spec.id for spec in specs for entry in spec.closes}
+    for spec in specs:
+        for entry in spec.defers:
+            if entry["to"] not in covered and closing.get(entry["id"], spec.id) != spec.id:
+                yield (
+                    f"{spec.path}: {entry['id']} is deferred to {entry['to']}, which no spec covers, but spec "
+                    f"{closing[entry['id']]} closes it"
+                )
+
+
 def pointer_problem(repo_root: Path, span: str) -> str | None:
-    """Why `span`, when it is a path:line pointer, doesn't resolve; None when it does or isn't a pointer."""
+    """Why `span`, when it reads as a pointer, doesn't resolve; None when it does or doesn't read as one."""
+    if not _CITATION_SHAPED.match(span):
+        return None
+    if span.startswith(("/", "~")):
+        return f"{span}: a pointer is a path relative to the repository"
     found = _POINTER.match(span)
     if not found:
-        return None
+        return f"{span}: not a `path:line` or `path:first-last` pointer"
     relative = Path(found["path"])
-    if ".." in relative.parts or relative.is_absolute():
+    if ".." in relative.parts:
         return f"{span}: a pointer stays inside the repository"
     target = repo_root / relative
     if not target.is_file():
@@ -276,6 +342,8 @@ def pointer_problem(repo_root: Path, span: str) -> str | None:
     count = len(target.read_text(encoding="utf-8").splitlines())
     first = int(found["first"])
     last = int(found["last"] or first)
-    if not 1 <= first <= last <= count:
+    if first > last:
+        return f"{span}: the range runs backwards"
+    if not 1 <= last <= count or first < 1:
         return f"{span}: {found['path']} has {count} lines"
     return None

@@ -255,7 +255,7 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-014 | contract | none | A press or locating fit must carry an ISO 286 class, so a crush-rib or vendor-limit interference has no truthful form. |
 | IR-015 | contract | none | A retaining-ring groove bound to a feature needs an ISO groove class, so a printed groove with explicit limits is refused. |
 | IR-020 | contract | none | The machine profile has no field for a printer's calibration state (standard built-in or custom). |
-| IR-025 | decide | none | A loose kit item (a shipped tool or a length option) must be placed in the assembly, which puts it in the checks, the sweep and the access plan. |
+| IR-025 | contract | none | A loose kit item (a shipped tool or a length option) must be placed in the assembly, which puts it in the checks, the sweep and the access plan. |
 | IR-028 | contract | none | A fixed joint silently ignores a non-zero value, so a placement offset given there is lost. |
 | IR-029 | contract | assembly-steps-and-coupons | There is no way to offset a whole subassembly without editing every child placement. |
 | IR-036 | contract | none | There are no assembly configurations, so a sweep can't cover alternative operating envelopes such as several bundle sizes. |

@@ -57,12 +57,12 @@ A block id is a short upper-case prefix, a hyphen and a number, such as `FE-3`. 
 
 The body has these sections, in this order.
 
-1. **Status.** A line under the title: the status, the date, and the commit of `main` the spec was written against.
+1. **Baseline.** A line under the title: the commit of `main` the spec's pointers were checked against. The status is the front matter's, and the body doesn't repeat it.
 2. **Capabilities.** Each capability id, linked to its catalogue entry, with the tools, CLI commands and contracts that the catalogue lists for it.
 3. **Problem and users.** What goes wrong without the capability, and who meets it: the user, the agent, a provider author or a maintainer.
-4. **Requirements.** Each one a bullet that starts `- **REQ-n.**`, numbered from 1 within the spec. A requirement is testable. It cites its source: a `path:line` of the plan, an ADR or a contract page, or an issue-register id (`IR-nnn` or `RULE-nn`). A requirement with no source is marked `**Proposal**`, and it needs the owner's approval of the spec before its block starts. A requirement that waits on an open question names the question.
+4. **Requirements.** A `## Requirements` section of bullets, each starting `- **REQ-n.**`, numbered from 1 within the spec. A requirement is testable. It cites its source: a `path:line` of the plan, an ADR or a contract page, or an issue-register id (`IR-nnn` or `RULE-nn`). A requirement with no source is marked `**Proposal**`, and it needs the owner's approval of the spec before its block starts. A requirement that waits on an open question names the question.
 5. **Interfaces.** The MCP tools, CLI commands, contracts and provider methods the spec touches, with each new or changed contract named and its version bump.
-6. **Issue register.** A table of the entries the spec closes, with the block and the test for each, and a table of the entries it defers, with the capability that closes each.
+6. **Issue register.** A table of the entries the spec closes, with the block and the test for each, and a table of the entries it defers, with the capability that closes each. A behaviour that another capability or a later phase must finish is named there as a handoff, with its capability.
 7. **Prototype behaviour replaced.** The prototype files and symbols, as `docs/architecture/prototype-inventory.md` lists them, and the oracle tests under `reference/` whose cases the blocks port.
 8. **Non-goals.** What the spec leaves out, and where it goes instead.
 9. **Open questions.** Each catalogue question the spec cites, whether it blocks, and which blocks wait for it.
@@ -76,14 +76,14 @@ A Phase 2 register entry is joined to a spec when one of its `prototype_paths` m
 
 ## What `just specs` checks
 
-- The index and each spec's front matter match their schemas, and each spec's id is its file name. Every Markdown file in `docs/specs/` is a listed spec, this page or the generated page.
-- Every capability, open question, design rule and register id exists in the catalogue or the register.
-- Every `` `path:line` `` and `` `path:first-last` `` in a spec's body names a file of the repository, and lines that it has.
+- The index and each spec's front matter match their schemas, and each spec's id is its file name. A front-matter key given twice is refused, so a second key can't hide the first. Every Markdown file in `docs/specs/` is a listed spec, this page or the generated page.
+- Every capability, open question, design rule and register id exists in the catalogue or the register, in the front matter and in the body.
+- Every span in a spec's body that reads as a pointer, a path then a colon and a digit, is a repository-relative `` `path:line` `` or `` `path:first-last` ``. It names a file of the repository and lines that it has, and a range doesn't run backwards.
 - A capability is covered by one spec at most. Each Phase 2 capability is covered by a spec or listed in `not_yet_specced`, and that list names only uncovered Phase 2 capabilities.
 - Block ids are unique. Each dependency resolves to a block, a listed question or an uncovered capability, and the blocks form no cycle.
-- Each requirement cites a source, appears once and belongs to a block. Each block names only requirements of its spec.
-- Each block has its section, with its scope and its acceptance.
-- A register entry is closed once, by a block of the closing spec. A deferral to a covered capability is closed by that capability's spec. Each joined entry is closed or deferred.
+- The spec has a `## Requirements` section. Every top-level bullet in it is a well-formed REQ bullet, and no REQ bullet sits outside it. Each requirement cites a source that exists (a register id, a pointer that resolves, or `**Proposal**`), appears once and belongs to a block. Each block names only requirements of its spec.
+- Each block has exactly one section, with its scope and its acceptance.
+- A register entry is closed once, by a block of the closing spec. Specs that defer one entry agree on its capability. A deferral to a covered capability is closed by that capability's spec, and an entry that one spec closes isn't deferred by another to an uncovered capability. Each joined entry is closed or deferred.
 - `phase-2.md` matches what `just specs --write` generates.
 
 ## Status

@@ -27,7 +27,10 @@ PHASE = 2
 """The phase whose capabilities the specs must cover and the page indexes."""
 
 _REQUIREMENT = re.compile(r"^- \*\*(?P<id>REQ-[1-9][0-9]*)\.\*\*")
+_REQUIREMENT_SHAPED = re.compile(r"^\s*[-*+]\s+\S*REQ-")
+"""A bullet that names a REQ at its start, well formed or not."""
 _BLOCK_HEADING = re.compile(r"^### (?P<id>[A-Z]+-[1-9][0-9]*)\b")
+REQUIREMENTS_HEADING = "## Requirements"
 
 
 class SpecError(Exception):
@@ -75,33 +78,66 @@ class Spec:
     def defers(self) -> list[dict[str, Any]]:
         return self.front["issues"]["defers"]
 
+    def requirements_section(self) -> tuple[int, list[str]] | None:
+        """The offset into the body of the line after `## Requirements`, and the lines up to the next heading of
+        level 2 or above; None when the body has no such section."""
+        if REQUIREMENTS_HEADING not in self.body:
+            return None
+        start = self.body.index(REQUIREMENTS_HEADING) + 1
+        end = next(
+            (index for index in range(start, len(self.body)) if self.body[index].startswith(("# ", "## "))),
+            len(self.body),
+        )
+        return start, self.body[start:end]
+
     def requirements(self) -> list[Requirement]:
-        """The body's REQ bullets, each with the lines up to the next bullet, heading or blank line."""
+        """The REQ bullets of the Requirements section, each with the lines up to the next bullet, heading or
+        blank line."""
+        section = self.requirements_section()
+        if section is None:
+            return []
+        first, lines = section
         found: list[Requirement] = []
         current: list[str] = []
         current_id = ""
         start = 0
-        for offset, line in enumerate([*self.body, ""]):
+        for offset, line in enumerate([*lines, ""]):
             match = _REQUIREMENT.match(line)
             if current and (match or not line.strip() or line.startswith(("- ", "#"))):
                 found.append(Requirement(current_id, start, " ".join(current)))
                 current = []
             if match:
-                current, current_id, start = [line], match["id"], self.body_line + offset
+                current, current_id, start = [line], match["id"], self.body_line + first + offset
             elif current:
                 current.append(line.strip())
         return found
 
-    def block_sections(self) -> dict[str, list[str]]:
-        """Each `### <block id>` section of the body: its lines up to the next heading of level 3 or above."""
-        sections: dict[str, list[str]] = {}
+    def malformed_requirements(self) -> list[tuple[int, str]]:
+        """(file line, line) of each bullet that isn't a well-formed REQ bullet in the Requirements section: a
+        top-level bullet there that isn't `- **REQ-n.**`, and a REQ-shaped bullet anywhere else."""
+        section = self.requirements_section()
+        inside = range(section[0], section[0] + len(section[1])) if section else range(0)
+        found: list[tuple[int, str]] = []
+        for offset, line in enumerate(self.body):
+            if offset in inside:
+                bad = line.startswith(("- ", "* ", "+ ")) and not _REQUIREMENT.match(line)
+            else:
+                bad = bool(_REQUIREMENT_SHAPED.match(line))
+            if bad:
+                found.append((self.body_line + offset, line))
+        return found
+
+    def block_sections(self) -> dict[str, list[list[str]]]:
+        """Each `### <block id>` section of the body, by block id: its lines up to the next heading of level 3 or
+        above. A heading given twice gives two sections."""
+        sections: dict[str, list[list[str]]] = {}
         current: list[str] | None = None
         for line in self.body:
             if line.startswith(("# ", "## ", "### ")):
                 match = _BLOCK_HEADING.match(line)
-                current = sections.setdefault(match["id"], []) if match else None
-                if current is not None:
-                    current.append(line)
+                current = [line] if match else None
+                if match and current is not None:
+                    sections.setdefault(match["id"], []).append(current)
             elif current is not None:
                 current.append(line)
         return sections
@@ -133,6 +169,41 @@ class Sources:
         ]
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """A safe loader that refuses a mapping key given twice, which safe_load would silently collapse."""
+
+
+class DuplicateKeyError(yaml.YAMLError):
+    def __init__(self, key: Any, line: int) -> None:
+        super().__init__(f"key {key!r} is given twice")
+        self.key = key
+        self.line = line
+        """The key's 0-based line in the parsed text."""
+
+
+def _unique_mapping(loader: _UniqueKeyLoader, node: yaml.MappingNode) -> dict[Any, Any]:
+    loader.flatten_mapping(node)
+    seen: list[Any] = []
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node)
+        if key in seen:
+            raise DuplicateKeyError(key, key_node.start_mark.line)
+        seen.append(key)
+    return loader.construct_mapping(node)
+
+
+_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _unique_mapping)
+
+
+def _load_front_matter(text: str) -> Any:
+    """The YAML document in `text`, read by the safe loader that refuses duplicate keys."""
+    loader = _UniqueKeyLoader(text)
+    try:
+        return loader.get_single_data()
+    finally:
+        loader.dispose()
+
+
 def split_front_matter(text: str, where: str) -> tuple[Any, list[str], int]:
     """The parsed YAML between the leading `---` lines, the body lines after them, and the body's first line."""
     lines = text.splitlines()
@@ -140,7 +211,11 @@ def split_front_matter(text: str, where: str) -> tuple[Any, list[str], int]:
         raise SpecError([f"{where}: no YAML front matter between --- lines at the top of the file"])
     end = lines.index("---", 1)
     try:
-        front = yaml.safe_load("\n".join(lines[1:end]))
+        front = _load_front_matter("\n".join(lines[1:end]))
+    except DuplicateKeyError as error:
+        raise SpecError(
+            [f"{where}:{error.line + 2}: front matter key {error.key!r} is given twice"]
+        ) from error
     except yaml.YAMLError as error:
         raise SpecError([f"{where}: front matter is not valid YAML: {error}"]) from error
     return front, lines[end + 1 :], end + 2

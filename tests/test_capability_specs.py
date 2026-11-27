@@ -56,6 +56,7 @@ def _catalogue() -> dict[str, Any]:
             },
             {"id": "snapshots", "title": "Snapshots", "phase": 2, "status": "planned"},
             {"id": "store", "title": "Store", "phase": 1, "status": "built"},
+            {"id": "viewer", "title": "Viewer", "phase": 5, "status": "planned"},
         ],
     }
 
@@ -140,11 +141,11 @@ def _decisions() -> Spec:
 BODIES = {
     "engine": [
         "# The engine",
-        "",
+        "## Requirements",
         "- **REQ-1.** The flow loads. Source: `docs/plan.md:2`.",
         "- **REQ-2.** A gate holds",
         "  until the user answers (IR-001).",
-        "",
+        "## Blocks",
         "### EN-1: Load the flow",
         "",
         "**Scope.** The loader. **Acceptance.** A load test.",
@@ -155,9 +156,9 @@ BODIES = {
     ],
     "decisions": [
         "# Decisions",
-        "",
+        "## Requirements",
         "- **REQ-1.** A decision is written. **Proposal** for the owner.",
-        "",
+        "## Blocks",
         "### DR-1: Write decisions",
         "",
         "**Scope.** The writer. **Acceptance.** A writer test.",
@@ -268,6 +269,10 @@ def test_an_id_that_doesnt_exist_is_a_problem(
         ("docs/plan.md:0", "docs/plan.md has 5 lines"),
         ("docs/missing.md:1", "no file docs/missing.md"),
         ("../outside.md:1", "a pointer stays inside the repository"),
+        ("/abs/plan.md:3", "a pointer is a path relative to the repository"),
+        ("~/plan.md:1", "a pointer is a path relative to the repository"),
+        ("docs/plan.md:4-", "not a `path:line` or `path:first-last` pointer"),
+        ("docs/plan.md:4-2", "the range runs backwards"),
     ],
 )
 def test_a_pointer_that_doesnt_resolve_is_a_problem_on_its_line(
@@ -523,3 +528,94 @@ def test_the_block_graph_renders(tmp_path: Path) -> None:
     text = (REPO_ROOT / PAGE_FILE).read_text(encoding="utf-8")
     assert mermaid_blocks(text) == 1
     assert len(render_markdown(text, tmp_path)) == 1
+
+
+def test_an_invented_register_id_is_no_source_and_a_problem_on_its_line(repo: Repo) -> None:
+    repo.bodies["engine"][3:5] = ["- **REQ-2.** A gate holds", "  until the user answers. Source: IR-999."]
+    problems = "\n".join(repo.check())
+    assert "REQ-2 cites no source" in problems
+    lines = (repo.root / SPECS_DIR / "engine.md").read_text(encoding="utf-8").splitlines()
+    line = next(number for number, text in enumerate(lines, start=1) if "IR-999" in text)
+    assert f"docs/specs/engine.md:{line}: IR-999 is not in the issue register" in problems
+
+
+def test_an_invented_design_rule_anywhere_in_the_body_is_a_problem(repo: Repo) -> None:
+    repo.bodies["engine"].append("The gates follow RULE-99.")
+    assert "RULE-99 is not in the issue register" in "\n".join(repo.check())
+
+
+def test_a_bad_pointer_next_to_a_good_source_is_still_a_problem(repo: Repo) -> None:
+    repo.bodies["engine"][2] = "- **REQ-1.** The flow loads (IR-001), `docs/plan.md:2` and `/abs/plan.md:2`."
+    assert "/abs/plan.md:2: a pointer is a path relative to the repository" in "\n".join(repo.check())
+
+
+def test_a_pointer_that_doesnt_resolve_is_no_source(repo: Repo) -> None:
+    repo.bodies["decisions"][2] = "- **REQ-1.** A decision is written, as `docs/plan.md:9` says."
+    problems = "\n".join(repo.check())
+    assert "REQ-1 cites no source" in problems
+    assert "docs/plan.md:9: docs/plan.md has 5 lines" in problems
+
+
+def test_a_front_matter_key_given_twice_is_a_problem_that_names_its_line(repo: Repo) -> None:
+    repo.write()
+    path = repo.root / SPECS_DIR / "engine.md"
+    text = path.read_text(encoding="utf-8")
+    # A second depends_on with a valid list would otherwise hide the first one's unknown block.
+    text = text.replace("  depends_on: []\n", "  depends_on:\n  - XX-9\n  depends_on: []\n", 1)
+    path.write_text(text, encoding="utf-8")
+    line = next(number for number, row in enumerate(text.splitlines(), start=1) if row == "  depends_on: []")
+    with pytest.raises(SpecError, match=f"engine.md:{line}: front matter key 'depends_on' is given twice"):
+        run(repo.root, write=True)
+
+
+def test_a_block_heading_given_twice_is_a_problem_even_when_the_two_halves_pass_together(repo: Repo) -> None:
+    repo.bodies["decisions"][6:7] = [
+        "**Scope.** The writer.",
+        "",
+        "### DR-1: Again",
+        "",
+        "**Acceptance.** A test.",
+    ]
+    assert "block DR-1 has 2 `### DR-1` sections, not one" in "\n".join(repo.check())
+
+
+def test_a_malformed_requirement_bullet_is_a_problem(repo: Repo) -> None:
+    repo.bodies["decisions"].insert(3, "- **REQ-2** has no period (IR-002).")
+    assert "docs/specs/decisions.md:" in "\n".join(repo.check())
+    assert "not a requirement bullet" in "\n".join(repo.check())
+
+
+def test_a_requirement_outside_the_requirements_section_is_a_problem(repo: Repo) -> None:
+    repo.bodies["decisions"].append("- **REQ-2.** A stray requirement (IR-002).")
+    problems = "\n".join(repo.check())
+    assert "not a requirement bullet" in problems
+    assert "REQ-2 is defined" not in problems
+
+
+def test_a_spec_without_a_requirements_section_is_a_problem(repo: Repo) -> None:
+    repo.bodies["decisions"][1] = "## Needs"
+    problems = "\n".join(repo.check())
+    assert "decisions.md: no `## Requirements` section" in problems
+    assert "block DR-1 names REQ-1, which the spec doesn't define" in problems
+
+
+def test_one_entry_deferred_to_two_capabilities_is_a_problem(repo: Repo) -> None:
+    repo.specs["engine"]["issues"]["defers"].append({"id": "IR-003", "to": "snapshots", "reason": "r"})
+    repo.specs["decisions"]["issues"]["defers"].append({"id": "IR-003", "to": "viewer", "reason": "r"})
+    assert "IR-003 is deferred to 2 capabilities: snapshots, viewer" in "\n".join(repo.check())
+
+
+def test_two_specs_that_defer_one_entry_to_one_capability_hold(repo: Repo) -> None:
+    repo.specs["engine"]["issues"]["defers"].append({"id": "IR-003", "to": "snapshots", "reason": "r"})
+    repo.specs["decisions"]["issues"]["defers"].append({"id": "IR-003", "to": "snapshots", "reason": "r"})
+    assert repo.check() == []
+
+
+def test_an_entry_deferred_to_an_unspecced_capability_but_closed_by_another_spec_is_a_problem(
+    repo: Repo,
+) -> None:
+    repo.specs["decisions"]["issues"]["closes"].append({"id": "IR-003", "block": "DR-1", "test": "t"})
+    repo.specs["engine"]["issues"]["defers"].append({"id": "IR-003", "to": "snapshots", "reason": "r"})
+    assert "IR-003 is deferred to snapshots, which no spec covers, but spec decisions closes it" in "\n".join(
+        repo.check()
+    )
