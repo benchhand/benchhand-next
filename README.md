@@ -16,7 +16,11 @@ This is the temporary home of the benchhand rewrite: agent-guided mechanical CAD
 
 ```sh
 uv sync --all-packages
-mise install        # the pinned tools: d2, prek, typos, taplo, gitleaks, actionlint, zizmor, pinact, osv-scanner
+mise install        # the pinned tools: d2, prek, typos, taplo, gitleaks, actionlint, zizmor, pinact, osv-scanner, reuse
 just hooks-install  # git hooks; they call the same recipes CI does (docs/tooling.md)
 just check
 ```
+
+## Licence
+
+[MPL-2.0](LICENSE). Each file carries an SPDX header, or an entry in [`REUSE.toml`](REUSE.toml), and `reuse lint` checks them. Third-party files keep their own licences: see [`NOTICE`](NOTICE). Contributions need a signed [CLA](CLA.md); see [`CONTRIBUTING.md`](CONTRIBUTING.md).
