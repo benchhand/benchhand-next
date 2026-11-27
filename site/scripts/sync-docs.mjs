@@ -78,7 +78,22 @@ function planCopies() {
       }
     }
   }
-  return { pages, assets };
+  return { pages, assets, aliases: foldersFirst(pages) };
+}
+
+// A generated page `x.md` beside a directory `x/` with an index (docs/contract/generated/domain-model.md, a stub
+// that points at domain-model/README.md) would claim the route of `x/index.md` a second time, and Astro warns
+// of a duplicate slug. The directory's index wins: the stub is not written, and a link to it goes to the index.
+// Returns source → destination of the index for each page removed from `pages`.
+function foldersFirst(pages) {
+  const destinations = new Set(pages.values());
+  const aliases = new Map();
+  for (const [source, dest] of pages) {
+    const index = dest.replace(/\.md$/, "/index.md");
+    if (generatedSources.has(source) && destinations.has(index)) aliases.set(source, index);
+  }
+  for (const source of aliases.keys()) pages.delete(source);
+  return aliases;
 }
 
 const destinations = new Set();
@@ -106,6 +121,7 @@ function rewriteUrl(url, source, kind, plan) {
   if (resolved.startsWith("../")) throw new Error(`${source}: link ${url} leaves the repository`);
 
   if (plan.pages.has(resolved)) return { rule: "synced page → site route", url: routeOf(plan.pages.get(resolved)) + suffix };
+  if (plan.aliases.has(resolved)) return { rule: "page folded into its folder's index → site route", url: routeOf(plan.aliases.get(resolved)) + suffix };
   if (kind === "image" && plan.assets.has(resolved)) return undefined;
   return githubTarget(resolved, suffix, kind, `${source}: link ${url}`);
 }
