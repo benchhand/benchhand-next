@@ -150,7 +150,8 @@ def test_every_diagram_is_followed_by_a_table_of_its_relationships(
             assert f"Relationships in diagram {diagram.number}:" in section
             table = [line for line in section.splitlines() if line.startswith("| ") and " | " in line]
             assert table[0] == "| Source | Relation | Target | Cardinality |"
-            assert len(table) == len(rows) + 1, f"{stem} diagram {diagram.number}"  # the header and a row each
+            # The header and a row each.
+            assert len(table) == len(rows) + 1, f"{stem} diagram {diagram.number}"
             tables += 1
     assert tables > 20
 
