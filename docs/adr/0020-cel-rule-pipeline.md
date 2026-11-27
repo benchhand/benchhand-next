@@ -104,14 +104,14 @@ So:
 A rule list is a cel-policy file, `flow/*.celpolicy`. The profile is an allow-list of what the flat "checks by iteration" list exercised on the three evaluators tested on it:
 
 - a `name`, and a `rule` with one `match` block, evaluated first-match;
-- each choice has a `condition` and an `output`;
+- each choice has an `output`, and every choice except the final one has a `condition`;
 - the final choice has no condition, so it always matches.
 
 The profile has no `variables`, no `aggregate` and no nested `rule`. Every other cel-policy field, `explanation` and `imports` included, is outside it. The compile step refuses an excluded feature before the policy compiler runs, in every profile. A feature joins the profile only when the CheckedExpr the compiler emits for it passes the supported-profile gate on cel-expr-python.
 
 The final choice keeps "no match means UNKNOWN". A dispatch list ends with `- output: '"unknown"'`. The rule-list schema reserves the value `unknown`, and the host records it as UNKNOWN coverage, never PASS. Every other list's final choice outputs an explicit default of the same type as its other outputs, so the compiler's output-type check still holds.
 
-The policy compiler checks output-type assignability, a literal `false` condition, and a literally true choice before the last one. A condition that is always false without being the literal passes it.
+The policy compiler checks output-type assignability between the choices, a literal `false` condition, and a literally true choice before the last one. A condition that is always false without being the literal passes it. Assignability between choices doesn't check the list against its slot: a `dyn` output is assignable to anything, and all choices can agree on the wrong type. So the cel-go tool also checks the type of the compiled list's result against the slot type that the rule-list contract declares for the list's kind, and refuses a list whose result type differs.
 
 ### Compilation and the rules bundle
 
@@ -166,7 +166,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
   - accept, reject, profile and presence cases;
   - reject cases for a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable;
   - profile cases in which an enabled feature checks and an excluded one fails;
-  - a refusal fixture for each excluded cel-policy feature;
+  - a refusal fixture for each excluded cel-policy feature, and for a list whose result type differs from its slot type;
   - tampered-bundle cases on its bundles, all refused: another profile's digest, an edited source, a substituted payload and a checker not of record.
 - **cel-expr-python:**
   - the same accept, reject, profile and presence cases, with the presence cases run through the activation path (parse a record, then evaluate);
