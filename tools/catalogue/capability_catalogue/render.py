@@ -149,8 +149,9 @@ def _graph(catalogue: Catalogue) -> list[str]:
         "",
         "An arrow points from a capability to one it depends on. A solid box or arrow is on `main`: green "
         "is built, pale green with a dashed border is partial, and a solid arrow joins two of them. A dashed "
-        "box or arrow is planned, with its phase in the label. Red and dotted has no phase; purple and "
-        "dotted is proposed.",
+        "box is planned, with its phase in the label; red and dotted has no phase; purple and dotted is "
+        "proposed. A dashed arrow is not implemented, and its nodes give the phase and status. It is labelled "
+        "`proposed` when either end is proposed, and `no phase` when either end has no phase.",
         "",
         "```mermaid",
         "flowchart LR",
@@ -163,9 +164,19 @@ def _graph(catalogue: Catalogue) -> list[str]:
         lines.append("  end")
     for item in catalogue.capabilities:
         for target in item.get("depends_on", []):
-            solid = item["status"] in _ON_MAIN and catalogue.capability(target)["status"] in _ON_MAIN
-            lines.append(f"  {_node(item['id'])} {'-->' if solid else '-.->'} {_node(target)}")
+            lines.append(f"  {_node(item['id'])} {_edge(item, catalogue.capability(target))} {_node(target)}")
     return [*lines, *(f"  {definition}" for definition in _CLASSES), "```"]
+
+
+def _edge(source: dict[str, Any], target: dict[str, Any]) -> str:
+    ends = (source, target)
+    if all(end["status"] in _ON_MAIN for end in ends):
+        return "-->"
+    if any(end["status"] == "proposed" for end in ends):
+        return "-.->|proposed|"
+    if any(end["phase"] is None for end in ends):
+        return "-.->|no phase|"
+    return "-.->"
 
 
 def _source(source: dict[str, str]) -> str:

@@ -365,6 +365,22 @@ def test_the_graph_draws_solid_only_between_capabilities_on_main_and_labels_ever
     assert "| **all** | **3** | 2 | 0 | 1 | 0 | 0 |" in text
 
 
+def test_a_dashed_arrow_to_a_proposed_or_phaseless_capability_says_which() -> None:
+    data = _catalogue()
+    data["capabilities"] += [
+        {
+            **copy.deepcopy(data["capabilities"][1]),
+            "id": "docs",
+            "status": "proposed",
+            "depends_on": ["jobs"],
+        },
+        {**copy.deepcopy(data["capabilities"][1]), "id": "host", "phase": None, "depends_on": ["jobs"]},
+    ]
+    graph = render_page(Catalogue(data)).split("```mermaid\n")[1]
+    assert "  docs -.->|proposed| jobs" in graph
+    assert "  host -.->|no phase| jobs" in graph
+
+
 def test_the_gap_list_names_toolless_capabilities_undefined_contracts_and_unowned_commands() -> None:
     data = _catalogue()
     data["tools"] = data["tools"][:1]

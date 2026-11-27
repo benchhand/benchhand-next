@@ -150,7 +150,7 @@ MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands:
 
 ## Dependency graph
 
-An arrow points from a capability to one it depends on. A solid box or arrow is on `main`: green is built, pale green with a dashed border is partial, and a solid arrow joins two of them. A dashed box or arrow is planned, with its phase in the label. Red and dotted has no phase; purple and dotted is proposed.
+An arrow points from a capability to one it depends on. A solid box or arrow is on `main`: green is built, pale green with a dashed border is partial, and a solid arrow joins two of them. A dashed box is planned, with its phase in the label; red and dotted has no phase; purple and dotted is proposed. A dashed arrow is not implemented, and its nodes give the phase and status. It is labelled `proposed` when either end is proposed, and `no phase` when either end has no phase.
 
 ```mermaid
 flowchart LR
@@ -281,11 +281,11 @@ flowchart LR
   assembly_steps_and_coupons -.-> record_store
   assembly_steps_and_coupons -.-> evidence_assessment
   annotation_set -.-> record_store
-  middleware_chain -.-> contract_validation
-  middleware_chain -.-> gate_policy
-  design_recheck -.-> evidence_assessment
-  scratch_workspaces -.-> record_store
-  scratch_workspaces -.-> model_build
+  middleware_chain -.->|no phase| contract_validation
+  middleware_chain -.->|no phase| gate_policy
+  design_recheck -.->|no phase| evidence_assessment
+  scratch_workspaces -.->|no phase| record_store
+  scratch_workspaces -.->|no phase| model_build
   mcp_server -.-> result_envelope
   mcp_server -.-> contract_validation
   mcp_server -.-> guide_service
@@ -305,13 +305,13 @@ flowchart LR
   gate_packet -.-> evidence_assessment
   provider_runtime -.-> provider_protocol_contract
   provider_runtime -.-> contract_validation
-  provider_host -.-> provider_runtime
-  provider_host -.-> job_service
+  provider_host -.->|no phase| provider_runtime
+  provider_host -.->|no phase| job_service
   provider_environments -.-> provider_runtime
   provider_cli -.-> provider_runtime
-  provider_cli -.-> provider_host
+  provider_cli -.->|no phase| provider_host
   freecad_runtime -.-> provider_runtime
-  model_build -.-> provider_host
+  model_build -.->|no phase| provider_host
   model_build -.-> provider_environments
   model_build -.-> version_snapshots
   model_build -.-> existing_equipment
@@ -320,7 +320,7 @@ flowchart LR
   model_diff -.-> model_inspect
   model_diff -.-> version_snapshots
   generators -.-> part_sdk
-  process_checks -.-> provider_host
+  process_checks -.->|no phase| provider_host
   process_checks -.-> rule_lists
   check_orchestration -.-> evidence_assessment
   check_orchestration -.-> rule_lists
@@ -332,9 +332,9 @@ flowchart LR
   fea_analysis -.-> model_build
   motion_analysis -.-> model_build
   motion_analysis -.-> job_service
-  motion_analysis -.-> provider_host
+  motion_analysis -.->|no phase| provider_host
   render_output -.-> model_build
-  render_output -.-> provider_host
+  render_output -.->|no phase| provider_host
   drawings -.-> freecad_runtime
   drawings -.-> model_build
   drawings -.-> job_service
@@ -347,9 +347,9 @@ flowchart LR
   documentation_set -.-> drawings
   documentation_set -.-> render_output
   documentation_set -.-> existing_equipment
-  store_provider -.-> provider_host
-  policy_provider -.-> provider_host
-  policy_provider -.-> gate_policy
+  store_provider -.->|no phase| provider_host
+  policy_provider -.->|no phase| provider_host
+  policy_provider -.->|no phase| gate_policy
   preview_host -.-> mcp_server
   preview_host -.-> job_service
   viewer -.-> preview_host
@@ -368,11 +368,11 @@ flowchart LR
   harness_install -.-> mcp_server
   harness_install -.-> guide_service
   skills_over_mcp -.-> guide_service
-  container_launcher -.-> mcp_server
-  container_launcher -.-> env_doctor
-  container_launcher -.-> job_service
+  container_launcher -.->|no phase| mcp_server
+  container_launcher -.->|no phase| env_doctor
+  container_launcher -.->|no phase| job_service
   distribution -.-> harness_install
-  distribution -.-> container_launcher
+  distribution -.->|no phase| container_launcher
   distribution -.-> cel_rule_pipeline
   golden_parity -.-> mcp_server
   golden_parity -.-> model_build
@@ -380,21 +380,21 @@ flowchart LR
   golden_parity -.-> bom
   golden_parity -.-> release_packaging
   golden_parity -.-> interaction_chat_fallbacks
-  bounded_results -.-> result_envelope
-  bounded_results -.-> job_service
-  docs_index -.-> guide_service
-  docs_index -.-> part_sdk
-  standards_parts_data -.-> record_store
-  standards_parts_data -.-> evidence_assessment
-  step_import -.-> model_inspect
-  step_import -.-> record_ops
-  live_project_viewer -.-> viewer
-  live_project_viewer -.-> model_diff
-  live_project_viewer -.-> flow_view
-  product_docs -.-> documentation_set
-  product_docs -.-> version_snapshots
-  product_docs -.-> bom
-  product_docs -.-> release_packaging
+  bounded_results -.->|proposed| result_envelope
+  bounded_results -.->|proposed| job_service
+  docs_index -.->|proposed| guide_service
+  docs_index -.->|proposed| part_sdk
+  standards_parts_data -.->|proposed| record_store
+  standards_parts_data -.->|proposed| evidence_assessment
+  step_import -.->|proposed| model_inspect
+  step_import -.->|proposed| record_ops
+  live_project_viewer -.->|proposed| viewer
+  live_project_viewer -.->|proposed| model_diff
+  live_project_viewer -.->|proposed| flow_view
+  product_docs -.->|proposed| documentation_set
+  product_docs -.->|proposed| version_snapshots
+  product_docs -.->|proposed| bom
+  product_docs -.->|proposed| release_packaging
   classDef built fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b1b1b
   classDef partial fill:#f1faf3,stroke:#2e7d32,stroke-width:2px,stroke-dasharray:6 3,color:#1b1b1b
   classDef planned fill:#ffffff,stroke:#616161,stroke-width:1px,stroke-dasharray:6 4,color:#1b1b1b
