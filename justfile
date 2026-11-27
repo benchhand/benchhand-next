@@ -15,7 +15,7 @@ _need tool:
 # Lint, type-check and test everything, and check the generated contract code. The git hooks
 # (.pre-commit-config.yaml) call the same recipes. `audit`, `secrets-history` and `lint-workflows-online`
 # need the network and run in CI.
-check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map inventory issues
+check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map inventory issues capabilities
 
 lint:
     uv run ruff check .
@@ -232,6 +232,12 @@ issues *args:
 # and per-issue hashes once the report is triaged; the new file must pass `just issues` before it is written.
 issues-sync *args:
     PYTHONPATH=tools/issues:tools/map uv run python -m issue_register sync {{args}}
+
+# Check docs/architecture/capabilities.yaml against its JSON Schema and its cross references, and with `--write`
+# regenerate docs/architecture/capabilities.md from it. Offline and fast. With BENCHHAND_REFERENCE_DIR set (as for
+# `reference-map`) it also checks that every runnable prototype script has a prototype command entry.
+capabilities *args:
+    PYTHONPATH=tools/catalogue:tools/map uv run python -m capability_catalogue {{args}}
 
 # Install the git hooks (.pre-commit-config.yaml) for pre-commit and pre-push. Run `mise install` first: the
 # hooks call the tools pinned in mise.toml. Git keeps hooks per clone, so every worktree of it shares them.
