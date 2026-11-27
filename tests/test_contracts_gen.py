@@ -359,6 +359,8 @@ def test_docs_render_each_contract_and_an_index(schemas_dir: Path, tmp_path: Pat
         # A property has a table row, not a heading, so its link has no anchor.
         ("part.schema.json#/properties/transparency", "[`part.transparency`](part.md)"),
         ("#/properties/transparency", "`transparency`"),
+        # The same holds for a property of a definition.
+        ("decision.schema.json#/$defs/approval/properties/channel", "[`decision.channel`](decision.md)"),
     ],
 )
 def test_docs_link_a_ref_only_to_an_anchor_that_exists(ref: str, expected: str) -> None:

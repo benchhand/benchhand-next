@@ -265,7 +265,7 @@ Type: object
 | `gate` | [`gate_id`](../record/common.md#gate_id) | yes |  |
 | `status` | [`GateDecisionStatus`](#gatedecisionstatus) | yes |  |
 | `version` | [`version`](../record/common.md#version) | no | The built version the decision is on |
-| `channel` | [`channel`](../record/decision.md#channel) | yes | `not: {"const": "form"}` |
+| `channel` | [`decision.channel`](../record/decision.md) | yes | `not: {"const": "form"}` |
 | `by` | [`NonblankText`](#nonblanktext) | no | Who decided |
 | `quote` | [`NonblankText`](#nonblanktext) | no | The user's words, quoted |
 | `provisional` | [`decision`](../record/common.md#decision) | no |  |
