@@ -2073,9 +2073,11 @@ capabilities:
     title: Apps, image results and tasks
     purpose: 'The enhancements over the baseline, only where a host
       declares them: the MCP App gate card and viewer shells embedding
-      the preview page, image content and resource links for the agent,
-      and the tasks adapter behind a flag. Form elicitation isn''t
-      used (ADR-0018).'
+      the preview page, the structured-question App (a form over nested
+      schemas for the GROUND, INTENT and SPECIFY questions), image
+      content and resource links for the agent, and the tasks adapter
+      behind a flag. The App form is an MCP App; MCP form elicitation
+      isn''t used (ADR-0018).'
     layer: interaction
     container: containers.md:interaction
     phase: 5
@@ -2089,14 +2091,19 @@ capabilities:
       apps:
         - gate card
         - ui://benchhand/viewer
+        - structured-question form
       phase: 5
       sources:
         - kind: plan
           ref: docs/design-plan.md:597
+        - kind: plan
+          ref: docs/design-plan.md:344
       baseline:
         - flow.gate_packet
         - flow.record_decision
         - viewer.show
+        - project.questions
+        - project.record_profile
     depends_on:
       - interaction-chat-fallbacks
       - preview-host

@@ -527,7 +527,7 @@ ADR-0018 makes a tool the baseline for readable content: each resource, prompt a
 | [record-ops](#record-ops) | `record`, `schemas`, `accepted values` | – | – | `record.read`; **missing:** no tool returns the published schemas or the accepted values. | P3 | plan: `docs/design-plan.md:574` |
 | [part-sdk](#part-sdk) | `sdk://describe` | – | – | **missing:** no tool returns the SDK signatures that sdk://describe lists. | P4 | plan: `docs/design-plan.md:366` |
 | [viewer](#viewer) | – | – | `ui://benchhand/viewer` | `viewer.show`, `preview.serve` | P5 | plan: `docs/design-plan.md:342` |
-| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer` | `flow.gate_packet`, `flow.record_decision`, `viewer.show` | P5 | plan: `docs/design-plan.md:597` |
+| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer`, `structured-question form` | `flow.gate_packet`, `flow.record_decision`, `viewer.show`, `project.questions`, `project.record_profile` | P5 | plan: `docs/design-plan.md:597`; plan: `docs/design-plan.md:344` |
 | [docs-index](#docs-index) | `docs://` | – | – | `docs.get` | P3 | study: `lane8-agentcad.md section 6, item 5` |
 
 ## CLI commands
@@ -1998,7 +1998,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 ### rich-interactions
 
-**Apps, image results and tasks.** The enhancements over the baseline, only where a host declares them: the MCP App gate card and viewer shells embedding the preview page, image content and resource links for the agent, and the tasks adapter behind a flag. Form elicitation isn't used (ADR-0018).
+**Apps, image results and tasks.** The enhancements over the baseline, only where a host declares them: the MCP App gate card and viewer shells embedding the preview page, the structured-question App (a form over nested schemas for the GROUND, INTENT and SPECIFY questions), image content and resource links for the agent, and the tasks adapter behind a flag. The App form is an MCP App; MCP form elicitation isn't used (ADR-0018).
 
 - Layer and container: interaction, `containers.md:interaction`
 - Phase and status: P5, planned
