@@ -2,14 +2,15 @@
 # which zizmor and Dependabot read; those lines exceed 80 columns.
 # yamllint disable rule:line-length
 #
-# On a release, check that the committed contracts are what `just contracts` generates, rebuild
-# the docs site from the tagged commit and deploy it to GitHub Pages, and attach the published
-# schemas to the release. Tags are `v*` (tools/gen/contracts_gen/breaking.py, RELEASE_TAG_PATTERN);
-# release.toml names the repository and carries no version.
-#
-# A tag push and a published release for the same tag both start this workflow. The runs queue
-# on the tag, and the second finds the release or the site already as the first left it:
-# the tag run has no release to attach to yet, and the release run uploads with --clobber.
+# A tag push checks that the committed contracts are what `just contracts` generates and that the
+# docs site builds from the tagged commit; it deploys nothing. A published release does the same,
+# then
+# - deploys the site to GitHub Pages, only when its tag is the highest stable semver tag at that
+#   moment (the check runs inside the shared `pages` concurrency group, so deploys can't race);
+# - attaches the published schemas to the release, always, so a backport or an older release
+#   still gets its schema assets and the site keeps the newest version.
+# Tags are `v*` (tools/gen/contracts_gen/breaking.py, RELEASE_TAG_PATTERN); release.toml names the
+# repository and carries no version.
 #
 # The `github-pages` environment must allow deployments from `v*` tags (Settings, Environments,
 # github-pages, Deployment branches and tags); by default it allows only the default branch.
@@ -20,8 +21,9 @@ on:
   push:
     tags: ["v*"]
 
+# Per event and tag, so a queued release run is never displaced by the tag push's validation run.
 concurrency:
-  group: release-docs-${{ github.ref }}
+  group: release-docs-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -34,6 +36,7 @@ env:
 
 jobs:
   build:
+    if: github.event_name == 'push' || startsWith(github.event.release.tag_name, 'v')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -85,10 +88,12 @@ jobs:
           path: site/dist
 
   deploy:
+    if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
@@ -97,11 +102,38 @@ jobs:
     concurrency:
       group: pages
       cancel-in-progress: false
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      PRERELEASE: ${{ github.event.release.prerelease }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
+      # Runs inside the `pages` group, so no other deploy is between this check and the deploy.
+      - name: Deploy only the highest stable semver tag
+        id: eligible
+        run: |
+          set -euo pipefail
+          stable='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          if [[ "${PRERELEASE}" == "true" || ! "${TAG}" =~ ${stable} ]]; then
+            echo "deploy=false" >> "${GITHUB_OUTPUT}"
+            echo "Site not deployed: ${TAG} is a prerelease or not a stable vX.Y.Z tag." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+          highest="$(gh api --paginate "repos/${GH_REPO}/git/matching-refs/tags/v" --jq '.[].ref' \
+            | sed 's,^refs/tags/,,' | { grep -E "${stable}" || true; } | sort -V | tail -n 1)"
+          if [[ "${highest}" == "${TAG}" ]]; then
+            echo "deploy=true" >> "${GITHUB_OUTPUT}"
+            echo "Site deployed from ${TAG}, the highest stable tag." >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "deploy=false" >> "${GITHUB_OUTPUT}"
+            echo "Site not deployed: ${TAG} is not the highest stable tag (${highest:-none found}). The site keeps the newest version; the schemas are still attached to this release." >> "${GITHUB_STEP_SUMMARY}"
+          fi
       - id: deploy
+        if: steps.eligible.outputs.deploy == 'true'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   schemas:
+    if: github.event_name == 'release'
     # The build job has checked that the committed schemas are the generated ones, so this job
     # packs them from its own checkout of the same commit.
     needs: build
@@ -110,7 +142,7 @@ jobs:
     permissions:
       contents: write
     env:
-      TAG: ${{ github.ref_name }}
+      TAG: ${{ github.event.release.tag_name }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
@@ -130,11 +162,6 @@ jobs:
             -cf - schemas | gzip -n > "release-assets/${tarball}"
           (cd release-assets && sha256sum "${tarball}" > SHA256SUMS && sha256sum --check SHA256SUMS)
           tar -tzf "release-assets/${tarball}" | wc -l
-      - name: Attach them to the release, when it exists
-        run: |
-          set -euo pipefail
-          if gh release view "${TAG}" > /dev/null 2>&1; then
-            gh release upload "${TAG}" release-assets/* --clobber
-          else
-            echo "No release for ${TAG} yet; the run for its published release attaches the schemas."
-          fi
+      # No probe: an API or permission error fails the job rather than leaving the release bare.
+      - name: Attach them to the release
+        run: gh release upload "${TAG}" release-assets/* --clobber
