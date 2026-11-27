@@ -8,19 +8,20 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 - **planned**: a phase of the design plan's Steps builds it. **proposed**: no source plans it. A proposed name comes from this catalogue (`catalogue`), for a prototype command or a gap the plan implies, or from the CAD-libraries study (`study`), whose reports aren't in this repository.
 - `P2` is Phase 2 of the plan's Steps. `no phase` means no phase delivers it; an open question says why.
 - A capability's status is its core's. Each tool and CLI command has its own status and phase. A tool is **unresolved** when a source names it only in an example and an open question asks whether it exists; it has no phase until that is answered.
+- *Scope* **baseline**: a phase of the plan's Steps delivers it in v1. **deferred**: no phase delivers it, or no source plans it yet. A planned capability's source cites the requirement or phase line that plans it.
 
-| Phase | Capabilities | built | partial | planned | proposed | dropped |
-|---|---|---|---|---|---|---|
-| P0 | 2 | 1 | 1 | 0 | 0 | 0 |
-| P1 | 7 | 5 | 2 | 0 | 0 | 0 |
-| P2 | 15 | 0 | 1 | 14 | 0 | 0 |
-| P3 | 11 | 0 | 1 | 8 | 2 | 0 |
-| P4 | 24 | 0 | 0 | 21 | 3 | 0 |
-| P5 | 8 | 0 | 0 | 7 | 1 | 0 |
-| P6 | 2 | 0 | 0 | 2 | 0 | 0 |
-| P7 | 2 | 0 | 0 | 2 | 0 | 0 |
-| no phase | 6 | 0 | 0 | 6 | 0 | 0 |
-| **all** | **77** | 6 | 5 | 60 | 6 | 0 |
+| Phase | Capabilities | built | partial | planned | proposed | dropped | baseline | deferred |
+|---|---|---|---|---|---|---|---|---|
+| P0 | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 0 |
+| P1 | 7 | 5 | 2 | 0 | 0 | 0 | 7 | 0 |
+| P2 | 15 | 0 | 1 | 14 | 0 | 0 | 15 | 0 |
+| P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
+| P4 | 24 | 0 | 0 | 21 | 3 | 0 | 21 | 3 |
+| P5 | 8 | 0 | 0 | 7 | 1 | 0 | 7 | 1 |
+| P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
+| P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
+| no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
+| **all** | **77** | 6 | 5 | 60 | 6 | 0 | 65 | 12 |
 
 MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 27. Doc corrections: 1.
 
@@ -28,125 +29,125 @@ MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands:
 
 ### P0
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [provider-protocol-contract](#provider-protocol-contract) | Provider protocol contract | contracts | `containers.md:published` | built | `contracts` | 0 | 0 |
-| [client-capability-probe](#client-capability-probe) | Client capability probe (dev only) | dev-tooling | `layers.md:support` | partial | `tools/probe` | 0 | 0 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [provider-protocol-contract](#provider-protocol-contract) | Provider protocol contract | contracts | `containers.md:published` | built | baseline | `contracts` | 0 | 0 |
+| [client-capability-probe](#client-capability-probe) | Client capability probe (dev only) | dev-tooling | `layers.md:support` | partial | baseline | `tools/probe` | 0 | 0 |
 
 ### P1
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [contracts-pipeline](#contracts-pipeline) | Contracts and code generation | contracts | `containers.md:published` | built | `contracts`, `tools/gen` | 0 | 0 |
-| [contract-validation](#contract-validation) | Runtime contract validation | contracts | `containers.md:validator` | built | `packages/benchhand-contracts` | 0 | 0 |
-| [record-store](#record-store) | Record store, typed reads and writes | core | `containers.md:store` | built | `packages/benchhand-core` | 1 | 0 |
-| [record-validate](#record-validate) | Record validation | core | `containers.md:validate` | partial | `packages/benchhand-core` | 1 | 0 |
-| [record-migrate](#record-migrate) | Record migration | core | `containers.md:migrate` | built | `packages/benchhand-core`, `packages/benchhand` | 1 | 1 |
-| [evidence-assessment](#evidence-assessment) | Evidence assessment | core | `containers.md:evidence` | partial | `packages/benchhand-core` | 2 | 0 |
-| [job-service](#job-service) | Job service | core | `containers.md:jobService` | built | `packages/benchhand-core` | 5 | 0 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [contracts-pipeline](#contracts-pipeline) | Contracts and code generation | contracts | `containers.md:published` | built | baseline | `contracts`, `tools/gen` | 0 | 0 |
+| [contract-validation](#contract-validation) | Runtime contract validation | contracts | `containers.md:validator` | built | baseline | `packages/benchhand-contracts` | 0 | 0 |
+| [record-store](#record-store) | Record store, typed reads and writes | core | `containers.md:store` | built | baseline | `packages/benchhand-core` | 1 | 0 |
+| [record-validate](#record-validate) | Record validation | core | `containers.md:validate` | partial | baseline | `packages/benchhand-core` | 1 | 0 |
+| [record-migrate](#record-migrate) | Record migration | core | `containers.md:migrate` | built | baseline | `packages/benchhand-core`, `packages/benchhand` | 1 | 1 |
+| [evidence-assessment](#evidence-assessment) | Evidence assessment | core | `containers.md:evidence` | partial | baseline | `packages/benchhand-core` | 2 | 0 |
+| [job-service](#job-service) | Job service | core | `containers.md:jobService` | built | baseline | `packages/benchhand-core` | 5 | 0 |
 
 ### P2
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [flow-engine](#flow-engine) | Flow engine | core | `containers.md:flowEngine` | planned | `packages/benchhand-core`, `flow` | 1 | 0 |
-| [cel-rule-pipeline](#cel-rule-pipeline) | CEL rule pipeline | core | `containers.md:celTypes` | planned | `packages/benchhand-core`, `tools/celcheck`, `tools/gen` | 0 | 1 |
-| [rule-lists](#rule-lists) | Rule lists | core | `layers.md:flowDir` | planned | `flow` | 0 | 0 |
-| [gate-policy](#gate-policy) | Gate policy | core | `containers.md:flowEngine` | planned | `packages/benchhand-core` | 2 | 2 |
-| [decision-records](#decision-records) | Gate decisions and decision records | core | `containers.md:flowEngine` | planned | `packages/benchhand-core` | 2 | 0 |
-| [scoped-reapproval](#scoped-reapproval) | Scoped approvals and changed-since-approval | core | `containers.md:flowEngine` | planned | `packages/benchhand-core` | 0 | 0 |
-| [result-envelope](#result-envelope) | Result envelope and next actions | mcp-surface | `containers.md:surface` | partial | `packages/benchhand-core`, `contracts` | 0 | 0 |
-| [guide-service](#guide-service) | Guidance from the server | core | `containers.md:guide` | planned | `packages/benchhand-core`, `flow` | 1 | 0 |
-| [version-snapshots](#version-snapshots) | Version snapshots, seal and verify | core | `containers.md:versions` | planned | `packages/benchhand-core` | 1 | 2 |
-| [project-profile](#project-profile) | Project-start profile | core | `containers.md:flowEngine` | planned | `packages/benchhand-core` | 3 | 0 |
-| [selection-assessment](#selection-assessment) | Use case and candidate selection | core | `containers.md:record` | planned | `packages/benchhand-core` | 1 | 0 |
-| [change-impact](#change-impact) | Change impact | core | `containers.md:flowEngine` | planned | `packages/benchhand-core` | 1 | 0 |
-| [existing-equipment](#existing-equipment) | Existing equipment and occurrence roles | core | `containers.md:record` | planned | `contracts`, `packages/benchhand-core` | 0 | 0 |
-| [assembly-steps-and-coupons](#assembly-steps-and-coupons) | Assembly steps and joint evidence | core | `containers.md:record` | planned | `contracts`, `packages/benchhand-core` | 1 | 0 |
-| [annotation-set](#annotation-set) | Annotation set | contracts | `containers.md:record` | planned | `contracts`, `packages/benchhand-core` | 0 | 0 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [flow-engine](#flow-engine) | Flow engine | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core`, `flow` | 1 | 0 |
+| [cel-rule-pipeline](#cel-rule-pipeline) | CEL rule pipeline | core | `containers.md:celTypes` | planned | baseline | `packages/benchhand-core`, `tools/celcheck`, `tools/gen` | 0 | 1 |
+| [rule-lists](#rule-lists) | Rule lists | core | `layers.md:flowDir` | planned | baseline | `flow` | 0 | 0 |
+| [gate-policy](#gate-policy) | Gate policy | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 2 | 2 |
+| [decision-records](#decision-records) | Gate decisions and decision records | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 2 | 0 |
+| [scoped-reapproval](#scoped-reapproval) | Scoped approvals and changed-since-approval | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 0 | 0 |
+| [result-envelope](#result-envelope) | Result envelope and next actions | mcp-surface | `containers.md:surface` | partial | baseline | `packages/benchhand-core`, `contracts` | 0 | 0 |
+| [guide-service](#guide-service) | Guidance from the server | core | `containers.md:guide` | planned | baseline | `packages/benchhand-core`, `flow` | 1 | 0 |
+| [version-snapshots](#version-snapshots) | Version snapshots, seal and verify | core | `containers.md:versions` | planned | baseline | `packages/benchhand-core` | 1 | 2 |
+| [project-profile](#project-profile) | Project-start profile | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 3 | 0 |
+| [selection-assessment](#selection-assessment) | Use case and candidate selection | core | `containers.md:record` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [change-impact](#change-impact) | Change impact | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [existing-equipment](#existing-equipment) | Existing equipment and occurrence roles | core | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
+| [assembly-steps-and-coupons](#assembly-steps-and-coupons) | Assembly steps and joint evidence | core | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 1 | 0 |
+| [annotation-set](#annotation-set) | Annotation set | contracts | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
 
 ### P3
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [mcp-server](#mcp-server) | MCP server | mcp-surface | `containers.md:surface` | planned | `packages/benchhand` | 0 | 3 |
-| [cli-app](#cli-app) | The benchhand CLI | cli | `containers.md:cli` | partial | `packages/benchhand` | 0 | 1 |
-| [project-session](#project-session) | Project session | mcp-surface | `containers.md:surface` | planned | `packages/benchhand` | 1 | 0 |
-| [env-doctor](#env-doctor) | Environment doctor | cli | `containers.md:cli` | planned | `packages/benchhand` | 1 | 1 |
-| [setup](#setup) | Setup and the managed FreeCAD install | cli | `containers.md:cli` | planned | `packages/benchhand` | 0 | 1 |
-| [record-ops](#record-ops) | Typed record operations | mcp-surface | `containers.md:recordOps` | planned | `packages/benchhand`, `packages/benchhand-core` | 6 | 0 |
-| [machine-profile](#machine-profile) | Machine capability profile | core | `containers.md:record` | planned | `packages/benchhand-core` | 2 | 0 |
-| [interaction-chat-fallbacks](#interaction-chat-fallbacks) | Interaction layer, chat baseline | interaction | `containers.md:interaction` | planned | `packages/benchhand` | 0 | 0 |
-| [gate-packet](#gate-packet) | Gate packet | core | `containers.md:flowEngine` | planned | `packages/benchhand-core` | 1 | 0 |
-| [bounded-results](#bounded-results) | Bounded results with a retrieve handle | mcp-surface | `containers.md:surface` | proposed | `packages/benchhand`, `contracts` | 0 | 0 |
-| [docs-index](#docs-index) | benchhand's own manual over MCP | mcp-surface | `containers.md:surface` | proposed | `packages/benchhand` | 1 | 1 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [mcp-server](#mcp-server) | MCP server | mcp-surface | `containers.md:surface` | planned | baseline | `packages/benchhand` | 0 | 3 |
+| [cli-app](#cli-app) | The benchhand CLI | cli | `containers.md:cli` | partial | baseline | `packages/benchhand` | 0 | 1 |
+| [project-session](#project-session) | Project session | mcp-surface | `containers.md:surface` | planned | baseline | `packages/benchhand` | 1 | 0 |
+| [env-doctor](#env-doctor) | Environment doctor | cli | `containers.md:cli` | planned | baseline | `packages/benchhand` | 1 | 1 |
+| [setup](#setup) | Setup and the managed FreeCAD install | cli | `containers.md:cli` | planned | baseline | `packages/benchhand` | 0 | 1 |
+| [record-ops](#record-ops) | Typed record operations | mcp-surface | `containers.md:recordOps` | planned | baseline | `packages/benchhand`, `packages/benchhand-core` | 6 | 0 |
+| [machine-profile](#machine-profile) | Machine capability profile | core | `containers.md:record` | planned | baseline | `packages/benchhand-core` | 2 | 0 |
+| [interaction-chat-fallbacks](#interaction-chat-fallbacks) | Interaction layer, chat baseline | interaction | `containers.md:interaction` | planned | baseline | `packages/benchhand` | 0 | 0 |
+| [gate-packet](#gate-packet) | Gate packet | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [bounded-results](#bounded-results) | Bounded results with a retrieve handle | mcp-surface | `containers.md:surface` | proposed | deferred | `packages/benchhand`, `contracts` | 0 | 0 |
+| [docs-index](#docs-index) | benchhand's own manual over MCP | mcp-surface | `containers.md:surface` | proposed | deferred | `packages/benchhand` | 1 | 1 |
 
 ### P4
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [provider-runtime](#provider-runtime) | Provider runtime and conformance kit | providers | `containers.md:providerRuntime` | planned | `packages/benchhand-provider` | 0 | 0 |
-| [provider-environments](#provider-environments) | Provider environments | providers | `containers.md:providerRuntime` | planned | `packages/benchhand-provider` | 0 | 0 |
-| [provider-cli](#provider-cli) | Provider-declared CLI subcommands | cli | `containers.md:cli` | planned | `packages/benchhand`, `packages/benchhand-provider` | 0 | 1 |
-| [freecad-runtime](#freecad-runtime) | FreeCAD provider and supported versions | providers | `containers.md:freecadProvider` | planned | `providers/freecad` | 0 | 1 |
-| [model-build](#model-build) | Build a version | providers | `containers.md:kernels` | planned | `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 0 |
-| [model-export](#model-export) | Mesh exports | providers | `containers.md:kernels` | planned | `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 0 |
-| [model-inspect](#model-inspect) | Inspect geometry | providers | `containers.md:kernels` | planned | `providers/kernel-cadquery`, `providers/kernel-build123d` | 6 | 2 |
-| [model-diff](#model-diff) | Version diff | providers | `containers.md:kernels` | planned | `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 1 |
-| [part-sdk](#part-sdk) | Part SDK | providers | `containers.md:sdk` | planned | `packages/benchhand-sdk` | 0 | 0 |
-| [generators](#generators) | Parametric generators | providers | `containers.md:sdk` | planned | `packages/benchhand-sdk` | 0 | 0 |
-| [process-checks](#process-checks) | Process and form checks | providers | `containers.md:checks` | planned | `providers/checks-process` | 1 | 0 |
-| [check-orchestration](#check-orchestration) | Running a version's checks | core | `containers.md:evidence` | planned | `packages/benchhand-core` | 1 | 0 |
-| [fits-calculators](#fits-calculators) | Fits and stack-ups | core | `containers.md:domain` | planned | `packages/benchhand-core` | 2 | 0 |
-| [fea-analysis](#fea-analysis) | Structural analysis | providers | `containers.md:solver` | planned | `providers/solver-calculix`, `providers/freecad` | 3 | 0 |
-| [motion-analysis](#motion-analysis) | Motion, sweeps and access | providers | `containers.md:collision` | planned | `packages/benchhand-core`, `providers/collision-fcl`, `providers/freecad` | 9 | 0 |
-| [render-output](#render-output) | Product renders | providers | `containers.md:renderer` | planned | `providers/render-chromium` | 2 | 0 |
-| [drawings](#drawings) | Part and assembly drawings | providers | `containers.md:freecadProvider` | planned | `providers/freecad` | 5 | 0 |
-| [bom](#bom) | Engineering BOM | core | `containers.md:domain` | planned | `packages/benchhand-core` | 1 | 0 |
-| [release-packaging](#release-packaging) | Release packaging | core | `containers.md:release` | planned | `packages/benchhand-core` | 1 | 0 |
-| [documentation-set](#documentation-set) | Documentation set | providers | `containers.md:freecadProvider` | planned | `providers/freecad`, `providers/render-chromium`, `packages/benchhand-core` | 0 | 0 |
-| [store-provider](#store-provider) | Artifact store provider | providers | `containers.md:store` | planned | `providers/store-fs` | 0 | 0 |
-| [standards-parts-data](#standards-parts-data) | Standards and parts data | core | `containers.md:domain` | proposed | `packages/benchhand-core` | 5 | 2 |
-| [step-import](#step-import) | Supplier STEP import | core | `containers.md:recordOps` | proposed | `packages/benchhand-core` | 1 | 0 |
-| [product-docs](#product-docs) | Product documents (Typst) | providers | `containers.md:providers` | proposed | `packages/benchhand-core`, `providers/docs-typst` | 4 | 4 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [provider-runtime](#provider-runtime) | Provider runtime and conformance kit | providers | `containers.md:providerRuntime` | planned | baseline | `packages/benchhand-provider` | 0 | 0 |
+| [provider-environments](#provider-environments) | Provider environments | providers | `containers.md:providerRuntime` | planned | baseline | `packages/benchhand-provider` | 0 | 0 |
+| [provider-cli](#provider-cli) | Provider-declared CLI subcommands | cli | `containers.md:cli` | planned | baseline | `packages/benchhand`, `packages/benchhand-provider` | 0 | 1 |
+| [freecad-runtime](#freecad-runtime) | FreeCAD provider and supported versions | providers | `containers.md:freecadProvider` | planned | baseline | `providers/freecad` | 0 | 1 |
+| [model-build](#model-build) | Build a version | providers | `containers.md:kernels` | planned | baseline | `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 0 |
+| [model-export](#model-export) | Mesh exports | providers | `containers.md:kernels` | planned | baseline | `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 0 |
+| [model-inspect](#model-inspect) | Inspect geometry | providers | `containers.md:kernels` | planned | baseline | `providers/kernel-cadquery`, `providers/kernel-build123d` | 6 | 2 |
+| [model-diff](#model-diff) | Version diff | providers | `containers.md:kernels` | planned | baseline | `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 1 |
+| [part-sdk](#part-sdk) | Part SDK | providers | `containers.md:sdk` | planned | baseline | `packages/benchhand-sdk` | 0 | 0 |
+| [generators](#generators) | Parametric generators | providers | `containers.md:sdk` | planned | baseline | `packages/benchhand-sdk` | 0 | 0 |
+| [process-checks](#process-checks) | Process and form checks | providers | `containers.md:checks` | planned | baseline | `providers/checks-process` | 1 | 0 |
+| [check-orchestration](#check-orchestration) | Running a version's checks | core | `containers.md:evidence` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [fits-calculators](#fits-calculators) | Fits and stack-ups | core | `containers.md:domain` | planned | baseline | `packages/benchhand-core` | 2 | 0 |
+| [fea-analysis](#fea-analysis) | Structural analysis | providers | `containers.md:solver` | planned | baseline | `providers/solver-calculix`, `providers/freecad` | 3 | 0 |
+| [motion-analysis](#motion-analysis) | Motion, sweeps and access | providers | `containers.md:collision` | planned | baseline | `packages/benchhand-core`, `providers/collision-fcl`, `providers/freecad` | 9 | 0 |
+| [render-output](#render-output) | Product renders | providers | `containers.md:renderer` | planned | baseline | `providers/render-chromium` | 2 | 0 |
+| [drawings](#drawings) | Part and assembly drawings | providers | `containers.md:freecadProvider` | planned | baseline | `providers/freecad` | 5 | 0 |
+| [bom](#bom) | Engineering BOM | core | `containers.md:domain` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [release-packaging](#release-packaging) | Release packaging | core | `containers.md:release` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [documentation-set](#documentation-set) | Documentation set | providers | `containers.md:freecadProvider` | planned | baseline | `providers/freecad`, `providers/render-chromium`, `packages/benchhand-core` | 0 | 0 |
+| [store-provider](#store-provider) | Artifact store provider | providers | `containers.md:store` | planned | baseline | `providers/store-fs` | 0 | 0 |
+| [standards-parts-data](#standards-parts-data) | Standards and parts data | core | `containers.md:domain` | proposed | deferred | `packages/benchhand-core` | 5 | 2 |
+| [step-import](#step-import) | Supplier STEP import | core | `containers.md:recordOps` | proposed | deferred | `packages/benchhand-core` | 1 | 0 |
+| [product-docs](#product-docs) | Product documents (Typst) | providers | `containers.md:providers` | proposed | deferred | `packages/benchhand-core`, `providers/docs-typst` | 4 | 4 |
 
 ### P5
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [preview-host](#preview-host) | Preview host | preview-host | `containers.md:preview` | planned | `packages/benchhand` | 3 | 1 |
-| [viewer](#viewer) | Viewer | ui | `containers.md:ui` | planned | `ui/viewer`, `providers/viewer-ocp` | 8 | 1 |
-| [concept-scene](#concept-scene) | Concept scenes | ui | `containers.md:ui` | planned | `ui/concept`, `providers/viewer-ocp` | 4 | 0 |
-| [draft-preview](#draft-preview) | Draft preview | preview-host | `containers.md:preview` | planned | `packages/benchhand` | 2 | 0 |
-| [layout-skeleton](#layout-skeleton) | Layout skeleton from the concept | core | `containers.md:recordOps` | planned | `packages/benchhand-core` | 1 | 0 |
-| [flow-view](#flow-view) | Flow view | ui | `containers.md:ui` | planned | `ui/flow-view` | 0 | 0 |
-| [rich-interactions](#rich-interactions) | Apps, image results and tasks | interaction | `containers.md:interaction` | planned | `packages/benchhand`, `ui/gate-card` | 0 | 0 |
-| [live-project-viewer](#live-project-viewer) | Live project viewer | ui | `containers.md:ui` | proposed | `ui/viewer`, `packages/benchhand` | 2 | 0 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [preview-host](#preview-host) | Preview host | preview-host | `containers.md:preview` | planned | baseline | `packages/benchhand` | 3 | 1 |
+| [viewer](#viewer) | Viewer | ui | `containers.md:ui` | planned | baseline | `ui/viewer`, `providers/viewer-ocp` | 8 | 1 |
+| [concept-scene](#concept-scene) | Concept scenes | ui | `containers.md:ui` | planned | baseline | `ui/concept`, `providers/viewer-ocp` | 4 | 0 |
+| [draft-preview](#draft-preview) | Draft preview | preview-host | `containers.md:preview` | planned | baseline | `packages/benchhand` | 2 | 0 |
+| [layout-skeleton](#layout-skeleton) | Layout skeleton from the concept | core | `containers.md:recordOps` | planned | baseline | `packages/benchhand-core` | 1 | 0 |
+| [flow-view](#flow-view) | Flow view | ui | `containers.md:ui` | planned | baseline | `ui/flow-view` | 0 | 0 |
+| [rich-interactions](#rich-interactions) | Apps, image results and tasks | interaction | `containers.md:interaction` | planned | baseline | `packages/benchhand`, `ui/gate-card` | 0 | 0 |
+| [live-project-viewer](#live-project-viewer) | Live project viewer | ui | `containers.md:ui` | proposed | deferred | `ui/viewer`, `packages/benchhand` | 2 | 0 |
 
 ### P6
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [harness-install](#harness-install) | Harness install | harness-integration | `layers.md:harnessDir` | planned | `harness`, `packages/benchhand` | 0 | 2 |
-| [skills-over-mcp](#skills-over-mcp) | Skills over MCP | mcp-surface | `containers.md:surface` | planned | `packages/benchhand` | 0 | 0 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [harness-install](#harness-install) | Harness install | harness-integration | `layers.md:harnessDir` | planned | baseline | `harness`, `packages/benchhand` | 0 | 2 |
+| [skills-over-mcp](#skills-over-mcp) | Skills over MCP | mcp-surface | `containers.md:surface` | planned | baseline | `packages/benchhand` | 0 | 0 |
 
 ### P7
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [distribution](#distribution) | Packaging and distribution | distribution | `layers.md:containerDir` | planned | `packages/benchhand`, `container`, `harness` | 0 | 0 |
-| [golden-parity](#golden-parity) | Golden end-to-end parity | dev-tooling | `layers.md:support` | planned | `tools/golden` | 0 | 0 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [distribution](#distribution) | Packaging and distribution | distribution | `layers.md:containerDir` | planned | baseline | `packages/benchhand`, `container`, `harness` | 0 | 0 |
+| [golden-parity](#golden-parity) | Golden end-to-end parity | dev-tooling | `layers.md:support` | planned | baseline | `tools/golden` | 0 | 0 |
 
 ### no phase
 
-| Capability | Title | Layer | Container | Status | Owner | Tools | CLI |
-|---|---|---|---|---|---|---|---|
-| [middleware-chain](#middleware-chain) | Middleware chain | core | `containers.md:middleware` | planned | `packages/benchhand-core` | 0 | 0 |
-| [design-recheck](#design-recheck) | Design recheck record | core | `containers.md:domain` | planned | `packages/benchhand-core` | 3 | 0 |
-| [scratch-workspaces](#scratch-workspaces) | Scratch workspaces for worker units | core | `containers.md:domain` | planned | `packages/benchhand-core` | 3 | 0 |
-| [provider-host](#provider-host) | Provider host | core | `containers.md:providerHost` | planned | `packages/benchhand-core` | 0 | 0 |
-| [policy-provider](#policy-provider) | Default policy provider | providers | `containers.md:policy` | planned | `providers/policy-default` | 0 | 0 |
-| [container-launcher](#container-launcher) | Container launcher | distribution | `layers.md:containerDir` | planned | `packages/benchhand`, `container` | 0 | 2 |
+| Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
+|---|---|---|---|---|---|---|---|---|
+| [middleware-chain](#middleware-chain) | Middleware chain | core | `containers.md:middleware` | planned | deferred | `packages/benchhand-core` | 0 | 0 |
+| [design-recheck](#design-recheck) | Design recheck record | core | `containers.md:domain` | planned | deferred | `packages/benchhand-core` | 3 | 0 |
+| [scratch-workspaces](#scratch-workspaces) | Scratch workspaces for worker units | core | `containers.md:domain` | planned | deferred | `packages/benchhand-core` | 3 | 0 |
+| [provider-host](#provider-host) | Provider host | core | `containers.md:providerHost` | planned | deferred | `packages/benchhand-core` | 0 | 0 |
+| [policy-provider](#policy-provider) | Default policy provider | providers | `containers.md:policy` | planned | deferred | `providers/policy-default` | 0 | 0 |
+| [container-launcher](#container-launcher) | Container launcher | distribution | `layers.md:containerDir` | planned | deferred | `packages/benchhand`, `container` | 0 | 2 |
 
 ## Dependency graph
 
@@ -599,7 +600,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 | `scratch.py init` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.init` |  |
 | `scratch.py build` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.build` |  |
 | `scratch.py deliver` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.deliver` |  |
-| `setup.py` | `skills/cad-flow/scripts/setup.py` | [setup](#setup) | – |  |
+| `setup.py` | `skills/cad-flow/scripts/setup.py` | [setup](#setup) | – | benchhand setup replaces it. |
 | `cad_model.py run` | `skills/cad-model/scripts/cad_model.py` | [model-build](#model-build) | `model.build` |  |
 | `cad_model.py check` | `skills/cad-model/scripts/cad_model.py` | [model-inspect](#model-inspect) | `model.check` |  |
 | `cad_model.py diff` | `skills/cad-model/scripts/cad_model.py` | [model-diff](#model-diff) | `model.diff` |  |
@@ -644,12 +645,16 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 | `viewer.py animate` | `skills/cad-viewer/scripts/viewer.py` | [viewer](#viewer) | `viewer.animate` |  |
 | `viewer.py studio` | `skills/cad-viewer/scripts/viewer.py` | [viewer](#viewer) | `viewer.studio` |  |
 | `viewer.py capture` | `skills/cad-viewer/scripts/viewer.py` | [viewer](#viewer) | `viewer.capture` |  |
-| `generate.py` | `harness/generate.py` | [harness-install](#harness-install) | – |  |
-| `install.py` | `harness/install.py` | [harness-install](#harness-install) | – |  |
+| `generate.py` | `harness/generate.py` | [harness-install](#harness-install) | – | benchhand install writes the agent profiles it rendered. |
+| `install.py` | `harness/install.py` | [harness-install](#harness-install) | – | benchhand install replaces it. |
 
 ## Gaps
 
-### Capabilities with no MCP tool (6)
+*Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped.
+
+### Missing interfaces (114)
+
+#### Capabilities with no MCP tool (6)
 
 - [scoped-reapproval](#scoped-reapproval) (P2, planned)
 - [annotation-set](#annotation-set) (P2, planned)
@@ -658,42 +663,12 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [documentation-set](#documentation-set) (P4, planned)
 - [bounded-results](#bounded-results) (P3, proposed)
 
-### Capabilities with no MCP tool by design (27)
-
-- [contracts-pipeline](#contracts-pipeline): Build-time tooling; nothing runs it through MCP.
-- [contract-validation](#contract-validation): A library that every boundary calls.
-- [provider-protocol-contract](#provider-protocol-contract): A contract; the provider runtime and host implement it.
-- [client-capability-probe](#client-capability-probe): Its MCP tools are the probe's own, not benchhand's.
-- [cel-rule-pipeline](#cel-rule-pipeline): Load-time machinery; the CLI's rules compile is its user surface.
-- [rule-lists](#rule-lists): Data the flow engine and the check tools evaluate.
-- [result-envelope](#result-envelope): The shape every tool returns.
-- [existing-equipment](#existing-equipment): Record fields that the build, BOM, drawing and release tools read.
-- [middleware-chain](#middleware-chain): Runs inside every tool call.
-- [mcp-server](#mcp-server): The server hosts the tools; it has none of its own.
-- [cli-app](#cli-app): The CLI is a launcher, not a workflow surface (ADR-0001).
-- [setup](#setup): The plan makes setup a CLI command (section 7).
-- [interaction-chat-fallbacks](#interaction-chat-fallbacks): It shapes how the other tools answer.
-- [provider-runtime](#provider-runtime): Providers are reached through the host, not through tools.
-- [provider-host](#provider-host): Internal to the server.
-- [provider-environments](#provider-environments): env.doctor reports on it; nothing else drives it.
-- [provider-cli](#provider-cli): A CLI extension point.
-- [freecad-runtime](#freecad-runtime): env.doctor reports it and setup installs it; the output tools use it.
-- [store-provider](#store-provider): The host uses it to place artifacts.
-- [policy-provider](#policy-provider): The flow engine calls it.
-- [flow-view](#flow-view): A page; preview.serve hosts it.
-- [rich-interactions](#rich-interactions): It changes how the existing tools answer.
-- [harness-install](#harness-install): An install-time CLI command.
-- [skills-over-mcp](#skills-over-mcp): Another publication of flow.guide's content.
-- [container-launcher](#container-launcher): A launcher mode of the CLI.
-- [distribution](#distribution): Release engineering.
-- [golden-parity](#golden-parity): A test that drives the other tools.
-
-### MCP surfaces with a missing baseline (2)
+#### MCP surfaces with a missing baseline (2)
 
 - [record-ops](#record-ops): no tool returns the published schemas or the accepted values.
 - [part-sdk](#part-sdk): no tool returns the SDK signatures that sdk://describe lists.
 
-### Tools with no contract (105)
+#### Tools with no contract (103)
 
 - `bom.rollup`: input
 - `checks.form`: input and output
@@ -742,7 +717,6 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - `model.measure`: input and output
 - `model.section`: input and output
 - `motion.access`: input and output
-- `motion.check`: input and output
 - `motion.plan`: input and output
 - `motion.play`: input and output
 - `motion.pose`: input and output
@@ -764,7 +738,6 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - `project.open`: input and output
 - `project.questions`: input and output
 - `project.record_profile`: input and output
-- `recheck.diff`: input and output
 - `recheck.stamp`: input and output
 - `recheck.verify`: input and output
 - `record.add_bom_row`: input and output
@@ -801,26 +774,163 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - `work.deliver`: input and output
 - `work.init`: input and output
 
-### Prototype commands with no capability (0)
+#### Prototype commands with no capability (0)
 
 None.
 
-### Prototype commands no tool replaces (14)
+#### Prototype commands no tool replaces (3)
 
-- `build_reference.py` ([model-build](#model-build))
-- `review_render.py` ([render-output](#render-output))
-- `clean_envs.py` ([provider-environments](#provider-environments))
-- `run.py` ([provider-environments](#provider-environments))
-- `setup.py` ([setup](#setup))
 - `cad_model.py latest` ([model-build](#model-build))
 - `cad_model.py store` ([model-build](#model-build))
-- `run_build123d.py` ([model-build](#model-build))
-- `run_cadquery.py` ([model-build](#model-build))
-- `emit.py` ([result-envelope](#result-envelope))
 - `layout.py` ([version-snapshots](#version-snapshots))
-- `viewer.py host` ([preview-host](#preview-host))
-- `generate.py` ([harness-install](#harness-install))
-- `install.py` ([harness-install](#harness-install))
+
+### Intentional CLI or internal replacements (38)
+
+#### Capabilities with no MCP tool by design (27)
+
+- [contracts-pipeline](#contracts-pipeline): Build-time tooling; nothing runs it through MCP.
+- [contract-validation](#contract-validation): A library that every boundary calls.
+- [provider-protocol-contract](#provider-protocol-contract): A contract; the provider runtime and host implement it.
+- [client-capability-probe](#client-capability-probe): Its MCP tools are the probe's own, not benchhand's.
+- [cel-rule-pipeline](#cel-rule-pipeline): Load-time machinery; the CLI's rules compile is its user surface.
+- [rule-lists](#rule-lists): Data the flow engine and the check tools evaluate.
+- [result-envelope](#result-envelope): The shape every tool returns.
+- [existing-equipment](#existing-equipment): Record fields that the build, BOM, drawing and release tools read.
+- [middleware-chain](#middleware-chain): Runs inside every tool call.
+- [mcp-server](#mcp-server): The server hosts the tools; it has none of its own.
+- [cli-app](#cli-app): The CLI is a launcher, not a workflow surface (ADR-0001).
+- [setup](#setup): The plan makes setup a CLI command (section 7).
+- [interaction-chat-fallbacks](#interaction-chat-fallbacks): It shapes how the other tools answer.
+- [provider-runtime](#provider-runtime): Providers are reached through the host, not through tools.
+- [provider-host](#provider-host): Internal to the server.
+- [provider-environments](#provider-environments): env.doctor reports on it; nothing else drives it.
+- [provider-cli](#provider-cli): A CLI extension point.
+- [freecad-runtime](#freecad-runtime): env.doctor reports it and setup installs it; the output tools use it.
+- [store-provider](#store-provider): The host uses it to place artifacts.
+- [policy-provider](#policy-provider): The flow engine calls it.
+- [flow-view](#flow-view): A page; preview.serve hosts it.
+- [rich-interactions](#rich-interactions): It changes how the existing tools answer.
+- [harness-install](#harness-install): An install-time CLI command.
+- [skills-over-mcp](#skills-over-mcp): Another publication of flow.guide's content.
+- [container-launcher](#container-launcher): A launcher mode of the CLI.
+- [distribution](#distribution): Release engineering.
+- [golden-parity](#golden-parity): A test that drives the other tools.
+
+#### Prototype commands a CLI command replaces (3)
+
+- `setup.py` ([setup](#setup)): benchhand setup replaces it.
+- `generate.py` ([harness-install](#harness-install)): benchhand install writes the agent profiles it rendered.
+- `install.py` ([harness-install](#harness-install)): benchhand install replaces it.
+
+#### Prototype commands replaced inside benchhand (8)
+
+- `build_reference.py` ([model-build](#model-build)): Builds the cad-design reference parts in one kernel; a development fixture, so no tool.
+- `review_render.py` ([render-output](#render-output)): Review renders of the reference lamp arm per kernel; a development fixture, so no tool.
+- `clean_envs.py` ([provider-environments](#provider-environments)): The provider host owns the environments; no tool lists or deletes them.
+- `run.py` ([provider-environments](#provider-environments)): The launcher of every other command; D1 drops the per-skill uv run --script commands.
+- `run_build123d.py` ([model-build](#model-build)): The build123d kernel runner that cad_model.py starts; the kernel build hook replaces it.
+- `run_cadquery.py` ([model-build](#model-build)): The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it.
+- `emit.py` ([result-envelope](#result-envelope)): Printed a producer's result; every tool's envelope replaces it.
+- `viewer.py host` ([preview-host](#preview-host)): The hidden subcommand the viewer host runs as; the preview host replaces it.
+
+### Proposals awaiting approval (85)
+
+#### Proposed capabilities (6)
+
+- [bounded-results](#bounded-results) (P3): study: `lane8-agentcad.md section 6, items 1 and 2`
+- [docs-index](#docs-index) (P3): study: `lane8-agentcad.md section 6, item 5`
+- [standards-parts-data](#standards-parts-data) (P4): study: `lane8-agentcad.md section 6, item 7`
+- [step-import](#step-import) (P4): study: `lane8-agentcad.md section 6, item 8`
+- [live-project-viewer](#live-project-viewer) (P5): study: `lane8-agentcad.md section 6, items 9 and 10`
+- [product-docs](#product-docs) (P4): study: `lane8b-product-docs.md section 6, items 1 to 9`
+
+#### Proposed tools (64)
+
+- `bom.rollup` ([bom](#bom), catalogue)
+- `checks.form` ([process-checks](#process-checks), catalogue)
+- `checks.run` ([check-orchestration](#check-orchestration), catalogue)
+- `concept.check` ([concept-scene](#concept-scene), catalogue)
+- `docs.get` ([docs-index](#docs-index), study)
+- `docset.build` ([product-docs](#product-docs), study)
+- `docset.list` ([product-docs](#product-docs), study)
+- `docset.show` ([product-docs](#product-docs), study)
+- `docset.unknowns` ([product-docs](#product-docs), study)
+- `drawing.assembly` ([drawings](#drawings), catalogue)
+- `drawing.check` ([drawings](#drawings), catalogue)
+- `drawing.draft` ([drawings](#drawings), catalogue): A reviewable draft, never the record.
+- `drawing.merge` ([drawings](#drawings), catalogue)
+- `drawing.part` ([drawings](#drawings), catalogue)
+- `evidence.assess` ([evidence-assessment](#evidence-assessment), catalogue)
+- `evidence.digest` ([evidence-assessment](#evidence-assessment), catalogue)
+- `fea.static` ([fea-analysis](#fea-analysis), catalogue)
+- `fea.stop_reaction` ([fea-analysis](#fea-analysis), catalogue)
+- `flow.advance` ([flow-engine](#flow-engine), catalogue): The interpreter is the normal writer of flow.stage; the prototype agent wrote it by hand.
+- `flow.gate_packet` ([gate-packet](#gate-packet), catalogue)
+- `flow.impact` ([change-impact](#change-impact), catalogue)
+- `jobs.cancel` ([job-service](#job-service), catalogue)
+- `jobs.strays` ([job-service](#job-service), catalogue)
+- `model.check` ([model-inspect](#model-inspect), catalogue)
+- `model.diff` ([model-diff](#model-diff), study)
+- `model.inspect` ([model-inspect](#model-inspect), study): The study extends model.measure to any STEP and adds layered validity under a time budget.
+- `motion.access` ([motion-analysis](#motion-analysis), catalogue)
+- `motion.plan` ([motion-analysis](#motion-analysis), catalogue)
+- `motion.play` ([motion-analysis](#motion-analysis), catalogue)
+- `motion.simulate` ([motion-analysis](#motion-analysis), catalogue)
+- `motion.spot_check` ([motion-analysis](#motion-analysis), catalogue)
+- `motion.sweep` ([motion-analysis](#motion-analysis), catalogue): The envelope contract's pending example is a collision/sweep job (contracts/envelope/envelope.tsp:154).
+- `part.import_step` ([step-import](#step-import), study)
+- `parts.search` ([standards-parts-data](#standards-parts-data), study)
+- `parts.show` ([standards-parts-data](#standards-parts-data), study)
+- `policy.get` ([gate-policy](#gate-policy), catalogue)
+- `policy.set` ([gate-policy](#gate-policy), catalogue)
+- `project.check_profile` ([project-profile](#project-profile), catalogue)
+- `project.questions` ([project-profile](#project-profile), catalogue)
+- `project.record_profile` ([project-profile](#project-profile), catalogue)
+- `recheck.stamp` ([design-recheck](#design-recheck), catalogue)
+- `recheck.verify` ([design-recheck](#design-recheck), catalogue)
+- `record.check_machine_profile` ([machine-profile](#machine-profile), catalogue)
+- `record.cite_source` ([standards-parts-data](#standards-parts-data), study)
+- `record.propose_coupons` ([assembly-steps-and-coupons](#assembly-steps-and-coupons), catalogue): The plan says a tool proposes the coupons and adds them to the calibration print job, and names none.
+- `record.read` ([record-store](#record-store), catalogue): The tool behind the record resources, which Claude Desktop and Pi -p don't pass to the agent.
+- `record.set_machine_profile` ([machine-profile](#machine-profile), catalogue)
+- `record.validate` ([record-validate](#record-validate), catalogue)
+- `release.package` ([release-packaging](#release-packaging), catalogue)
+- `render.compare` ([render-output](#render-output), catalogue)
+- `render.product` ([render-output](#render-output), catalogue)
+- `selection.assess` ([selection-assessment](#selection-assessment), catalogue)
+- `standards.search` ([standards-parts-data](#standards-parts-data), study)
+- `standards.show` ([standards-parts-data](#standards-parts-data), study)
+- `version.parts` ([version-snapshots](#version-snapshots), study)
+- `viewer.animate` ([viewer](#viewer), catalogue)
+- `viewer.export` ([live-project-viewer](#live-project-viewer), study)
+- `viewer.mode` ([viewer](#viewer), catalogue)
+- `viewer.open` ([live-project-viewer](#live-project-viewer), study)
+- `viewer.parts` ([viewer](#viewer), catalogue)
+- `viewer.studio` ([viewer](#viewer), catalogue)
+- `work.build` ([scratch-workspaces](#scratch-workspaces), catalogue): Was work.run, for `scratch.py run`, which doesn't exist at the pin.
+- `work.deliver` ([scratch-workspaces](#scratch-workspaces), catalogue): Was work.check, for `scratch.py check`, which doesn't exist at the pin.
+- `work.init` ([scratch-workspaces](#scratch-workspaces), catalogue)
+
+#### Proposed CLI commands (13)
+
+- `benchhand diff` ([model-diff](#model-diff), study)
+- `benchhand docs` ([docs-index](#docs-index), study)
+- `benchhand docset list` ([product-docs](#product-docs), study)
+- `benchhand docset preview` ([product-docs](#product-docs), study): Compiles to a directory outside hw/ and touches no record.
+- `benchhand docset show` ([product-docs](#product-docs), study)
+- `benchhand docset unknowns` ([product-docs](#product-docs), study)
+- `benchhand inspect` ([model-inspect](#model-inspect), study)
+- `benchhand measure` ([model-inspect](#model-inspect), study)
+- `benchhand parts list` ([version-snapshots](#version-snapshots), study)
+- `benchhand parts show` ([version-snapshots](#version-snapshots), study)
+- `benchhand standards search` ([standards-parts-data](#standards-parts-data), study)
+- `benchhand standards show` ([standards-parts-data](#standards-parts-data), study)
+- `benchhand view` ([viewer](#viewer), study): Opens serve on two versions.
+
+#### Dropped tools (2)
+
+- `motion.check` ([motion-analysis](#motion-analysis), catalogue): Proposed for `motion.py check`, which doesn't exist at the pin; `motion.py plan` checks coverage, and motion.plan replaces it.
+- `recheck.diff` ([design-recheck](#design-recheck), catalogue): Proposed for `stamp.py diff`, which doesn't exist at the pin; stamp.py has flag-only modes, and `--verify --committed` goes to recheck.verify.
 
 ### Dependencies on a later phase (11)
 
@@ -848,6 +958,7 @@ Which subcommands does the CLI have? The lists differ, and `main` has two comman
 - `docs/design-plan.md:9`: D1 lists mcp, serve, install, doctor, setup, policy, rules compile and debug call.
 - `docs/adr/0001-mcp-only-interface.md:11`: ADR-0001 lists mcp, serve, install, doctor, setup, policy and debug call, without rules compile (ADR-0020 adds it).
 - `packages/benchhand/src/benchhand/cli.py:15`: main has version and record migrate, and neither list names them.
+- Blocking: yes. Owner: project-owner. Decision needed: The CLI subcommand list, reconciling D1, ADR-0001 and the version and record migrate commands on main, before the cli-app spec.
 - Cited by: [record-migrate](#record-migrate), [mcp-server](#mcp-server), [cli-app](#cli-app), `benchhand version`, `benchhand record migrate`, `benchhand rules compile`
 
 ### record-migrate-tool
@@ -857,6 +968,7 @@ Is there a record.migrate MCP tool, and in which phase? The envelope contract's 
 - Pointers: `contracts/envelope/envelope.tsp:183`, `docs/architecture/data-flow.md:351`
 - `contracts/envelope/envelope.tsp:183`: an error result's next action is the tool record.migrate.
 - `docs/architecture/data-flow.md:351`: no MCP tool for migration is named; main has the CLI subcommand.
+- Blocking: yes. Owner: project-owner. Decision needed: Whether record.migrate is an MCP tool and in which phase, or the envelope example names the CLI command instead.
 - Cited by: [record-migrate](#record-migrate), `record.migrate`, `benchhand record migrate`
 
 ### provisional-recording
@@ -866,6 +978,7 @@ Who records a PROVISIONAL approval: a tool call, or the interpreter? The envelop
 - Pointers: `contracts/envelope/envelope.tsp:105`, `docs/design-plan.md:341`, `docs/contract/flow.md:53`
 - `contracts/envelope/envelope.tsp:105`: after fast checks pass, the next action is the tool flow.record_provisional.
 - `docs/contract/flow.md:53`: GateDecisionRequest records a human-gate decision; the interpreter records the other VOIDs itself.
+- Blocking: yes. Owner: project-owner. Decision needed: Whether a tool call or the interpreter records a PROVISIONAL approval, before the decision-records spec.
 - Cited by: [decision-records](#decision-records), `flow.record_provisional`
 
 ### policy-resources
@@ -875,6 +988,7 @@ How does the agent read and change gate modes over MCP? D3 says the `policy.*` r
 - Pointers: `docs/design-plan.md:11`, `docs/adr/0018-baseline-and-no-forms.md:28`
 - `docs/design-plan.md:11`: `benchhand policy` and the `policy.*` resources change it, and every relaxation is recorded in a DR.
 - `docs/adr/0018-baseline-and-no-forms.md:28`: readable content comes from a tool; a resource is an enhancement.
+- Blocking: yes. Owner: project-owner. Decision needed: The tools that read and change gate modes over MCP, with the policy.* resources as an enhancement, or no MCP path at all.
 - Cited by: [gate-policy](#gate-policy), `policy.get`, `policy.set`
 
 ### policy-composition
@@ -882,6 +996,7 @@ How does the agent read and change gate modes over MCP? D3 says the `policy.*` r
 How contributed policy rule lists compose with the flow's own; the owner decides. (existing)
 
 - Pointers: `docs/adr/0020-cel-rule-pipeline.md:207`, `docs/design-plan.md:648`
+- Blocking: yes. Owner: project-owner. Decision needed: How a policy provider's rule lists compose with the flow's own (ADR-0020).
 - Cited by: [gate-policy](#gate-policy), [policy-provider](#policy-provider)
 
 ### tool-stage-check
@@ -889,6 +1004,7 @@ How contributed policy rule lists compose with the flow's own; the owner decides
 Whether a tool call such as model.build is checked against flow.stage; CEL guards run on transitions only. (existing)
 
 - Pointers: `docs/architecture/data-flow.md:344`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether a writing tool call is checked against flow.stage, and which tools are.
 - Cited by: [flow-engine](#flow-engine), [record-ops](#record-ops), [model-build](#model-build), `project.record_profile`, `record.add_requirement`, `record.add_interface`, `record.add_part`, `record.set_route`, `record.add_evidence`, `record.add_bom_row`, `model.build`
 
 ### cancel-tool
@@ -896,6 +1012,7 @@ Whether a tool call such as model.build is checked against flow.stage; CEL guard
 The plan names jobs.start, jobs.status and jobs.result, and no cancel tool, although the job service cancels. (existing)
 
 - Pointers: `docs/architecture/data-flow.md:349`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether jobs.cancel joins jobs.start, jobs.status and jobs.result.
 - Cited by: [job-service](#job-service), `jobs.cancel`
 
 ### no-phase
@@ -903,6 +1020,7 @@ The plan names jobs.start, jobs.status and jobs.result, and no cancel tool, alth
 The plan names the middleware chain, the provider host, viewer-ocp, policy-default and the recheck and work modules, and no phase of its Steps delivers them. (existing)
 
 - Pointers: `docs/architecture/containers.md:179`
+- Blocking: yes. Owner: project-owner. Decision needed: The phase that delivers each of the middleware chain, the provider host, viewer-ocp, policy-default and the recheck and work modules.
 - Cited by: [middleware-chain](#middleware-chain), [design-recheck](#design-recheck), [scratch-workspaces](#scratch-workspaces), [provider-host](#provider-host), [policy-provider](#policy-provider), `recheck.stamp`, `recheck.verify`, `recheck.diff`, `work.init`, `work.build`, `work.deliver`
 
 ### artifact-placement
@@ -910,6 +1028,7 @@ The plan names the middleware chain, the provider host, viewer-ocp, policy-defau
 Which component moves a provider's verified artifacts into hw/; the record store writes YAML, CSV and decisions only. (existing)
 
 - Pointers: `docs/architecture/data-flow.md:345`
+- Blocking: yes. Owner: project-owner. Decision needed: The component that moves a provider's verified artifacts into hw/.
 - Cited by: [provider-host](#provider-host), [model-build](#model-build), [store-provider](#store-provider)
 
 ### freeze-digest
@@ -917,6 +1036,7 @@ Which component moves a provider's verified artifacts into hw/; the record store
 A freeze whose evidence assessment refuses has no digest; product.yaml allows flow.frozen without evidence_sha256. (existing)
 
 - Pointers: `docs/architecture/data-flow.md:346`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether a freeze without an evidence digest is allowed, and what product.yaml then requires.
 - Cited by: [evidence-assessment](#evidence-assessment), [release-packaging](#release-packaging)
 
 ### provider-job
@@ -924,6 +1044,7 @@ A freeze whose evidence assessment refuses has no digest; product.yaml allows fl
 How a provider request becomes a job; JobService runs a command under a supervisor. (existing)
 
 - Pointers: `docs/architecture/data-flow.md:348`
+- Blocking: yes. Owner: project-owner. Decision needed: How a provider request becomes a job of the job service.
 - Cited by: [job-service](#job-service), [provider-host](#provider-host)
 
 ### release-refusals
@@ -931,6 +1052,7 @@ How a provider request becomes a job; JobService runs a command under a supervis
 The full list of release refusal checks; the plan names the acceptance digest and the context and tooling refusal only. (existing)
 
 - Pointers: `docs/architecture/data-flow.md:350`
+- Blocking: yes. Owner: project-owner. Decision needed: The full list of release refusal checks.
 - Cited by: [release-packaging](#release-packaging), `release.package`
 
 ### envelope-phase
@@ -938,6 +1060,7 @@ The full list of release refusal checks; the plan names the acceptance digest an
 Phase 1 writes the envelope contract and Phase 2 lists the result envelope and next_actions. (existing)
 
 - Pointers: `docs/architecture/layers.md:154`
+- Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [result-envelope](#result-envelope)
 
 ### annotation-set-phase
@@ -945,6 +1068,7 @@ Phase 1 writes the envelope contract and Phase 2 lists the result envelope and n
 Phase 2 lists the annotation set as a record contract addition, and Phase 4 lists the annotation-set contract. (existing)
 
 - Pointers: `docs/architecture/layers.md:155`, `docs/design-plan.md:568`, `docs/design-plan.md:585`
+- Blocking: yes. Owner: maintainer. Decision needed: Which phase publishes the annotation-set contract, Phase 2 or Phase 4, with the plan and layers.md made to agree.
 - Cited by: [annotation-set](#annotation-set), [documentation-set](#documentation-set)
 
 ### unscoped-decisions
@@ -952,6 +1076,7 @@ Phase 2 lists the annotation set as a record contract addition, and Phase 4 list
 How a migrated decision without an approval scope is treated, as covering the whole stage or as needing confirmation. (existing)
 
 - Pointers: `docs/adr/0019-scoped-reapproval.md:31`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether a migrated decision without an approval scope covers its whole stage or needs confirmation (ADR-0019).
 - Cited by: [scoped-reapproval](#scoped-reapproval)
 
 ### interval-citation
@@ -959,6 +1084,7 @@ How a migrated decision without an approval scope is treated, as covering the wh
 How a gate request cites the decision that accepts unproved intervals. (existing)
 
 - Pointers: `docs/phases/phase-0-1.md:170`
+- Blocking: yes. Owner: project-owner. Decision needed: How a gate request cites the decision that accepts unproved intervals.
 - Cited by: [decision-records](#decision-records)
 
 ### dispatch-explanation
@@ -966,6 +1092,7 @@ How a gate request cites the decision that accepts unproved intervals. (existing
 ADR-0020's restricted profile has no `explanation`, so dispatch findings lose the prototype's "no handler for" text. (existing)
 
 - Pointers: `docs/phases/phase-0-1.md:169`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether the restricted CEL profile gains an explanation, or dispatch findings drop the prototype's text.
 - Cited by: [rule-lists](#rule-lists)
 
 ### validate-surface
@@ -973,6 +1100,7 @@ ADR-0020's restricted profile has no `explanation`, so dispatch findings lose th
 Neither CLI list names validate or evidence; they arrive as record.* tools, which no source names one by one. (existing)
 
 - Pointers: `docs/phases/phase-0-1.md:154`
+- Blocking: yes. Owner: project-owner. Decision needed: The record.* tools for validate and evidence, named one by one.
 - Cited by: [record-validate](#record-validate), [record-ops](#record-ops), `record.validate`
 
 ### guideline-asset
@@ -980,6 +1108,7 @@ Neither CLI list names validate or evidence; they arrive as record.* tools, whic
 The shipped guideline sets become a package asset when the guideline catalog is ported; until then the caller names the directory. (existing)
 
 - Pointers: `docs/design-plan.md:649`
+- Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [evidence-assessment](#evidence-assessment)
 
 ### user-bundle-location
@@ -987,6 +1116,7 @@ The shipped guideline sets become a package asset when the guideline catalog is 
 Where a project's and a provider's rules bundle lives, and how a scope is declared; Phase 2 picks. (existing)
 
 - Pointers: `docs/adr/0020-cel-rule-pipeline.md:214`, `docs/adr/0020-cel-rule-pipeline.md:215`
+- Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [cel-rule-pipeline](#cel-rule-pipeline), `benchhand rules compile`
 
 ### container-launcher-phase
@@ -994,6 +1124,7 @@ Where a project's and a provider's rules bundle lives, and how a scope is declar
 No phase of the Steps delivers the --container launcher; Phase 6 lists install --container and Phase 7 the image. (existing)
 
 - Pointers: `docs/architecture/overview.md:79`, `docs/design-plan.md:602`
+- Blocking: yes. Owner: project-owner. Decision needed: The phase that delivers the --container launcher.
 - Cited by: [container-launcher](#container-launcher), `benchhand mcp --container`, `benchhand doctor --clean`
 
 ### document-export-hook
@@ -1003,6 +1134,7 @@ Is the structured .FCStd export a cad-app hook? Phase 4 names `cad-app` `documen
 - Pointers: `docs/design-plan.md:590`, `docs/design-plan.md:202`, `docs/contract/provider-protocol.md:77`
 - `docs/design-plan.md:590`: the structured .FCStd export is `cad-app` `document.export`.
 - `docs/contract/provider-protocol.md:77`: the cad-app hooks are cad-app/drawing, cad-app/assembly and cad-app/fem.
+- Blocking: yes. Owner: project-owner. Decision needed: Whether the structured .FCStd export is a cad-app hook, and if so the provider protocol change.
 - Cited by: [documentation-set](#documentation-set)
 
 ### viewer-provider-phase
@@ -1012,6 +1144,7 @@ Which phase builds viewer-ocp? The reference map homes the prototype viewer ther
 - Pointers: `docs/architecture/reference-map.yaml:1058`, `docs/architecture/containers.md:179`
 - `docs/architecture/reference-map.yaml:1058`: skills/cad-viewer/scripts/viewer.py goes to providers/viewer-ocp/ and ui/viewer/ in Phase 5.
 - `docs/architecture/containers.md:179`: viewer-ocp has no phase in the Steps.
+- Blocking: yes. Owner: maintainer. Decision needed: The phase of viewer-ocp, with the reference map and the containers page made to agree.
 - Cited by: [viewer](#viewer)
 
 ### new-project
@@ -1021,6 +1154,7 @@ What creates a new project's hw/? The reference map homes the prototype's projec
 - Pointers: `docs/architecture/reference-map.yaml:919`, `docs/design-plan.md:246`
 - `docs/architecture/reference-map.yaml:919`: skills/cad-record/assets/project-template/ goes to packages/benchhand/src/benchhand/cli/, Phase 3.
 - `docs/design-plan.md:246`: the CLI subcommands are mcp, serve, install, doctor, setup, policy, rules compile and debug call.
+- Blocking: yes. Owner: project-owner. Decision needed: The command or tool that creates a new project's hw/ from the template.
 - Cited by: [project-session](#project-session)
 
 ### read-only-cli
@@ -1028,6 +1162,7 @@ What creates a new project's hw/? The reference map homes the prototype's projec
 Does the CLI get read-only adapters over the MCP tools' core (inspect, measure, parts, diff, view, docs, standards, docset)? The CAD-libraries study (lane 8 section 3) proposes it as an ADR-0001 amendment for the owner; ADR-0001 keeps the CLI to launching and administration. (catalogue)
 
 - Pointers: `docs/adr/0001-mcp-only-interface.md:11`, `docs/client-support.md:15`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether to accept the ADR-0001 amendment for read-only CLI adapters.
 - Cited by: [cli-app](#cli-app), [standards-parts-data](#standards-parts-data), [product-docs](#product-docs), `benchhand inspect`, `benchhand measure`, `benchhand parts list`, `benchhand parts show`, `benchhand diff`, `benchhand view`, `benchhand docs`, `benchhand standards search`, `benchhand standards show`, `benchhand docset list`, `benchhand docset show`, `benchhand docset unknowns`, `benchhand docset preview`
 
 ### bounded-results
@@ -1035,6 +1170,7 @@ Does the CLI get read-only adapters over the MCP tools' core (inspect, measure, 
 The CAD-libraries study (lane 8, adoption item 1) proposes a bounded envelope with `truncated`, `estimate` and a `retrieve` handle. The envelope contract has none of them, and no tool that retrieves a saved result is named. (catalogue)
 
 - Pointers: `contracts/envelope/envelope.tsp:16`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether to accept the bounded envelope with truncated, estimate and a retrieve handle.
 - Cited by: [bounded-results](#bounded-results)
 
 ### setup-over-mcp
@@ -1042,6 +1178,7 @@ The CAD-libraries study (lane 8, adoption item 1) proposes a bounded envelope wi
 Can the agent run setup? The plan makes setup a CLI command that includes the managed FreeCAD install, and env.doctor only reports; no tool installs anything. (catalogue)
 
 - Pointers: `docs/design-plan.md:249`, `docs/design-plan.md:258`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether the agent can run setup over MCP, or setup stays a CLI command that env.doctor points to.
 - Cited by: [setup](#setup), `benchhand setup`
 
 ## Doc corrections
@@ -1057,7 +1194,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Contracts and code generation.** Every owned shape has one TypeSpec source under contracts/, emitted to JSON Schema 2020-12 and split into one published schema per contract. The Pydantic models, TypeScript types, conformance fixtures and reference docs are generated from the published schemas, and CI fails on drift, a TypeSpec warning, a lint finding or a breaking change without a major bump. Later phases add the MCP tool schemas, the CEL environment and the preview-host API.
 
 - Layer and container: contracts, `containers.md:published`
-- Phase and status: P1, built
+- Phase and status: P1, built, baseline
 - Owner: `contracts`, `tools/gen`
 - Contracts: –
 - MCP tools: –
@@ -1073,7 +1210,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Runtime contract validation.** Validate any instance against a published schema by its $id and report every violation with its schema path, never a silent coercion. The record service uses it on every read and write; the MCP server, the provider host and the preview host are to use it at their boundaries in both directions.
 
 - Layer and container: contracts, `containers.md:validator`
-- Phase and status: P1, built
+- Phase and status: P1, built, baseline
 - Owner: `packages/benchhand-contracts`
 - Contracts: `record/product.schema.json`
 - MCP tools: –
@@ -1088,7 +1225,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Provider protocol contract.** The JSON-RPC 2.0 protocol between the host and each provider process: LSP framing, initialize with version and capability negotiation, the hook params and results of every provider kind, progress, log and artifact messages, cancellation and error codes, plus the pre-spawn manifest. The prose and the TypeSpec contract are on main; the runtime that speaks it is Phase 4.
 
 - Layer and container: contracts, `containers.md:published`
-- Phase and status: P0, built
+- Phase and status: P0, built, baseline
 - Owner: `contracts`
 - Contracts: `provider/protocol.schema.json`, `provider/manifest.schema.json`
 - MCP tools: –
@@ -1102,7 +1239,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Client capability probe (dev only).** A throwaway stdio MCP server that a developer registers by hand in each host. It records what the host advertises and tries each interaction: forms, images, progress, long calls, resources, prompts and Apps. Its results in docs/client-support.md set the ADR-0018 baseline. It isn't shipped and isn't run in CI.
 
 - Layer and container: dev-tooling, `layers.md:support`
-- Phase and status: P0, partial
+- Phase and status: P0, partial, baseline
 - Owner: `tools/probe`
 - Contracts: –
 - MCP tools: –
@@ -1117,7 +1254,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Record store, typed reads and writes.** Read and write the hw/ design record as typed documents: YAML, CSV and decision records, each validated against its contract before it touches disk, with file identity and round-trip checks on save. Every other record capability reads and writes through it.
 
 - Layer and container: core, `containers.md:store`
-- Phase and status: P1, built
+- Phase and status: P1, built, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/product.schema.json`, `record/part.schema.json`, `record/assembly.schema.json`, `record/interfaces.schema.json`, `record/requirements.schema.json`, `record/bom-row.schema.json`, `record/verification-row.schema.json`, `record/decision.schema.json`, `record/policy.schema.json`, `record/common.schema.json`
 - MCP tools: `record.read`
@@ -1132,7 +1269,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Record validation.** Check a whole record against its contracts and the cross-document rules (BOM, interfaces, assembly, drawing, decisions, verification) and report findings. It is how direct edits to hw/ are caught, as findings and not prevented (D3).
 
 - Layer and container: core, `containers.md:validate`
-- Phase and status: P1, partial
+- Phase and status: P1, partial, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `common/finding.schema.json`
 - MCP tools: `record.validate`
@@ -1149,7 +1286,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Record migration.** Migrate a prototype record (record_version 2) to record version 3 as a table of rules, one row per prototype change: a dry run by default, an apply that backs up every file it changes, resume after a stop, and undo from the backup. Each later prototype change is ported as its own row with a fixture (ADR-0015).
 
 - Layer and container: core, `containers.md:migrate`
-- Phase and status: P1, built
+- Phase and status: P1, built, baseline
 - Owner: `packages/benchhand-core`, `packages/benchhand`
 - Contracts: `record/product.schema.json`, `record/decision.schema.json`
 - MCP tools: `record.migrate`
@@ -1164,7 +1301,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Evidence assessment.** Read a built version and assess what each expected check, requirement and part has shown: obligations, sealed packets, waivers, staleness from input fingerprints, and the acceptance digest a freeze binds. It reads and assesses; nothing writes evidence yet.
 
 - Layer and container: core, `containers.md:evidence`
-- Phase and status: P1, partial
+- Phase and status: P1, partial, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/evidence-assessment.schema.json`, `record/manufacturing-evidence.schema.json`, `record/manufacturing-check-result.schema.json`, `record/manufacturing-guideline.schema.json`, `record/bundle-manifest.schema.json`
 - MCP tools: `evidence.assess`, `evidence.digest`
@@ -1181,7 +1318,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Job service.** Run long work as jobs: each in its own session and process group, with pid-reuse-safe identity, progress, cancellation, reaping, and a run record under .benchhand/runs/. It is the baseline for work over the long-call threshold (ADR-0018): the jobs tools return a handle and the agent polls it.
 
 - Layer and container: core, `containers.md:jobService`
-- Phase and status: P1, built
+- Phase and status: P1, built, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `jobs/job.schema.json`
 - MCP tools: `jobs.start`, `jobs.status`, `jobs.result`, `jobs.cancel`, `jobs.strays`
@@ -1198,13 +1335,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Flow engine.** Load flow.yaml (stages, gates and edges as data, every condition in CEL), check every standalone expression at load, and run the state machine: refuse an out-of-order transition with a reason and the next action, cascade a VOID to the later stages, and be the normal writer of flow.stage. Gates steer; they are not a security control (D3).
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`, `flow`
 - Contracts: `flow/flow.schema.json`, `record/product.schema.json`, `common/cel.schema.json`
 - MCP tools: `flow.advance`
 - CLI: –
 - Depends on: [record-store](#record-store), [cel-rule-pipeline](#cel-rule-pipeline)
 - ADRs: ADR-0003, ADR-0014, ADR-0019, ADR-0020
+- Source: plan: `docs/design-plan.md:552`
 - Prototype: `skills/cad-record/scripts/stages.py`, `skills/cad-flow/references/`
 - Open questions: [tool-stage-check](#tool-stage-check)
 
@@ -1213,13 +1351,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **CEL rule pipeline.** The CEL environment as data: a FileDescriptorSet and a profile manifest per rule scope, generated from the published schemas with a JCS digest; a pinned cel-go tool that compiles rule lists into a rules bundle; and the host's cel-expr-python adapter, which verifies the bundle and refuses a missing or stale entry, naming `benchhand rules compile`.
 
 - Layer and container: core, `containers.md:celTypes`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`, `tools/celcheck`, `tools/gen`
 - Contracts: `common/cel.schema.json`, `flow/rules.schema.json`
 - MCP tools: –
 - CLI: `benchhand rules compile`
 - Depends on: [contracts-pipeline](#contracts-pipeline)
 - ADRs: ADR-0014, ADR-0020
+- Source: plan: `docs/design-plan.md:553`
 - Contracts not yet published: the environment profile manifest; the rules bundle
 - Open questions: [user-bundle-location](#user-bundle-location)
 
@@ -1228,13 +1367,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Rule lists.** The ordered first-match CEL rule lists that replace the prototype's decision tables: checks by iteration, process-check dispatch, fidelity per stage, and rigor. Dispatch ends in `unknown`, recorded as UNKNOWN coverage and never PASS.
 
 - Layer and container: core, `layers.md:flowDir`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `flow`
 - Contracts: `flow/rules.schema.json`
 - MCP tools: –
 - CLI: –
 - Depends on: [cel-rule-pipeline](#cel-rule-pipeline)
 - ADRs: ADR-0014, ADR-0020
+- Source: plan: `docs/design-plan.md:552`
 - Prototype: `skills/cad-design/scripts/process_checks/dispatch.py`, `skills/cad-record/scripts/fail_fast.py`
 - Open questions: [dispatch-explanation](#dispatch-explanation)
 
@@ -1243,13 +1383,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Gate policy.** Each project sets a mode per gate in hw/policy.yaml (ask, chat or auto) and names its rigor; every relaxation is recorded in a DR. Policy providers contribute rule lists and gate requirements in CEL, which hold as well as the flow's own.
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/policy.schema.json`, `policy/contribution.schema.json`
 - MCP tools: `policy.get`, `policy.set`
 - CLI: `benchhand policy get`, `benchhand policy set`
 - Depends on: [flow-engine](#flow-engine), [decision-records](#decision-records), [rule-lists](#rule-lists)
 - ADRs: ADR-0003, ADR-0006, ADR-0020
+- Source: plan: `docs/design-plan.md:552`
 - Open questions: [policy-composition](#policy-composition), [policy-resources](#policy-resources)
 
 ### decision-records
@@ -1257,13 +1398,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Gate decisions and decision records.** Record who approved what, through which channel (app, chat or auto), with the user's words quoted; an empty or declined answer leaves the gate open. The engine writes hw/decisions/ itself, including the VOIDs it records after a failing full check.
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `flow/flow.schema.json#/$defs/GateDecisionRequest`, `record/decision.schema.json`
 - MCP tools: `flow.record_decision`, `flow.record_provisional`
 - CLI: –
 - Depends on: [flow-engine](#flow-engine), [record-store](#record-store)
 - ADRs: ADR-0003, ADR-0018, ADR-0019
+- Source: plan: `docs/design-plan.md:562`
 - Prototype: `skills/cad-record/scripts/decision_records.py`
 - Open questions: [provisional-recording](#provisional-recording), [interval-citation](#interval-citation)
 
@@ -1272,13 +1414,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Scoped approvals and changed-since-approval.** A human-gate approval records the items it covers with their fingerprints. A later change marks only the changed items changed_since_approval; the stage stays where it is, and the next human gate confirms each item with a diff. A CEL selector in flow.yaml picks the affected items.
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `flow/flow.schema.json#/$defs/ApprovalScope`, `flow/flow.schema.json#/$defs/ApprovedItemState`
 - MCP tools: –
 - CLI: –
 - Depends on: [decision-records](#decision-records), [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0019
+- Source: plan: `docs/design-plan.md:563`
 - Open questions: [unscoped-decisions](#unscoped-decisions)
 
 ### result-envelope
@@ -1286,7 +1429,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Result envelope and next actions.** Every tool returns one envelope as structuredContent: status (ok, refused, pending or error), a verdict for checks, findings, artifacts by absolute path, guidance, and next_actions, the tool calls that make sense next, so the agent rarely needs flow.guide again.
 
 - Layer and container: mcp-surface, `containers.md:surface`
-- Phase and status: P2, partial
+- Phase and status: P2, partial, baseline
 - Owner: `packages/benchhand-core`, `contracts`
 - Contracts: `envelope/envelope.schema.json`, `common/finding.schema.json`, `provider/protocol.schema.json#/$defs/Artifact`
 - MCP tools: –
@@ -1303,13 +1446,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Guidance from the server.** flow.guide returns the current stage and its goal, the steps for the stage and role from flow/guides/<stage>.md (the prototype's SKILL.md and flow.md prose, cut per stage), the tools relevant now, the open gates and what each needs, and the next action. The same content is served as prompts and resources.
 
 - Layer and container: core, `containers.md:guide`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`, `flow`
 - Contracts: `flow/flow.schema.json#/$defs/FlowGuides`
 - MCP tools: `flow.guide`
 - CLI: –
 - Depends on: [flow-engine](#flow-engine)
 - ADRs: ADR-0011, ADR-0018
+- Source: plan: `docs/design-plan.md:564`
 - Prototype: `skills/cad-flow/SKILL.md`, `skills/cad-analysis/SKILL.md`, `skills/cad-bom/SKILL.md`, `skills/cad-concept/SKILL.md`, `skills/cad-design/SKILL.md`, `skills/cad-drawings/SKILL.md`, `skills/cad-fits/SKILL.md`, `skills/cad-model/SKILL.md`, `skills/cad-motion/SKILL.md`, `skills/cad-recheck/SKILL.md`, `skills/cad-record/SKILL.md`, `skills/cad-render/SKILL.md`, `skills/cad-review-dfm/SKILL.md`, `skills/cad-review-mech/SKILL.md`, `skills/cad-viewer/SKILL.md`, `skills/cad-record/references/`
 
 ### version-snapshots
@@ -1317,13 +1461,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Version snapshots, seal and verify.** Capture the version a build is made from, seal it under hw/versions/<V>/ with a files sha256 map, and verify it later. The freeze and the --since-version baselines use it, and it honours the project ignore rules.
 
 - Layer and container: core, `containers.md:versions`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/bundle-manifest.schema.json`
 - MCP tools: `version.parts`
 - CLI: `benchhand parts list`, `benchhand parts show`
 - Depends on: [record-store](#record-store)
 - ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:561`
 - Prototype: `skills/cad-record/scripts/layout.py`, `skills/cad-record/scripts/prune.py`
 
 ### project-profile
@@ -1331,13 +1476,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Project-start profile.** The project-start questions, the record of their answers in product.yaml flow.profile (such as whether generated results are stored in git), and the check on that record.
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/product.schema.json`
 - MCP tools: `project.questions`, `project.record_profile`, `project.check_profile`
 - CLI: –
 - Depends on: [record-store](#record-store), [flow-engine](#flow-engine)
 - ADRs: ADR-0003
+- Source: architecture: `docs/architecture/reference-map.yaml:384`
 - Prototype: `skills/cad-flow/scripts/flow_profile.py`, `skills/cad-record/scripts/flow_profile_gate.py`
 
 ### selection-assessment
@@ -1345,13 +1491,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Use case and candidate selection.** Assess a record's use case and compare its material, process and architecture candidates; the selection gate reads the result.
 
 - Layer and container: core, `containers.md:record`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/manufacturing-selection.schema.json`, `record/manufacturing-materials.schema.json`
 - MCP tools: `selection.assess`
 - CLI: –
 - Depends on: [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0017
+- Source: architecture: `docs/architecture/reference-map.yaml:873`
 - Prototype: `skills/cad-record/scripts/selection.py`
 
 ### change-impact
@@ -1359,13 +1506,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Change impact.** Work out what a change affects over the manufacturing-intent dependency domains of the record, so the right evidence goes stale and the right approvals reopen.
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `flow.impact`
 - CLI: –
 - Depends on: [evidence-assessment](#evidence-assessment), [scoped-reapproval](#scoped-reapproval)
 - ADRs: ADR-0019
+- Source: architecture: `docs/architecture/reference-map.yaml:815`
 - Prototype: `skills/cad-record/scripts/impact.py`
 
 ### existing-equipment
@@ -1373,20 +1521,21 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Existing equipment and occurrence roles.** The record side, which Phase 2 adds: make_buy `existing` for customer equipment, with a dimension range and its basis, the occurrence role (product, context or tooling), and obligation generation that marks parts nobody orders not_applicable with a reason. Its Phase 4 consumers are model-build, which exports product and scene files by role, and release-packaging, which refuses a product export with a context or tooling part.
 
 - Layer and container: core, `containers.md:record`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `contracts`, `packages/benchhand-core`
 - Contracts: `record/part.schema.json`, `record/assembly.schema.json`
 - MCP tools: –
 - CLI: –
 - Depends on: [record-store](#record-store)
 - ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:567`
 
 ### assembly-steps-and-coupons
 
 **Assembly steps and joint evidence.** The 13 assembly operation kinds of ADR-0021: the pin's 10, plus `place`, `bench` and `hold`. `place` installs a part or a bench unit without making a joint, and #334's `install` becomes `place`. Its `retained_by` is a list of later joining steps in the same build, or an open fact with a reason; the record validator requires it only when the placed part is delivered (`role: product`). `bench` opens a sub-build and names its base, and `hold` is a dwell with duration, fixture and orientation. Existing equipment may be the `part` of `place` and `disassemble` only. Joint evidence that needs a physical test comes from test coupons proposed from the verification rows, whose results record method, instrument, values, uncertainty and test conditions; a result passes only the conditions it was tested under.
 
 - Layer and container: core, `containers.md:record`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `contracts`, `packages/benchhand-core`
 - Contracts: `record/assembly.schema.json`, `record/verification-row.schema.json`, `record/manufacturing-evidence.schema.json`
 - MCP tools: `record.propose_coupons`
@@ -1402,13 +1551,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Annotation set.** One annotation set per part and assembly, derived from the record and editable by the user: groups (subassemblies and sourcing), callout targets, one material per body, surface finish, notes and weld callouts, and the numbered assembly order. The drawings, renders, viewer and .FCStd export all read it.
 
 - Layer and container: contracts, `containers.md:record`
-- Phase and status: P2, planned
+- Phase and status: P2, planned, baseline
 - Owner: `contracts`, `packages/benchhand-core`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [record-store](#record-store)
 - ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:568`
 - Contracts not yet published: contracts/record/annotations
 - Open questions: [annotation-set-phase](#annotation-set-phase)
 
@@ -1417,13 +1567,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Middleware chain.** The chain every call passes through: validation, policy, audit, provenance, cache and telemetry. The reference map homes the prototype's build store and provenance in it.
 
 - Layer and container: core, `containers.md:middleware`
-- Phase and status: no phase, planned
+- Phase and status: no phase, planned, deferred
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [contract-validation](#contract-validation), [gate-policy](#gate-policy)
 - ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:65`
 - Prototype: `skills/cad-record/scripts/store.py`, `skills/cad-model/scripts/cadmodel/store.py`, `skills/cad-model/scripts/cadmodel/provenance.py`
 - Open questions: [no-phase](#no-phase)
 
@@ -1432,13 +1583,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Design recheck record.** Write or verify the recheck record for the staged index before a commit of hw/ changes, and show what changed since it was stamped.
 
 - Layer and container: core, `containers.md:domain`
-- Phase and status: no phase, planned
+- Phase and status: no phase, planned, deferred
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `recheck.stamp`, `recheck.verify`, `recheck.diff`
 - CLI: –
 - Depends on: [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0003
+- Source: plan: `docs/design-plan.md:505`
 - Prototype: `skills/cad-recheck/scripts/stamp.py`
 - Open questions: [no-phase](#no-phase)
 
@@ -1447,13 +1599,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Scratch workspaces for worker units.** The workspace of one worker unit: copy hw/, build and check the copy, then deliver the unit's parts back.
 
 - Layer and container: core, `containers.md:domain`
-- Phase and status: no phase, planned
+- Phase and status: no phase, planned, deferred
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `work.init`, `work.build`, `work.deliver`
 - CLI: –
 - Depends on: [record-store](#record-store), [model-build](#model-build)
 - ADRs: ADR-0004
+- Source: plan: `docs/design-plan.md:494`
 - Prototype: `skills/cad-flow/scripts/scratch.py`
 - Open questions: [no-phase](#no-phase)
 
@@ -1462,13 +1615,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **MCP server.** `benchhand mcp` on stdio by default, or loopback streamable HTTP with --http, built on the MCP Python SDK v2. It registers each tool's input and output schema from the contracts, validates inputs and its own outputs, and returns the envelope. The server instructions tell the agent to call flow.guide. `debug call` reaches a tool through the same code path.
 
 - Layer and container: mcp-surface, `containers.md:surface`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: `envelope/envelope.schema.json`
 - MCP tools: –
 - CLI: `benchhand mcp`, `benchhand mcp --http`, `benchhand debug call`
 - Depends on: [result-envelope](#result-envelope), [contract-validation](#contract-validation), [guide-service](#guide-service)
 - ADRs: ADR-0001, ADR-0004, ADR-0010, ADR-0011, ADR-0017, ADR-0018
+- Source: plan: `docs/design-plan.md:572`
 - Contracts not yet published: MCP tool inputs and outputs
 - Open questions: [cli-command-list](#cli-command-list)
 
@@ -1477,7 +1631,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **The benchhand CLI.** A thin Typer launcher and admin tool. On main it has `version` and `record migrate`; Phase 3 adds the launcher and admin subcommands.
 
 - Layer and container: cli, `containers.md:cli`
-- Phase and status: P3, partial
+- Phase and status: P3, partial, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: –
@@ -1493,13 +1647,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Project session.** Resolve the project the server works on: from the working directory, from MCP roots when the client sends them, from --project, or from a project.open call where the host starts the server with no project directory (Claude Desktop). The server also reads Codex's sandbox state to report a read-only project.
 
 - Layer and container: mcp-surface, `containers.md:surface`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: `project.open`
 - CLI: –
 - Depends on: [mcp-server](#mcp-server), [record-store](#record-store)
 - ADRs: ADR-0001, ADR-0009
+- Source: plan: `docs/design-plan.md:573`
 - Prototype: `skills/cad-record/assets/project-template/`
 - Open questions: [new-project](#new-project)
 
@@ -1508,13 +1663,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Environment doctor.** The checks of the prototype's preflight: uv, the provider environments, Chromium, the three.js vendor cache and FreeCAD, plus the provider manifests, the MCP registration of each installed harness and the startup-timeout settings. Each failed check comes with an explicit fix; --json gives machine output, and env.doctor returns the same report to the agent, including the background warm-up's progress.
 
 - Layer and container: cli, `containers.md:cli`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: `provider/manifest.schema.json`
 - MCP tools: `env.doctor`
 - CLI: `benchhand doctor`
 - Depends on: [provider-environments](#provider-environments)
 - ADRs: ADR-0001, ADR-0002, ADR-0005
+- Source: plan: `docs/design-plan.md:573`
 - Prototype: `skills/cad-flow/scripts/preflight.py`
 
 ### setup
@@ -1522,13 +1678,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Setup and the managed FreeCAD install.** `benchhand setup [--yes]` replaces the prototype's setup: it plans and, with --yes, installs the prerequisites, including the managed FreeCAD download from the supported list.
 
 - Layer and container: cli, `containers.md:cli`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: –
 - CLI: `benchhand setup`
 - Depends on: [freecad-runtime](#freecad-runtime)
 - ADRs: ADR-0001, ADR-0002, ADR-0005
+- Source: plan: `docs/design-plan.md:576`
 - Prototype: `skills/cad-flow/scripts/setup.py`
 - Open questions: [setup-over-mcp](#setup-over-mcp)
 
@@ -1537,13 +1694,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Typed record operations.** Write the record through typed tools validated on write instead of hand-edited YAML: requirements, interfaces, parts, routes, evidence and BOM rows (closes c7q.13). The record, its schemas and the accepted values are also served as resources.
 
 - Layer and container: mcp-surface, `containers.md:recordOps`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand`, `packages/benchhand-core`
 - Contracts: `record/requirements.schema.json`, `record/interfaces.schema.json`, `record/part.schema.json`, `record/bom-row.schema.json`, `record/manufacturing-evidence.schema.json`
 - MCP tools: `record.add_requirement`, `record.add_interface`, `record.add_part`, `record.set_route`, `record.add_evidence`, `record.add_bom_row`
 - CLI: –
 - Depends on: [record-store](#record-store), [mcp-server](#mcp-server)
 - ADRs: ADR-0007, ADR-0017, ADR-0018
+- Source: plan: `docs/design-plan.md:573`
 - Open questions: [validate-surface](#validate-surface), [tool-stage-check](#tool-stage-check)
 
 ### machine-profile
@@ -1551,13 +1709,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Machine capability profile.** Guided machine setup: check a capability profile built from published specs, and write it into the record, kept apart from the design requirements.
 
 - Layer and container: core, `containers.md:record`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/manufacturing-capabilities.schema.json`
 - MCP tools: `record.check_machine_profile`, `record.set_machine_profile`
 - CLI: –
 - Depends on: [record-store](#record-store)
 - ADRs: ADR-0017
+- Source: architecture: `docs/architecture/reference-map.yaml:827`
 - Prototype: `skills/cad-record/scripts/machine_profile.py`
 
 ### interaction-chat-fallbacks
@@ -1565,33 +1724,35 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Interaction layer, chat baseline.** Read the client's capabilities and pick a channel per interaction from an ordered chain whose last entry always works. Phase 3 builds the baseline every workflow must complete on: the agent asks at a gate in chat and records the reply with channel chat; previews are loopback URLs and paths in the text result; long work returns a job handle.
 
 - Layer and container: interaction, `containers.md:interaction`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [mcp-server](#mcp-server), [decision-records](#decision-records), [job-service](#job-service)
 - ADRs: ADR-0008, ADR-0009, ADR-0018
+- Source: plan: `docs/design-plan.md:575`
 
 ### gate-packet
 
 **Gate packet.** What the user approves at a human gate: the packet with renders, the evidence for the gate, the flow view, and since ADR-0019 a "changed since approval" section. On the baseline the agent presents the packet and the gate-page URL in chat and asks.
 
 - Layer and container: core, `containers.md:flowEngine`
-- Phase and status: P3, planned
+- Phase and status: P3, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `flow.gate_packet`
 - CLI: –
 - Depends on: [decision-records](#decision-records), [scoped-reapproval](#scoped-reapproval), [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0008, ADR-0018, ADR-0019
+- Source: plan: `docs/design-plan.md:341`
 
 ### provider-runtime
 
 **Provider runtime and conformance kit.** The package a provider is built on: framing, initialize negotiation, hook dispatch, cancellation, progress, artifacts, and the conformance kit that every built-in provider passes in CI, generated from the contract's valid and invalid examples.
 
 - Layer and container: providers, `containers.md:providerRuntime`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-provider`
 - Contracts: `provider/protocol.schema.json`, `provider/manifest.schema.json`
 - MCP tools: –
@@ -1599,6 +1760,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [provider-protocol-contract](#provider-protocol-contract), [contract-validation](#contract-validation)
 - ADRs: ADR-0006, ADR-0013
 - Note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:51); not on main.
+- Source: plan: `docs/design-plan.md:580`
 - Prototype: `skills/cad-model/scripts/cadmodel/runner.py`
 
 ### provider-host
@@ -1606,13 +1768,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Provider host.** The core side of the provider protocol: start each provider in its own environment, negotiate, own the per-hook deadlines and the cancel grace period, verify artifacts, and kill the whole process group so no provider outlives the server. A missing provider or hook gives UNKNOWN coverage, never PASS.
 
 - Layer and container: core, `containers.md:providerHost`
-- Phase and status: no phase, planned
+- Phase and status: no phase, planned, deferred
 - Owner: `packages/benchhand-core`
 - Contracts: `provider/protocol.schema.json`
 - MCP tools: –
 - CLI: –
 - Depends on: [provider-runtime](#provider-runtime), [job-service](#job-service)
 - ADRs: ADR-0004, ADR-0006, ADR-0013
+- Source: plan: `docs/design-plan.md:66`
 - Open questions: [no-phase](#no-phase), [artifact-placement](#artifact-placement), [provider-job](#provider-job)
 
 ### provider-environments
@@ -1620,13 +1783,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Provider environments.** Build each provider's uv environment from its manifest, keyed by dependency set, so CadQuery (OCP 7.9) and build123d (OCP 8.0) never share a process; long-lived providers stay resident with warm imports, which replaces the prototype's warm-up and its per-script launcher.
 
 - Layer and container: providers, `containers.md:providerRuntime`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-provider`
 - Contracts: `provider/manifest.schema.json`
 - MCP tools: –
 - CLI: –
 - Depends on: [provider-runtime](#provider-runtime)
 - ADRs: ADR-0002, ADR-0013
+- Source: plan: `docs/design-plan.md:196`
 - Prototype: `skills/cad-flow/scripts/run.py`, `skills/cad-flow/scripts/clean_envs.py`, `skills/cad-model/scripts/cadmodel/scriptenv.py`
 
 ### provider-cli
@@ -1634,20 +1798,21 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Provider-declared CLI subcommands.** A provider manifest may declare [cli] subcommands, mounted as `benchhand <provider> <cmd>` and run through the provider protocol, such as `benchhand freecad probe`; the benchhand.cli entry point is the in-process alternative for core packages.
 
 - Layer and container: cli, `containers.md:cli`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand`, `packages/benchhand-provider`
 - Contracts: `provider/manifest.schema.json`, `provider/protocol.schema.json#/$defs/CliRunParams`
 - MCP tools: –
 - CLI: `benchhand <provider> <cmd>`
 - Depends on: [provider-runtime](#provider-runtime), [provider-host](#provider-host)
 - ADRs: ADR-0001, ADR-0013
+- Source: plan: `docs/design-plan.md:592`
 
 ### freecad-runtime
 
 **FreeCAD provider and supported versions.** Find FreeCAD (FREECADCMD, PATH, the macOS bundle, an AppImage, the managed directory), install a supported version with consent from freecad-versions.toml, refuse a version that isn't on the list with a fix, and run freecadcmd jobs. A compatibility suite qualifies each new FreeCAD release in CI.
 
 - Layer and container: providers, `containers.md:freecadProvider`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/freecad`
 - Contracts: `provider/manifest.schema.json`
 - MCP tools: –
@@ -1655,6 +1820,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [provider-runtime](#provider-runtime)
 - ADRs: ADR-0005, ADR-0006
 - Note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:52); not on main.
+- Source: plan: `docs/design-plan.md:581`
 - Prototype: `skills/cad-drawings/scripts/freecad_runtime.py`, `skills/cad-analysis/scripts/freecad_lookup.py`
 
 ### model-build
@@ -1662,13 +1828,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Build a version.** Build a version from the agent's model.py in the CadQuery or build123d kernel provider and return STEP AP242, GLB and the build manifest as artifacts. The agent writes geometry, and nothing else is scripted. Each version exports product.step and product.glb with product occurrences only, and scene.step and scene.glb with all of them (plan section 12a).
 
 - Layer and container: providers, `containers.md:kernels`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/kernel-cadquery`, `providers/kernel-build123d`
 - Contracts: `provider/protocol.schema.json#/$defs/KernelBuildParams`, `provider/protocol.schema.json#/$defs/KernelBuildResult`
 - MCP tools: `model.build`
 - CLI: –
 - Depends on: [provider-host](#provider-host), [provider-environments](#provider-environments), [version-snapshots](#version-snapshots), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0007, ADR-0013
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-model/scripts/cad_model.py`, `skills/cad-model/scripts/cadmodel/build.py`, `skills/cad-model/scripts/cadmodel/agreement.py`, `skills/cad-model/scripts/cadmodel/stepfile.py`, `skills/cad-model/scripts/cadmodel/manufacture.py`, `skills/cad-model/scripts/run_cadquery.py`, `skills/cad-model/scripts/run_build123d.py`, `skills/cad-design/scripts/build_reference.py`
 - Open questions: [tool-stage-check](#tool-stage-check), [artifact-placement](#artifact-placement)
 
@@ -1677,13 +1844,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Mesh exports.** Export a version's parts as STL and 3MF.
 
 - Layer and container: providers, `containers.md:kernels`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/kernel-cadquery`, `providers/kernel-build123d`
 - Contracts: `provider/protocol.schema.json#/$defs/KernelExportParams`, `provider/protocol.schema.json#/$defs/KernelExportResult`
 - MCP tools: `model.export`
 - CLI: –
 - Depends on: [model-build](#model-build)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-model/scripts/cadmodel/threemf.py`, `skills/cad-model/scripts/cadmodel/mesh.py`
 
 ### model-inspect
@@ -1691,13 +1859,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Inspect geometry.** Measure, section, mass properties and interference on a built version, and the prototype's static check of a version, through the kernel inspect hook.
 
 - Layer and container: providers, `containers.md:kernels`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/kernel-cadquery`, `providers/kernel-build123d`
 - Contracts: `provider/protocol.schema.json#/$defs/KernelInspectParams`, `provider/protocol.schema.json#/$defs/KernelInspectResult`
 - MCP tools: `model.check`, `model.measure`, `model.section`, `model.mass_props`, `model.interference`, `model.inspect`
 - CLI: `benchhand inspect`, `benchhand measure`
 - Depends on: [model-build](#model-build)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-model/scripts/cad_model.py`, `skills/cad-model/scripts/cadmodel/check.py`, `skills/cad-model/scripts/cadmodel/occ.py`
 
 ### model-diff
@@ -1705,13 +1874,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Version diff.** Compare two versions part by part. The plan homes the prototype's diff in the kernel providers; the CAD-libraries study proposes the tool and a result contract (a STEP-sha256 fast path, an exact partition under a time budget, a labelled voxel fallback, the changed fingerprint domains).
 
 - Layer and container: providers, `containers.md:kernels`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/kernel-cadquery`, `providers/kernel-build123d`
 - Contracts: –
 - MCP tools: `model.diff`
 - CLI: `benchhand diff`
 - Depends on: [model-inspect](#model-inspect), [version-snapshots](#version-snapshots)
 - ADRs: ADR-0007
+- Source: architecture: `docs/architecture/reference-map.yaml:473`
 - Contracts not yet published: a version-diff result contract (study)
 - Prototype: `skills/cad-model/scripts/cad_model.py`, `skills/cad-model/scripts/cadmodel/diff.py`
 
@@ -1720,13 +1890,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Part SDK.** The package model.py imports: safe booleans with volume-envelope checks, holes, fillets, components and fonts with stable imports. sdk://describe lists the signatures.
 
 - Layer and container: providers, `containers.md:sdk`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-sdk`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: –
 - ADRs: ADR-0007, ADR-0012
+- Source: plan: `docs/design-plan.md:582`
 - Prototype: `skills/cad-model/scripts/cadmodel/safe.py`, `skills/cad-model/scripts/cadmodel/holes.py`, `skills/cad-model/scripts/cadmodel/fillets.py`, `skills/cad-model/scripts/cadmodel/components.py`, `skills/cad-model/scripts/cadmodel/fonts.py`, `skills/cad-model/scripts/cadmodel/occ_derived.py`, `skills/cad-model/scripts/cadmodel/orientation.py`, `skills/cad-model/NOTICE`
 
 ### generators
@@ -1734,26 +1905,28 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Parametric generators.** Generators for ISO and ASME holes and counterbores, purchased fasteners and bearings (bd_warehouse), and bosses, ribs and sheet flanges. They emit reviewable model.py fragments.
 
 - Layer and container: providers, `containers.md:sdk`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-sdk`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [part-sdk](#part-sdk)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 
 ### process-checks
 
 **Process and form checks.** The fidelity self-check over per-part STEP files (B-rep validity, form metrics, joint bores) and the manufacturing process checks (additive, machining, sheet, shaping, purchased, secondary, route), dispatched by the CEL dispatch rule list.
 
 - Layer and container: providers, `containers.md:checks`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/checks-process`
 - Contracts: `provider/protocol.schema.json#/$defs/ProcessCheckCheckParams`, `record/manufacturing-check-result.schema.json`, `record/manufacturing-findings.schema.json`
 - MCP tools: `checks.form`
 - CLI: –
 - Depends on: [provider-host](#provider-host), [rule-lists](#rule-lists)
 - ADRs: ADR-0006, ADR-0014
+- Source: plan: `docs/design-plan.md:581`
 - Prototype: `skills/cad-design/scripts/form_check.py`, `skills/cad-design/scripts/process_checks/__init__.py`, `skills/cad-design/scripts/process_checks/core.py`, `skills/cad-design/scripts/process_checks/additive.py`, `skills/cad-design/scripts/process_checks/machining.py`, `skills/cad-design/scripts/process_checks/purchased.py`, `skills/cad-design/scripts/process_checks/route.py`, `skills/cad-design/scripts/process_checks/secondary.py`, `skills/cad-design/scripts/process_checks/shaping.py`, `skills/cad-design/scripts/process_checks/sheet.py`
 
 ### check-orchestration
@@ -1761,13 +1934,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Running a version's checks.** Run the checks a stage and iteration select for a built version, collect each producer's result into a sealed packet, and return the verdict. The reference map leaves producer orchestration to a tool that runs the checks, not yet named.
 
 - Layer and container: core, `containers.md:evidence`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/manufacturing-check-result.schema.json`, `envelope/envelope.schema.json`
 - MCP tools: `checks.run`
 - CLI: –
 - Depends on: [evidence-assessment](#evidence-assessment), [rule-lists](#rule-lists), [job-service](#job-service), [process-checks](#process-checks)
 - ADRs: ADR-0014, ADR-0018
+- Source: plan: `docs/design-plan.md:581`
 - Prototype: `skills/cad-record/scripts/evidence.py`, `skills/cad-record/scripts/check_packet.py`
 
 ### fits-calculators
@@ -1775,13 +1949,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Fits and stack-ups.** ISO 286 limits of size and fit classification on the hole basis, and one-dimensional linear tolerance stack-ups, worst case and statistics only where justified.
 
 - Layer and container: core, `containers.md:domain`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `fits.lookup`, `fits.stackup`
 - CLI: –
 - Depends on: [record-store](#record-store)
 - ADRs: ADR-0007, ADR-0012
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-fits/scripts/fits.py`, `skills/cad-fits/scripts/stackup.py`, `skills/cad-fits/data/`, `skills/cad-fits/references/`
 
 ### fea-analysis
@@ -1789,13 +1964,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Structural analysis.** Static linear FEM cases from a case file through FreeCAD FEM and CalculiX, the stop-reaction check of every critical structural interface, and building an FEA case from a requirement.
 
 - Layer and container: providers, `containers.md:solver`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/solver-calculix`, `providers/freecad`
 - Contracts: `provider/protocol.schema.json#/$defs/SolverSolveParams`, `provider/protocol.schema.json#/$defs/CadAppFemParams`
 - MCP tools: `fea.case_from_requirement`, `fea.static`, `fea.stop_reaction`
 - CLI: –
 - Depends on: [freecad-runtime](#freecad-runtime), [job-service](#job-service), [model-build](#model-build)
 - ADRs: ADR-0006, ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-analysis/scripts/fea_static.py`, `skills/cad-analysis/scripts/stop_reaction.py`, `skills/cad-analysis/scripts/ccx_failure.py`, `skills/cad-analysis/scripts/fea_conditions.py`, `skills/cad-analysis/scripts/fea_linearise.py`, `skills/cad-analysis/scripts/fea_modes.py`, `skills/cad-analysis/scripts/fea_near_support.py`, `skills/cad-analysis/scripts/fea_part_selection.py`, `skills/cad-analysis/scripts/fea_reaction.py`, `skills/cad-analysis/scripts/fea_stress.py`, `skills/cad-analysis/scripts/fea_stress_study.py`, `skills/cad-analysis/scripts/mesh_quality.py`, `skills/cad-analysis/scripts/stop_extrema.py`, `skills/cad-analysis/scripts/stop_statics.py`, `skills/cad-flow/scripts/fea_solvers.py`, `skills/cad-flow/scripts/fea_solvers_job.py`
 
 ### motion-analysis
@@ -1803,13 +1979,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Motion, sweeps and access.** Pose an assembly at joint values; plan, check and render its motion; sweep for interference, clearance, reach and worst-case pose; check assembly and service access and mechanism play; build and simulate a FreeCAD Assembly from the joint record.
 
 - Layer and container: providers, `containers.md:collision`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-core`, `providers/collision-fcl`, `providers/freecad`
 - Contracts: `provider/protocol.schema.json#/$defs/CollisionSweepParams`, `provider/protocol.schema.json#/$defs/CadAppAssemblyParams`, `record/assembly.schema.json`
 - MCP tools: `motion.pose`, `motion.render`, `motion.plan`, `motion.check`, `motion.sweep`, `motion.spot_check`, `motion.access`, `motion.play`, `motion.simulate`
 - CLI: –
 - Depends on: [model-build](#model-build), [job-service](#job-service), [provider-host](#provider-host)
 - ADRs: ADR-0006, ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-motion/scripts/motion.py`, `skills/cad-motion/scripts/pose.py`, `skills/cad-motion/scripts/sweep.py`, `skills/cad-motion/scripts/merge_sweeps.py`, `skills/cad-motion/scripts/spot_check.py`, `skills/cad-motion/scripts/access.py`, `skills/cad-motion/scripts/play.py`, `skills/cad-motion/scripts/freecad_assembly.py`, `skills/cad-motion/scripts/plan.py`, `skills/cad-motion/scripts/continuous.py`, `skills/cad-motion/scripts/coupling.py`, `skills/cad-motion/scripts/engagement.py`, `skills/cad-motion/scripts/incremental.py`, `skills/cad-motion/scripts/mesh_bound.py`, `skills/cad-motion/scripts/motion_glb.py`, `skills/cad-motion/scripts/pair_measure.py`, `skills/cad-motion/scripts/pair_policy.py`, `skills/cad-motion/scripts/subsystems.py`, `skills/cad-motion/scripts/code_shas.py`
 
 ### render-output
@@ -1817,13 +1994,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Product renders.** Render verified versions to product PNG bundles through a static three.js PBR page in headless Chromium, and compare two render bundles by their decisions and pixel parity.
 
 - Layer and container: providers, `containers.md:renderer`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/render-chromium`
 - Contracts: `provider/protocol.schema.json#/$defs/RendererRenderParams`
 - MCP tools: `render.product`, `render.compare`
 - CLI: –
 - Depends on: [model-build](#model-build), [provider-host](#provider-host)
 - ADRs: ADR-0006, ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-render/scripts/render.py`, `skills/cad-render/scripts/compare_renders.py`, `skills/cad-render/scripts/materials.py`, `skills/cad-render/scripts/parity_policy.py`, `skills/cad-render/scripts/versions.py`, `skills/cad-render/assets/`, `skills/cad-design/scripts/review_render.py`
 
 ### drawings
@@ -1831,13 +2009,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Part and assembly drawings.** Producer-ready TechDraw part drawings and the checked assembly drawing package of a built version (exploded view, balloons, parts list), a reviewable drawing-intent draft proposed from a part's B-rep, the merge of a reviewed draft into part.yaml, and the check of a published package.
 
 - Layer and container: providers, `containers.md:freecadProvider`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/freecad`
 - Contracts: `provider/protocol.schema.json#/$defs/CadAppDrawingParams`, `record/drawing.schema.json`
 - MCP tools: `drawing.part`, `drawing.assembly`, `drawing.draft`, `drawing.merge`, `drawing.check`
 - CLI: –
 - Depends on: [freecad-runtime](#freecad-runtime), [model-build](#model-build), [job-service](#job-service)
 - ADRs: ADR-0006, ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-drawings/scripts/drawing.py`, `skills/cad-drawings/scripts/assembly_drawing.py`, `skills/cad-drawings/scripts/assembly_check.py`, `skills/cad-drawings/scripts/drawing_draft.py`, `skills/cad-drawings/scripts/drawing_merge.py`, `skills/cad-drawings/scripts/drawing_contract.py`, `skills/cad-drawings/scripts/drawing_document.py`, `skills/cad-drawings/scripts/drawing_intent.py`, `skills/cad-drawings/scripts/feature_recognition.py`, `skills/cad-drawings/scripts/section_hatch.py`, `skills/cad-drawings/scripts/techdraw_job.py`
 
 ### bom
@@ -1845,13 +2024,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Engineering BOM.** Roll an engineering BOM up from a STEP AP242 assembly and the record, leaving out context and tooling occurrences.
 
 - Layer and container: core, `containers.md:domain`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/bom-row.schema.json`
 - MCP tools: `bom.rollup`
 - CLI: –
 - Depends on: [model-build](#model-build), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-bom/scripts/bom.py`, `skills/cad-bom/fixtures/`
 
 ### release-packaging
@@ -1859,13 +2039,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Release packaging.** Seal a release of the frozen version under hw/releases/<REV>/: byte copies and a manifest, the refusal checks, and the acceptance digest checked against the freeze. One refusal is a product export that holds a context or tooling part (plan section 12a).
 
 - Layer and container: core, `containers.md:release`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/bundle-manifest.schema.json`, `record/evidence-assessment.schema.json`
 - MCP tools: `release.package`
 - CLI: –
 - Depends on: [version-snapshots](#version-snapshots), [evidence-assessment](#evidence-assessment), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0017
+- Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-record/scripts/release.py`
 - Open questions: [release-refusals](#release-refusals), [freeze-digest](#freeze-digest)
 
@@ -1874,13 +2055,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Documentation set.** Beside the STEP AP242 deliverable, from the same version: part drawings with surface finish, weld symbols and notes; keynoted section details; assembly drawings grouped by make, buy and existing with one sheet per assembly step; labelled views; a structured .FCStd; and the build guide. Each output has a text baseline (ADR-0018).
 
 - Layer and container: providers, `containers.md:freecadProvider`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/freecad`, `providers/render-chromium`, `packages/benchhand-core`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [annotation-set](#annotation-set), [drawings](#drawings), [render-output](#render-output), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0007, ADR-0018
+- Source: plan: `docs/design-plan.md:584`
 - Prototype: `skills/cad-record/scripts/build_guide.py`, `skills/cad-record/scripts/generated_docs.py`, `skills/cad-record/assets/docs-templates/`
 - Open questions: [document-export-hook](#document-export-hook), [annotation-set-phase](#annotation-set-phase)
 
@@ -1889,13 +2071,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Artifact store provider.** Artifact storage behind the store provider kind (put, get, list), filesystem first.
 
 - Layer and container: providers, `containers.md:store`
-- Phase and status: P4, planned
+- Phase and status: P4, planned, baseline
 - Owner: `providers/store-fs`
 - Contracts: `provider/protocol.schema.json#/$defs/StorePutParams`
 - MCP tools: –
 - CLI: –
 - Depends on: [provider-host](#provider-host)
 - ADRs: ADR-0006
+- Source: plan: `docs/design-plan.md:581`
 - Open questions: [artifact-placement](#artifact-placement)
 
 ### policy-provider
@@ -1903,13 +2086,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Default policy provider.** The policy provider kind (evaluate), whose default implementation is named in the plan.
 
 - Layer and container: providers, `containers.md:policy`
-- Phase and status: no phase, planned
+- Phase and status: no phase, planned, deferred
 - Owner: `providers/policy-default`
 - Contracts: `provider/protocol.schema.json#/$defs/PolicyEvaluateParams`, `policy/contribution.schema.json`
 - MCP tools: –
 - CLI: –
 - Depends on: [provider-host](#provider-host), [gate-policy](#gate-policy)
 - ADRs: ADR-0006
+- Source: plan: `docs/design-plan.md:162`
 - Open questions: [no-phase](#no-phase), [policy-composition](#policy-composition)
 
 ### preview-host
@@ -1917,13 +2101,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Preview host.** A separate loopback HTTP listener in the server process, with ephemeral ports, Host-header and DNS-rebinding checks and a random path token. It hosts the viewer, concept, gallery, gate page, flow view and prototype pages, and its URLs appear in tool results. `benchhand serve` runs it without an agent.
 
 - Layer and container: preview-host, `containers.md:preview`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: `preview.serve`, `preview.stop`, `preview.list`
 - CLI: `benchhand serve`
 - Depends on: [mcp-server](#mcp-server), [job-service](#job-service)
 - ADRs: ADR-0004, ADR-0010
+- Source: plan: `docs/design-plan.md:594`
 - Contracts not yet published: the preview-host HTTP API
 - Prototype: `skills/cad-concept/scripts/serve.py`, `skills/cad-viewer/scripts/viewer.py`, `skills/cad-viewer/scripts/cadviewer/host.py`, `skills/cad-viewer/scripts/cadviewer/session.py`, `skills/cad-viewer/scripts/cadviewer/gallery.py`
 
@@ -1932,13 +2117,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Viewer.** Show a version, compare two side by side with a synced camera, capture the displayed version into an immutable bundle, and set the camera. Viewer layers from the annotation set add callouts, a legend, group toggles and assembly-step playback.
 
 - Layer and container: ui, `containers.md:ui`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `ui/viewer`, `providers/viewer-ocp`
 - Contracts: `provider/protocol.schema.json#/$defs/ViewerShowParams`, `provider/protocol.schema.json#/$defs/ViewerCompareParams`, `provider/protocol.schema.json#/$defs/ViewerCaptureParams`
 - MCP tools: `viewer.show`, `viewer.compare`, `viewer.capture`, `viewer.camera`, `viewer.mode`, `viewer.parts`, `viewer.animate`, `viewer.studio`
 - CLI: `benchhand view`
 - Depends on: [preview-host](#preview-host), [model-build](#model-build), [annotation-set](#annotation-set)
 - ADRs: ADR-0004, ADR-0007, ADR-0008
+- Source: plan: `docs/design-plan.md:595`
 - Prototype: `skills/cad-viewer/scripts/viewer.py`, `skills/cad-viewer/scripts/cadviewer/__init__.py`, `skills/cad-viewer/scripts/cadviewer/capture.py`, `skills/cad-viewer/scripts/cadviewer/motion.py`, `skills/cad-viewer/scripts/cadviewer/record.py`, `skills/cad-viewer/assets/`
 - Open questions: [viewer-provider-phase](#viewer-provider-phase)
 
@@ -1947,13 +2133,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Concept scenes.** Edit a concept scene with tools (add a variant, set a primitive, take a snapshot), check the scene contract after each edit, and show it in the concept page.
 
 - Layer and container: ui, `containers.md:ui`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `ui/concept`, `providers/viewer-ocp`
 - Contracts: –
 - MCP tools: `concept.add_variant`, `concept.set_primitive`, `concept.snapshot`, `concept.check`
 - CLI: –
 - Depends on: [preview-host](#preview-host)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:595`
 - Prototype: `skills/cad-concept/scripts/concept.py`, `skills/cad-concept/assets/`, `skills/cad-concept/references/`
 
 ### draft-preview
@@ -1961,26 +2148,28 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Draft preview.** Build a part or an assembly without making a version, return snapshots, and update the live viewer.
 
 - Layer and container: preview-host, `containers.md:preview`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: `preview.part`, `preview.assembly`
 - CLI: –
 - Depends on: [model-build](#model-build), [viewer](#viewer)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:595`
 
 ### layout-skeleton
 
 **Layout skeleton from the concept.** Write a layout draft from the concept, recording each inferred value as a bounded assumption that must be accepted or edited at LAYOUT freeze; the draft can never be frozen as it is. It replaces the prototype's concept-to-CAD handoff manifest.
 
 - Layer and container: core, `containers.md:recordOps`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `packages/benchhand-core`
 - Contracts: `record/interfaces.schema.json`, `record/requirements.schema.json`
 - MCP tools: `layout.from_concept`
 - CLI: –
 - Depends on: [concept-scene](#concept-scene), [record-ops](#record-ops)
 - ADRs: ADR-0007
+- Source: plan: `docs/design-plan.md:595`
 - Prototype: `skills/cad-concept/scripts/concept.py`
 
 ### flow-view
@@ -1988,26 +2177,28 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Flow view.** React Flow draws flow.yaml and the project's live state in the preview host and the gate card: the current stage, open gates, provisional and void history, and the evidence for each gate.
 
 - Layer and container: ui, `containers.md:ui`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `ui/flow-view`
 - Contracts: `flow/flow.schema.json`
 - MCP tools: –
 - CLI: –
 - Depends on: [flow-engine](#flow-engine), [preview-host](#preview-host)
 - ADRs: ADR-0014
+- Source: plan: `docs/design-plan.md:594`
 
 ### rich-interactions
 
 **Apps, image results and tasks.** The enhancements over the baseline, only where a host declares them: the MCP App gate card and viewer shells embedding the preview page, the structured-question App (a form over nested schemas for the GROUND, INTENT and SPECIFY questions), image content and resource links for the agent, and the tasks adapter behind a flag. The App form is an MCP App; MCP form elicitation isn't used (ADR-0018).
 
 - Layer and container: interaction, `containers.md:interaction`
-- Phase and status: P5, planned
+- Phase and status: P5, planned, baseline
 - Owner: `packages/benchhand`, `ui/gate-card`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [interaction-chat-fallbacks](#interaction-chat-fallbacks), [preview-host](#preview-host), [gate-packet](#gate-packet)
 - ADRs: ADR-0008, ADR-0018
+- Source: plan: `docs/design-plan.md:597`
 - Contracts not yet published: the App postMessage payloads
 
 ### harness-install
@@ -2015,13 +2206,14 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Harness install.** `benchhand install --harness X` writes, per host, the MCP registration with its timeouts, the bootstrap skill, the agent profiles generated from the neutral agents/*.md (keeping the tier and model rendering and the CHEAP_ELIGIBLE allowlist), and host extras such as the Pi package's gate dialog.
 
 - Layer and container: harness-integration, `layers.md:harnessDir`
-- Phase and status: P6, planned
+- Phase and status: P6, planned, baseline
 - Owner: `harness`, `packages/benchhand`
 - Contracts: –
 - MCP tools: –
 - CLI: `benchhand install`, `benchhand install --container`
 - Depends on: [mcp-server](#mcp-server), [guide-service](#guide-service)
 - ADRs: ADR-0002, ADR-0009, ADR-0011
+- Source: plan: `docs/design-plan.md:600`
 - Prototype: `harness/generate.py`, `harness/install.py`, `harness/claude/agents/`, `harness/codex/agents/`, `harness/kiro/agents/`, `harness/opencode/agents/`, `harness/opencode/commands/cad-flow.md`, `agents/cad-analyst.md`, `agents/cad-clerk.md`, `agents/cad-concept-designer.md`, `agents/cad-dfm-reviewer.md`, `agents/cad-mech-reviewer.md`, `agents/cad-part-designer.md`, `agents/cad-sourcing-researcher.md`
 
 ### skills-over-mcp
@@ -2029,26 +2221,28 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Skills over MCP.** Serve the guide content as Skills over MCP where a host supports it, from the same source as flow.guide.
 
 - Layer and container: mcp-surface, `containers.md:surface`
-- Phase and status: P6, planned
+- Phase and status: P6, planned, baseline
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [guide-service](#guide-service)
 - ADRs: ADR-0011
+- Source: plan: `docs/design-plan.md:601`
 
 ### container-launcher
 
 **Container launcher.** `benchhand mcp --container` resolves the project, picks a container runtime by profile (docker, podman, nerdctl), pulls the pinned image, runs it with the project mounted at the same path, pumps stdio, and cleans up on every exit path; with no runtime it serves a one-tool error server whose env.doctor explains the fix.
 
 - Layer and container: distribution, `layers.md:containerDir`
-- Phase and status: no phase, planned
+- Phase and status: no phase, planned, deferred
 - Owner: `packages/benchhand`, `container`
 - Contracts: –
 - MCP tools: –
 - CLI: `benchhand mcp --container`, `benchhand doctor --clean`
 - Depends on: [mcp-server](#mcp-server), [env-doctor](#env-doctor), [job-service](#job-service)
 - ADRs: ADR-0002
+- Source: plan: `docs/design-plan.md:602`
 - Open questions: [container-launcher-phase](#container-launcher-phase)
 
 ### distribution
@@ -2056,26 +2250,28 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Packaging and distribution.** Publish benchhand and the benchhand-celcheck platform wheels on PyPI, the OCI image on GHCR, the Claude Code plugin and marketplace, the Claude Desktop .mcpb, the Codex plugin and the Pi package, with the repo name read from release.toml.
 
 - Layer and container: distribution, `layers.md:containerDir`
-- Phase and status: P7, planned
+- Phase and status: P7, planned, baseline
 - Owner: `packages/benchhand`, `container`, `harness`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [harness-install](#harness-install), [container-launcher](#container-launcher), [cel-rule-pipeline](#cel-rule-pipeline)
 - ADRs: ADR-0002, ADR-0009, ADR-0015, ADR-0020
+- Source: plan: `docs/design-plan.md:604`
 
 ### golden-parity
 
 **Golden end-to-end parity.** examples/lamp-arm goes from GROUND to RELEASE through MCP tools only, driven by a scripted MCP client, once per capability profile (chat only is the release gate), and its STEP, drawings, EBOM and verification match the prototype's baseline; then the repos swap.
 
 - Layer and container: dev-tooling, `layers.md:support`
-- Phase and status: P7, planned
+- Phase and status: P7, planned, baseline
 - Owner: `tools/golden`
 - Contracts: –
 - MCP tools: –
 - CLI: –
 - Depends on: [mcp-server](#mcp-server), [model-build](#model-build), [drawings](#drawings), [bom](#bom), [release-packaging](#release-packaging), [interaction-chat-fallbacks](#interaction-chat-fallbacks)
 - ADRs: ADR-0015, ADR-0018
+- Source: plan: `docs/design-plan.md:606`
 - Prototype: `examples/lamp-arm/`
 
 ### bounded-results
@@ -2083,7 +2279,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Bounded results with a retrieve handle.** Bound large results: mark them truncated with an estimate, save the full result, and return a handle to retrieve it; also idempotency keys on model.build and jobs.start so a lost response can be retried.
 
 - Layer and container: mcp-surface, `containers.md:surface`
-- Phase and status: P3, proposed
+- Phase and status: P3, proposed, deferred
 - Owner: `packages/benchhand`, `contracts`
 - Contracts: `envelope/envelope.schema.json`
 - MCP tools: –
@@ -2098,7 +2294,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **benchhand's own manual over MCP.** An index-first, bounded docs tool generated from the guides, the SDK, the contracts, the provider manifests and the data tables, with docs:// resources.
 
 - Layer and container: mcp-surface, `containers.md:surface`
-- Phase and status: P3, proposed
+- Phase and status: P3, proposed, deferred
 - Owner: `packages/benchhand`
 - Contracts: –
 - MCP tools: `docs.get`
@@ -2112,7 +2308,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Standards and parts data.** A pinned data package whose rows carry their provenance, searched through tools; a cited row is frozen into hw/manufacturing/sources/, which the acceptance inventory already hashes.
 
 - Layer and container: core, `containers.md:domain`
-- Phase and status: P4, proposed
+- Phase and status: P4, proposed, deferred
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `standards.search`, `standards.show`, `parts.search`, `parts.show`, `record.cite_source`
@@ -2127,7 +2323,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Supplier STEP import.** Freeze supplier STEP bytes and their sha256 into sources/, read them back, inspect them, and draft the procurement entry.
 
 - Layer and container: core, `containers.md:recordOps`
-- Phase and status: P4, proposed
+- Phase and status: P4, proposed, deferred
 - Owner: `packages/benchhand-core`
 - Contracts: –
 - MCP tools: `part.import_step`
@@ -2141,7 +2337,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Live project viewer.** One stable per-project viewer page through every stage, with stage tabs (Concept, Model, Compare, Gate, Flow) driven by the flow engine's events, keep-last-good with a failure banner, and a self-contained export.
 
 - Layer and container: ui, `containers.md:ui`
-- Phase and status: P5, proposed
+- Phase and status: P5, proposed, deferred
 - Owner: `ui/viewer`, `packages/benchhand`
 - Contracts: –
 - MCP tools: `viewer.open`, `viewer.export`
@@ -2155,7 +2351,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Product documents (Typst).** Deterministic product documents from a sealed version: one JSON projection per document built in core (rendering only `known` facts, with an UNKNOWN inventory), compiled by a pinned, hermetic docs-typst provider into a sealed docs bundle that the release copies.
 
 - Layer and container: providers, `containers.md:providers`
-- Phase and status: P4, proposed
+- Phase and status: P4, proposed, deferred
 - Owner: `packages/benchhand-core`, `providers/docs-typst`
 - Contracts: –
 - MCP tools: `docset.build`, `docset.unknowns`, `docset.show`, `docset.list`

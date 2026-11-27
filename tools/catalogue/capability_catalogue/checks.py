@@ -33,6 +33,8 @@ def check_catalogue(catalogue: Catalogue, repo_root: Path) -> list[str]:
         *_references(catalogue),
         *_cycles(catalogue),
         *_tool_reasons(catalogue),
+        *_planned_sources(catalogue),
+        *_replaced_without_tool(catalogue),
         *_prototype_paths(catalogue, repo_root),
         *_contracts(catalogue, repo_root),
         *_adrs(catalogue, repo_root),
@@ -117,6 +119,26 @@ def _tool_reasons(catalogue: Catalogue) -> Iterator[str]:
     for item in catalogue.capabilities:
         if "no_tool_reason" in item and catalogue.tools_of(item["id"]):
             yield f"capability {item['id']} has tools, so it takes no `no_tool_reason`"
+
+
+def _planned_sources(catalogue: Catalogue) -> Iterator[str]:
+    """A planned capability cites the line of the requirement or phase that plans it."""
+    for item in catalogue.capabilities:
+        if item["status"] == "planned":
+            found = _LINE.match(item["source"]["ref"])
+            if not found or found["line"] is None:
+                yield f"capability {item['id']} is planned, and its source {item['source']['ref']} needs a path:LINE"
+
+
+def _replaced_without_tool(catalogue: Catalogue) -> Iterator[str]:
+    replaced = {name for tool in catalogue.tools for name in tool.get("replaces", [])}
+    for command in catalogue.prototype_commands:
+        how = command.get("replaced_without_tool")
+        where = f"prototype command {command['command']}"
+        if how and command["command"] in replaced:
+            yield f"{where}: a tool replaces it, so it takes no `replaced_without_tool`"
+        elif how == "cli" and not (command["capability"] and catalogue.cli_of(command["capability"])):
+            yield f"{where}: replaced by the CLI, and its capability has no CLI command"
 
 
 def _prototype_paths(catalogue: Catalogue, repo_root: Path) -> Iterator[str]:

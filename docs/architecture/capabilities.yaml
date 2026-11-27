@@ -34,6 +34,11 @@ doc_corrections:
 
 open_questions:
   - id: cli-command-list
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The CLI subcommand list, reconciling D1, ADR-0001
+      and the version and record migrate commands on main, before the
+      cli-app spec.'
     origin: catalogue
     question: Which subcommands does the CLI have? The lists differ,
       and `main` has two commands neither list names.
@@ -52,6 +57,10 @@ open_questions:
         says: main has version and record migrate, and neither list
           names them.
   - id: record-migrate-tool
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether record.migrate is an MCP tool and in which
+      phase, or the envelope example names the CLI command instead.'
     origin: catalogue
     question: Is there a record.migrate MCP tool, and in which phase?
       The envelope contract's example names it; the architecture pages
@@ -66,6 +75,10 @@ open_questions:
         says: no MCP tool for migration is named; main has the CLI
           subcommand.
   - id: provisional-recording
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether a tool call or the interpreter records a
+      PROVISIONAL approval, before the decision-records spec.'
     origin: catalogue
     question: 'Who records a PROVISIONAL approval: a tool call, or
       the interpreter? The envelope example names a flow.record_provisional
@@ -83,6 +96,11 @@ open_questions:
         says: GateDecisionRequest records a human-gate decision; the
           interpreter records the other VOIDs itself.
   - id: policy-resources
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The tools that read and change gate modes over MCP,
+      with the policy.* resources as an enhancement, or no MCP path at
+      all.'
     origin: catalogue
     question: How does the agent read and change gate modes over MCP?
       D3 says the `policy.*` resources change them, but an MCP resource
@@ -99,6 +117,10 @@ open_questions:
         says: readable content comes from a tool; a resource is an
           enhancement.
   - id: policy-composition
+    blocking: true
+    owner: project-owner
+    decision_needed: 'How a policy provider''s rule lists compose with the
+      flow''s own (ADR-0020).'
     origin: existing
     question: How contributed policy rule lists compose with the flow's
       own; the owner decides.
@@ -106,18 +128,31 @@ open_questions:
       - docs/adr/0020-cel-rule-pipeline.md:207
       - docs/design-plan.md:648
   - id: tool-stage-check
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether a writing tool call is checked against
+      flow.stage, and which tools are.'
     origin: existing
     question: Whether a tool call such as model.build is checked against
       flow.stage; CEL guards run on transitions only.
     pointers:
       - docs/architecture/data-flow.md:344
   - id: cancel-tool
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether jobs.cancel joins jobs.start, jobs.status
+      and jobs.result.'
     origin: existing
     question: The plan names jobs.start, jobs.status and jobs.result,
       and no cancel tool, although the job service cancels.
     pointers:
       - docs/architecture/data-flow.md:349
   - id: no-phase
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The phase that delivers each of the middleware
+      chain, the provider host, viewer-ocp, policy-default and the recheck
+      and work modules.'
     origin: existing
     question: The plan names the middleware chain, the provider host,
       viewer-ocp, policy-default and the recheck and work modules,
@@ -125,36 +160,56 @@ open_questions:
     pointers:
       - docs/architecture/containers.md:179
   - id: artifact-placement
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The component that moves a provider''s verified
+      artifacts into hw/.'
     origin: existing
     question: Which component moves a provider's verified artifacts
       into hw/; the record store writes YAML, CSV and decisions only.
     pointers:
       - docs/architecture/data-flow.md:345
   - id: freeze-digest
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether a freeze without an evidence digest is
+      allowed, and what product.yaml then requires.'
     origin: existing
     question: A freeze whose evidence assessment refuses has no digest;
       product.yaml allows flow.frozen without evidence_sha256.
     pointers:
       - docs/architecture/data-flow.md:346
   - id: provider-job
+    blocking: true
+    owner: project-owner
+    decision_needed: 'How a provider request becomes a job of the job
+      service.'
     origin: existing
     question: How a provider request becomes a job; JobService runs
       a command under a supervisor.
     pointers:
       - docs/architecture/data-flow.md:348
   - id: release-refusals
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The full list of release refusal checks.'
     origin: existing
     question: The full list of release refusal checks; the plan names
       the acceptance digest and the context and tooling refusal only.
     pointers:
       - docs/architecture/data-flow.md:350
   - id: envelope-phase
+    blocking: false
     origin: existing
     question: Phase 1 writes the envelope contract and Phase 2 lists
       the result envelope and next_actions.
     pointers:
       - docs/architecture/layers.md:154
   - id: annotation-set-phase
+    blocking: true
+    owner: maintainer
+    decision_needed: 'Which phase publishes the annotation-set contract,
+      Phase 2 or Phase 4, with the plan and layers.md made to agree.'
     origin: existing
     question: Phase 2 lists the annotation set as a record contract
       addition, and Phase 4 lists the annotation-set contract.
@@ -163,30 +218,47 @@ open_questions:
       - docs/design-plan.md:568
       - docs/design-plan.md:585
   - id: unscoped-decisions
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether a migrated decision without an approval
+      scope covers its whole stage or needs confirmation (ADR-0019).'
     origin: existing
     question: How a migrated decision without an approval scope is
       treated, as covering the whole stage or as needing confirmation.
     pointers:
       - docs/adr/0019-scoped-reapproval.md:31
   - id: interval-citation
+    blocking: true
+    owner: project-owner
+    decision_needed: 'How a gate request cites the decision that accepts
+      unproved intervals.'
     origin: existing
     question: How a gate request cites the decision that accepts unproved
       intervals.
     pointers:
       - docs/phases/phase-0-1.md:170
   - id: dispatch-explanation
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether the restricted CEL profile gains an
+      explanation, or dispatch findings drop the prototype''s text.'
     origin: existing
     question: ADR-0020's restricted profile has no `explanation`,
       so dispatch findings lose the prototype's "no handler for" text.
     pointers:
       - docs/phases/phase-0-1.md:169
   - id: validate-surface
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The record.* tools for validate and evidence, named
+      one by one.'
     origin: existing
     question: Neither CLI list names validate or evidence; they arrive
       as record.* tools, which no source names one by one.
     pointers:
       - docs/phases/phase-0-1.md:154
   - id: guideline-asset
+    blocking: false
     origin: existing
     question: The shipped guideline sets become a package asset when
       the guideline catalog is ported; until then the caller names
@@ -194,6 +266,7 @@ open_questions:
     pointers:
       - docs/design-plan.md:649
   - id: user-bundle-location
+    blocking: false
     origin: existing
     question: Where a project's and a provider's rules bundle lives,
       and how a scope is declared; Phase 2 picks.
@@ -201,6 +274,9 @@ open_questions:
       - docs/adr/0020-cel-rule-pipeline.md:214
       - docs/adr/0020-cel-rule-pipeline.md:215
   - id: container-launcher-phase
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The phase that delivers the --container launcher.'
     origin: existing
     question: No phase of the Steps delivers the --container launcher;
       Phase 6 lists install --container and Phase 7 the image.
@@ -208,6 +284,10 @@ open_questions:
       - docs/architecture/overview.md:79
       - docs/design-plan.md:602
   - id: document-export-hook
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether the structured .FCStd export is a cad-app
+      hook, and if so the provider protocol change.'
     origin: catalogue
     question: Is the structured .FCStd export a cad-app hook? Phase
       4 names `cad-app` `document.export`; the plan's hook table and
@@ -223,6 +303,10 @@ open_questions:
         says: the cad-app hooks are cad-app/drawing, cad-app/assembly
           and cad-app/fem.
   - id: viewer-provider-phase
+    blocking: true
+    owner: maintainer
+    decision_needed: 'The phase of viewer-ocp, with the reference map and
+      the containers page made to agree.'
     origin: catalogue
     question: Which phase builds viewer-ocp? The reference map homes
       the prototype viewer there in Phase 5; the containers page says
@@ -237,6 +321,10 @@ open_questions:
       - source: docs/architecture/containers.md:179
         says: viewer-ocp has no phase in the Steps.
   - id: new-project
+    blocking: true
+    owner: project-owner
+    decision_needed: 'The command or tool that creates a new project''s
+      hw/ from the template.'
     origin: catalogue
     question: What creates a new project's hw/? The reference map
       homes the prototype's project template in the CLI package (Phase
@@ -253,6 +341,10 @@ open_questions:
         says: the CLI subcommands are mcp, serve, install, doctor,
           setup, policy, rules compile and debug call.
   - id: read-only-cli
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether to accept the ADR-0001 amendment for
+      read-only CLI adapters.'
     origin: catalogue
     question: Does the CLI get read-only adapters over the MCP tools'
       core (inspect, measure, parts, diff, view, docs, standards,
@@ -263,6 +355,10 @@ open_questions:
       - docs/adr/0001-mcp-only-interface.md:11
       - docs/client-support.md:15
   - id: bounded-results
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether to accept the bounded envelope with
+      truncated, estimate and a retrieve handle.'
     origin: catalogue
     question: The CAD-libraries study (lane 8, adoption item 1) proposes
       a bounded envelope with `truncated`, `estimate` and a `retrieve`
@@ -271,6 +367,10 @@ open_questions:
     pointers:
       - contracts/envelope/envelope.tsp:16
   - id: setup-over-mcp
+    blocking: true
+    owner: project-owner
+    decision_needed: 'Whether the agent can run setup over MCP, or setup
+      stays a CLI command that env.doctor points to.'
     origin: catalogue
     question: Can the agent run setup? The plan makes setup a CLI
       command that includes the managed FreeCAD install, and env.doctor
@@ -296,6 +396,7 @@ capabilities:
     container: containers.md:published
     phase: 1
     status: built
+    scope: baseline
     evidence:
       - justfile:106
       - tools/gen/contracts_gen/__main__.py:24
@@ -323,6 +424,7 @@ capabilities:
     container: containers.md:validator
     phase: 1
     status: built
+    scope: baseline
     evidence:
       - packages/benchhand-contracts/src/benchhand_contracts/validation.py:52
     owner:
@@ -348,6 +450,7 @@ capabilities:
     container: containers.md:published
     phase: 0
     status: built
+    scope: baseline
     evidence:
       - contracts/provider/protocol.tsp
       - contracts/provider/manifest.tsp
@@ -377,6 +480,7 @@ capabilities:
     container: layers.md:support
     phase: 0
     status: partial
+    scope: baseline
     evidence:
       - tools/probe/probe.py
       - docs/client-support.md
@@ -400,6 +504,7 @@ capabilities:
     container: containers.md:store
     phase: 1
     status: built
+    scope: baseline
     evidence:
       - packages/benchhand-core/src/benchhand_core/record/store.py:313
       - packages/benchhand-core/src/benchhand_core/record/documents.py
@@ -442,6 +547,7 @@ capabilities:
     container: containers.md:validate
     phase: 1
     status: partial
+    scope: baseline
     evidence:
       - packages/benchhand-core/src/benchhand_core/record/validate.py:43
     note: The library is on main with no CLI or tool. The reference
@@ -476,6 +582,7 @@ capabilities:
     container: containers.md:migrate
     phase: 1
     status: built
+    scope: baseline
     evidence:
       - packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674
       - packages/benchhand/src/benchhand/cli.py:34
@@ -505,6 +612,7 @@ capabilities:
     container: containers.md:evidence
     phase: 1
     status: partial
+    scope: baseline
     evidence:
       - packages/benchhand-core/src/benchhand_core/record/evidence/assess.py:383
       - packages/benchhand-core/src/benchhand_core/record/evidence/reader.py:394
@@ -547,6 +655,7 @@ capabilities:
     container: containers.md:jobService
     phase: 1
     status: built
+    scope: baseline
     evidence:
       - packages/benchhand-core/src/benchhand_core/jobs/service.py:119
       - packages/benchhand-core/src/benchhand_core/jobs/supervisor.py
@@ -581,6 +690,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:552
     owner:
       - packages/benchhand-core
       - flow
@@ -613,6 +726,10 @@ capabilities:
     container: containers.md:celTypes
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:553
     owner:
       - packages/benchhand-core
       - tools/celcheck
@@ -642,6 +759,10 @@ capabilities:
     container: layers.md:flowDir
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:552
     owner:
       - flow
     contracts:
@@ -667,6 +788,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:552
     owner:
       - packages/benchhand-core
     contracts:
@@ -703,6 +828,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:562
     owner:
       - packages/benchhand-core
     contracts:
@@ -731,6 +860,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:563
     owner:
       - packages/benchhand-core
     contracts:
@@ -754,6 +887,7 @@ capabilities:
     container: containers.md:surface
     phase: 2
     status: partial
+    scope: baseline
     evidence:
       - contracts/envelope/envelope.tsp
       - docs/contract/envelope.md
@@ -790,6 +924,10 @@ capabilities:
     container: containers.md:guide
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:564
     owner:
       - packages/benchhand-core
       - flow
@@ -838,6 +976,10 @@ capabilities:
     container: containers.md:versions
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:561
     owner:
       - packages/benchhand-core
     contracts:
@@ -858,6 +1000,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: architecture
+      ref: docs/architecture/reference-map.yaml:384
     owner:
       - packages/benchhand-core
     contracts:
@@ -879,6 +1025,10 @@ capabilities:
     container: containers.md:record
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: architecture
+      ref: docs/architecture/reference-map.yaml:873
     owner:
       - packages/benchhand-core
     contracts:
@@ -899,6 +1049,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: architecture
+      ref: docs/architecture/reference-map.yaml:815
     owner:
       - packages/benchhand-core
     prototype:
@@ -921,6 +1075,10 @@ capabilities:
     container: containers.md:record
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:567
     owner:
       - contracts
       - packages/benchhand-core
@@ -952,6 +1110,7 @@ capabilities:
     container: containers.md:record
     phase: 2
     status: planned
+    scope: baseline
     note: ADR-0021 supersedes plan section 12b, which requires `retained_by`
       naming one step on every `place` and never lets existing equipment
       be a step's `part` (docs/design-plan.md:439-441).
@@ -984,6 +1143,10 @@ capabilities:
     container: containers.md:record
     phase: 2
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:568
     owner:
       - contracts
       - packages/benchhand-core
@@ -1004,6 +1167,10 @@ capabilities:
     container: containers.md:middleware
     phase: null
     status: planned
+    scope: deferred
+    source:
+      kind: plan
+      ref: docs/design-plan.md:65
     owner:
       - packages/benchhand-core
     prototype:
@@ -1027,6 +1194,10 @@ capabilities:
     container: containers.md:domain
     phase: null
     status: planned
+    scope: deferred
+    source:
+      kind: plan
+      ref: docs/design-plan.md:505
     owner:
       - packages/benchhand-core
     prototype:
@@ -1045,6 +1216,10 @@ capabilities:
     container: containers.md:domain
     phase: null
     status: planned
+    scope: deferred
+    source:
+      kind: plan
+      ref: docs/design-plan.md:494
     owner:
       - packages/benchhand-core
     prototype:
@@ -1070,6 +1245,10 @@ capabilities:
     container: containers.md:surface
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:572
     owner:
       - packages/benchhand
     contracts:
@@ -1100,6 +1279,7 @@ capabilities:
     container: containers.md:cli
     phase: 3
     status: partial
+    scope: baseline
     evidence:
       - packages/benchhand/src/benchhand/cli.py:15
     note: Only version and record migrate are on main; the plan's
@@ -1126,6 +1306,10 @@ capabilities:
     container: containers.md:surface
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:573
     owner:
       - packages/benchhand
     prototype:
@@ -1151,6 +1335,10 @@ capabilities:
     container: containers.md:cli
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:573
     owner:
       - packages/benchhand
     contracts:
@@ -1172,6 +1360,10 @@ capabilities:
     container: containers.md:cli
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:576
     owner:
       - packages/benchhand
     prototype:
@@ -1195,6 +1387,10 @@ capabilities:
     container: containers.md:recordOps
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:573
     owner:
       - packages/benchhand
       - packages/benchhand-core
@@ -1236,6 +1432,10 @@ capabilities:
     container: containers.md:record
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: architecture
+      ref: docs/architecture/reference-map.yaml:827
     owner:
       - packages/benchhand-core
     contracts:
@@ -1258,6 +1458,10 @@ capabilities:
     container: containers.md:interaction
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:575
     owner:
       - packages/benchhand
     depends_on:
@@ -1280,6 +1484,10 @@ capabilities:
     container: containers.md:flowEngine
     phase: 3
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:341
     owner:
       - packages/benchhand-core
     depends_on:
@@ -1302,6 +1510,10 @@ capabilities:
     container: containers.md:providerRuntime
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:580
     note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:51);
       not on main.
     owner:
@@ -1330,6 +1542,10 @@ capabilities:
     container: containers.md:providerHost
     phase: null
     status: planned
+    scope: deferred
+    source:
+      kind: plan
+      ref: docs/design-plan.md:66
     owner:
       - packages/benchhand-core
     contracts:
@@ -1357,6 +1573,10 @@ capabilities:
     container: containers.md:providerRuntime
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:196
     owner:
       - packages/benchhand-provider
     contracts:
@@ -1382,6 +1602,10 @@ capabilities:
     container: containers.md:cli
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:592
     owner:
       - packages/benchhand
       - packages/benchhand-provider
@@ -1406,6 +1630,10 @@ capabilities:
     container: containers.md:freecadProvider
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:581
     note: Built ahead on an unmerged branch (docs/phases/phase-0-1.md:52);
       not on main.
     owner:
@@ -1434,6 +1662,10 @@ capabilities:
     container: containers.md:kernels
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - providers/kernel-cadquery
       - providers/kernel-build123d
@@ -1467,6 +1699,10 @@ capabilities:
     container: containers.md:kernels
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - providers/kernel-cadquery
       - providers/kernel-build123d
@@ -1489,6 +1725,10 @@ capabilities:
     container: containers.md:kernels
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - providers/kernel-cadquery
       - providers/kernel-build123d
@@ -1514,6 +1754,10 @@ capabilities:
     container: containers.md:kernels
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: architecture
+      ref: docs/architecture/reference-map.yaml:473
     owner:
       - providers/kernel-cadquery
       - providers/kernel-build123d
@@ -1536,6 +1780,10 @@ capabilities:
     container: containers.md:sdk
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:582
     owner:
       - packages/benchhand-sdk
     mcp:
@@ -1569,6 +1817,10 @@ capabilities:
     container: containers.md:sdk
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - packages/benchhand-sdk
     depends_on:
@@ -1585,6 +1837,10 @@ capabilities:
     container: containers.md:checks
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:581
     owner:
       - providers/checks-process
     contracts:
@@ -1618,6 +1874,10 @@ capabilities:
     container: containers.md:evidence
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:581
     owner:
       - packages/benchhand-core
     contracts:
@@ -1643,6 +1903,10 @@ capabilities:
     container: containers.md:domain
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - packages/benchhand-core
     prototype:
@@ -1664,6 +1928,10 @@ capabilities:
     container: containers.md:solver
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - providers/solver-calculix
       - providers/freecad
@@ -1704,6 +1972,10 @@ capabilities:
     container: containers.md:collision
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - packages/benchhand-core
       - providers/collision-fcl
@@ -1748,6 +2020,10 @@ capabilities:
     container: containers.md:renderer
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - providers/render-chromium
     contracts:
@@ -1777,6 +2053,10 @@ capabilities:
     container: containers.md:freecadProvider
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - providers/freecad
     contracts:
@@ -1809,6 +2089,10 @@ capabilities:
     container: containers.md:domain
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - packages/benchhand-core
     contracts:
@@ -1831,6 +2115,10 @@ capabilities:
     container: containers.md:release
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:583
     owner:
       - packages/benchhand-core
     contracts:
@@ -1859,6 +2147,10 @@ capabilities:
     container: containers.md:freecadProvider
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:584
     owner:
       - providers/freecad
       - providers/render-chromium
@@ -1886,6 +2178,10 @@ capabilities:
     container: containers.md:store
     phase: 4
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:581
     owner:
       - providers/store-fs
     contracts:
@@ -1905,6 +2201,10 @@ capabilities:
     container: containers.md:policy
     phase: null
     status: planned
+    scope: deferred
+    source:
+      kind: plan
+      ref: docs/design-plan.md:162
     owner:
       - providers/policy-default
     contracts:
@@ -1932,6 +2232,10 @@ capabilities:
     container: containers.md:preview
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:594
     owner:
       - packages/benchhand
     contracts_planned:
@@ -1958,6 +2262,10 @@ capabilities:
     container: containers.md:ui
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:595
     owner:
       - ui/viewer
       - providers/viewer-ocp
@@ -2001,6 +2309,10 @@ capabilities:
     container: containers.md:ui
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:595
     owner:
       - ui/concept
       - providers/viewer-ocp
@@ -2020,6 +2332,10 @@ capabilities:
     container: containers.md:preview
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:595
     owner:
       - packages/benchhand
     depends_on:
@@ -2037,6 +2353,10 @@ capabilities:
     container: containers.md:recordOps
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:595
     owner:
       - packages/benchhand-core
     contracts:
@@ -2059,6 +2379,10 @@ capabilities:
     container: containers.md:ui
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:594
     owner:
       - ui/flow-view
     contracts:
@@ -2082,6 +2406,10 @@ capabilities:
     container: containers.md:interaction
     phase: 5
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:597
     owner:
       - packages/benchhand
       - ui/gate-card
@@ -2125,6 +2453,10 @@ capabilities:
     container: layers.md:harnessDir
     phase: 6
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:600
     owner:
       - harness
       - packages/benchhand
@@ -2159,6 +2491,10 @@ capabilities:
     container: containers.md:surface
     phase: 6
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:601
     owner:
       - packages/benchhand
     depends_on:
@@ -2178,6 +2514,10 @@ capabilities:
     container: layers.md:containerDir
     phase: null
     status: planned
+    scope: deferred
+    source:
+      kind: plan
+      ref: docs/design-plan.md:602
     owner:
       - packages/benchhand
       - container
@@ -2202,6 +2542,10 @@ capabilities:
     container: layers.md:containerDir
     phase: 7
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:604
     owner:
       - packages/benchhand
       - container
@@ -2227,6 +2571,10 @@ capabilities:
     container: layers.md:support
     phase: 7
     status: planned
+    scope: baseline
+    source:
+      kind: plan
+      ref: docs/design-plan.md:606
     owner:
       - tools/golden
     prototype:
@@ -2254,6 +2602,7 @@ capabilities:
     container: containers.md:surface
     phase: 3
     status: proposed
+    scope: deferred
     source:
       kind: study
       ref: lane8-agentcad.md section 6, items 1 and 2
@@ -2278,6 +2627,7 @@ capabilities:
     container: containers.md:surface
     phase: 3
     status: proposed
+    scope: deferred
     source:
       kind: study
       ref: lane8-agentcad.md section 6, item 5
@@ -2307,6 +2657,7 @@ capabilities:
     container: containers.md:domain
     phase: 4
     status: proposed
+    scope: deferred
     source:
       kind: study
       ref: lane8-agentcad.md section 6, item 7
@@ -2327,6 +2678,7 @@ capabilities:
     container: containers.md:recordOps
     phase: 4
     status: proposed
+    scope: deferred
     source:
       kind: study
       ref: lane8-agentcad.md section 6, item 8
@@ -2347,6 +2699,7 @@ capabilities:
     container: containers.md:ui
     phase: 5
     status: proposed
+    scope: deferred
     source:
       kind: study
       ref: lane8-agentcad.md section 6, items 9 and 10
@@ -2370,6 +2723,7 @@ capabilities:
     container: containers.md:providers
     phase: 4
     status: proposed
+    scope: deferred
     source:
       kind: study
       ref: lane8b-product-docs.md section 6, items 1 to 9
@@ -4248,6 +4602,7 @@ prototype_commands:
     capability: model-build
     note: Builds the cad-design reference parts in one kernel; a development
       fixture, so no tool.
+    replaced_without_tool: internal
   - command: form_check.py
     path: skills/cad-design/scripts/form_check.py
     capability: process-checks
@@ -4256,6 +4611,7 @@ prototype_commands:
     capability: render-output
     note: Review renders of the reference lamp arm per kernel; a development
       fixture, so no tool.
+    replaced_without_tool: internal
   - command: assembly_check.py
     path: skills/cad-drawings/scripts/assembly_check.py
     capability: drawings
@@ -4282,6 +4638,7 @@ prototype_commands:
     capability: provider-environments
     note: The provider host owns the environments; no tool lists or
       deletes them.
+    replaced_without_tool: internal
   - command: flow_profile.py questions
     path: skills/cad-flow/scripts/flow_profile.py
     capability: project-profile
@@ -4302,6 +4659,7 @@ prototype_commands:
     capability: provider-environments
     note: The launcher of every other command; D1 drops the per-skill
       uv run --script commands.
+    replaced_without_tool: internal
   - command: scratch.py init
     path: skills/cad-flow/scripts/scratch.py
     capability: scratch-workspaces
@@ -4314,6 +4672,8 @@ prototype_commands:
   - command: setup.py
     path: skills/cad-flow/scripts/setup.py
     capability: setup
+    note: benchhand setup replaces it.
+    replaced_without_tool: cli
   - command: cad_model.py run
     path: skills/cad-model/scripts/cad_model.py
     capability: model-build
@@ -4337,11 +4697,13 @@ prototype_commands:
     capability: model-build
     note: The build123d kernel runner that cad_model.py starts; the
       kernel build hook replaces it.
+    replaced_without_tool: internal
   - command: run_cadquery.py
     path: skills/cad-model/scripts/run_cadquery.py
     capability: model-build
     note: The CadQuery kernel runner that cad_model.py starts; the
       kernel build hook replaces it.
+    replaced_without_tool: internal
   - command: access.py
     path: skills/cad-motion/scripts/access.py
     capability: motion-analysis
@@ -4386,6 +4748,7 @@ prototype_commands:
     capability: result-envelope
     note: Printed a producer's result; every tool's envelope replaces
       it.
+    replaced_without_tool: internal
   - command: evidence.py check
     path: skills/cad-record/scripts/evidence.py
     capability: evidence-assessment
@@ -4438,6 +4801,7 @@ prototype_commands:
     capability: preview-host
     note: The hidden subcommand the viewer host runs as; the preview
       host replaces it.
+    replaced_without_tool: internal
   - command: viewer.py show
     path: skills/cad-viewer/scripts/viewer.py
     capability: viewer
@@ -4462,6 +4826,10 @@ prototype_commands:
   - command: generate.py
     path: harness/generate.py
     capability: harness-install
+    note: benchhand install writes the agent profiles it rendered.
+    replaced_without_tool: cli
   - command: install.py
     path: harness/install.py
     capability: harness-install
+    note: benchhand install replaces it.
+    replaced_without_tool: cli

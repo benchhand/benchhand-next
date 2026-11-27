@@ -180,13 +180,42 @@
         "id",
         "question",
         "origin",
-        "pointers"
+        "pointers",
+        "blocking"
       ],
+      "if": {
+        "properties": {
+          "blocking": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "owner",
+          "decision_needed"
+        ]
+      },
       "properties": {
         "id": {
           "$ref": "#/$defs/Id"
         },
         "question": {
+          "$ref": "#/$defs/Text"
+        },
+        "blocking": {
+          "description": "true: the spec of a capability, tool or command that cites it can't start until it is answered. false: the spec can start, and decides or works around it.",
+          "type": "boolean"
+        },
+        "owner": {
+          "description": "Who answers it. project-owner: a product or design decision, which the owner makes or an ADR records. maintainer: sources disagree on a fact that a decision already settles, and a doc or contract correction answers it.",
+          "enum": [
+            "project-owner",
+            "maintainer"
+          ]
+        },
+        "decision_needed": {
+          "description": "The decision the blocked spec needs before it can start.",
           "$ref": "#/$defs/Text"
         },
         "origin": {
@@ -288,6 +317,7 @@
         "container",
         "phase",
         "status",
+        "scope",
         "owner",
         "adrs"
       ],
@@ -342,10 +372,18 @@
             "$ref": "#/$defs/Pointer"
           }
         },
+        "scope": {
+          "description": "baseline: a phase of the plan's Steps delivers it in v1, and it is built, partial or planned. deferred: no phase delivers it, or no source plans it yet.",
+          "enum": [
+            "baseline",
+            "deferred"
+          ]
+        },
         "note": {
           "$ref": "#/$defs/Text"
         },
         "source": {
+          "description": "For planned: the requirement or the phase of the plan's Steps that plans it, as path:LINE. For proposed and dropped: who proposes it.",
           "$ref": "#/$defs/Source"
         },
         "owner": {
@@ -406,6 +444,57 @@
         }
       },
       "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "baseline"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "phase": {
+                "type": "integer"
+              },
+              "status": {
+                "enum": [
+                  "built",
+                  "partial",
+                  "planned"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "planned"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "plan",
+                      "adr",
+                      "contract",
+                      "architecture"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
         {
           "if": {
             "properties": {
@@ -840,7 +929,24 @@
         },
         "note": {
           "$ref": "#/$defs/Text"
+        },
+        "replaced_without_tool": {
+          "description": "Why no MCP tool replaces it, when that is intended. cli: a CLI command of its capability replaces it. internal: a component replaces it with no command, or it is a development fixture; the note says which. Without this, a command no tool replaces is a missing interface.",
+          "enum": [
+            "cli",
+            "internal"
+          ]
         }
+      },
+      "if": {
+        "required": [
+          "replaced_without_tool"
+        ]
+      },
+      "then": {
+        "required": [
+          "note"
+        ]
       }
     }
   }

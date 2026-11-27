@@ -34,7 +34,7 @@ The checker also resolves every reference in the file:
 - capability ids, tool names and open questions;
 - reference-map paths and published contract `$id` values;
 - ADR numbers and architecture-page nodes;
-- every `path:line` pointer, including that a cited line names the tool or command it sources;
+- every `path:line` pointer, including that a cited line names the tool or command it sources, and that each capability with status `planned` cites the line of the requirement or phase that plans it;
 - every prototype command against `prototype-inventory.json`, both ways: each command line the pin can run has an entry, and each entry is a command line, or a flag-only mode of one, that the pin declares.
 
 ## Legend

@@ -30,7 +30,15 @@ def _catalogue() -> dict[str, Any]:
         "contract_base": BASE,
         "doc_corrections": [],
         "open_questions": [
-            {"id": "q", "question": "Which?", "origin": "existing", "pointers": ["docs/design-plan.md:9"]}
+            {
+                "id": "q",
+                "question": "Which?",
+                "origin": "existing",
+                "pointers": ["docs/design-plan.md:9"],
+                "blocking": True,
+                "owner": "project-owner",
+                "decision_needed": "Which one.",
+            }
         ],
         "capabilities": [
             {
@@ -41,6 +49,7 @@ def _catalogue() -> dict[str, Any]:
                 "container": "containers.md:jobService",
                 "phase": 1,
                 "status": "built",
+                "scope": "baseline",
                 "evidence": ["packages/benchhand-core/src/benchhand_core/jobs/service.py:119"],
                 "owner": ["packages/benchhand-core"],
                 "contracts": ["jobs/job.schema.json#/$defs/JobHandle"],
@@ -55,6 +64,8 @@ def _catalogue() -> dict[str, Any]:
                 "container": "containers.md:kernels",
                 "phase": 4,
                 "status": "planned",
+                "scope": "baseline",
+                "source": {"kind": "plan", "ref": "docs/design-plan.md:583"},
                 "owner": ["providers/kernel-cadquery"],
                 "prototype": ["skills/cad-model/scripts/cad_model.py"],
                 "depends_on": ["jobs"],
@@ -286,7 +297,9 @@ def test_a_schema_violation_is_reported_with_its_path(tmp_path: Path) -> None:
     data = _catalogue()
     data["capabilities"][0]["status"] = "done"
     del data["capabilities"][1]["open_questions"]
+    del data["capabilities"][1]["source"]
     data["capabilities"][1]["phase"] = None
+    del data["open_questions"][0]["owner"]
     path = tmp_path / "capabilities.yaml"
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
     with pytest.raises(CatalogueError) as raised:
@@ -294,6 +307,36 @@ def test_a_schema_violation_is_reported_with_its_path(tmp_path: Path) -> None:
     text = "\n".join(raised.value.problems)
     assert "/capabilities/0/status: 'done' is not one of" in text
     assert "/capabilities/1: 'open_questions' is a required property" in text
+    assert "/capabilities/1: 'source' is a required property" in text, (
+        "a planned capability cites its plan line"
+    )
+    assert "/capabilities/1/phase: None is not of type 'integer'" in text, "a baseline capability has a phase"
+    assert "/open_questions/0: 'owner' is a required property" in text, "a blocking question has an owner"
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (
+            lambda d: d["capabilities"][1]["source"].update(ref="docs/design-plan.md"),
+            "capability build is planned, and its source docs/design-plan.md needs a path:LINE",
+        ),
+        (
+            lambda d: d["prototype_commands"][0].update(replaced_without_tool="internal", note="x"),
+            "cad_model.py run: a tool replaces it, so it takes no `replaced_without_tool`",
+        ),
+        (
+            lambda d: d["prototype_commands"][1].update(
+                capability="build", replaced_without_tool="cli", note="x"
+            ),
+            "process_lifecycle.py strays: replaced by the CLI, and its capability has no CLI command",
+        ),
+    ],
+)
+def test_a_spec_ready_rule_that_fails_is_reported(change: Any, message: str) -> None:
+    data = _catalogue()
+    change(data)
+    assert any(message in problem for problem in _problems(data)), _problems(data)
 
 
 def _inventory_file(path: str, commands: list[dict[str, Any]], entry: bool = True) -> dict[str, Any]:
@@ -393,14 +436,31 @@ def test_a_dashed_arrow_to_a_proposed_or_phaseless_capability_says_which() -> No
     assert "  host -.->|no phase| jobs" in graph
 
 
-def test_the_gap_list_names_toolless_capabilities_undefined_contracts_and_unowned_commands() -> None:
+def test_the_gap_list_splits_missing_interfaces_intentional_replacements_and_proposals() -> None:
     data = _catalogue()
     data["tools"] = data["tools"][:1]
+    data["tools"].append(
+        {
+            **copy.deepcopy(data["tools"][0]),
+            "name": "model.check",
+            "status": "dropped",
+            "note": "Gone at the pin.",
+        }
+    )
+    del data["tools"][1]["replaces"]
+    data["prototype_commands"][1].update(
+        capability="jobs", replaced_without_tool="cli", note="`record migrate`."
+    )
     text = render_page(Catalogue(data))
     gaps = text.split("## Gaps")[1].split("## Open questions")[0]
-    assert "### Capabilities with no MCP tool (1)\n\n- [jobs](#jobs) (P1, built)" in gaps
-    assert "- `model.build`: input and output" in gaps
-    assert "### Prototype commands with no capability (1)\n\n- `process_lifecycle.py strays`" in gaps
+    missing, intentional, proposals = (part.split("\n### ")[0] for part in gaps.split("\n### ")[1:4])
+    assert missing.startswith("Missing interfaces (2)")
+    assert "#### Capabilities with no MCP tool (1)\n\n- [jobs](#jobs) (P1, built)" in missing
+    assert "- `model.build`: input and output" in missing
+    assert "model.check" not in missing, "a dropped tool needs no contract"
+    assert intentional.startswith("Intentional CLI or internal replacements (1)")
+    assert "- `process_lifecycle.py strays` ([jobs](#jobs)): `record migrate`." in intentional
+    assert "#### Dropped tools (1)\n\n- `model.check` ([build](#build), plan): Gone at the pin." in proposals
 
 
 def test_the_committed_catalogue_is_valid_and_its_page_is_current() -> None:
