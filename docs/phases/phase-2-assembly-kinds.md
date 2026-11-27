@@ -1,6 +1,6 @@
 # Phase 2: assembly operation kinds
 
-Status: design for the owner's review. No contract or code is changed. Written 2026-11-27 against `main` at `09394c69`. Inputs: the prototype at the pin `412b5d9`, prototype PRs #333, #334, #337 and #341 (merged) and #348 (open), and the test project's `hw/` as read on 2026-11-27 at 17:06. The test project was only read. Nothing of it was copied, and this page gives counts and operation indices, not its content. The decision record is [ADR-0021](../adr/0021-assembly-operation-kinds.md), status proposed.
+Status: design reviewed by the owner; the owner decided its seven questions on 2026-11-27 (see [Owner decisions](#owner-decisions-2026-11-27)), and ADR-0021 is accepted. No contract or code is changed. Written 2026-11-27 against `main` at `09394c69`. Inputs: the prototype at the pin `412b5d9`, prototype PRs #333, #334, #337 and #341 (merged) and #348 (open), and the test project's `hw/` as read on 2026-11-27 at 17:06. The test project was only read. Nothing of it was copied, and this page gives counts and operation indices, not its content. The decision record is [ADR-0021](../adr/0021-assembly-operation-kinds.md), status accepted.
 
 The owner decided on 2026-11-27 that the assembly operation kinds get one design pass before their contracts and migrate rules (`docs/phases/phase-0-1.md`, Decided, item 2). This is that pass.
 
@@ -301,7 +301,7 @@ Argue each in `versioning.md`, as the `obligation_id` widening was.
 
 Each step is its own reviewed change (ADR-0015):
 
-1. ADR-0021 accepted, with the owner's answers below.
+1. ADR-0021 accepted, with the owner's answers below (done 2026-11-27).
 2. #332: `record/part` 1.1.0.
 3. #331: `record/part` 1.2.0. It can run beside #332.
 4. #333: `record/part` 1.3.0. Existing obligations `not_applicable` per the plan, and `existing.installed` per D4.
@@ -316,15 +316,17 @@ Each step is its own reviewed change (ADR-0015):
 
 Then the test project's hand edits and a migrate run on a copy.
 
-## Questions for the owner
+## Owner decisions (2026-11-27)
 
-1. **Existing equipment as a step's `part`.** The plan and #333 say never. Recommendation: allow it for `place` and `disassemble` only, with a `place` coming after a `disassemble` of it (D4).
-2. **`install` folded into `place`.** This diverges from merged #334. Recommendation: fold it, and let joining kinds install a unit too (D1). No known record uses `install`.
-3. **`retained_by` required by the validator for delivered parts, not by the schema on every `place`.** This diverges from plan 12b's wording. Recommendation: the validator, so that customer and tooling moves need no invented retention and the sealed snapshots stay readable (D5).
-4. **Fits by explicit limits.** Wait for #348 to merge, or port its form ahead of the prototype? And for `limits_mm`, derive `nominal_mm` from the hole's lower limit with an info finding, or refuse? Recommendation: wait for #348, then derive with the finding (D10, [Migrate rules](#migrate-rules)).
-5. **`mates_with`** in the Phase 4 release manifest. Recommendation: yes, in #337's shape, listing interfaces with an `existing` end (D6).
-6. **Export names:** the plan's `product.*` and `scene.*`, or #337's `product.*` and `assembly.*`? Recommendation: the plan's (D6).
-7. **`instructions`** as a guide-only field on every step. Recommendation: yes (D7).
+The owner took the recommendation on all seven questions (Inbox, "benchhand-next build" thread):
+
+1. **Existing equipment as a step's `part`:** allowed for `place` and `disassemble` only, with a `place` coming after a `disassemble` of it (D4).
+2. **`install` folded into `place`,** and joining kinds may install a unit too (D1).
+3. **`retained_by`** is required by the validator for delivered parts, not by the schema on every `place` (D5).
+4. **Fits by explicit limits:** wait for #348 to merge, then derive `nominal_mm` from the hole's lower limit with an info finding (D10, [Migrate rules](#migrate-rules)).
+5. **`mates_with`** goes in the Phase 4 release manifest, in #337's shape, listing interfaces with an `existing` end (D6).
+6. **Export names:** the plan's `product.*` and `scene.*` (D6).
+7. **`instructions`** is a guide-only field on every step (D7).
 
 ## How this was checked
 

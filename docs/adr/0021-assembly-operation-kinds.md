@@ -1,6 +1,6 @@
 # ADR-0021: Assembly operation kinds
 
-Status: proposed. Source: the design pass the owner asked for on 2026-11-27 (`docs/phases/phase-0-1.md`, Decided, item 2). The design, its alternatives and the evidence are in [`docs/phases/phase-2-assembly-kinds.md`](../phases/phase-2-assembly-kinds.md). It refines sections 12a and 12b of [the plan](../design-plan.md).
+Status: accepted 2026-11-27; the owner took the recommendation on all seven questions (`docs/phases/phase-2-assembly-kinds.md`, Owner decisions). Source: the design pass the owner asked for on 2026-11-27 (`docs/phases/phase-0-1.md`, Decided, item 2). The design, its alternatives and the evidence are in [`docs/phases/phase-2-assembly-kinds.md`](../phases/phase-2-assembly-kinds.md). It refines sections 12a and 12b of [the plan](../design-plan.md).
 
 ## Context
 
