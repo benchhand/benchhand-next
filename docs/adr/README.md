@@ -1,6 +1,6 @@
 # Architecture decision records
 
-- [ADR-0001: MCP is the only workflow interface; `benchhand` is a thin CLI](0001-mcp-only-interface.md)
+- [ADR-0001: MCP is the only workflow interface; `benchhand` is a thin CLI](0001-mcp-only-interface.md), amended 2026-11-27 for read-only subcommands
 - [ADR-0002: Install through `uvx`, with an optional container](0002-install-uvx-and-container.md)
 - [ADR-0003: Gates guide the standard process; they are not a security control](0003-gates-guide.md)
 - [ADR-0004: The MCP server process is the runner](0004-server-is-runner.md)
@@ -21,3 +21,4 @@
 - [ADR-0019: A design change reopens the approvals it touches, not the stage](0019-scoped-reapproval.md)
 - [ADR-0020: The CEL rule pipeline](0020-cel-rule-pipeline.md)
 - [ADR-0021: Assembly operation kinds](0021-assembly-operation-kinds.md)
+- [ADR-0022: A hazards and risk-assessment contract](0022-hazards-risk-assessment.md)
