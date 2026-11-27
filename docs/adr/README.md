@@ -13,9 +13,10 @@
 - [ADR-0011: Guidance comes from the server](0011-guidance-from-server.md)
 - [ADR-0012: Python host and core, TypeScript UIs, rewrite rather than port](0012-python-host-rewrite.md)
 - [ADR-0013: The provider protocol is JSON-RPC 2.0 over stdio, after slopvac 3.0](0013-provider-protocol.md)
-- [ADR-0014: The flow is data, the rules are CEL](0014-flow-rules-cel.md)
+- [ADR-0014: The flow is data, the rules are CEL](0014-flow-rules-cel.md), superseded in part by ADR-0020
 - [ADR-0015: Temporary repo `benchhand/benchhand-next`, swapped later](0015-temporary-repo.md)
 - [ADR-0016: The capability probe is dev-only](0016-dev-only-probe.md)
 - [ADR-0017: Contracts are generated from one TypeSpec source and enforced](0017-contracts.md)
 - [ADR-0018: Plain tool calls are the baseline; forms are dropped from v1](0018-baseline-and-no-forms.md)
 - [ADR-0019: A design change reopens the approvals it touches, not the stage](0019-scoped-reapproval.md)
+- [ADR-0020: The CEL rule pipeline](0020-cel-rule-pipeline.md)
