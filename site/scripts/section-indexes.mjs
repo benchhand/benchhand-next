@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The ADR index and the contracts index, written by sync-docs.mjs in place of the synced READMEs.
 // Both are tables built from their sources, so they can't drift from them:
 // - the ADR index reads each docs/adr/NNNN-*.md H1 and its "Status:" line;

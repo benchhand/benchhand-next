@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Copy the repository's narrative and generated docs, and the published JSON Schemas, into the
 // site before `astro build`. The copies are gitignored: docs/ and the schemas stay the source.
 //

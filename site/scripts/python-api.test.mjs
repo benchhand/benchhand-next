@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // What counts as public in the Python API pages (publicNames in python-api.mjs).
 import assert from "node:assert/strict";
 import { test } from "node:test";

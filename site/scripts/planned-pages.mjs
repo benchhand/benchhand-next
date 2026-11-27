@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Check the placeholder pages, and list them by phase on /planned/.
 //
 // A placeholder page sets `phase: N` in its front matter; MarkdownContent renders its "Planned"

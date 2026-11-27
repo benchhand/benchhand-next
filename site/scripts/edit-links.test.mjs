@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Every "Edit page" link in the built site must target a file that git tracks: the generated pages
 // switch the link off (`editUrl: false`), and every other page's link names its source. Run after `pnpm build`.
 import assert from "node:assert/strict";

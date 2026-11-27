@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # Each action is pinned to a full SHA with its version as a comment,
 # which zizmor and Dependabot read; those lines exceed 80 columns.
 # yamllint disable rule:line-length

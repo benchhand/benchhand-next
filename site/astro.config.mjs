@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // @ts-check
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";

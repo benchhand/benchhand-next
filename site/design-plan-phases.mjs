@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The phases of docs/design-plan.md's "Steps (phased)" list, parsed from the plan itself.
 // A placeholder page's `phase` front matter must name one of them.
 import { readFileSync } from "node:fs";

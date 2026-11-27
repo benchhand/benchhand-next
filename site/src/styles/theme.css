@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Sjors Robroek
+ *
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* benchhand's theme over Starlight's tokens (node_modules/@astrojs/starlight/dist/style/props.css).
  * It sets the accent and the grey ramp of both themes, and adds the few global rules the site needs:
  * the wordmark, focus rings, framed D2 diagrams and the landing-page layout.

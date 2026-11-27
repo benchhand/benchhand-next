@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The public URL of the site and the repository it documents, read by astro.config.mjs,
 // the sync script and the schema-URL test.
 import { readFileSync } from "node:fs";

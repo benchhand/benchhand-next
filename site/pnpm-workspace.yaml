@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # Fail the install on a Node outside package.json's engines
 # (26.x, the major of ci.yml's lts/*).
 engineStrict: true

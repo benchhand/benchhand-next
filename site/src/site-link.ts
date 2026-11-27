@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 /// <reference types="astro/client" />
 // Turn a link written in a page's front matter or a component prop into the URL the built site uses.
 // - "/reference/" is a site route: the site base is prefixed, as remark-base-links does for Markdown.

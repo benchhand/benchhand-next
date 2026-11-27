@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Each published schema's $id must map to a file the built site serves, with the schema's own bytes.
 // The $ids stay at https://benchhand.github.io/benchhand/contracts/ (owner decision, 2026-11-27) and the
 // site serves each schema at /contracts/<name> relative to its root, so the path below the $id prefix is

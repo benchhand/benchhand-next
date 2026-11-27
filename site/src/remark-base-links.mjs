@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Prefix the site base to root-relative links in Markdown, so pages write `/reference/` and the
 // built site links to `/benchhand-next/reference/` (or `/reference/` when DOCS_URL is at a domain root).
 // starlight-links-validator then sees the final URLs and checks them.

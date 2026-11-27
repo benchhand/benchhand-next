@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Render the Python API of benchhand-contracts to MDX, from griffe's static JSON dump.
 //
 // griffe (pinned below, run through uvx) reads the source without importing it. This renderer

@@ -35,6 +35,7 @@ path = [
   "NOTICE",
   "ui/**/pnpm-lock.yaml",
   "contracts/pnpm-lock.yaml",
+  "site/pnpm-lock.yaml",
 ]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 Sjors Robroek"
