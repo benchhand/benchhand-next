@@ -217,6 +217,7 @@ stateDiagram-v2
 - **Gate mode auto.** The two-gate diagram shows the path for the modes ask and chat. Under auto, plan section 5's APPROVED guard holds without an answer, so no question is asked; `validate` accepts an approval through channel `auto` only under that mode (`record/rules/decisions.py`).
 - **Open** (red, dotted): engineering change. The record contract has `flow.change`, and the prototype reopens affected parts and their dependents as L3 and then affected cases as L4, keeping the evidence of unaffected parts. Neither the plan nor an ADR says how `flow.yaml` represents it; the migrate service refuses frozen records until "the Phase 2 flow engine can record an engineering change". The plan's [Open questions](../design-plan.md#open-questions) don't list it.
 - The VOID cascade example uses v4 and v5 for illustration.
+- The `requires` and `void_scope` expressions are standalone CEL. The flow engine checks them at load with cel-expr-python, against the generated environment profile of their scope (ADR-0020).
 - In the prototype the statuses were MADR `proposed`, `accepted` and `rejected`. The record contract renames them `provisional`, `approved` and `void`.
 
 ## Sources
@@ -236,7 +237,7 @@ stateDiagram-v2
   - [Decisions](../design-plan.md#decisions), D3: the gate modes in `hw/policy.yaml`.
   - [Steps (phased)](../design-plan.md#steps-phased), Phase 2: `flow.yaml`, the interpreter, CEL guards, decision records and the VOID cascade.
   - [Verification](../design-plan.md#verification), "Flow tests".
-- `docs/adr/`: [0003](../adr/0003-gates-guide.md) (gates guide; modes ask, chat, auto) and [0014](../adr/0014-flow-rules-cel.md) (the flow is data, the rules are CEL), each under "Decision".
+- `docs/adr/`: [0003](../adr/0003-gates-guide.md) (gates guide; modes ask, chat, auto) and [0014](../adr/0014-flow-rules-cel.md) (the flow is data, the rules are CEL) and [0020](../adr/0020-cel-rule-pipeline.md) (standalone CEL is checked at load), each under "Decision".
 - `docs/contract/record-migration.md`: [Decision record format](../contract/record-migration.md#decision-record-format): `kind: gate` with `approved`, `provisional` or `void`, and the prototype's MADR statuses.
 - Contracts on `main`: `contracts/record/common.tsp` (`stage`), `contracts/record/product.tsp` (`flow.frozen`, `flow.change`), `contracts/record/decision.tsp` (gate statuses). Code on `main`: `packages/benchhand-core/src/benchhand_core/record/rules/decisions.py` (`_gate_approvals`: channel `auto` only under the auto mode).
 - `docs/contract/record-migration.md`: [Dry run and apply](../contract/record-migration.md#dry-run-and-apply), its "Frozen records" paragraph.

@@ -18,7 +18,7 @@ flowchart LR
     contractsPkg["benchhand-contracts<br/>generated pydantic models and validators"]:::impl
   end
 
-  cli["benchhand CLI, Typer<br/>on main: version, record migrate<br/>Phase 3: mcp, doctor, setup, policy, debug call<br/>Phase 4: provider subcommands<br/>Phase 5: serve, Phase 6: install"]:::impl
+  cli["benchhand CLI, Typer<br/>on main: version, record migrate<br/>Phase 3: mcp, doctor, setup, policy, rules compile, debug call<br/>Phase 4: provider subcommands<br/>Phase 5: serve, Phase 6: install"]:::impl
 
   subgraph providers["Providers: one subprocess each, in its own environment"]
     providerRuntime["benchhand-provider runtime and conformance kit<br/>stub on main, Phase 4"]:::planned
@@ -71,7 +71,7 @@ flowchart TB
   surface["MCP surface, Phase 3"]:::planned
 
   subgraph core["benchhand-core, no CAD dependencies"]
-    flowEngine["Flow engine<br/>flow.yaml graph and state machine; CEL guards on the edges<br/>and CEL requires on the gates, at transitions only;<br/>decision records, VOID cascade, policy<br/>Phase 2"]:::planned
+    flowEngine["Flow engine<br/>flow.yaml graph and state machine; CEL guards on the edges<br/>and CEL requires on the gates, at transitions only;<br/>standalone CEL checked at load, rule lists from the rules bundle,<br/>all evaluated with cel-expr-python (ADR-0020);<br/>decision records, VOID cascade, policy<br/>Phase 2"]:::planned
     guide["Guide service<br/>flow/guides per stage and role: Phase 2<br/>flow.guide tool: Phase 3"]:::planned
     middleware["Middleware chain<br/>validation, policy, audit, provenance, cache, telemetry<br/>open: no phase in Steps"]:::open
     providerHost["Provider host<br/>lifecycle, timeouts, cancel, artifact checks<br/>open: no phase in Steps; Phase 4 builds the runtime it speaks to"]:::open
@@ -137,7 +137,7 @@ flowchart TB
 flowchart LR
   tsp["contracts/*.tsp<br/>TypeSpec, the only source of shapes<br/>record: 18 documents and 2 libraries; jobs, provider protocol and manifest, common finding"]:::impl
   missing["Result envelope and flow contracts<br/>listed for Phase 1, not on main; Phase 2 uses them"]:::planned
-  later["MCP tool inputs and outputs, benchhand.toml, rule lists,<br/>preview-host HTTP API, App postMessage<br/>with their users, Phases 2 to 5"]:::planned
+  later["MCP tool inputs and outputs, benchhand.toml, rule lists,<br/>CEL profile manifest and rules bundle,<br/>preview-host HTTP API, App postMessage<br/>with their users, Phases 2 to 5"]:::planned
   bundle["tsp compile --warn-as-error<br/>one JSON Schema bundle, unpublished"]:::impl
   normalise["tools/gen contracts_gen normalise<br/>one published schema per contract"]:::impl
   published["Published JSON Schema 2020-12<br/>benchhand_contracts/schemas"]:::impl
@@ -147,7 +147,8 @@ flowchart LR
   fixtures["Conformance fixtures<br/>benchhand_contracts/examples"]:::impl
   docs["Reference pages<br/>docs/contract/generated"]:::impl
   toolSchemas["MCP tool schemas<br/>Phase 3"]:::planned
-  celTypes["CEL type declarations<br/>Phase 2"]:::planned
+  celTypes["CEL FileDescriptorSet, profile manifest and env YAML<br/>per structural rule scope<br/>Phase 2"]:::planned
+  celcheck["tools/celcheck: pinned cel-go tool<br/>compiles flow/*.celpolicy into the rules bundle in CI: Phase 2<br/>benchhand-celcheck wheel for rules compile: Phase 3"]:::planned
   openapi["OpenAPI 3.2, hey-api TypeScript and Zod<br/>open: arrive with the first HTTP or Zod consumer"]:::open
   ci["just contracts-check<br/>format, metaschema and lint, drift, breaking change"]:::impl
 
@@ -161,6 +162,7 @@ flowchart LR
   published --> docs
   published -.-> toolSchemas
   published -.-> celTypes
+  celTypes -.->|"builds its environment from the manifest"| celcheck
   published -.-> openapi
   ci --> tsp
   ci --> published
@@ -189,13 +191,13 @@ flowchart LR
   - [1. Layered architecture](../design-plan.md#1-layered-architecture): the MCP surface, interaction layer, preview host, the core services and the provider list.
   - [2. Repository and package layout](../design-plan.md#2-repository-and-package-layout-temporary-repo-benchhandbenchhand-next): the packages, `ui/` and `providers/`.
   - [3. Transport: stdio vs localhost HTTP (D10)](../design-plan.md#3-transport-stdio-vs-localhost-http-d10): the lifecycle of each transport, and the preview host as a separate loopback listener.
-  - [5. Flow engine and rules (D14)](../design-plan.md#5-flow-engine-and-rules-d14): the edges with CEL guards and the gates with CEL `requires`; the interpreter writes `flow.stage` and `hw/decisions/`.
+  - [5. Flow engine and rules (D14)](../design-plan.md#5-flow-engine-and-rules-d14): the edges with CEL guards and the gates with CEL `requires`; the interpreter writes `flow.stage` and `hw/decisions/`; the CEL pipeline, with the generated profile, the cel-go tool and the rules bundle.
   - [6. Provider protocol (D13)](../design-plan.md#6-provider-protocol-d13): the hook families.
   - [6a. Contracts: generated and enforced (D17)](../design-plan.md#6a-contracts-generated-and-enforced-d17): the contract list, the generated outputs and runtime validation.
   - [7. CLI (D1)](../design-plan.md#7-cli-d1), [11. Adaptive interaction layer (D8)](../design-plan.md#11-adaptive-interaction-layer-d8) and [12. Build API (D7)](../design-plan.md#12-build-api-d7): typed record ops.
   - [Behavioural reference map](../design-plan.md#behavioural-reference-map-from-benchhandbenchhand-into-benchhandbenchhand-next): `benchhand-core/{fits,bom,recheck,motion,work}`.
   - [Steps (phased)](../design-plan.md#steps-phased): the phase of every node.
-- `docs/adr/`: [0001](../adr/0001-mcp-only-interface.md), [0004](../adr/0004-server-is-runner.md), [0006](../adr/0006-providers-everywhere.md), [0010](../adr/0010-stdio-transport.md), [0011](../adr/0011-guidance-from-server.md), [0013](../adr/0013-provider-protocol.md), [0014](../adr/0014-flow-rules-cel.md), [0017](../adr/0017-contracts.md) ("Decision": TypeSpec source, the generator table, OpenAPI with the first consumer) and [0018](../adr/0018-baseline-and-no-forms.md) (no form elicitation). Each under its "Decision" heading.
+- `docs/adr/`: [0001](../adr/0001-mcp-only-interface.md), [0004](../adr/0004-server-is-runner.md), [0006](../adr/0006-providers-everywhere.md), [0010](../adr/0010-stdio-transport.md), [0011](../adr/0011-guidance-from-server.md), [0013](../adr/0013-provider-protocol.md), [0014](../adr/0014-flow-rules-cel.md), [0017](../adr/0017-contracts.md) ("Decision": TypeSpec source, the generator table, OpenAPI with the first consumer) and [0018](../adr/0018-baseline-and-no-forms.md) (no form elicitation) and [0020](../adr/0020-cel-rule-pipeline.md) (the CEL rule pipeline). Each under its "Decision" heading.
 - `docs/contract/provider-protocol.md`: [1. Transport](../contract/provider-protocol.md#1-transport), [4. Hooks](../contract/provider-protocol.md#4-hooks), [5. Notifications from the provider](../contract/provider-protocol.md#5-notifications-from-the-provider) and [6. Artifacts and paths](../contract/provider-protocol.md#6-artifacts-and-paths).
 - `docs/contract/versioning.md`: [Generated outputs](../contract/versioning.md#generated-outputs) and [Drift check](../contract/versioning.md#drift-check).
 - `docs/phases/phase-0-1.md`: [What was built](../phases/phase-0-1.md#what-was-built) and [Not built, which the plan puts in Phase 1](../phases/phase-0-1.md#not-built-which-the-plan-puts-in-phase-1).
