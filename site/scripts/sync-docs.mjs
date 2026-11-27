@@ -2,7 +2,8 @@
 // site before `astro build`. The copies are gitignored: docs/ and the schemas stay the source.
 //
 // For each Markdown file it
-// - moves the first H1 into the front matter title, and points editUrl at the source file;
+// - moves the first H1 into the front matter title, and points editUrl at the source file, or
+//   turns the edit link off for a generated source (`generated` below);
 // - rewrites each repo-relative link: to the site route when the target is a synced page, and to
 //   the file on GitHub otherwise. A link to a file that doesn't exist fails the sync.
 // Every rewrite is listed in .cache/link-rewrites.tsv.
@@ -15,19 +16,20 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 import { visit } from "unist-util-visit";
 
-import { repoRoot, repoUrl, schemaIdPrefix } from "../site-url.mjs";
+import { base, repoRoot, repoUrl, schemaIdPrefix, site } from "../site-url.mjs";
 
 const siteRoot = fileURLToPath(new URL("..", import.meta.url));
 const docsOut = path.join(siteRoot, "src/content/docs");
 const schemasSource = "packages/benchhand-contracts/src/benchhand_contracts/schemas";
 
 // Source directory (repo-relative) → destination directory (under src/content/docs).
-// Each source's README.md becomes the destination's index page.
+// Each source's README.md becomes the destination's index page. A `generated` source is written by
+// `just contracts`, so its pages have no edit link.
 const MARKDOWN_SOURCES = [
   { from: "docs/architecture", to: "architecture", recursive: false },
   { from: "docs/adr", to: "adr", recursive: false },
   { from: "docs/contract", to: "reference/contracts", recursive: false },
-  { from: "docs/contract/generated", to: "reference/contracts", recursive: true },
+  { from: "docs/contract/generated", to: "reference/contracts", recursive: true, generated: true },
 ];
 
 // Images copied next to the synced pages, so relative image links keep working.
@@ -58,13 +60,14 @@ function listFiles(dir, recursive) {
 function planCopies() {
   const pages = new Map();
   const assets = new Map();
-  for (const { from, to, recursive } of MARKDOWN_SOURCES) {
+  for (const { from, to, recursive, generated = false } of MARKDOWN_SOURCES) {
     for (const file of listFiles(from, recursive)) {
       const rel = path.posix.relative(from, file);
       const ext = path.posix.extname(file);
       if (ext === ".md") {
         const dest = rel.replace(/(^|\/)README\.md$/, "$1index.md");
         addUnique(pages, file, `${to}/${dest}`);
+        if (generated) generatedSources.add(file);
       } else if (ASSET_EXTENSIONS.has(ext)) {
         addUnique(assets, file, `${to}/${rel}`);
       }
@@ -74,6 +77,7 @@ function planCopies() {
 }
 
 const destinations = new Set();
+const generatedSources = new Set();
 function addUnique(map, source, dest) {
   if (destinations.has(dest)) throw new Error(`two sources sync to ${dest}; the second is ${source}`);
   destinations.add(dest);
@@ -156,7 +160,7 @@ function convertPage(source, dest, plan, rewrites) {
   const frontMatter = [
     "---",
     `title: ${JSON.stringify(plainText(h1))}`,
-    `editUrl: ${JSON.stringify(`${repoUrl}/edit/main/${source}`)}`,
+    `editUrl: ${generatedSources.has(source) ? "false" : JSON.stringify(`${repoUrl}/edit/main/${source}`)}`,
     ...(dest.endsWith("index.md") ? ["sidebar:", "  label: Overview", "  order: 0"] : []),
     "---",
   ];
@@ -172,6 +176,19 @@ function write(dest, content) {
 // Serve every published schema under public/contracts/, so each is at /contracts/<name> below the
 // site root. Its $id is at schemaIdPrefix; the schema-URL test checks the mapping between the two.
 function syncSchemas() {
+  // The site serves a schema at its `$id` only when the site root is the `$id` prefix's parent.
+  const servedPrefix = new URL("contracts/", `${site}${base}`).href;
+  const idNotice =
+    servedPrefix === schemaIdPrefix
+      ? []
+      : [
+          ":::caution[The `$id`s don't resolve to this site]",
+          `The \`$id\`s name \`${schemaIdPrefix}\`, and this site serves its schemas at \`${servedPrefix}\`.`,
+          "A `$id` is an identifier, not a link that works, until the site is published at the `$id` host, or the `$id` URLs redirect to the served URLs.",
+          "Use the first column to fetch a schema.",
+          ":::",
+          "",
+        ];
   const rows = [];
   for (const file of listFiles(schemasSource, true).filter((f) => f.endsWith(".schema.json")).sort()) {
     const rel = path.posix.relative(schemasSource, file);
@@ -187,19 +204,15 @@ function syncSchemas() {
     [
       "---",
       "title: JSON Schemas",
+      "editUrl: false",
       "sidebar:",
       "  order: 1",
       "---",
       "",
       `The published JSON Schemas, copied from [\`${schemasSource}\`](${repoUrl}/tree/main/${schemasSource}).`,
-      "This site serves each one at `/contracts/<name>` below its root, which is the path of its `$id` below `https://benchhand.github.io/benchhand/`.",
+      `This site serves each one at \`/contracts/<name>\` below its root, which is the path of its \`$id\` below \`${schemaIdPrefix}\`.`,
       "",
-      ":::caution[The `$id`s don't resolve yet]",
-      "The `$id`s name `benchhand.github.io/benchhand`, and this site is published at a different address.",
-      "Until the site is published at that host, or at a domain that redirects to it, a `$id` is an identifier, not a link that works.",
-      "Use the first column to fetch a schema.",
-      ":::",
-      "",
+      ...idNotice,
       "| Schema, served by this site | `$id` |",
       "|---|---|",
       ...rows,

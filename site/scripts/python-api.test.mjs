@@ -12,7 +12,7 @@ test("a module with __all__ is public by __all__, including names imported from 
   assert.deepEqual(publicNames(module), ["validate", "Finding"]);
 });
 
-test("a module without __all__ is public by name: no leading underscore, defined here", () => {
+test("a module without __all__ is public by name: a function or class, no leading underscore, defined here", () => {
   const module = {
     exports: null,
     members: {
@@ -25,7 +25,7 @@ test("a module without __all__ is public by name: no leading underscore, defined
       submodule: { kind: "module" },
     },
   };
-  assert.deepEqual(publicNames(module), ["run", "Runner", "LIMIT"]);
+  assert.deepEqual(publicNames(module), ["run", "Runner"]);
 });
 
 test("an empty module has no public names", () => {
