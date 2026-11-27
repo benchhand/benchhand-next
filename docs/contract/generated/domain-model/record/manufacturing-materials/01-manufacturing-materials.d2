@@ -1,0 +1,94 @@
+...@../../classes
+direction: right
+
+"aggregate__record_manufacturing_materials": {
+  class: aggregate
+  label: "manufacturing-materials"
+  "record_manufacturing_materials": {
+    class: document
+    label: "manufacturing-materials"
+    shape: sql_table
+    "profiles": "profile[]" { constraint: "req" }
+  }
+  "record_manufacturing_materials__profile": {
+    class: owned
+    label: "profile"
+    shape: sql_table
+    "id": "profile_id" { constraint: "req" }
+    "revision": "integer" { constraint: "req" }
+    "title": "text" { constraint: "req" }
+    "level": "enum family|grade" { constraint: "req" }
+    "family": "text" { constraint: "req" }
+    "material_family": "scope_fact"
+    "filler": "scope_fact"
+    "shore": "scope_fact"
+    "grade": "text_fact" { constraint: "req" }
+    "manufacturer": "text_fact"
+    "specification": "text_fact"
+    "form": "enum" { constraint: "req" }
+    "process_state": "object" { constraint: "req" }
+    "typical_not_allowable": "boolean" { constraint: "req" }
+    "properties": "property[]" { constraint: "req" }
+    "guidance": "texts"
+    "note": "text"
+  }
+  "record_manufacturing_materials__profile__process_state": {
+    class: owned
+    label: "profile.process_state"
+    shape: sql_table
+    "process": "semantic_id or fact_open" { constraint: "req" }
+    "orientation": "text"
+    "layup": "text"
+    "temper": "text"
+    "conditioning": "conditioning = dry|conditioned|as_received|unknown" { constraint: "req" }
+    "lot": "text"
+    "notes": "text"
+  }
+  "record_manufacturing_materials__property": {
+    class: owned
+    label: "property"
+    shape: sql_table
+    "name": "semantic_id" { constraint: "req" }
+    "value": "quantity_fact" { constraint: "req" }
+    "conditions": "object" { constraint: "req" }
+  }
+  "record_manufacturing_materials__property__conditions": {
+    class: owned
+    label: "property.conditions"
+    shape: sql_table
+    "test_standard": "text_fact" { constraint: "req" }
+    "temperature": "quantity_fact" { constraint: "req" }
+    "conditioning": "conditioning = dry|conditioned|as_received|unknown" { constraint: "req" }
+    "orientation": "text_fact"
+    "gauge": "gauge = 5.65sqrtS0|5d|A50mm|A2in|other"
+    "specimen": "text"
+    "rate": "text"
+    "notes": "text"
+  }
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile" -> "stub__record_common__text_fact": "material_family, filler, shore [0..1]" { class: composition }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile" -> "stub__record_common__text_fact": "grade [1]\nmanufacturer, specification [0..1]" { class: association }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile__process_state"."process" -> "stub__record_common__fact_open": "process [0..1]" { class: association }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile"."process_state" -> "aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile__process_state": "process_state [1]" { class: composition }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__property"."value" -> "stub__record_common__quantity_fact": "value [1]" { class: association }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__property__conditions" -> "stub__record_common__text_fact": "test_standard [1]\norientation [0..1]" { class: association }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__property__conditions"."temperature" -> "stub__record_common__quantity_fact": "temperature [1]" { class: association }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__property"."conditions" -> "aggregate__record_manufacturing_materials"."record_manufacturing_materials__property__conditions": "conditions [1]" { class: composition }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile"."properties" -> "aggregate__record_manufacturing_materials"."record_manufacturing_materials__property": "properties [0..*]" { class: composition }
+"aggregate__record_manufacturing_materials"."record_manufacturing_materials"."profiles" -> "aggregate__record_manufacturing_materials"."record_manufacturing_materials__profile": "profiles [0..*]" { class: composition }

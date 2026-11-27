@@ -1,0 +1,91 @@
+...@../../classes
+direction: right
+
+"aggregate__record_product__flow": {
+  class: aggregate
+  label: "product.flow"
+  "record_product__flow": {
+    class: owned
+    label: "product.flow"
+    shape: sql_table
+    "stage": "stage" { constraint: "req" }
+    "recheck_from": "stage" { constraint: "req" }
+    "frozen": "frozen"
+    "change": "change"
+    "profile": "profile"
+  }
+  "record_product__frozen": {
+    class: owned
+    label: "frozen"
+    shape: sql_table
+    "version": "version" { constraint: "req" }
+    "manifest_sha256": "sha256" { constraint: "req" }
+    "decision": "decision" { constraint: "req" }
+    "evidence_sha256": "sha256"
+  }
+  "record_product__change": {
+    class: owned
+    label: "change"
+    shape: sql_table
+    "decision": "decision" { constraint: "req" }
+    "baseline_version": "version" { constraint: "req" }
+    "affected_parts": "pn[1..*]" { constraint: "req" }
+  }
+  "record_product__profile": {
+    class: owned
+    label: "profile"
+    shape: sql_table
+    "decision": "decision"
+    "fea": "fea" { constraint: "req" }
+    "stack_up": "enum auto|on|off" { constraint: "req" }
+    "critique": "enum full|light|off" { constraint: "req" }
+    "motion": "enum auto" { constraint: "req" }
+    "storage_results_in_git": "boolean" { constraint: "req" }
+    "asked": "enum user|asked-accepted-default by key"
+    "processes": "object" { constraint: "req" }
+  }
+  "record_product__fea": {
+    class: owned
+    label: "fea"
+    shape: sql_table
+    "enabled": "boolean" { constraint: "req" }
+    "mode": "enum fast|accurate"
+    "fast_band_pct": "number"
+  }
+  "record_product__profile__processes": {
+    class: owned
+    label: "profile.processes"
+    shape: sql_table
+    "fdm": "fdm_profile"
+  }
+  "record_product__fdm_profile": {
+    class: owned
+    label: "fdm_profile"
+    shape: sql_table
+    "orientation": "enum user|propose" { constraint: "req" }
+    "supports": "enum allowed|free|off" { constraint: "req" }
+    "overhang_deg": "number or enum calibrated|off" { constraint: "req" }
+    "bridge_mm": "limit" { constraint: "req" }
+    "min_wall_mm": "limit" { constraint: "req" }
+    "min_feature_mm": "limit" { constraint: "req" }
+    "warp": "enum calibrated|off" { constraint: "req" }
+    "cosmetic_faces": "boolean" { constraint: "req" }
+    "print_in_place": "boolean" { constraint: "req" }
+    "pip_clearance_mm": "object" { constraint: "req" }
+  }
+  "record_product__fdm_profile__pip_clearance_mm": {
+    class: owned
+    label: "fdm_profile.pip_clearance_mm"
+    shape: sql_table
+    "xy": "clearance" { constraint: "req" }
+    "z": "clearance" { constraint: "req" }
+  }
+}
+
+"aggregate__record_product__flow"."record_product__flow"."frozen" -> "aggregate__record_product__flow"."record_product__frozen": "frozen [0..1]" { class: composition }
+"aggregate__record_product__flow"."record_product__flow"."change" -> "aggregate__record_product__flow"."record_product__change": "change [0..1]" { class: composition }
+"aggregate__record_product__flow"."record_product__profile"."fea" -> "aggregate__record_product__flow"."record_product__fea": "fea [1]" { class: composition }
+"aggregate__record_product__flow"."record_product__fdm_profile"."pip_clearance_mm" -> "aggregate__record_product__flow"."record_product__fdm_profile__pip_clearance_mm": "pip_clearance_mm [1]" { class: composition }
+"aggregate__record_product__flow"."record_product__profile__processes"."fdm" -> "aggregate__record_product__flow"."record_product__fdm_profile": "fdm [0..1]" { class: composition }
+"aggregate__record_product__flow"."record_product__profile"."processes" -> "aggregate__record_product__flow"."record_product__profile__processes": "processes [1]" { class: composition }
+"aggregate__record_product__flow"."record_product__flow"."profile" -> "aggregate__record_product__flow"."record_product__profile": "profile [0..1]" { class: composition }

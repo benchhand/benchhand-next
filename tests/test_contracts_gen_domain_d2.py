@@ -24,11 +24,11 @@ from contracts_gen.domain_d2 import (
     check_d2_version,
     parse_d2_version,
     plan_diagrams,
+    render_d2,
     render_diagram,
     render_overview,
     stubs_of,
 )
-from contracts_gen.domain_preview import render_d2
 from contracts_gen.sources import REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
 
 IN_CI = os.environ.get("CI") == "true"

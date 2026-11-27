@@ -1,0 +1,99 @@
+...@../../classes
+direction: right
+
+"aggregate__record_product": {
+  class: aggregate
+  label: "product"
+  "record_product": {
+    class: document
+    label: "product"
+    shape: sql_table
+    "record_version": "record_version" { constraint: "req" }
+    "id": "string" { constraint: "req" }
+    "units": "const mm" { constraint: "req" }
+    "regime": "enum iso|asme" { constraint: "req" }
+    "general_tolerance": "number or string or fact_unknown" { constraint: "req" }
+    "license": "object"
+    "flow": "object" { constraint: "req" }
+    "build_volume": "object"
+    "design": "object"
+    "manufacturing": "object"
+    "storage": "object"
+    "drawing": "product_drawing"
+    "use_case": "use_case" { constraint: "req" }
+  }
+  "record_product__license": {
+    class: owned
+    label: "product.license"
+    shape: sql_table
+    "hardware": "string"
+    "documentation": "string"
+  }
+  "record_product__build_volume": {
+    class: owned
+    label: "product.build_volume"
+    shape: sql_table
+    "x_mm": "number" { constraint: "req" }
+    "y_mm": "number" { constraint: "req" }
+    "z_mm": "number" { constraint: "req" }
+    "orientations": "enum xyz|xzy|yxz|yzx|zxy|zyx[1..*]"
+    "margin_mm": "number"
+  }
+  "record_product__design": {
+    class: owned
+    label: "product.design"
+    shape: sql_table
+    "clearance_margin_mm": "number"
+  }
+  "record_product__manufacturing": {
+    class: owned
+    label: "product.manufacturing"
+    shape: sql_table
+    "processes": "primary_process[1..*]"
+    "min_wall_mm": "object"
+  }
+  "record_product__manufacturing__min_wall_mm": {
+    class: owned
+    label: "product.manufacturing.min_wall_mm"
+    shape: sql_table
+    "fdm": "number"
+    "cnc": "number"
+  }
+  "record_product__storage": {
+    class: owned
+    label: "product.storage"
+    shape: sql_table
+    "results_in_git": "boolean"
+  }
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_drawing__product_drawing": {
+  class: stub
+  label: "product_drawing\n(record/drawing)"
+  link: "../drawing/03-product-drawing.svg"
+}
+"stub__record_product__flow": {
+  class: stub
+  label: "product.flow"
+  link: "03-product-flow.svg"
+}
+"stub__record_product__use_case": {
+  class: stub
+  label: "use_case"
+  link: "02-use-case.svg"
+}
+
+"aggregate__record_product"."record_product"."general_tolerance" -> "stub__record_common__fact_unknown": "general_tolerance [0..1]" { class: association }
+"aggregate__record_product"."record_product"."license" -> "aggregate__record_product"."record_product__license": "license [0..1]" { class: composition }
+"aggregate__record_product"."record_product"."flow" -> "stub__record_product__flow": "flow [1]" { class: composition }
+"aggregate__record_product"."record_product"."build_volume" -> "aggregate__record_product"."record_product__build_volume": "build_volume [0..1]" { class: composition }
+"aggregate__record_product"."record_product"."design" -> "aggregate__record_product"."record_product__design": "design [0..1]" { class: composition }
+"aggregate__record_product"."record_product__manufacturing"."min_wall_mm" -> "aggregate__record_product"."record_product__manufacturing__min_wall_mm": "min_wall_mm [0..1]" { class: composition }
+"aggregate__record_product"."record_product"."manufacturing" -> "aggregate__record_product"."record_product__manufacturing": "manufacturing [0..1]" { class: composition }
+"aggregate__record_product"."record_product"."storage" -> "aggregate__record_product"."record_product__storage": "storage [0..1]" { class: composition }
+"aggregate__record_product"."record_product"."drawing" -> "stub__record_drawing__product_drawing": "drawing [0..1]" { class: association }
+"aggregate__record_product"."record_product"."use_case" -> "stub__record_product__use_case": "use_case [1]" { class: composition }

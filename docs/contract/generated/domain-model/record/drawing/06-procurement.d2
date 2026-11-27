@@ -1,0 +1,52 @@
+...@../../classes
+direction: right
+
+"aggregate__record_drawing__procurement": {
+  class: aggregate
+  label: "procurement"
+  "record_drawing__procurement": {
+    class: owned
+    label: "procurement"
+    shape: sql_table
+    "mode": "enum catalog|made_to_drawing" { constraint: "req" }
+    "manufacturer": "string"
+    "manufacturer_part_number": "string"
+    "supplier_part_number": "string"
+    "designation": "string"
+    "standard": "string"
+    "specification": "object"
+    "open": "object"
+    "approved_sources": "object[1..*]"
+    "qualification_evidence": "string"
+    "certificates": "string[1..*]"
+  }
+  "record_drawing__procurement__specification": {
+    class: owned
+    label: "procurement.specification"
+    shape: sql_table
+    "reference": "string" { constraint: "req" }
+    "revision": "string" { constraint: "req" }
+    "artifact": "string"
+    "url": "string"
+    "sha256": "sha256" { constraint: "req" }
+  }
+  "record_drawing__procurement__open": {
+    class: owned
+    label: "procurement.open"
+    shape: sql_table
+    "manufacturer": "string"
+    "manufacturer_part_number": "string"
+    "supplier_part_number": "string"
+  }
+  "record_drawing__procurement__approved_sources": {
+    class: owned
+    label: "procurement.approved_sources"
+    shape: sql_table
+    "name": "string" { constraint: "req" }
+    "part_number": "string"
+  }
+}
+
+"aggregate__record_drawing__procurement"."record_drawing__procurement"."specification" -> "aggregate__record_drawing__procurement"."record_drawing__procurement__specification": "specification [0..1]" { class: composition }
+"aggregate__record_drawing__procurement"."record_drawing__procurement"."open" -> "aggregate__record_drawing__procurement"."record_drawing__procurement__open": "open [0..1]" { class: composition }
+"aggregate__record_drawing__procurement"."record_drawing__procurement"."approved_sources" -> "aggregate__record_drawing__procurement"."record_drawing__procurement__approved_sources": "approved_sources [0..*]" { class: composition }

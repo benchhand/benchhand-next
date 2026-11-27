@@ -1,0 +1,198 @@
+...@../../classes
+direction: right
+
+"aggregate__record_product__use_case": {
+  class: aggregate
+  label: "use_case"
+  "record_product__use_case": {
+    class: owned
+    label: "use_case"
+    shape: sql_table
+    "status": "enum unknown|draft|confirmed" { constraint: "req" }
+    "decision": "decision"
+    "service_class": "fact_known or fact_unknown" { constraint: "req" }
+    "purpose": "text_fact" { constraint: "req" }
+    "users": "text_fact" { constraint: "req" }
+    "environment": "object" { constraint: "req" }
+    "loads": "load[1..*] or fact_open" { constraint: "req" }
+    "motion": "object" { constraint: "req" }
+    "accuracy": "object" { constraint: "req" }
+    "consequences": "object" { constraint: "req" }
+    "logistics": "object" { constraint: "req" }
+    "capability": "object" { constraint: "req" }
+    "release_scope": "object" { constraint: "req" }
+    "evidence_policy": "fact_unknown or object" { constraint: "req" }
+  }
+  "record_product__use_case__service_class": {
+    class: union
+    label: "use_case.service_class  «abstract»"
+    shape: sql_table
+    "status": "discriminator" { constraint: "req" }
+  }
+  "record_product__use_case__service_class__known": {
+    class: owned
+    label: "use_case.service_class.known"
+    shape: sql_table
+    "value": "service_class"
+  }
+  "record_product__use_case__environment": {
+    class: owned
+    label: "use_case.environment"
+    shape: sql_table
+    "temperature": "quantity_fact" { constraint: "req" }
+    "heat_sources": "text_fact" { constraint: "req" }
+    "moisture": "text_fact" { constraint: "req" }
+    "chemicals": "text_fact" { constraint: "req" }
+    "uv": "text_fact" { constraint: "req" }
+    "corrosion": "text_fact" { constraint: "req" }
+  }
+  "record_product__use_case__motion": {
+    class: owned
+    label: "use_case.motion"
+    shape: sql_table
+    "speed": "quantity_fact" { constraint: "req" }
+    "range": "quantity_fact" { constraint: "req" }
+    "duty_cycle": "text_fact" { constraint: "req" }
+    "friction": "text_fact" { constraint: "req" }
+    "wear": "text_fact" { constraint: "req" }
+    "service_life": "quantity_fact" { constraint: "req" }
+  }
+  "record_product__use_case__accuracy": {
+    class: owned
+    label: "use_case.accuracy"
+    shape: sql_table
+    "tolerance": "text_fact" { constraint: "req" }
+    "repeatability": "text_fact" { constraint: "req" }
+    "surface_finish": "text_fact" { constraint: "req" }
+    "dimensional_stability": "text_fact" { constraint: "req" }
+  }
+  "record_product__use_case__logistics": {
+    class: owned
+    label: "use_case.logistics"
+    shape: sql_table
+    "quantity": "quantity_fact" { constraint: "req" }
+    "budget": "money_fact" { constraint: "req" }
+    "lead_time": "quantity_fact" { constraint: "req" }
+    "maintenance": "text_fact" { constraint: "req" }
+    "repair": "text_fact" { constraint: "req" }
+  }
+  "record_product__use_case__capability": {
+    class: owned
+    label: "use_case.capability"
+    shape: sql_table
+    "equipment": "profile_id[1..*] or fact_open" { constraint: "req" }
+    "operator": "text_fact" { constraint: "req" }
+    "outsourcing": "text_fact" { constraint: "req" }
+  }
+  "record_product__use_case__release_scope": {
+    class: owned
+    label: "use_case.release_scope"
+    shape: sql_table
+    "purpose": "text_fact" { constraint: "req" }
+    "operating_limits": "texts_fact" { constraint: "req" }
+    "exclusions": "texts_fact" { constraint: "req" }
+  }
+  "record_product__use_case__evidence_policy": {
+    class: union
+    label: "use_case.evidence_policy  «union»"
+    shape: sql_table
+  }
+  "record_product__use_case__evidence_policy__2": {
+    class: owned
+    label: "use_case.evidence_policy.2"
+    shape: sql_table
+    "obligations": "object[1..*]" { constraint: "req" }
+    "decision": "decision" { constraint: "req" }
+  }
+  "record_product__use_case__evidence_policy__2__obligations": {
+    class: owned
+    label: "use_case.evidence_policy.2.obligations"
+    shape: sql_table
+    "requirement": "requirement_id"
+    "subject": "subject"
+    "level": "evidence_level = cad_valid|geometrically_manufacturable|pro…" { constraint: "req" }
+    "note": "text"
+  }
+}
+"stub__record_common__fact_known": {
+  class: stub
+  label: "fact_known\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__load": {
+  class: stub
+  label: "load\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__money_fact": {
+  class: stub
+  label: "money_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__subject": {
+  class: stub
+  label: "subject\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__texts_fact": {
+  class: stub
+  label: "texts_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_product__use_case__consequences": {
+  class: stub
+  label: "use_case.consequences"
+  link: "04-use-case-consequences.svg"
+}
+
+"aggregate__record_product__use_case"."record_product__use_case__service_class__known" -> "stub__record_common__fact_known": { class: inheritance }
+"aggregate__record_product__use_case"."record_product__use_case__service_class__known" -> "aggregate__record_product__use_case"."record_product__use_case__service_class": { class: inheritance }
+"stub__record_common__fact_unknown" -> "aggregate__record_product__use_case"."record_product__use_case__service_class": { class: inheritance }
+"stub__record_common__fact_unknown" -> "aggregate__record_product__use_case"."record_product__use_case__evidence_policy": { class: inheritance }
+"aggregate__record_product__use_case"."record_product__use_case__evidence_policy__2" -> "aggregate__record_product__use_case"."record_product__use_case__evidence_policy": { class: inheritance }
+"aggregate__record_product__use_case"."record_product__use_case"."service_class" -> "aggregate__record_product__use_case"."record_product__use_case__service_class": "service_class [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case" -> "stub__record_common__text_fact": "purpose, users [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__environment"."temperature" -> "stub__record_common__quantity_fact": "temperature [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__environment" -> "stub__record_common__text_fact": "heat_sources, moisture, chemicals, uv, corrosion [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."environment" -> "aggregate__record_product__use_case"."record_product__use_case__environment": "environment [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case"."loads" -> "stub__record_common__load": "loads [0..*]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."loads" -> "stub__record_common__fact_open": "loads [0..1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__motion" -> "stub__record_common__quantity_fact": "speed, range, service_life [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__motion" -> "stub__record_common__text_fact": "duty_cycle, friction, wear [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."motion" -> "aggregate__record_product__use_case"."record_product__use_case__motion": "motion [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case__accuracy" -> "stub__record_common__text_fact": "tolerance, repeatability, surface_finish, dimensional_stability [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."accuracy" -> "aggregate__record_product__use_case"."record_product__use_case__accuracy": "accuracy [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case"."consequences" -> "stub__record_product__use_case__consequences": "consequences [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case__logistics" -> "stub__record_common__quantity_fact": "quantity, lead_time [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__logistics"."budget" -> "stub__record_common__money_fact": "budget [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__logistics" -> "stub__record_common__text_fact": "maintenance, repair [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."logistics" -> "aggregate__record_product__use_case"."record_product__use_case__logistics": "logistics [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case__capability"."equipment" -> "stub__record_common__fact_open": "equipment [0..1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__capability" -> "stub__record_common__text_fact": "operator, outsourcing [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."capability" -> "aggregate__record_product__use_case"."record_product__use_case__capability": "capability [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case__release_scope"."purpose" -> "stub__record_common__text_fact": "purpose [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__release_scope" -> "stub__record_common__texts_fact": "operating_limits, exclusions [1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case"."release_scope" -> "aggregate__record_product__use_case"."record_product__use_case__release_scope": "release_scope [1]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case__evidence_policy__2__obligations"."subject" -> "stub__record_common__subject": "subject [0..1]" { class: association }
+"aggregate__record_product__use_case"."record_product__use_case__evidence_policy__2"."obligations" -> "aggregate__record_product__use_case"."record_product__use_case__evidence_policy__2__obligations": "obligations [1..*]" { class: composition }
+"aggregate__record_product__use_case"."record_product__use_case"."evidence_policy" -> "aggregate__record_product__use_case"."record_product__use_case__evidence_policy": "evidence_policy [1]" { class: composition }

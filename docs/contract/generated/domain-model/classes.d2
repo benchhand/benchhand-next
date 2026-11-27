@@ -1,0 +1,21 @@
+# The colours of every diagram, set once. A sql_table takes its header from `fill` and its body from `stroke`.
+classes: {
+  document: { style: { fill: "#1d4ed8"; stroke: "#eff6ff"; font-color: "#ffffff" } }
+  owned: { style: { fill: "#0f766e"; stroke: "#f0fdfa"; font-color: "#ffffff" } }
+  union: { style: { fill: "#7c3aed"; stroke: "#f5f3ff"; font-color: "#ffffff" } }
+  overview_document: { style: { fill: "#1d4ed8"; stroke: "#1e3a8a"; font-color: "#ffffff"; font-size: 20 } }
+  overview_library: { style: { fill: "#b45309"; stroke: "#78350f"; font-color: "#ffffff"; font-size: 20 } }
+  stub: {
+    style: { fill: "#e5e7eb"; stroke: "#9ca3af"; font-color: "#4b5563"; font-size: 14; stroke-dash: 2 }
+  }
+  aggregate: {
+    style: { fill: "#f8fafc"; stroke: "#94a3b8"; stroke-dash: 3; font-size: 22; font-color: "#334155" }
+  }
+  composition: { style: { stroke: "#334155"; stroke-width: 2 } }
+  association: { style: { stroke: "#6b7280"; stroke-dash: 4 } }
+  inheritance: {
+    style: { stroke: "#7c3aed"; stroke-width: 2 }
+    target-arrowhead: { shape: triangle; style: { filled: false } }
+  }
+  reference: { style: { stroke: "#64748b" } }
+}

@@ -1,0 +1,26 @@
+...@../../classes
+direction: right
+
+"record_bom_row": {
+  class: document
+  label: "bom-row"
+  shape: sql_table
+  "level": "integer" { constraint: "req" }
+  "PN": "pn" { constraint: "req" }
+  "rev": "string or null" { constraint: "req" }
+  "qty": "integer" { constraint: "req" }
+  "title": "string or null" { constraint: "req" }
+  "material": "string or null" { constraint: "req" }
+  "process": "primary_process or null" { constraint: "req" }
+  "make_buy": "enum make|buy|null" { constraint: "req" }
+  "supplier": "string or null" { constraint: "req" }
+  "mass": "number or null" { constraint: "req" }
+  "unit": "enum pcs"
+  "designation": "string or null"
+  "manufacturer": "string or null"
+  "manufacturer_part_number": "string or null"
+  "supplier_part_number": "string or null"
+  "specification_reference": "string or null"
+  "specification_revision": "string or null"
+}
+

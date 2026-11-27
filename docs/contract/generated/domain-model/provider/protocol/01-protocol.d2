@@ -1,0 +1,77 @@
+...@../../classes
+direction: right
+
+"aggregate__provider_protocol": {
+  class: aggregate
+  label: "protocol"
+  "provider_protocol": {
+    class: union
+    label: "protocol  «union»"
+    shape: sql_table
+  }
+  "provider_protocol__Request": {
+    class: owned
+    label: "Request"
+    shape: sql_table
+    "jsonrpc": "const \"2.0\"" { constraint: "req" }
+    "id": "RequestId" { constraint: "req" }
+    "method": "Method" { constraint: "req" }
+    "params": "any"
+  }
+  "provider_protocol__Notification": {
+    class: owned
+    label: "Notification"
+    shape: sql_table
+    "jsonrpc": "const \"2.0\"" { constraint: "req" }
+    "method": "Method" { constraint: "req" }
+    "params": "any"
+  }
+  "provider_protocol__SuccessResponse": {
+    class: owned
+    label: "SuccessResponse"
+    shape: sql_table
+    "jsonrpc": "const \"2.0\"" { constraint: "req" }
+    "id": "RequestId" { constraint: "req" }
+    "result": "any" { constraint: "req" }
+  }
+  "provider_protocol__ErrorResponse": {
+    class: owned
+    label: "ErrorResponse"
+    shape: sql_table
+    "jsonrpc": "const \"2.0\"" { constraint: "req" }
+    "id": "RequestId or null" { constraint: "req" }
+    "error": "ErrorObject" { constraint: "req" }
+  }
+  "provider_protocol__ErrorObject": {
+    class: owned
+    label: "ErrorObject"
+    shape: sql_table
+    "code": "integer" { constraint: "req" }
+    "message": "string" { constraint: "req" }
+    "data": "object" { constraint: "req" }
+  }
+  "provider_protocol__ErrorObject__data": {
+    class: owned
+    label: "ErrorObject.data"
+    shape: sql_table
+    "code": "enum" { constraint: "req" }
+    "supported": "object"
+    "fix": "string"
+    "detail": "any"
+  }
+  "provider_protocol__ErrorObject__data__supported": {
+    class: owned
+    label: "ErrorObject.data.supported"
+    shape: sql_table
+    "min": "ProtocolVersion" { constraint: "req" }
+    "max": "ProtocolVersion" { constraint: "req" }
+  }
+}
+
+"aggregate__provider_protocol"."provider_protocol__Request" -> "aggregate__provider_protocol"."provider_protocol": { class: inheritance }
+"aggregate__provider_protocol"."provider_protocol__Notification" -> "aggregate__provider_protocol"."provider_protocol": { class: inheritance }
+"aggregate__provider_protocol"."provider_protocol__SuccessResponse" -> "aggregate__provider_protocol"."provider_protocol": { class: inheritance }
+"aggregate__provider_protocol"."provider_protocol__ErrorResponse" -> "aggregate__provider_protocol"."provider_protocol": { class: inheritance }
+"aggregate__provider_protocol"."provider_protocol__ErrorObject__data"."supported" -> "aggregate__provider_protocol"."provider_protocol__ErrorObject__data__supported": "supported [0..1]" { class: composition }
+"aggregate__provider_protocol"."provider_protocol__ErrorObject"."data" -> "aggregate__provider_protocol"."provider_protocol__ErrorObject__data": "data [1]" { class: composition }
+"aggregate__provider_protocol"."provider_protocol__ErrorResponse"."error" -> "aggregate__provider_protocol"."provider_protocol__ErrorObject": "error [1]" { class: composition }

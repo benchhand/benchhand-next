@@ -1,0 +1,43 @@
+...@../../classes
+direction: right
+
+"record_manufacturing_check_result": {
+  class: document
+  label: "manufacturing-check-result"
+  shape: sql_table
+  "schema_version": "const 1" { constraint: "req" }
+  "record_version": "record_version" { constraint: "req" }
+  "producer": "text" { constraint: "req" }
+  "scope": "subject[1..*]" { constraint: "req" }
+  "expected": "obligation[]" { constraint: "req" }
+  "outcomes": "obligation_outcome[]" { constraint: "req" }
+  "findings": "finding[]" { constraint: "req" }
+  "dependencies": "sha256 by key" { constraint: "req" }
+  "complete": "boolean" { constraint: "req" }
+  "result": "outcome = pass|fail|unknown|not_applicable|not_assessed" { constraint: "req" }
+}
+"stub__record_common__finding": {
+  class: stub
+  label: "finding\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__obligation": {
+  class: stub
+  label: "obligation\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__obligation_outcome": {
+  class: stub
+  label: "obligation_outcome\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__subject": {
+  class: stub
+  label: "subject\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+
+"record_manufacturing_check_result"."scope" -> "stub__record_common__subject": "scope [1..*]" { class: association }
+"record_manufacturing_check_result"."expected" -> "stub__record_common__obligation": "expected [0..*]" { class: association }
+"record_manufacturing_check_result"."outcomes" -> "stub__record_common__obligation_outcome": "outcomes [0..*]" { class: association }
+"record_manufacturing_check_result"."findings" -> "stub__record_common__finding": "findings [0..*]" { class: association }

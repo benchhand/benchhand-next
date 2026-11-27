@@ -1,0 +1,53 @@
+...@../../classes
+direction: right
+
+"aggregate__record_drawing__product_drawing": {
+  class: aggregate
+  label: "product_drawing"
+  "record_drawing__tolerance_policy": {
+    class: union
+    label: "tolerance_policy  «abstract»"
+    shape: sql_table
+    "kind": "discriminator" { constraint: "req" }
+  }
+  "record_drawing__tolerance_policy__standard": {
+    class: owned
+    label: "tolerance_policy.standard"
+    shape: sql_table
+    "kind": "const standard" { constraint: "req" }
+    "standard": "const ISO 2768-1:1989" { constraint: "req" }
+    "class": "enum f|m|c|v" { constraint: "req" }
+    "applies_to": "primary_process[1..*]" { constraint: "req" }
+  }
+  "record_drawing__tolerance_policy__limits": {
+    class: owned
+    label: "tolerance_policy.limits"
+    shape: sql_table
+    "kind": "const limits" { constraint: "req" }
+    "linear_mm": "number" { constraint: "req" }
+    "angular_deg": "number"
+    "applies_to": "primary_process[1..*]" { constraint: "req" }
+    "reference": "string" { constraint: "req" }
+  }
+  "record_drawing__product_drawing": {
+    class: owned
+    label: "product_drawing"
+    shape: sql_table
+    "definition": "const model_and_drawing" { constraint: "req" }
+    "projection": "enum first_angle|third_angle" { constraint: "req" }
+    "standards": "string by key" { constraint: "req" }
+    "default_sheet": "sheet" { constraint: "req" }
+    "tolerance_policies": "tolerance_policy by key" { constraint: "req" }
+    "general_tolerance_policy": "policy_name" { constraint: "req" }
+  }
+}
+"stub__record_drawing__product_drawing__default_sheet": {
+  class: stub
+  label: "product_drawing.default_sheet"
+  link: "01-part-drawing.svg"
+}
+
+"aggregate__record_drawing__product_drawing"."record_drawing__tolerance_policy__standard" -> "aggregate__record_drawing__product_drawing"."record_drawing__tolerance_policy": { class: inheritance }
+"aggregate__record_drawing__product_drawing"."record_drawing__tolerance_policy__limits" -> "aggregate__record_drawing__product_drawing"."record_drawing__tolerance_policy": { class: inheritance }
+"aggregate__record_drawing__product_drawing"."record_drawing__product_drawing"."default_sheet" -> "stub__record_drawing__product_drawing__default_sheet": "default_sheet [1]" { class: composition }
+"aggregate__record_drawing__product_drawing"."record_drawing__product_drawing"."tolerance_policies" -> "aggregate__record_drawing__product_drawing"."record_drawing__tolerance_policy": "tolerance_policies [1..*]" { class: composition }

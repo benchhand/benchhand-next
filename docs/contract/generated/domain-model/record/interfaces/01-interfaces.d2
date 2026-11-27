@@ -1,0 +1,58 @@
+...@../../classes
+direction: right
+
+"aggregate__record_interfaces": {
+  class: aggregate
+  label: "interfaces"
+  "record_interfaces": {
+    class: document
+    label: "interfaces"
+    shape: sql_table
+    "interfaces": "object[]" { constraint: "req" }
+  }
+  "record_interfaces__interfaces": {
+    class: owned
+    label: "interfaces.interfaces"
+    shape: sql_table
+    "id": "interface_id" { constraint: "req" }
+    "from": "string" { constraint: "req" }
+    "to": "string" { constraint: "req" }
+    "type": "enum mounting|motion|electrical|thermal|clearance|other" { constraint: "req" }
+    "description": "string" { constraint: "req" }
+    "pair": "part_ref[2]"
+    "min_clearance_mm": "number"
+    "margin_mm": "number"
+    "limits": "object"
+    "functional": "functional"
+  }
+  "record_interfaces__interfaces__limits": {
+    class: owned
+    label: "interfaces.interfaces.limits"
+    shape: sql_table
+    "press_fit": "fit"
+    "running_fit": "fit"
+    "locating_fit": "fit"
+    "heat_set": "heat_set[1..*]"
+  }
+}
+"stub__record_drawing__fit": {
+  class: stub
+  label: "fit\n(record/drawing)"
+  link: "../drawing/07-fit.svg"
+}
+"stub__record_drawing__heat_set": {
+  class: stub
+  label: "heat_set\n(record/drawing)"
+  link: "../drawing/07-fit.svg"
+}
+"stub__record_interfaces__functional": {
+  class: stub
+  label: "functional"
+  link: "02-functional.svg"
+}
+
+"aggregate__record_interfaces"."record_interfaces__interfaces__limits" -> "stub__record_drawing__fit": "press_fit, running_fit, locating_fit [0..1]" { class: association }
+"aggregate__record_interfaces"."record_interfaces__interfaces__limits"."heat_set" -> "stub__record_drawing__heat_set": "heat_set [0..*]" { class: association }
+"aggregate__record_interfaces"."record_interfaces__interfaces"."limits" -> "aggregate__record_interfaces"."record_interfaces__interfaces__limits": "limits [0..1]" { class: composition }
+"aggregate__record_interfaces"."record_interfaces__interfaces"."functional" -> "stub__record_interfaces__functional": "functional [0..1]" { class: composition }
+"aggregate__record_interfaces"."record_interfaces"."interfaces" -> "aggregate__record_interfaces"."record_interfaces__interfaces": "interfaces [0..*]" { class: composition }

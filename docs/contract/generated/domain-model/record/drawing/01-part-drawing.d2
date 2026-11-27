@@ -1,0 +1,156 @@
+...@../../classes
+direction: right
+
+"aggregate__record_drawing__part_drawing": {
+  class: aggregate
+  label: "part_drawing"
+  "record_drawing__sheet": {
+    class: owned
+    label: "sheet"
+    shape: sql_table
+    "sizes": "sheet_size[1..*]"
+    "orientation": "enum landscape|portrait"
+    "scale": "scale"
+    "multi_sheet": "boolean"
+  }
+  "record_drawing__view": {
+    class: owned
+    label: "view"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "kind": "enum orthographic|auxiliary|section|detail" { constraint: "req" }
+    "normal_to": "reference"
+    "along_axis": "reference"
+    "parallel_to": "reference"
+    "perpendicular_to": "reference"
+    "opposite": "semantic_id"
+    "through": "references"
+    "normal_axis": "enum x|y|z"
+    "sheet": "integer"
+    "toward": "reference"
+    "feature": "semantic_id"
+    "scale": "scale"
+  }
+  "record_drawing__geometric_tolerance": {
+    class: owned
+    label: "geometric_tolerance"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "characteristic": "enum" { constraint: "req" }
+    "features": "semantic_id[1..*]" { constraint: "req" }
+    "zone_mm": "number" { constraint: "req" }
+    "diameter_zone": "boolean"
+    "datum_frame": "datum_label[1..3]"
+  }
+  "record_drawing__part_drawing": {
+    class: owned
+    label: "part_drawing"
+    shape: sql_table
+    "type": "enum detail|vendor_specification|source_control" { constraint: "req" }
+    "tolerance_policy": "policy_name"
+    "datum_features": "object by key"
+    "coordinate_frame": "object"
+    "views": "view[1..*]"
+    "features": "feature_intent by key"
+    "dimensions": "dimension_request[1..*]"
+    "geometric_tolerances": "geometric_tolerance[1..*]"
+    "edges": "edges"
+    "surface_texture": "texture_requirement or object"
+    "notes": "object[1..*]"
+    "manufacturing": "object"
+    "sheet": "sheet"
+  }
+  "record_drawing__part_drawing__datum_features": {
+    class: owned
+    label: "part_drawing.datum_features"
+    shape: sql_table
+    "feature": "semantic_id" { constraint: "req" }
+    "role": "enum plane|axis|point|center_plane|clocking_feature" { constraint: "req" }
+  }
+  "record_drawing__part_drawing__edges": {
+    class: owned
+    label: "part_drawing.edges"
+    shape: sql_table
+  }
+  "record_drawing__part_drawing__surface_texture": {
+    class: union
+    label: "part_drawing.surface_texture  «union»"
+    shape: sql_table
+  }
+  "record_drawing__part_drawing__surface_texture__2": {
+    class: owned
+    label: "part_drawing.surface_texture.2"
+    shape: sql_table
+    "open": "string" { constraint: "req" }
+  }
+  "record_drawing__part_drawing__notes": {
+    class: owned
+    label: "part_drawing.notes"
+    shape: sql_table
+    "kind": "enum process|finish|material|inspection|general" { constraint: "req" }
+    "text": "string" { constraint: "req" }
+    "reference": "string"
+  }
+  "record_drawing__part_drawing__manufacturing": {
+    class: owned
+    label: "part_drawing.manufacturing"
+    shape: sql_table
+    "build_direction": "direction"
+    "interface_condition": "enum as_printed|post_processed|finish_machined"
+    "dimensions_apply": "enum before_finish|after_finish"
+    "post_processing": "string[1..*]"
+    "inspection_stage": "string"
+  }
+}
+"record_drawing__product_drawing__default_sheet": {
+  class: owned
+  label: "product_drawing.default_sheet"
+  shape: sql_table
+}
+"stub__record_drawing__dimension_request": {
+  class: stub
+  label: "dimension_request"
+  link: "05-dimension-request.svg"
+}
+"stub__record_drawing__direction": {
+  class: stub
+  label: "direction"
+  link: "02-part-drawing-coordinate-frame.svg"
+}
+"stub__record_drawing__edges": {
+  class: stub
+  label: "edges"
+  link: "04-feature-intent.svg"
+}
+"stub__record_drawing__feature_intent": {
+  class: stub
+  label: "feature_intent"
+  link: "04-feature-intent.svg"
+}
+"stub__record_drawing__part_drawing__coordinate_frame": {
+  class: stub
+  label: "part_drawing.coordinate_frame"
+  link: "02-part-drawing-coordinate-frame.svg"
+}
+"stub__record_drawing__texture_requirement": {
+  class: stub
+  label: "texture_requirement"
+  link: "04-feature-intent.svg"
+}
+
+"record_drawing__product_drawing__default_sheet" -> "aggregate__record_drawing__part_drawing"."record_drawing__sheet": { class: inheritance }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__edges" -> "stub__record_drawing__edges": { class: inheritance }
+"stub__record_drawing__texture_requirement" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__surface_texture": { class: inheritance }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__surface_texture__2" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__surface_texture": { class: inheritance }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."datum_features" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__datum_features": "datum_features [0..*]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."coordinate_frame" -> "stub__record_drawing__part_drawing__coordinate_frame": "coordinate_frame [0..1]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."views" -> "aggregate__record_drawing__part_drawing"."record_drawing__view": "views [0..*]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."features" -> "stub__record_drawing__feature_intent": "features [0..*]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."dimensions" -> "stub__record_drawing__dimension_request": "dimensions [0..*]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."geometric_tolerances" -> "aggregate__record_drawing__part_drawing"."record_drawing__geometric_tolerance": "geometric_tolerances [0..*]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."edges" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__edges": "edges [0..1]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."surface_texture" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__surface_texture": "surface_texture [0..1]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."notes" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__notes": "notes [0..*]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__manufacturing"."build_direction" -> "stub__record_drawing__direction": "build_direction [0..1]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."manufacturing" -> "aggregate__record_drawing__part_drawing"."record_drawing__part_drawing__manufacturing": "manufacturing [0..1]" { class: composition }
+"aggregate__record_drawing__part_drawing"."record_drawing__part_drawing"."sheet" -> "aggregate__record_drawing__part_drawing"."record_drawing__sheet": "sheet [0..1]" { class: composition }

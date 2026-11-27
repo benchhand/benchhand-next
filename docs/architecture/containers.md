@@ -181,7 +181,7 @@ flowchart LR
 - **Open: no phase in Steps.** The plan names the middleware chain, the provider host, `viewer-ocp`, `policy-default`, and the `recheck` and `work` modules, but no phase of its Steps delivers them. The plan's [Open questions](../design-plan.md#open-questions) don't list them.
 - **Open: OpenAPI and Zod.** ADR-0017 adds them with the first HTTP or Zod consumer, which no phase names yet.
 - **Open: the integration points.** Plan section 5 puts CEL on transitions only: guards on the edges, `requires` on the gates. No source says a guard runs on every tool call. The provider host verifies artifacts and moves them into `hw/`, but no source routes them through the typed record store, which reads and writes YAML, CSV and decision documents only. No source names a call between record versions and the evidence service.
-- The record counts come from the generated [domain model](../contract/generated/domain-model.md#overview-the-record-documents): its `<<document>>` and `<<library>>` classes.
+- The record counts come from the generated [domain model](../contract/generated/domain-model/README.md): the documents (blue) and the libraries (amber) of its overview.
 - The `benchhand` CLI node is solid because the CLI exists; on `main` it has `version` and `record migrate`. The provider and SDK packages exist on `main` as empty stubs, so their nodes stay dashed until Phase 4.
 
 ## Sources

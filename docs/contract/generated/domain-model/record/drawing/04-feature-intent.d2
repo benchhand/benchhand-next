@@ -1,0 +1,62 @@
+...@../../classes
+direction: right
+
+"aggregate__record_drawing__feature_intent": {
+  class: aggregate
+  label: "feature_intent"
+  "record_drawing__feature_intent": {
+    class: owned
+    label: "feature_intent"
+    shape: sql_table
+    "size": "enum general|interface"
+    "location": "const datum_coordinates"
+    "profile": "const controlled_model"
+    "profile_tolerance_mm": "number"
+    "presentation": "enum auto|visible|section|detail|general_note"
+    "axial_location_from": "reference"
+    "tolerance_policy": "policy_name"
+    "thread": "thread"
+    "surface_texture": "texture_requirement"
+    "edges": "edges"
+  }
+  "record_drawing__thread": {
+    class: owned
+    label: "thread"
+    shape: sql_table
+    "designation": "string" { constraint: "req" }
+    "standard": "string" { constraint: "req" }
+    "operation": "enum tap|thread_form|roll|cut|vendor" { constraint: "req" }
+    "full_depth_anchor": "semantic_id"
+  }
+  "record_drawing__texture_requirement": {
+    class: owned
+    label: "texture_requirement"
+    shape: sql_table
+    "parameter": "enum Ra|Rz" { constraint: "req" }
+    "limit_um": "number" { constraint: "req" }
+    "process": "enum any|removal_required|removal_prohibited" { constraint: "req" }
+  }
+  "record_drawing__edges": {
+    class: owned
+    label: "edges"
+    shape: sql_table
+    "external": "edge_limits"
+    "internal": "edge_limits"
+  }
+}
+"stub__record_drawing__part_drawing__edges": {
+  class: stub
+  label: "part_drawing.edges"
+  link: "01-part-drawing.svg"
+}
+"stub__record_drawing__part_drawing__surface_texture": {
+  class: stub
+  label: "part_drawing.surface_texture"
+  link: "01-part-drawing.svg"
+}
+
+"stub__record_drawing__part_drawing__edges" -> "aggregate__record_drawing__feature_intent"."record_drawing__edges": { class: inheritance }
+"aggregate__record_drawing__feature_intent"."record_drawing__texture_requirement" -> "stub__record_drawing__part_drawing__surface_texture": { class: inheritance }
+"aggregate__record_drawing__feature_intent"."record_drawing__feature_intent"."thread" -> "aggregate__record_drawing__feature_intent"."record_drawing__thread": "thread [0..1]" { class: composition }
+"aggregate__record_drawing__feature_intent"."record_drawing__feature_intent"."surface_texture" -> "aggregate__record_drawing__feature_intent"."record_drawing__texture_requirement": "surface_texture [0..1]" { class: composition }
+"aggregate__record_drawing__feature_intent"."record_drawing__feature_intent"."edges" -> "aggregate__record_drawing__feature_intent"."record_drawing__edges": "edges [0..1]" { class: composition }

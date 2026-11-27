@@ -1,0 +1,206 @@
+...@../../classes
+direction: right
+
+"aggregate__record_part__operation": {
+  class: aggregate
+  label: "operation"
+  "record_part__purchase": {
+    class: owned
+    label: "purchase"
+    shape: sql_table
+    "identity": "text_fact" { constraint: "req" }
+    "specification": "text_fact" { constraint: "req" }
+    "ratings": "text_fact" { constraint: "req" }
+    "optical": "text_fact"
+    "thickness": "quantity_fact"
+    "availability": "text_fact"
+    "supplier_evidence": "sources"
+  }
+  "record_part__operation": {
+    class: owned
+    label: "operation"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "kind": "semantic_id" { constraint: "req" }
+    "title": "text"
+    "capability": "profile_id or fact_unknown"
+    "provider": "enum local|outsourced"
+    "supplier": "text"
+    "components": "semantic_ids"
+    "depends_on": "semantic_ids"
+    "input_state": "semantic_id"
+    "output_state": "semantic_id"
+    "material_state_in": "text"
+    "material_state_out": "text"
+    "targets": "target[1..*]"
+    "setup": "setup"
+    "orientation": "orientation or fact_open"
+    "supports": "supports or fact_open"
+    "allowances": "allowance[1..*]"
+    "post_processing": "texts"
+    "inspection": "inspection[1..*]"
+    "requirements": "requirement_ids"
+    "criteria": "criterion[1..*]"
+    "evidence": "evidence_id[1..*]"
+    "purchase": "purchase"
+  }
+  "record_part__operation__orientation": {
+    class: union
+    label: "operation.orientation  «union»"
+    shape: sql_table
+  }
+  "record_part__orientation": {
+    class: owned
+    label: "orientation"
+    shape: sql_table
+    "status": "enum proposed|approved" { constraint: "req" }
+    "rotation": "object" { constraint: "req" }
+    "decision": "decision"
+    "selection": "semantic_id"
+    "note": "text"
+  }
+  "record_part__orientation__rotation": {
+    class: union
+    label: "orientation.rotation  «union»"
+    shape: sql_table
+  }
+  "record_part__orientation__rotation__1": {
+    class: owned
+    label: "orientation.rotation.1"
+    shape: sql_table
+    "quaternion": "number[4]" { constraint: "req" }
+  }
+  "record_part__orientation__rotation__2": {
+    class: owned
+    label: "orientation.rotation.2"
+    shape: sql_table
+    "axis": "vector" { constraint: "req" }
+    "angle_deg": "number" { constraint: "req" }
+  }
+  "record_part__operation__supports": {
+    class: union
+    label: "operation.supports  «union»"
+    shape: sql_table
+  }
+  "record_part__supports": {
+    class: owned
+    label: "supports"
+    shape: sql_table
+    "strategy": "enum none|reachable_noncritical|finished_critical" { constraint: "req" }
+    "start_regions": "target[1..*]"
+    "contact_regions": "target[1..*]"
+    "material": "text"
+    "removal": "object"
+    "affected_surfaces": "target[1..*]"
+    "allowance": "quantity"
+    "finish": "text"
+    "inspection": "semantic_ids"
+  }
+  "record_part__supports__removal": {
+    class: owned
+    label: "supports.removal"
+    shape: sql_table
+    "tools": "texts" { constraint: "req" }
+    "access": "text" { constraint: "req" }
+    "path": "text"
+  }
+  "record_part__allowance": {
+    class: owned
+    label: "allowance"
+    shape: sql_table
+    "feature": "semantic_id" { constraint: "req" }
+    "region": "semantic_id"
+    "dimension": "semantic_id"
+    "amount": "quantity" { constraint: "req" }
+    "purpose": "enum stock|finish|coating|support_removal|shrinkage|other" { constraint: "req" }
+    "limits": "text"
+    "source": "source" { constraint: "req" }
+  }
+  "record_part__inspection": {
+    class: owned
+    label: "inspection"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "feature": "semantic_id"
+    "region": "semantic_id"
+    "requirement": "requirement_id"
+    "criterion": "criterion"
+    "method": "text" { constraint: "req" }
+    "instrument": "text"
+    "capability": "profile_id"
+    "state": "dimension_state = as_manufactured|after_finish|assembled" { constraint: "req" }
+    "coupon": "boolean"
+    "evidence": "evidence_id[1..*]"
+  }
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__quantity": {
+  class: stub
+  label: "quantity\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__target": {
+  class: stub
+  label: "target\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_part__setup": {
+  class: stub
+  label: "setup"
+  link: "03-setup.svg"
+}
+
+"aggregate__record_part__operation"."record_part__orientation__rotation__1" -> "aggregate__record_part__operation"."record_part__orientation__rotation": { class: inheritance }
+"aggregate__record_part__operation"."record_part__orientation__rotation__2" -> "aggregate__record_part__operation"."record_part__orientation__rotation": { class: inheritance }
+"aggregate__record_part__operation"."record_part__orientation" -> "aggregate__record_part__operation"."record_part__operation__orientation": { class: inheritance }
+"stub__record_common__fact_open" -> "aggregate__record_part__operation"."record_part__operation__orientation": { class: inheritance }
+"aggregate__record_part__operation"."record_part__supports" -> "aggregate__record_part__operation"."record_part__operation__supports": { class: inheritance }
+"stub__record_common__fact_open" -> "aggregate__record_part__operation"."record_part__operation__supports": { class: inheritance }
+"aggregate__record_part__operation"."record_part__purchase" -> "stub__record_common__text_fact": "identity, specification, ratings [1]\noptical, availability [0..1]" { class: association }
+"aggregate__record_part__operation"."record_part__purchase"."thickness" -> "stub__record_common__quantity_fact": "thickness [0..1]" { class: association }
+"aggregate__record_part__operation"."record_part__purchase"."supplier_evidence" -> "stub__record_common__source": "supplier_evidence [0..*]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."capability" -> "stub__record_common__fact_unknown": "capability [0..1]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."targets" -> "stub__record_common__target": "targets [0..*]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."setup" -> "stub__record_part__setup": "setup [0..1]" { class: composition }
+"aggregate__record_part__operation"."record_part__orientation"."rotation" -> "aggregate__record_part__operation"."record_part__orientation__rotation": "rotation [1]" { class: composition }
+"aggregate__record_part__operation"."record_part__operation"."orientation" -> "aggregate__record_part__operation"."record_part__operation__orientation": "orientation [0..1]" { class: composition }
+"aggregate__record_part__operation"."record_part__supports" -> "stub__record_common__target": "start_regions, contact_regions, affected_surfaces [0..*]" { class: association }
+"aggregate__record_part__operation"."record_part__supports"."removal" -> "aggregate__record_part__operation"."record_part__supports__removal": "removal [0..1]" { class: composition }
+"aggregate__record_part__operation"."record_part__supports"."allowance" -> "stub__record_common__quantity": "allowance [0..1]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."supports" -> "aggregate__record_part__operation"."record_part__operation__supports": "supports [0..1]" { class: composition }
+"aggregate__record_part__operation"."record_part__allowance"."amount" -> "stub__record_common__quantity": "amount [1]" { class: association }
+"aggregate__record_part__operation"."record_part__allowance"."source" -> "stub__record_common__source": "source [1]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."allowances" -> "aggregate__record_part__operation"."record_part__allowance": "allowances [0..*]" { class: composition }
+"aggregate__record_part__operation"."record_part__inspection"."criterion" -> "stub__record_common__criterion": "criterion [0..1]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."inspection" -> "aggregate__record_part__operation"."record_part__inspection": "inspection [0..*]" { class: composition }
+"aggregate__record_part__operation"."record_part__operation"."criteria" -> "stub__record_common__criterion": "criteria [0..*]" { class: association }
+"aggregate__record_part__operation"."record_part__operation"."purchase" -> "aggregate__record_part__operation"."record_part__purchase": "purchase [0..1]" { class: composition }

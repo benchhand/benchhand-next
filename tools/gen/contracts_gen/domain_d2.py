@@ -1,4 +1,4 @@
-"""D2 diagrams of the domain model (``domain.py``): a preview renderer next to the Mermaid one.
+"""D2 diagrams of the domain model (``domain.py``).
 
 The model is split per contract into *aggregates*: a root class plus the classes only it owns, meaning the
 classes reached through compositions and union branches whose every parent sits in the same aggregate. A
@@ -8,8 +8,9 @@ belong together, up to the same bound, each in a container named after its root;
 is a grey stub that links to the diagram that owns it.
 
 Every class is in exactly one diagram. ``render_diagram`` writes the D2 of one, ``render_overview`` the
-overview of the record contracts, and ``CLASSES_D2`` holds the colours the diagrams import. The diagrams are
-laid out with ``d2 --layout elk``, which this module pins to ``D2_VERSION``.
+overview of the record contracts, and ``CLASSES_D2`` holds the colours the diagrams import. ``render_d2``
+lays a diagram out with ``d2 --layout elk``, which this module pins to ``D2_VERSION``; the same source and
+version give the same SVG bytes, so the SVGs are committed and checked for drift.
 """
 
 from __future__ import annotations
@@ -19,12 +20,14 @@ import re
 import subprocess
 from collections import Counter, deque
 from dataclasses import dataclass
+from pathlib import Path
 
 from .domain import ClassNode, DomainModel, Relation, class_id
 
 D2_VERSION = "0.9.0"
 D2_LAYOUT = "elk"
 D2_PAD = 40
+RENDER_TIMEOUT_SECONDS = 300
 D2_COMMAND = "d2"
 CLASSES_FILE = "classes.d2"
 OVERVIEW_FILE = "overview"
@@ -88,6 +91,17 @@ def check_d2_version(output: str | None = None) -> None:
     found = parse_d2_version(output)
     if found != D2_VERSION:
         raise D2VersionError(f"D2 {found} is installed, and the diagrams are pinned to D2 {D2_VERSION}")
+
+
+def render_d2(source: Path, target: Path) -> bytes:
+    """Lay ``source`` out with ELK into ``target``; return the SVG."""
+    command = [D2_COMMAND, "--layout", D2_LAYOUT, "--pad", str(D2_PAD), str(source), str(target)]
+    result = subprocess.run(
+        command, capture_output=True, text=True, timeout=RENDER_TIMEOUT_SECONDS, check=False
+    )
+    if result.returncode:
+        raise RuntimeError(f"d2 failed on {source}:\n{result.stderr}")
+    return target.read_bytes()
 
 
 # --- aggregates and diagrams

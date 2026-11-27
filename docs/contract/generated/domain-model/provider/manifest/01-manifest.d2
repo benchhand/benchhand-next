@@ -1,0 +1,83 @@
+...@../../classes
+direction: right
+
+"aggregate__provider_manifest": {
+  class: aggregate
+  label: "manifest"
+  "provider_manifest": {
+    class: document
+    label: "manifest"
+    shape: sql_table
+    "name": "string" { constraint: "req" }
+    "version": "string" { constraint: "req" }
+    "summary": "string"
+    "protocol": "object" { constraint: "req" }
+    "kinds": "HookKind[1..*]" { constraint: "req" }
+    "hooks": "HookDecl[1..*]" { constraint: "req" }
+    "resident": "boolean"
+    "command": "string[1..*]" { constraint: "req" }
+    "timeouts": "integer by key"
+    "environment": "object" { constraint: "req" }
+    "needs": "Needs" { constraint: "req" }
+    "cli": "object[]"
+  }
+  "provider_manifest__protocol": {
+    class: owned
+    label: "manifest.protocol"
+    shape: sql_table
+    "min": "integer" { constraint: "req" }
+    "max": "integer" { constraint: "req" }
+  }
+  "provider_manifest__environment": {
+    class: union
+    label: "manifest.environment  «abstract»"
+    shape: sql_table
+    "kind": "discriminator" { constraint: "req" }
+  }
+  "provider_manifest__environment__uv": {
+    class: owned
+    label: "manifest.environment.uv"
+    shape: sql_table
+    "kind": "const uv" { constraint: "req" }
+    "requires-python": "string" { constraint: "req" }
+    "dependencies": "string[]" { constraint: "req" }
+  }
+  "provider_manifest__environment__freecad": {
+    class: owned
+    label: "manifest.environment.freecad"
+    shape: sql_table
+    "kind": "const freecad" { constraint: "req" }
+  }
+  "provider_manifest__environment__system": {
+    class: owned
+    label: "manifest.environment.system"
+    shape: sql_table
+    "kind": "const system" { constraint: "req" }
+  }
+  "provider_manifest__cli": {
+    class: owned
+    label: "manifest.cli"
+    shape: sql_table
+    "name": "string" { constraint: "req" }
+    "summary": "string" { constraint: "req" }
+  }
+}
+"stub__provider_protocol__HookDecl": {
+  class: stub
+  label: "HookDecl\n(provider/protocol)"
+  link: "../protocol/02-initializeresult.svg"
+}
+"stub__provider_protocol__Needs": {
+  class: stub
+  label: "Needs\n(provider/protocol)"
+  link: "../protocol/02-initializeresult.svg"
+}
+
+"aggregate__provider_manifest"."provider_manifest__environment__uv" -> "aggregate__provider_manifest"."provider_manifest__environment": { class: inheritance }
+"aggregate__provider_manifest"."provider_manifest__environment__freecad" -> "aggregate__provider_manifest"."provider_manifest__environment": { class: inheritance }
+"aggregate__provider_manifest"."provider_manifest__environment__system" -> "aggregate__provider_manifest"."provider_manifest__environment": { class: inheritance }
+"aggregate__provider_manifest"."provider_manifest"."protocol" -> "aggregate__provider_manifest"."provider_manifest__protocol": "protocol [1]" { class: composition }
+"aggregate__provider_manifest"."provider_manifest"."hooks" -> "stub__provider_protocol__HookDecl": "hooks [1..*]" { class: association }
+"aggregate__provider_manifest"."provider_manifest"."environment" -> "aggregate__provider_manifest"."provider_manifest__environment": "environment [1]" { class: composition }
+"aggregate__provider_manifest"."provider_manifest"."needs" -> "stub__provider_protocol__Needs": "needs [1]" { class: association }
+"aggregate__provider_manifest"."provider_manifest"."cli" -> "aggregate__provider_manifest"."provider_manifest__cli": "cli [0..*]" { class: composition }

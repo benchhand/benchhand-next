@@ -1,0 +1,98 @@
+...@../../classes
+direction: right
+
+"aggregate__record_evidence_assessment": {
+  class: aggregate
+  label: "evidence-assessment"
+  "record_evidence_assessment": {
+    class: document
+    label: "evidence-assessment"
+    shape: sql_table
+    "version": "version" { constraint: "req" }
+    "manifest_sha256": "sha256" { constraint: "req" }
+    "build_staleness": "enum computed|not_computed" { constraint: "req" }
+    "expected_sha256": "sha256" { constraint: "req" }
+    "statuses": "obligation_status[]" { constraint: "req" }
+    "facets": "facets by key" { constraint: "req" }
+    "findings": "finding[]" { constraint: "req" }
+    "critical": "critical_finding[]" { constraint: "req" }
+    "complete": "boolean" { constraint: "req" }
+    "acceptance": "acceptance_formed or acceptance_refused" { constraint: "req" }
+  }
+  "record_evidence_assessment__obligation_status": {
+    class: owned
+    label: "obligation_status"
+    shape: sql_table
+    "obligation": "obligation" { constraint: "req" }
+    "result": "evidence_result" { constraint: "req" }
+    "sources": "string[]" { constraint: "req" }
+    "reasons": "string[]" { constraint: "req" }
+    "waiver": "waiver"
+  }
+  "record_evidence_assessment__facets": {
+    class: owned
+    label: "facets"
+    shape: sql_table
+    "cad_valid": "facet_result" { constraint: "req" }
+    "geometrically_manufacturable": "facet_result" { constraint: "req" }
+    "process_planned": "facet_result" { constraint: "req" }
+    "simulation_supported": "facet_result" { constraint: "req" }
+    "physically_validated": "facet_result" { constraint: "req" }
+  }
+  "record_evidence_assessment__critical_finding": {
+    class: owned
+    label: "critical_finding"
+    shape: sql_table
+    "finding": "semantic_id" { constraint: "req" }
+    "code": "finding_code"
+    "bundle": "project_path" { constraint: "req" }
+    "obligation": "obligation_id"
+    "consequence": "text"
+  }
+  "record_evidence_assessment__acceptance": {
+    class: union
+    label: "evidence-assessment.acceptance  «abstract»"
+    shape: sql_table
+    "status": "discriminator" { constraint: "req" }
+  }
+  "record_evidence_assessment__acceptance_formed": {
+    class: owned
+    label: "acceptance_formed"
+    shape: sql_table
+    "status": "const formed" { constraint: "req" }
+    "evidence_sha256": "sha256" { constraint: "req" }
+    "inventory": "sha256 by key" { constraint: "req" }
+  }
+  "record_evidence_assessment__acceptance_refused": {
+    class: owned
+    label: "acceptance_refused"
+    shape: sql_table
+    "status": "const refused" { constraint: "req" }
+    "reason": "text" { constraint: "req" }
+  }
+}
+"stub__common_finding": {
+  class: stub
+  label: "finding\n(common/finding)"
+  link: "../../common/finding/01-finding.svg"
+}
+"stub__record_common__obligation": {
+  class: stub
+  label: "obligation\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__waiver": {
+  class: stub
+  label: "waiver\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+
+"aggregate__record_evidence_assessment"."record_evidence_assessment__acceptance_formed" -> "aggregate__record_evidence_assessment"."record_evidence_assessment__acceptance": { class: inheritance }
+"aggregate__record_evidence_assessment"."record_evidence_assessment__acceptance_refused" -> "aggregate__record_evidence_assessment"."record_evidence_assessment__acceptance": { class: inheritance }
+"aggregate__record_evidence_assessment"."record_evidence_assessment__obligation_status"."obligation" -> "stub__record_common__obligation": "obligation [1]" { class: association }
+"aggregate__record_evidence_assessment"."record_evidence_assessment__obligation_status"."waiver" -> "stub__record_common__waiver": "waiver [0..1]" { class: association }
+"aggregate__record_evidence_assessment"."record_evidence_assessment"."statuses" -> "aggregate__record_evidence_assessment"."record_evidence_assessment__obligation_status": "statuses [0..*]" { class: composition }
+"aggregate__record_evidence_assessment"."record_evidence_assessment"."facets" -> "aggregate__record_evidence_assessment"."record_evidence_assessment__facets": "facets [0..*]" { class: composition }
+"aggregate__record_evidence_assessment"."record_evidence_assessment"."findings" -> "stub__common_finding": "findings [0..*]" { class: association }
+"aggregate__record_evidence_assessment"."record_evidence_assessment"."critical" -> "aggregate__record_evidence_assessment"."record_evidence_assessment__critical_finding": "critical [0..*]" { class: composition }
+"aggregate__record_evidence_assessment"."record_evidence_assessment"."acceptance" -> "aggregate__record_evidence_assessment"."record_evidence_assessment__acceptance": "acceptance [1]" { class: composition }

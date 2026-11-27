@@ -1,0 +1,56 @@
+...@../../classes
+direction: right
+
+"aggregate__record_decision": {
+  class: aggregate
+  label: "decision"
+  "record_decision": {
+    class: union
+    label: "decision  «abstract»"
+    shape: sql_table
+    "id": "decision" { constraint: "req" }
+    "kind": "enum gate|design" { constraint: "req" }
+  }
+  "record_decision__gate_decision": {
+    class: owned
+    label: "gate_decision"
+    shape: sql_table
+    "id": "decision" { constraint: "req" }
+    "kind": "const gate" { constraint: "req" }
+    "title": "title" { constraint: "req" }
+    "date": "date" { constraint: "req" }
+    "status": "enum approved|provisional|void" { constraint: "req" }
+    "gate": "gate_id" { constraint: "req" }
+    "stage": "stage" { constraint: "req" }
+    "version": "version"
+    "evidence": "project_path[1..*]"
+    "supersedes": "decisions"
+    "approval": "approval"
+  }
+  "record_decision__approval": {
+    class: owned
+    label: "approval"
+    shape: sql_table
+    "channel": "enum app|form|chat|auto" { constraint: "req" }
+    "by": "text"
+    "quote": "text"
+  }
+  "record_decision__design_decision": {
+    class: owned
+    label: "design_decision"
+    shape: sql_table
+    "id": "decision" { constraint: "req" }
+    "kind": "const design" { constraint: "req" }
+    "title": "title" { constraint: "req" }
+    "date": "date" { constraint: "req" }
+    "status": "enum proposed|accepted|rejected|superseded" { constraint: "req" }
+    "superseded_by": "decisions"
+    "decision_makers": "people"
+    "consulted": "people"
+    "informed": "people"
+  }
+}
+
+"aggregate__record_decision"."record_decision__gate_decision" -> "aggregate__record_decision"."record_decision": { class: inheritance }
+"aggregate__record_decision"."record_decision__design_decision" -> "aggregate__record_decision"."record_decision": { class: inheritance }
+"aggregate__record_decision"."record_decision__gate_decision"."approval" -> "aggregate__record_decision"."record_decision__approval": "approval [0..1]" { class: composition }

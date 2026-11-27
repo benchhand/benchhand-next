@@ -1,0 +1,210 @@
+...@../../classes
+direction: right
+
+"aggregate__record_common__fact": {
+  class: aggregate
+  label: "fact"
+  "record_common__fact_known": {
+    class: owned
+    label: "fact_known"
+    shape: sql_table
+    "status": "const known" { constraint: "req" }
+    "value": "any" { constraint: "req" }
+    "sources": "sources" { constraint: "req" }
+    "basis": "basis" { constraint: "req" }
+    "uncertainty": "uncertainty"
+    "conditions": "text"
+    "assumption": "assumption_id"
+    "derivation": "text"
+    "decision": "decision"
+    "note": "text"
+  }
+  "record_common__uncertainty": {
+    class: owned
+    label: "uncertainty"
+    shape: sql_table
+    "lower": "number"
+    "upper": "number"
+    "confidence": "number"
+    "note": "text" { constraint: "req" }
+  }
+  "record_common__fact": {
+    class: union
+    label: "fact  «abstract»"
+    shape: sql_table
+    "status": "discriminator" { constraint: "req" }
+  }
+}
+"aggregate__record_common__load": {
+  class: aggregate
+  label: "load"
+  "record_common__quantity_fact": {
+    class: union
+    label: "quantity_fact  «abstract»"
+    shape: sql_table
+    "status": "discriminator" { constraint: "req" }
+  }
+  "record_common__load": {
+    class: owned
+    label: "load"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "kind": "enum static|sustained|cyclic|impact|vibration" { constraint: "req" }
+    "magnitude": "quantity_fact" { constraint: "req" }
+    "direction": "number[3]" { constraint: "req" }
+    "application": "subject"
+    "duration": "quantity_fact"
+    "frequency": "quantity_fact"
+    "cycles": "quantity_fact"
+    "requirements": "requirement_ids"
+    "note": "text"
+  }
+}
+"aggregate__record_common__money_fact__known": {
+  class: aggregate
+  label: "money_fact.known"
+  "record_common__money": {
+    class: owned
+    label: "money"
+    shape: sql_table
+    "amount": "number" { constraint: "req" }
+    "currency": "string" { constraint: "req" }
+  }
+  "record_common__money_fact__known": {
+    class: owned
+    label: "money_fact.known"
+    shape: sql_table
+    "value": "money"
+  }
+}
+"record_common__text_fact": {
+  class: union
+  label: "text_fact  «abstract»"
+  shape: sql_table
+  "status": "discriminator" { constraint: "req" }
+}
+"record_common__fact_open": {
+  class: union
+  label: "fact_open  «abstract»"
+  shape: sql_table
+  "status": "discriminator" { constraint: "req" }
+}
+"record_common__texts_fact": {
+  class: union
+  label: "texts_fact  «abstract»"
+  shape: sql_table
+  "status": "discriminator" { constraint: "req" }
+}
+"record_common__boolean_fact": {
+  class: union
+  label: "boolean_fact  «abstract»"
+  shape: sql_table
+  "status": "discriminator" { constraint: "req" }
+}
+"record_common__money_fact": {
+  class: union
+  label: "money_fact  «abstract»"
+  shape: sql_table
+  "status": "discriminator" { constraint: "req" }
+}
+"stub__record_common__boolean_fact__known": {
+  class: stub
+  label: "boolean_fact.known"
+  link: "03-function-entry.svg"
+}
+"stub__record_common__fact_not_applicable": {
+  class: stub
+  label: "fact_not_applicable"
+  link: "03-function-entry.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown"
+  link: "01-finding.svg"
+}
+"stub__record_common__quantity_fact__known": {
+  class: stub
+  label: "quantity_fact.known"
+  link: "03-function-entry.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source"
+  link: "01-finding.svg"
+}
+"stub__record_common__subject": {
+  class: stub
+  label: "subject"
+  link: "01-finding.svg"
+}
+"stub__record_common__text_fact__known": {
+  class: stub
+  label: "text_fact.known"
+  link: "03-function-entry.svg"
+}
+"stub__record_common__texts_fact__known": {
+  class: stub
+  label: "texts_fact.known"
+  link: "03-function-entry.svg"
+}
+"stub__record_part__intent__service": {
+  class: stub
+  label: "intent.service\n(record/part)"
+  link: "../part/01-part.svg"
+}
+"stub__record_part__operation__orientation": {
+  class: stub
+  label: "operation.orientation\n(record/part)"
+  link: "../part/02-operation.svg"
+}
+"stub__record_part__operation__supports": {
+  class: stub
+  label: "operation.supports\n(record/part)"
+  link: "../part/02-operation.svg"
+}
+"stub__record_product__use_case__consequences__severity__known": {
+  class: stub
+  label: "use_case.consequences.severity.known\n(record/product)"
+  link: "../product/04-use-case-consequences.svg"
+}
+"stub__record_product__use_case__service_class__known": {
+  class: stub
+  label: "use_case.service_class.known\n(record/product)"
+  link: "../product/02-use-case.svg"
+}
+
+"stub__record_common__quantity_fact__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"stub__record_common__quantity_fact__known" -> "aggregate__record_common__load"."record_common__quantity_fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "aggregate__record_common__load"."record_common__quantity_fact": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "aggregate__record_common__load"."record_common__quantity_fact": { class: inheritance }
+"stub__record_common__text_fact__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"stub__record_common__text_fact__known" -> "record_common__text_fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "record_common__text_fact": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "record_common__text_fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "record_common__fact_open": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "record_common__fact_open": { class: inheritance }
+"aggregate__record_common__fact"."record_common__fact_known" -> "aggregate__record_common__fact"."record_common__fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "aggregate__record_common__fact"."record_common__fact": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "aggregate__record_common__fact"."record_common__fact": { class: inheritance }
+"stub__record_common__texts_fact__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"stub__record_common__texts_fact__known" -> "record_common__texts_fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "record_common__texts_fact": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "record_common__texts_fact": { class: inheritance }
+"stub__record_common__boolean_fact__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"stub__record_common__boolean_fact__known" -> "record_common__boolean_fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "record_common__boolean_fact": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "record_common__boolean_fact": { class: inheritance }
+"aggregate__record_common__money_fact__known"."record_common__money_fact__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"aggregate__record_common__money_fact__known"."record_common__money_fact__known" -> "record_common__money_fact": { class: inheritance }
+"stub__record_common__fact_unknown" -> "record_common__money_fact": { class: inheritance }
+"stub__record_common__fact_not_applicable" -> "record_common__money_fact": { class: inheritance }
+"record_common__fact_open" -> "stub__record_part__intent__service": { class: inheritance }
+"record_common__fact_open" -> "stub__record_part__operation__orientation": { class: inheritance }
+"record_common__fact_open" -> "stub__record_part__operation__supports": { class: inheritance }
+"stub__record_product__use_case__service_class__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"stub__record_product__use_case__consequences__severity__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
+"aggregate__record_common__fact"."record_common__fact_known"."sources" -> "stub__record_common__source": "sources [1..*]" { class: composition }
+"aggregate__record_common__fact"."record_common__fact_known"."uncertainty" -> "aggregate__record_common__fact"."record_common__uncertainty": "uncertainty [0..1]" { class: composition }
+"aggregate__record_common__money_fact__known"."record_common__money_fact__known"."value" -> "aggregate__record_common__money_fact__known"."record_common__money": "value [0..1]" { class: composition }
+"aggregate__record_common__load"."record_common__load" -> "aggregate__record_common__load"."record_common__quantity_fact": "magnitude [1]\nduration, frequency, cycles [0..1]" { class: composition }
+"aggregate__record_common__load"."record_common__load"."application" -> "stub__record_common__subject": "application [0..1]" { class: composition }

@@ -1,0 +1,23 @@
+...@../../classes
+direction: right
+
+"aggregate__record_bundle_manifest": {
+  class: aggregate
+  label: "bundle-manifest"
+  "record_bundle_manifest": {
+    class: document
+    label: "bundle-manifest"
+    shape: sql_table
+    "files": "sha256 by key" { constraint: "req" }
+    "version_manifest_sha256": "sha256"
+    "parts": "version_part by key"
+  }
+  "record_bundle_manifest__version_part": {
+    class: owned
+    label: "version_part"
+    shape: sql_table
+    "source_sha256": "sha256"
+  }
+}
+
+"aggregate__record_bundle_manifest"."record_bundle_manifest"."parts" -> "aggregate__record_bundle_manifest"."record_bundle_manifest__version_part": "parts [0..*]" { class: composition }

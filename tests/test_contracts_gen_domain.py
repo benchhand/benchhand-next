@@ -1,17 +1,12 @@
-"""The domain model generated from the published schemas: classes, relations, cardinality and unions."""
+"""The domain model built from the published schemas: classes, fields, relations, cardinality and unions."""
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
 from typing import Any
 
 import pytest
-from contracts_gen.docs import write_docs
-from contracts_gen.domain import MAX_ENUM_VALUES, build_model, class_id, ref_counts
-from contracts_gen.domain_render import DOMAIN_MODEL_FILE, MAX_DIAGRAM_CLASSES, render_domain_model
-from contracts_gen.sources import DOCS_OUT, REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
-from mermaid_render import mermaid_blocks, needs_mermaid, render_markdown
+from contracts_gen.domain import MAX_ENUM_VALUES, ClassNode, DomainModel, build_model, class_id, ref_counts
+from contracts_gen.sources import REPO_ROOT, SCHEMAS_OUT, Contract, load_contracts
 
 
 def _contract(stem: str, schema: dict[str, Any]) -> Contract:
@@ -56,61 +51,58 @@ WIDGET = _contract(
     },
 )
 
-EXPECTED_RECORD_DIAGRAM = """\
-classDiagram
-    class record_widget["widget"] {
-        id: part_id
-        status: enum draft|released
-        size?: enum
-        notes?: object
-        tags?: string[]
-        lines: line[1..*]
-        owner?: person
-        step: step
-    }
-    class record_widget__notes["widget.notes"] {
-        text?: string
-    }
-    class record_widget__line["line"] {
-        qty: integer
-    }
-    class record_widget__step["step"] {
-        <<abstract>>
-        kind: discriminator
-    }
-    class record_widget__press["press"] {
-        kind: const press
-        force: number
-    }
-    class record_widget__bolt["bolt"] {
-        kind: const bolt
-        torque?: number
-    }
-    class common_person["common/person.person"] {
-        <<external>>
-    }
-    record_widget "1" *-- "0..1" record_widget__notes : notes
-    record_widget "1" *-- "1..*" record_widget__line : lines
-    record_widget --> "0..1" common_person : owner
-    record_widget__step <|-- record_widget__press
-    record_widget__step <|-- record_widget__bolt
-    record_widget "1" *-- "1" record_widget__step : step"""
+
+def _fields(node: ClassNode) -> list[str]:
+    """The fields as ``name: type``, with ``?`` after the name of an optional one."""
+    return [f"{held.name}{'' if held.required else '?'}: {held.type}" for held in node.fields]
 
 
-def _blocks(markdown: str) -> list[str]:
-    return re.findall(r"```mermaid\n(.*?)\n```", markdown, flags=re.DOTALL)
+def _members(model: DomainModel, class_: str) -> list[str]:
+    return _fields(model.classes[class_])
 
 
-def test_a_synthetic_contract_renders_nesting_arrays_optionals_refs_and_a_discriminated_union() -> None:
-    blocks = _blocks(render_domain_model([PERSON, WIDGET]))
-    assert blocks[-1] == EXPECTED_RECORD_DIAGRAM
+def test_a_synthetic_contract_has_nesting_arrays_optionals_refs_and_a_discriminated_union() -> None:
+    model = build_model([PERSON, WIDGET])
+    assert _members(model, "record_widget") == [
+        "id: part_id",
+        "status: enum draft|released",
+        "size?: enum",
+        "notes?: object",
+        "tags?: string[]",
+        "lines: line[1..*]",
+        "owner?: person",
+        "step: step",
+    ]
+    assert _members(model, "record_widget__notes") == ["text?: string"]
+    assert model.classes["record_widget__step"].stereotype == "abstract"
+    assert _members(model, "record_widget__step") == ["kind: discriminator"]
+    assert _members(model, "record_widget__bolt") == ["kind: const bolt", "torque?: number"]
+    assert {(rel.source, rel.target, rel.kind) for rel in model.relations} == {
+        ("record_widget", "record_widget__notes", "composition"),
+        ("record_widget", "record_widget__line", "composition"),
+        ("record_widget", "common_person", "association"),
+        ("record_widget", "record_widget__step", "composition"),
+        ("record_widget__step", "record_widget__press", "inheritance"),
+        ("record_widget__step", "record_widget__bolt", "inheritance"),
+    }
 
 
-def test_the_overview_shows_the_record_documents_and_nothing_else() -> None:
-    overview = _blocks(render_domain_model([PERSON, WIDGET]))[0]
-    assert 'class record_widget["widget"]' in overview
-    assert "<<document>>" in overview
-    assert "common_person" not in overview
+def test_a_field_carries_its_description_and_the_values_of_an_enum_too_long_to_spell_out() -> None:
+    schema = {
+        "type": "object",
+        "description": "A box.",
+        "properties": {
+            "size": {"description": "How big.", "enum": [f"s{n}" for n in range(MAX_ENUM_VALUES + 1)]},
+            "sizes": {"type": "array", "items": {"enum": ["a", "b"]}},
+            "plain": {"type": "string"},
+        },
+    }
+    node = build_model([_contract("record/box", schema)]).classes["record_box"]
+    size, sizes, plain = node.fields
+    assert node.description == "A box."
+    assert (size.description, len(size.values)) == ("How big.", MAX_ENUM_VALUES + 1)
+    assert sizes.values == ("a", "b")
+    assert (plain.description, plain.values) == ("", ())
 
 
 def test_cardinality_comes_from_arrays_and_from_required_versus_optional() -> None:
@@ -149,38 +141,7 @@ def test_allof_with_a_ref_is_inheritance() -> None:
     assert [(rel.source, rel.target, rel.kind) for rel in model.relations] == [
         ("record_inherit__base", "record_inherit__child", "inheritance")
     ]
-    assert model.classes["record_inherit__child"].members == ["extra?: string"]
-
-
-def test_a_group_over_the_class_limit_is_split_by_document_without_dropping_a_class() -> None:
-    def crowded(stem: str) -> Contract:
-        defs = {f"item_{n}": {"type": "object", "properties": {"n": {"type": "integer"}}} for n in range(30)}
-        return _contract(stem, {"$defs": defs})
-
-    text = render_domain_model([crowded("record/first"), crowded("record/second")])
-    assert f"more than {MAX_DIAGRAM_CLASSES}, so there is one diagram per document" in text
-    assert "### `record/first`" in text
-    assert "### `record/second`" in text
-    for stem in ("record/first", "record/second"):
-        assert all(f"class {class_id(stem, f'item_{n}')}[" in text for n in range(30))
-
-
-def test_every_object_definition_of_the_published_contracts_is_a_class() -> None:
-    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
-    owned = _owned_classes(render_domain_model(contracts))
-    missing = [
-        f"{contract.stem}#{name}"
-        for contract in contracts
-        for name, schema in contract.schema.get("$defs", {}).items()
-        if "properties" in schema and class_id(contract.stem, name) not in owned
-    ]
-    assert missing == []
-
-
-def _owned_classes(text: str) -> set[str]:
-    """The classes a diagram defines, not the external stubs it shows for a relation."""
-    found = re.finditer(r'^    class (\S+)\["[^"]*"\]( \{\n        <<(\w+)>>)?', text, flags=re.MULTILINE)
-    return {match.group(1) for match in found if match.group(3) != "external"}
+    assert _members(model, "record_inherit__child") == ["extra?: string"]
 
 
 def _union_branches(schema: Any) -> list[Any]:
@@ -201,10 +162,22 @@ def _is_object(contracts: dict[str, Contract], stem: str, branch: Any) -> bool:
     return "properties" in contracts[other].schema.get("$defs", {}).get(fragment, {})
 
 
+def test_every_object_definition_of_the_published_contracts_is_a_class() -> None:
+    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
+    classes = build_model(contracts).classes
+    missing = [
+        f"{contract.stem}#{name}"
+        for contract in contracts
+        for name, schema in contract.schema.get("$defs", {}).items()
+        if "properties" in schema and class_id(contract.stem, name) not in classes
+    ]
+    assert missing == []
+
+
 def test_every_document_root_and_every_union_of_objects_is_a_class() -> None:
     contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
     by_stem = {contract.stem: contract for contract in contracts}
-    owned = _owned_classes(render_domain_model(contracts))
+    classes = build_model(contracts).classes
     roots = [
         c.stem
         for c in contracts
@@ -223,70 +196,55 @@ def test_every_document_root_and_every_union_of_objects_is_a_class() -> None:
         and all(_is_object(by_stem, contract.stem, b) for b in branches)
     ]
     assert unions
-    assert [stem for stem in roots if class_id(stem, None) not in owned] == []
-    assert [union for union in unions if union not in owned] == []
+    assert [stem for stem in roots if class_id(stem, None) not in classes] == []
+    assert [union for union in unions if union not in classes] == []
 
 
 @pytest.fixture(scope="module")
-def published() -> tuple[Any, str]:
-    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
-    return build_model(contracts), render_domain_model(contracts)
+def published() -> DomainModel:
+    return build_model(load_contracts(REPO_ROOT / SCHEMAS_OUT))
 
 
-def _relation(model: Any, source: str, label: str) -> tuple[str, str, str]:
+def _relation(model: DomainModel, source: str, label: str) -> tuple[str, str, str]:
     (found,) = [rel for rel in model.relations if rel.source == source and rel.label == label]
     return found.target, found.kind, found.cardinality
 
 
-def _members(model: Any, class_: str) -> list[str]:
-    return model.classes[class_].members
-
-
-def test_a_nullable_job_process_is_zero_or_one_process_identity(published: tuple[Any, str]) -> None:
-    model, _ = published
-    assert _relation(model, "jobs_job__JobRecord", "process") == (
+def test_a_nullable_job_process_is_zero_or_one_process_identity(published: DomainModel) -> None:
+    assert _relation(published, "jobs_job__JobRecord", "process") == (
         "jobs_job__ProcessIdentity",
         "composition",
         "0..1",
     )
-    assert "jobs_job__JobRecord__process" not in model.classes
-    assert "process: ProcessIdentity or null" in _members(model, "jobs_job__JobRecord")
+    assert "jobs_job__JobRecord__process" not in published.classes
+    assert "process: ProcessIdentity or null" in _members(published, "jobs_job__JobRecord")
 
 
-def test_map_values_are_typed_and_related(published: tuple[Any, str]) -> None:
-    model, _ = published
-    assert "facets: facets by key" in _members(model, "record_evidence_assessment")
-    assert _relation(model, "record_evidence_assessment", "facets") == (
+def test_map_values_are_typed_and_related(published: DomainModel) -> None:
+    assert "facets: facets by key" in _members(published, "record_evidence_assessment")
+    assert _relation(published, "record_evidence_assessment", "facets") == (
         "record_evidence_assessment__facets",
         "composition",
         "0..*",
     )
-    assert "parts?: version_part by key" in _members(model, "record_bundle_manifest")
-    assert _relation(model, "record_bundle_manifest", "parts") == (
+    assert "parts?: version_part by key" in _members(published, "record_bundle_manifest")
+    assert _relation(published, "record_bundle_manifest", "parts") == (
         "record_bundle_manifest__version_part",
         "composition",
         "0..*",
     )
 
 
-def test_tuples_and_nested_arrays_keep_their_shape_and_bounds(published: tuple[Any, str]) -> None:
-    model, _ = published
-    assert "samples: [number, number][2..*]" in _members(model, "record_assembly__profile")
+def test_tuples_and_nested_arrays_keep_their_shape_and_bounds(published: DomainModel) -> None:
+    assert "samples: [number, number][2..*]" in _members(published, "record_assembly__profile")
     holder = "record_interfaces__functional__print_in_place"
-    assert "gap_features: face[2][1..*]" in _members(model, holder)
-    assert _relation(model, holder, "gap_features") == ("record_interfaces__face", "composition", "2..*")
+    assert "gap_features: face[2][1..*]" in _members(published, holder)
+    assert _relation(published, holder, "gap_features") == ("record_interfaces__face", "composition", "2..*")
 
 
-def test_literals_are_json(published: tuple[Any, str]) -> None:
-    model, text = published
-    assert "make_buy: enum make|buy|null" in _members(model, "record_bom_row")
-    assert "None" not in text
-
-
-def test_the_overview_counts_every_ref_to_another_record_contract(published: tuple[Any, str]) -> None:
-    _, text = published
-    overview = _blocks(text)[0]
-    assert re.search(r"^    record_bom_row --> record_common : \d+ refs$", overview, flags=re.MULTILINE)
+def test_literals_are_json(published: DomainModel) -> None:
+    assert "make_buy: enum make|buy|null" in _members(published, "record_bom_row")
+    assert not [held for node in published.classes.values() for held in node.fields if "None" in held.type]
 
 
 def test_ref_counts_count_refs_anywhere_but_not_inside_the_same_contract() -> None:
@@ -309,30 +267,5 @@ def test_a_tuple_of_classes_holds_one_per_position() -> None:
         "$defs": {"row": {"type": "object", "properties": {"n": {"type": "integer"}}}},
     }
     model = build_model([_contract("record/pair", schema)])
-    assert model.classes["record_pair"].members == ["pair: [row, row]"]
+    assert _members(model, "record_pair") == ["pair: [row, row]"]
     assert {rel.cardinality for rel in model.relations if rel.label == "pair"} == {"1"}
-
-
-def test_the_docs_include_the_domain_model_and_link_it_from_the_index(tmp_path: Path) -> None:
-    write_docs([PERSON, WIDGET], tmp_path)
-    assert (tmp_path / DOMAIN_MODEL_FILE).read_text().startswith("# Domain model\n")
-    assert f"]({DOMAIN_MODEL_FILE})" in (tmp_path / "README.md").read_text()
-
-
-def test_the_committed_domain_model_is_what_the_generator_writes() -> None:
-    """The drift check covers every generated file; this one names the file a reader opens."""
-    contracts = load_contracts(REPO_ROOT / SCHEMAS_OUT)
-    committed = (REPO_ROOT / DOCS_OUT / DOMAIN_MODEL_FILE).read_text(encoding="utf-8")
-    assert committed == render_domain_model(contracts)
-
-
-@needs_mermaid
-def test_every_synthetic_block_renders(tmp_path: Path) -> None:
-    text = render_domain_model([PERSON, WIDGET])
-    assert len(render_markdown(text, tmp_path)) == mermaid_blocks(text)
-
-
-@needs_mermaid
-def test_every_block_of_the_domain_model_renders(tmp_path: Path) -> None:
-    text = (REPO_ROOT / DOCS_OUT / DOMAIN_MODEL_FILE).read_text(encoding="utf-8")
-    assert len(render_markdown(text, tmp_path)) == mermaid_blocks(text)

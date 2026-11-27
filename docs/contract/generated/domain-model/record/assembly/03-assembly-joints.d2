@@ -1,0 +1,70 @@
+...@../../classes
+direction: right
+
+"aggregate__record_assembly__joints": {
+  class: aggregate
+  label: "assembly.joints"
+  "record_assembly__joints": {
+    class: owned
+    label: "assembly.joints"
+    shape: sql_table
+    "id": "joint_id" { constraint: "req" }
+    "type": "enum revolute|prismatic|fixed" { constraint: "req" }
+    "parent": "part_ref" { constraint: "req" }
+    "child": "part_ref" { constraint: "req" }
+    "axis": "vector" { constraint: "req" }
+    "origin": "vector" { constraint: "req" }
+    "min": "number" { constraint: "req" }
+    "max": "number" { constraint: "req" }
+    "nominal": "number"
+    "coupling": "coupling"
+    "torque": "enum transmitted|none"
+    "torque_path": "torque_path"
+  }
+  "record_assembly__coupling": {
+    class: union
+    label: "coupling  «abstract»"
+    shape: sql_table
+    "type": "discriminator" { constraint: "req" }
+  }
+  "record_assembly__coupling__linear": {
+    class: owned
+    label: "coupling.linear"
+    shape: sql_table
+    "type": "const linear" { constraint: "req" }
+    "driver": "joint_id" { constraint: "req" }
+    "ratio": "number" { constraint: "req" }
+    "offset": "number"
+  }
+  "record_assembly__coupling__periodic_table": {
+    class: owned
+    label: "coupling.periodic_table"
+    shape: sql_table
+    "type": "const periodic_table" { constraint: "req" }
+    "driver": "joint_id" { constraint: "req" }
+    "profile": "string" { constraint: "req" }
+    "phase_deg": "number"
+  }
+  "record_assembly__coupling__slider_crank": {
+    class: owned
+    label: "coupling.slider_crank"
+    shape: sql_table
+    "type": "const slider_crank" { constraint: "req" }
+    "mechanism": "string" { constraint: "req" }
+    "output": "enum displacement|rod_angle" { constraint: "req" }
+  }
+  "record_assembly__torque_path": {
+    class: owned
+    label: "torque_path"
+    shape: sql_table
+    "type": "enum" { constraint: "req" }
+    "parts": "part_ref[1..*]"
+    "decision": "decision"
+  }
+}
+
+"aggregate__record_assembly__joints"."record_assembly__coupling__linear" -> "aggregate__record_assembly__joints"."record_assembly__coupling": { class: inheritance }
+"aggregate__record_assembly__joints"."record_assembly__coupling__periodic_table" -> "aggregate__record_assembly__joints"."record_assembly__coupling": { class: inheritance }
+"aggregate__record_assembly__joints"."record_assembly__coupling__slider_crank" -> "aggregate__record_assembly__joints"."record_assembly__coupling": { class: inheritance }
+"aggregate__record_assembly__joints"."record_assembly__joints"."coupling" -> "aggregate__record_assembly__joints"."record_assembly__coupling": "coupling [0..1]" { class: composition }
+"aggregate__record_assembly__joints"."record_assembly__joints"."torque_path" -> "aggregate__record_assembly__joints"."record_assembly__torque_path": "torque_path [0..1]" { class: composition }

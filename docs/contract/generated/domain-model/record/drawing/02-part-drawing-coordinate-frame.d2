@@ -1,0 +1,47 @@
+...@../../classes
+direction: right
+
+"aggregate__record_drawing__part_drawing__coordinate_frame": {
+  class: aggregate
+  label: "part_drawing.coordinate_frame"
+  "record_drawing__direction": {
+    class: owned
+    label: "direction"
+    shape: sql_table
+    "normal_to": "reference"
+    "parallel_to": "reference"
+    "toward": "reference"
+    "toward_axis": "reference"
+  }
+  "record_drawing__part_drawing__coordinate_frame": {
+    class: owned
+    label: "part_drawing.coordinate_frame"
+    shape: sql_table
+    "origin": "object" { constraint: "req" }
+    "x": "direction"
+    "y": "direction"
+    "z": "direction"
+  }
+  "record_drawing__part_drawing__coordinate_frame__origin": {
+    class: union
+    label: "part_drawing.coordinate_frame.origin  «union»"
+    shape: sql_table
+  }
+  "record_drawing__part_drawing__coordinate_frame__origin__1": {
+    class: owned
+    label: "part_drawing.coordinate_frame.origin.1"
+    shape: sql_table
+    "intersection": "reference[2..3]" { constraint: "req" }
+  }
+  "record_drawing__part_drawing__coordinate_frame__origin__2": {
+    class: owned
+    label: "part_drawing.coordinate_frame.origin.2"
+    shape: sql_table
+    "at": "reference" { constraint: "req" }
+  }
+}
+
+"aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame__origin__1" -> "aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame__origin": { class: inheritance }
+"aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame__origin__2" -> "aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame__origin": { class: inheritance }
+"aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame"."origin" -> "aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame__origin": "origin [1]" { class: composition }
+"aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__part_drawing__coordinate_frame" -> "aggregate__record_drawing__part_drawing__coordinate_frame"."record_drawing__direction": "x, y, z [0..1]" { class: composition }

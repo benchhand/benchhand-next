@@ -2,8 +2,8 @@
 
 ``build_model`` reads the published schemas the other generators read and returns the classes, one per
 contract root, named ``$defs`` object or union, and per inline object, with their relations. It reads nothing
-else: a new contract or definition shows up in the diagrams without a change here. ``domain_render`` writes
-the Mermaid.
+else: a new contract or definition shows up in the diagrams without a change here. ``domain_d2`` lays the
+classes out and ``domain_docs`` writes the pages.
 
 Relations, from the property that holds the reference:
 
@@ -51,9 +51,6 @@ _TYPE_KEYWORDS = (
 )
 _JSON_WORDS = ("null", "true", "false")
 _DISCRIMINATOR_NAMES = ("kind", "type", "status")
-_MEMBER_TRANSLATION = str.maketrans(
-    {"(": "[", ")": "]", "<": "[", ">": "]", "{": "[", "}": "]", '"': "'", "~": "-", "`": "'"}
-)
 
 
 @dataclass(frozen=True)
@@ -63,6 +60,9 @@ class Field:
     name: str
     type: str
     required: bool
+    description: str = ""
+    values: tuple[str, ...] = ()
+    """The values of an enum property, or of the enum an array property holds, as ``literal`` writes them."""
 
 
 @dataclass
@@ -75,10 +75,8 @@ class ClassNode:
     """The contract it is defined in, e.g. ``record/assembly``."""
     stereotype: str = ""
     """``abstract`` for a discriminated union, ``union`` for another union, or empty."""
-    members: list[str] = field(default_factory=list)
-    """The Mermaid member lines: ``name?: type`` with the characters Mermaid can't hold replaced."""
+    description: str = ""
     fields: list[Field] = field(default_factory=list)
-    """The same properties as ``members``, unaltered, for the renderers that aren't Mermaid."""
 
 
 @dataclass(frozen=True)
@@ -220,9 +218,13 @@ def _discriminator_rank(name: str) -> int:
     return _DISCRIMINATOR_NAMES.index(name) if name in _DISCRIMINATOR_NAMES else len(_DISCRIMINATOR_NAMES)
 
 
-def _safe(text: str) -> str:
-    """A Mermaid class member can't hold these: they read as a method, a generic, a type or markup."""
-    return text.translate(_MEMBER_TRANSLATION)
+def _enum_values(prop: Any) -> tuple[str, ...]:
+    """The values of the enum ``prop`` is, or that its array items are."""
+    if not isinstance(prop, dict):
+        return ()
+    if "enum" in prop:
+        return tuple(literal(value) for value in prop["enum"])
+    return _enum_values(prop.get("items"))
 
 
 def _enum_label(values: list[Any]) -> str:
@@ -401,7 +403,7 @@ class _Builder:
 
     def _define(self, cursor: _Cursor, schema: dict[str, Any]) -> str:
         if cursor.id not in self.classes:
-            node = ClassNode(cursor.id, cursor.label, cursor.stem)
+            node = ClassNode(cursor.id, cursor.label, cursor.stem, description=schema.get("description", ""))
             self.classes[cursor.id] = node
             if self.registry.kind(cursor.stem, schema) == "object":
                 self._define_object(cursor, schema, node)
@@ -425,7 +427,6 @@ class _Builder:
         values = _map_values(schema)
         if values is not None:  # the other keys of an object with named properties too
             key_type = self.registry.type_label(cursor.stem, values)
-            node.members.append(_safe(f"[key]: {key_type}"))
             node.fields.append(Field("[key]", key_type, required=False))
             for target in self._targets(cursor.child("key"), values, _Hold().times(0, None)):
                 cardinality = target.hold.cardinality(required=False)
@@ -442,8 +443,7 @@ class _Builder:
             return
         found = self.registry.discriminator(cursor.stem, branches)
         node.stereotype = "abstract" if found else "union"
-        if found and not any(member.startswith(f"{found[0]}") for member in node.members):
-            node.members.append(f"{found[0]}: discriminator")
+        if found and not any(held.name.startswith(found[0]) for held in node.fields):
             node.fields.append(Field(found[0], "discriminator", required=True))
         for index, branch in enumerate(branches):
             child = self._branch(cursor, branch, found[1][index] if found else str(index + 1))
@@ -468,8 +468,8 @@ class _Builder:
 
     def _member(self, cursor: _Cursor, node: ClassNode, name: str, prop: Any, required: bool) -> None:
         label = self.registry.type_label(cursor.stem, prop)
-        node.members.append(_safe(f"{name}{'' if required else '?'}: {label}"))
-        node.fields.append(Field(name, label, required))
+        description = prop.get("description", "") if isinstance(prop, dict) else ""
+        node.fields.append(Field(name, label, required, description, _enum_values(prop)))
         for target in self._targets(cursor.child(name), prop, _Hold()):
             cardinality = target.hold.cardinality(required)
             self.relations.append(Relation(cursor.id, target.id, target.kind, name, cardinality))

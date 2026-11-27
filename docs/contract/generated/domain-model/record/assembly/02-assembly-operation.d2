@@ -1,0 +1,98 @@
+...@../../classes
+direction: right
+
+"aggregate__record_assembly__assembly_operation": {
+  class: aggregate
+  label: "assembly_operation"
+  "record_assembly__assembly_operation": {
+    class: owned
+    label: "assembly_operation"
+    shape: sql_table
+    "id": "string" { constraint: "req" }
+    "kind": "enum" { constraint: "req" }
+    "part": "part_ref" { constraint: "req" }
+    "into": "part_ref"
+    "interface": "interface_id"
+    "direction": "vector"
+    "acceptance": "object"
+    "tools": "string[]"
+    "consumables": "string[]"
+    "verify_joint": "string"
+    "predecessors": "string[1..*]"
+    "closes": "part_ref[1..*]"
+    "tool_access": "object[1..*]"
+    "engagement": "quantity_fact"
+    "torque": "quantity_fact"
+    "retention": "text_fact"
+    "service_access": "text_fact"
+    "edge_distance": "object"
+    "path": "object"
+    "inspection": "string"
+  }
+  "record_assembly__assembly_operation__acceptance": {
+    class: owned
+    label: "assembly_operation.acceptance"
+    shape: sql_table
+    "kind": "enum" { constraint: "req" }
+    "features": "string[1..2]" { constraint: "req" }
+  }
+  "record_assembly__assembly_operation__tool_access": {
+    class: owned
+    label: "assembly_operation.tool_access"
+    shape: sql_table
+    "tool": "string" { constraint: "req" }
+    "capability": "profile_id"
+    "approach": "vector"
+    "reach": "quantity_fact"
+    "envelope": "text_fact"
+  }
+  "record_assembly__assembly_operation__edge_distance": {
+    class: owned
+    label: "assembly_operation.edge_distance"
+    shape: sql_table
+    "criterion": "criterion" { constraint: "req" }
+    "distance": "quantity_fact" { constraint: "req" }
+  }
+  "record_assembly__assembly_operation__edge_distance__criterion": {
+    class: owned
+    label: "assembly_operation.edge_distance.criterion"
+    shape: sql_table
+    "property": "const edge_distance"
+    "operator": "enum >=|between"
+    "units": "enum mm|um|m" { constraint: "req" }
+  }
+  "record_assembly__assembly_operation__path": {
+    class: owned
+    label: "assembly_operation.path"
+    shape: sql_table
+    "start": "vector" { constraint: "req" }
+    "via": "vector[1..*]"
+  }
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__edge_distance__criterion" -> "stub__record_common__criterion": { class: inheritance }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation"."acceptance" -> "aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__acceptance": "acceptance [0..1]" { class: composition }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__tool_access"."reach" -> "stub__record_common__quantity_fact": "reach [0..1]" { class: association }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__tool_access"."envelope" -> "stub__record_common__text_fact": "envelope [0..1]" { class: association }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation"."tool_access" -> "aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__tool_access": "tool_access [0..*]" { class: composition }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation" -> "stub__record_common__quantity_fact": "engagement, torque [0..1]" { class: association }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation" -> "stub__record_common__text_fact": "retention, service_access [0..1]" { class: association }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__edge_distance"."criterion" -> "aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__edge_distance__criterion": "criterion [1]" { class: composition }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__edge_distance"."distance" -> "stub__record_common__quantity_fact": "distance [1]" { class: association }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation"."edge_distance" -> "aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__edge_distance": "edge_distance [0..1]" { class: composition }
+"aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation"."path" -> "aggregate__record_assembly__assembly_operation"."record_assembly__assembly_operation__path": "path [0..1]" { class: composition }

@@ -1,0 +1,90 @@
+...@../../classes
+direction: right
+
+"aggregate__record_part__setup": {
+  class: aggregate
+  label: "setup"
+  "record_part__setup": {
+    class: owned
+    label: "setup"
+    shape: sql_table
+    "stock": "object"
+    "datums": "semantic_ids"
+    "workholding": "object"
+    "access": "object"
+    "inspection_access": "text_fact"
+  }
+  "record_part__setup__stock": {
+    class: owned
+    label: "setup.stock"
+    shape: sql_table
+    "material_profile": "profile_id or fact_open"
+    "grade": "text_fact"
+    "form": "text_fact"
+    "dimensions": "text_fact"
+    "thickness": "quantity_fact"
+    "state": "text"
+    "supplier": "text"
+  }
+  "record_part__setup__workholding": {
+    class: owned
+    label: "setup.workholding"
+    shape: sql_table
+    "method": "text_fact" { constraint: "req" }
+    "contact_regions": "target[1..*]"
+    "fixture": "text"
+    "clamping_force": "quantity_fact"
+    "allowable_deformation": "quantity_fact"
+  }
+  "record_part__setup__access": {
+    class: owned
+    label: "setup.access"
+    shape: sql_table
+    "sides": "texts"
+    "tools": "object[1..*]"
+  }
+  "record_part__setup__access__tools": {
+    class: owned
+    label: "setup.access.tools"
+    shape: sql_table
+    "description": "text" { constraint: "req" }
+    "capability": "profile_id"
+    "diameter": "quantity_fact"
+    "reach": "quantity_fact"
+    "holder": "text_fact"
+  }
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__target": {
+  class: stub
+  label: "target\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_part__setup"."record_part__setup__stock"."material_profile" -> "stub__record_common__fact_open": "material_profile [0..1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup__stock" -> "stub__record_common__text_fact": "grade, form, dimensions [0..1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup__stock"."thickness" -> "stub__record_common__quantity_fact": "thickness [0..1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup"."stock" -> "aggregate__record_part__setup"."record_part__setup__stock": "stock [0..1]" { class: composition }
+"aggregate__record_part__setup"."record_part__setup__workholding"."method" -> "stub__record_common__text_fact": "method [1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup__workholding"."contact_regions" -> "stub__record_common__target": "contact_regions [0..*]" { class: association }
+"aggregate__record_part__setup"."record_part__setup__workholding" -> "stub__record_common__quantity_fact": "clamping_force, allowable_deformation [0..1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup"."workholding" -> "aggregate__record_part__setup"."record_part__setup__workholding": "workholding [0..1]" { class: composition }
+"aggregate__record_part__setup"."record_part__setup__access__tools" -> "stub__record_common__quantity_fact": "diameter, reach [0..1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup__access__tools"."holder" -> "stub__record_common__text_fact": "holder [0..1]" { class: association }
+"aggregate__record_part__setup"."record_part__setup__access"."tools" -> "aggregate__record_part__setup"."record_part__setup__access__tools": "tools [0..*]" { class: composition }
+"aggregate__record_part__setup"."record_part__setup"."access" -> "aggregate__record_part__setup"."record_part__setup__access": "access [0..1]" { class: composition }
+"aggregate__record_part__setup"."record_part__setup"."inspection_access" -> "stub__record_common__text_fact": "inspection_access [0..1]" { class: association }

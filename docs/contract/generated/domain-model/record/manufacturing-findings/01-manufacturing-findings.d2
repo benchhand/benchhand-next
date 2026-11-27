@@ -1,0 +1,42 @@
+...@../../classes
+direction: right
+
+"aggregate__record_manufacturing_findings": {
+  class: aggregate
+  label: "manufacturing-findings"
+  "record_manufacturing_findings": {
+    class: document
+    label: "manufacturing-findings"
+    shape: sql_table
+    "dispositions": "disposition[]" { constraint: "req" }
+  }
+  "record_manufacturing_findings__disposition": {
+    class: owned
+    label: "disposition"
+    shape: sql_table
+    "finding": "semantic_id" { constraint: "req" }
+    "code": "finding_code"
+    "producer": "object" { constraint: "req" }
+    "status": "enum open|resolved|accepted_waiver|declined" { constraint: "req" }
+    "reason": "text" { constraint: "req" }
+    "decision": "decision"
+    "replacement_evidence": "evidence_id[1..*]"
+    "waiver": "waiver"
+  }
+  "record_manufacturing_findings__disposition__producer": {
+    class: owned
+    label: "disposition.producer"
+    shape: sql_table
+    "bundle": "project_path" { constraint: "req" }
+    "manifest_sha256": "sha256" { constraint: "req" }
+  }
+}
+"stub__record_common__waiver": {
+  class: stub
+  label: "waiver\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+
+"aggregate__record_manufacturing_findings"."record_manufacturing_findings__disposition"."producer" -> "aggregate__record_manufacturing_findings"."record_manufacturing_findings__disposition__producer": "producer [1]" { class: composition }
+"aggregate__record_manufacturing_findings"."record_manufacturing_findings__disposition"."waiver" -> "stub__record_common__waiver": "waiver [0..1]" { class: association }
+"aggregate__record_manufacturing_findings"."record_manufacturing_findings"."dispositions" -> "aggregate__record_manufacturing_findings"."record_manufacturing_findings__disposition": "dispositions [0..*]" { class: composition }

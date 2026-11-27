@@ -1,0 +1,140 @@
+...@../../classes
+direction: right
+
+"aggregate__record_assembly": {
+  class: aggregate
+  label: "assembly"
+  "record_assembly": {
+    class: document
+    label: "assembly"
+    shape: sql_table
+    "operations": "assembly_operation[] or fact_unknown"
+    "occurrences": "object[1..*]"
+    "profiles": "profile by key"
+    "mechanisms": "mechanism[1..*]"
+    "subassemblies": "object[1..*]" { constraint: "req" }
+    "joints": "object[]" { constraint: "req" }
+    "drawing": "assembly_drawing"
+  }
+  "record_assembly__occurrences": {
+    class: owned
+    label: "assembly.occurrences"
+    shape: sql_table
+    "id": "occurrence_id" { constraint: "req" }
+    "PN": "pn" { constraint: "req" }
+    "placement": "placement"
+  }
+  "record_assembly__placement": {
+    class: owned
+    label: "placement"
+    shape: sql_table
+    "translation_mm": "vector"
+    "rotation": "object"
+  }
+  "record_assembly__placement__rotation": {
+    class: owned
+    label: "placement.rotation"
+    shape: sql_table
+    "axis": "vector" { constraint: "req" }
+    "angle_deg": "number" { constraint: "req" }
+  }
+  "record_assembly__profile": {
+    class: owned
+    label: "profile"
+    shape: sql_table
+    "input_unit": "const deg" { constraint: "req" }
+    "output_unit": "enum mm|deg" { constraint: "req" }
+    "period_deg": "number" { constraint: "req" }
+    "interpolation": "const linear" { constraint: "req" }
+    "samples": "[number, number][2..*]" { constraint: "req" }
+  }
+  "record_assembly__mechanism": {
+    class: owned
+    label: "mechanism"
+    shape: sql_table
+    "id": "string" { constraint: "req" }
+    "type": "const slider_crank" { constraint: "req" }
+    "driver": "joint_id" { constraint: "req" }
+    "origin_mm": "vector" { constraint: "req" }
+    "crank_axis": "vector" { constraint: "req" }
+    "bank_axis": "vector" { constraint: "req" }
+    "crank_radius_mm": "number" { constraint: "req" }
+    "rod_length_mm": "number" { constraint: "req" }
+    "phase_deg": "number"
+  }
+  "record_assembly__subassemblies": {
+    class: owned
+    label: "assembly.subassemblies"
+    shape: sql_table
+    "id": "string" { constraint: "req" }
+    "title": "string" { constraint: "req" }
+    "parts": "pn[1..*]"
+    "occurrences": "occurrence_ref[1..*]"
+  }
+  "record_assembly__assembly_drawing": {
+    class: owned
+    label: "assembly_drawing"
+    shape: sql_table
+    "number": "string" { constraint: "req" }
+    "rev": "string" { constraint: "req" }
+    "title": "string" { constraint: "req" }
+    "scope": "enum modeled_mechanical_assembly|complete_assembly"
+    "excludes": "string[]"
+    "views": "object[1..*]" { constraint: "req" }
+    "explode": "object[]"
+    "items": "drawing_item[1..*]" { constraint: "req" }
+    "subassembly_sheets": "string[]"
+  }
+  "record_assembly__assembly_drawing__views": {
+    class: owned
+    label: "assembly_drawing.views"
+    shape: sql_table
+    "id": "string" { constraint: "req" }
+    "kind": "enum assembled|exploded" { constraint: "req" }
+    "direction": "enum" { constraint: "req" }
+  }
+  "record_assembly__assembly_drawing__explode": {
+    class: owned
+    label: "assembly_drawing.explode"
+    shape: sql_table
+    "ref": "part_ref" { constraint: "req" }
+    "offset_mm": "vector" { constraint: "req" }
+  }
+  "record_assembly__drawing_item": {
+    class: owned
+    label: "drawing_item"
+    shape: sql_table
+    "item": "integer" { constraint: "req" }
+    "PN": "pn" { constraint: "req" }
+    "occurrences": "occurrence_ref[1..*]"
+  }
+}
+"stub__record_assembly__assembly_operation": {
+  class: stub
+  label: "assembly_operation"
+  link: "02-assembly-operation.svg"
+}
+"stub__record_assembly__joints": {
+  class: stub
+  label: "assembly.joints"
+  link: "03-assembly-joints.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+
+"aggregate__record_assembly"."record_assembly"."operations" -> "stub__record_assembly__assembly_operation": "operations [0..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."operations" -> "stub__record_common__fact_unknown": "operations [0..1]" { class: association }
+"aggregate__record_assembly"."record_assembly__placement"."rotation" -> "aggregate__record_assembly"."record_assembly__placement__rotation": "rotation [0..1]" { class: composition }
+"aggregate__record_assembly"."record_assembly__occurrences"."placement" -> "aggregate__record_assembly"."record_assembly__placement": "placement [0..1]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."occurrences" -> "aggregate__record_assembly"."record_assembly__occurrences": "occurrences [0..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."profiles" -> "aggregate__record_assembly"."record_assembly__profile": "profiles [0..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."mechanisms" -> "aggregate__record_assembly"."record_assembly__mechanism": "mechanisms [0..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."subassemblies" -> "aggregate__record_assembly"."record_assembly__subassemblies": "subassemblies [1..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."joints" -> "stub__record_assembly__joints": "joints [0..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly__assembly_drawing"."views" -> "aggregate__record_assembly"."record_assembly__assembly_drawing__views": "views [1..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly__assembly_drawing"."explode" -> "aggregate__record_assembly"."record_assembly__assembly_drawing__explode": "explode [0..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly__assembly_drawing"."items" -> "aggregate__record_assembly"."record_assembly__drawing_item": "items [1..*]" { class: composition }
+"aggregate__record_assembly"."record_assembly"."drawing" -> "aggregate__record_assembly"."record_assembly__assembly_drawing": "drawing [0..1]" { class: composition }

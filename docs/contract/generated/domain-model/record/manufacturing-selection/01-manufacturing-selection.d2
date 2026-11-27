@@ -1,0 +1,190 @@
+...@../../classes
+direction: right
+
+"aggregate__record_manufacturing_selection": {
+  class: aggregate
+  label: "manufacturing-selection"
+  "record_manufacturing_selection": {
+    class: document
+    label: "manufacturing-selection"
+    shape: sql_table
+    "status": "enum not_assessed|assessed|confirmed" { constraint: "req" }
+    "assessment": "object"
+    "candidates": "candidate[]" { constraint: "req" }
+    "recommendation": "recommendation"
+  }
+  "record_manufacturing_selection__assessment": {
+    class: owned
+    label: "manufacturing-selection.assessment"
+    shape: sql_table
+    "input_sha256": "sha256" { constraint: "req" }
+    "method": "text" { constraint: "req" }
+    "date": "date" { constraint: "req" }
+    "decision": "decision"
+  }
+  "record_manufacturing_selection__candidate": {
+    class: owned
+    label: "candidate"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "title": "text" { constraint: "req" }
+    "architecture": "text" { constraint: "req" }
+    "parts": "candidate_part[1..*]" { constraint: "req" }
+    "interfaces": "interface_id[1..*]"
+    "evaluations": "not_assessed_rule[]" { constraint: "req" }
+    "changes": "object"
+    "quantity": "quantity_fact"
+    "cost": "money_fact"
+    "lead_time": "quantity_fact"
+    "maintenance": "text_fact"
+    "evidence_confidence": "text"
+    "obligations": "texts"
+    "pros": "texts" { constraint: "req" }
+    "cons": "texts" { constraint: "req" }
+    "tradeoffs": "texts" { constraint: "req" }
+    "preference_scores": "object[1..*]"
+  }
+  "record_manufacturing_selection__candidate_part": {
+    class: owned
+    label: "candidate_part"
+    shape: sql_table
+    "PN": "pn" { constraint: "req" }
+    "material_profile": "profile_id or fact_open" { constraint: "req" }
+    "route": "step[1..*]" { constraint: "req" }
+    "proposed": "proposed_part"
+    "note": "text"
+  }
+  "record_manufacturing_selection__step": {
+    class: owned
+    label: "step"
+    shape: sql_table
+    "kind": "semantic_id" { constraint: "req" }
+    "capability": "profile_id or fact_open" { constraint: "req" }
+    "provider": "enum local|outsourced"
+    "purchase": "purchase"
+  }
+  "record_manufacturing_selection__proposed_part": {
+    class: owned
+    label: "proposed_part"
+    shape: sql_table
+    "title": "text" { constraint: "req" }
+    "sourcing": "enum make|made_to_drawing|catalogue" { constraint: "req" }
+    "reason": "text" { constraint: "req" }
+    "functions": "function_entry[1..*]"
+    "transparency": "transparency = opaque|translucent|transparent"
+  }
+  "record_manufacturing_selection__candidate__evaluations": {
+    class: owned
+    label: "candidate.evaluations"
+    shape: sql_table
+    "requirement": "requirement_id" { constraint: "req" }
+    "outcome": "outcome = pass|fail|unknown|not_applicable|not_assessed" { constraint: "req" }
+    "reason": "not_assessed_reason = calibration_off|no_capability_profile"
+    "method": "text" { constraint: "req" }
+    "criterion": "criterion"
+    "value": "quantity or text"
+    "uncertainty": "text"
+    "source": "source"
+    "note": "text"
+  }
+  "record_manufacturing_selection__candidate__changes": {
+    class: owned
+    label: "candidate.changes"
+    shape: sql_table
+    "design": "texts"
+    "equipment": "texts"
+    "finishing": "texts"
+    "inspection": "texts"
+    "interfaces": "texts"
+    "assembly": "texts"
+  }
+  "record_manufacturing_selection__candidate__preference_scores": {
+    class: owned
+    label: "candidate.preference_scores"
+    shape: sql_table
+    "preference": "preference_id" { constraint: "req" }
+    "score": "number" { constraint: "req" }
+    "note": "text"
+  }
+  "record_manufacturing_selection__recommendation": {
+    class: owned
+    label: "recommendation"
+    shape: sql_table
+    "status": "enum conditional|final" { constraint: "req" }
+    "primary": "semantic_id" { constraint: "req" }
+    "prototype": "semantic_id"
+    "end_use": "semantic_id"
+    "fallback": "semantic_id"
+    "governing_requirements": "requirement_ids"
+    "reasons": "texts" { constraint: "req" }
+    "limits": "texts" { constraint: "req" }
+    "prototype_validates": "texts"
+    "what_would_change": "texts" { constraint: "req" }
+    "proposed_changes": "texts"
+  }
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__function_entry": {
+  class: stub
+  label: "function_entry\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__money_fact": {
+  class: stub
+  label: "money_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__quantity": {
+  class: stub
+  label: "quantity\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_part__purchase": {
+  class: stub
+  label: "purchase\n(record/part)"
+  link: "../part/02-operation.svg"
+}
+
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection"."assessment" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__assessment": "assessment [0..1]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate_part"."material_profile" -> "stub__record_common__fact_open": "material_profile [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__step"."capability" -> "stub__record_common__fact_open": "capability [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__step"."purchase" -> "stub__record_part__purchase": "purchase [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate_part"."route" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__step": "route [1..*]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__proposed_part"."functions" -> "stub__record_common__function_entry": "functions [0..*]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate_part"."proposed" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__proposed_part": "proposed [0..1]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate"."parts" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate_part": "parts [1..*]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate__evaluations"."criterion" -> "stub__record_common__criterion": "criterion [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate__evaluations"."value" -> "stub__record_common__quantity": "value [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate__evaluations"."source" -> "stub__record_common__source": "source [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate"."evaluations" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate__evaluations": "evaluations [0..*]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate"."changes" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate__changes": "changes [0..1]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate" -> "stub__record_common__quantity_fact": "quantity, lead_time [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate"."cost" -> "stub__record_common__money_fact": "cost [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate"."maintenance" -> "stub__record_common__text_fact": "maintenance [0..1]" { class: association }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate"."preference_scores" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate__preference_scores": "preference_scores [0..*]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection"."candidates" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__candidate": "candidates [0..*]" { class: composition }
+"aggregate__record_manufacturing_selection"."record_manufacturing_selection"."recommendation" -> "aggregate__record_manufacturing_selection"."record_manufacturing_selection__recommendation": "recommendation [0..1]" { class: composition }

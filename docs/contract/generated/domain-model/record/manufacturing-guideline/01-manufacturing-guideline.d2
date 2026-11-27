@@ -1,0 +1,115 @@
+...@../../classes
+direction: right
+
+"aggregate__record_manufacturing_guideline": {
+  class: aggregate
+  label: "manufacturing-guideline"
+  "record_manufacturing_guideline": {
+    class: document
+    label: "manufacturing-guideline"
+    shape: sql_table
+    "schema_version": "const 1" { constraint: "req" }
+    "id": "guideline_id" { constraint: "req" }
+    "revision": "integer" { constraint: "req" }
+    "title": "text" { constraint: "req" }
+    "extends": "guideline_id[1..*]"
+    "abstract": "boolean"
+    "scope": "scope" { constraint: "req" }
+    "limits": "limit[]" { constraint: "req" }
+  }
+  "record_manufacturing_guideline__scope": {
+    class: owned
+    label: "scope"
+    shape: sql_table
+    "process": "semantic_id" { constraint: "req" }
+    "material_family": "names"
+    "filler": "names"
+    "shore": "names"
+    "nozzle_diameter": "quantity and qty_nozzle_diameter"
+    "nozzle_material": "names"
+  }
+  "record_manufacturing_guideline__scope__nozzle_diameter": {
+    class: owned
+    label: "scope.nozzle_diameter"
+    shape: sql_table
+  }
+  "record_manufacturing_guideline__limit": {
+    class: owned
+    label: "limit"
+    shape: sql_table
+    "characteristic": "enum" { constraint: "req" }
+    "operator": "enum" { constraint: "req" }
+    "quantity": "quantity"
+    "relative": "relative"
+    "quantities": "quantity and qty_nozzle_diameter[1..*]"
+    "value": "string or boolean or string or boolean[1..*]"
+    "applies_to": "applies_to"
+    "disputed": "boolean"
+    "relaxes": "relaxes"
+    "citations": "sources" { constraint: "req" }
+  }
+  "record_manufacturing_guideline__relative": {
+    class: owned
+    label: "relative"
+    shape: sql_table
+    "relative_to": "enum nozzle_diameter|line_width" { constraint: "req" }
+    "factor": "number" { constraint: "req" }
+    "floor": "quantity" { constraint: "req" }
+  }
+  "record_manufacturing_guideline__relative__floor": {
+    class: owned
+    label: "relative.floor"
+    shape: sql_table
+  }
+  "record_manufacturing_guideline__limit__quantities": {
+    class: owned
+    label: "limit.quantities"
+    shape: sql_table
+  }
+  "record_manufacturing_guideline__applies_to": {
+    class: owned
+    label: "applies_to"
+    shape: sql_table
+    "orientation": "semantic_id"
+    "feature": "semantic_id"
+  }
+  "record_manufacturing_guideline__relaxes": {
+    class: owned
+    label: "relaxes"
+    shape: sql_table
+    "reason": "text" { constraint: "req" }
+    "citation": "source" { constraint: "req" }
+  }
+}
+"stub__record_common__quantity": {
+  class: stub
+  label: "quantity\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_manufacturing_capabilities__qty_nozzle_diameter": {
+  class: stub
+  label: "qty_nozzle_diameter\n(record/manufacturing-capabilities)"
+  link: "../manufacturing-capabilities/02-qty-nozzle-diameter.svg"
+}
+
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__scope__nozzle_diameter" -> "stub__record_common__quantity": { class: inheritance }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__scope__nozzle_diameter" -> "stub__record_manufacturing_capabilities__qty_nozzle_diameter": { class: inheritance }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__relative__floor" -> "stub__record_common__quantity": { class: inheritance }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit__quantities" -> "stub__record_common__quantity": { class: inheritance }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit__quantities" -> "stub__record_manufacturing_capabilities__qty_nozzle_diameter": { class: inheritance }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__scope"."nozzle_diameter" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__scope__nozzle_diameter": "nozzle_diameter [0..1]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline"."scope" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__scope": "scope [1]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit"."quantity" -> "stub__record_common__quantity": "quantity [0..1]" { class: association }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__relative"."floor" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__relative__floor": "floor [1]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit"."relative" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__relative": "relative [0..1]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit"."quantities" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit__quantities": "quantities [0..*]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit"."applies_to" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__applies_to": "applies_to [0..1]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__relaxes"."citation" -> "stub__record_common__source": "citation [1]" { class: association }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit"."relaxes" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__relaxes": "relaxes [0..1]" { class: composition }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit"."citations" -> "stub__record_common__source": "citations [1..*]" { class: association }
+"aggregate__record_manufacturing_guideline"."record_manufacturing_guideline"."limits" -> "aggregate__record_manufacturing_guideline"."record_manufacturing_guideline__limit": "limits [0..*]" { class: composition }

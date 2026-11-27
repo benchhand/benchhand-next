@@ -1,0 +1,14 @@
+...@../../classes
+direction: right
+
+"record_verification_row": {
+  class: document
+  label: "verification-row"
+  shape: sql_table
+  "requirement": "requirement_id" { constraint: "req" }
+  "method": "enum I|A|D|T" { constraint: "req" }
+  "criteria": "string" { constraint: "req" }
+  "result": "enum planned|pass|fail|waived|not_assessed" { constraint: "req" }
+  "evidence": "string" { constraint: "req" }
+}
+

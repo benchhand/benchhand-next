@@ -1,0 +1,180 @@
+...@../../classes
+direction: right
+
+"aggregate__record_manufacturing_capabilities": {
+  class: aggregate
+  label: "manufacturing-capabilities"
+  "record_manufacturing_capabilities": {
+    class: document
+    label: "manufacturing-capabilities"
+    shape: sql_table
+    "profiles": "profile[]" { constraint: "req" }
+  }
+  "record_manufacturing_capabilities__profile": {
+    class: owned
+    label: "profile"
+    shape: sql_table
+    "id": "profile_id" { constraint: "req" }
+    "revision": "integer" { constraint: "req" }
+    "title": "text" { constraint: "req" }
+    "process": "semantic_id" { constraint: "req" }
+    "provider": "enum local|outsourced" { constraint: "req" }
+    "template": "const true"
+    "guidance": "texts"
+    "supplier": "text_fact"
+    "operator": "text_fact"
+    "machine": "object"
+    "envelope": "object"
+    "materials": "material_approval[1..*] or fact_open" { constraint: "req" }
+    "parameters": "parameters" { constraint: "req" }
+    "tools": "object[1..*]"
+    "workholding": "text_fact"
+    "constraints": "texts"
+    "calibrations": "calibration[]" { constraint: "req" }
+    "guidelines": "guideline_ref[1..*]"
+    "source": "source"
+  }
+  "record_manufacturing_capabilities__profile__machine": {
+    class: owned
+    label: "profile.machine"
+    shape: sql_table
+    "identity": "text_fact" { constraint: "req" }
+    "location": "text"
+  }
+  "record_manufacturing_capabilities__profile__envelope": {
+    class: owned
+    label: "profile.envelope"
+    shape: sql_table
+    "x": "quantity_fact" { constraint: "req" }
+    "y": "quantity_fact" { constraint: "req" }
+    "z": "quantity_fact" { constraint: "req" }
+  }
+  "record_manufacturing_capabilities__material_approval": {
+    class: owned
+    label: "material_approval"
+    shape: sql_table
+    "material": "profile_id" { constraint: "req" }
+    "status": "enum approved|forbidden" { constraint: "req" }
+    "thickness": "quantity_fact"
+    "coating": "text_fact"
+    "extraction": "text_fact"
+    "operations": "enum[1..*]"
+    "reason": "text"
+    "source": "source" { constraint: "req" }
+  }
+  "record_manufacturing_capabilities__parameters": {
+    class: owned
+    label: "parameters"
+    shape: sql_table
+    "nozzle_diameter": "fact and fact_nozzle_diameter"
+    "layer_height": "fact and fact_layer_height"
+    "hotend_max_temperature": "fact and fact_hotend_max_temperature"
+    "bed_max_temperature": "fact and fact_bed_max_temperature"
+    "max_speed": "fact and fact_max_speed"
+    "travel_x": "fact and fact_travel_x"
+    "travel_y": "fact and fact_travel_y"
+    "travel_z": "fact and fact_travel_z"
+    "spindle_max_speed": "fact and fact_spindle_max_speed"
+    "power": "fact and fact_power"
+    "pump_pressure": "fact and fact_pump_pressure"
+    "press_brake_force": "fact and fact_press_brake_force"
+    "[key]": "fact"
+  }
+  "record_manufacturing_capabilities__profile__tools": {
+    class: owned
+    label: "profile.tools"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "description": "text" { constraint: "req" }
+    "parameters": "parameters" { constraint: "req" }
+  }
+  "record_manufacturing_capabilities__calibration": {
+    class: owned
+    label: "calibration"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "characteristic": "semantic_id" { constraint: "req" }
+    "scope": "object" { constraint: "req" }
+    "result": "object" { constraint: "req" }
+    "source": "source" { constraint: "req" }
+    "date": "date" { constraint: "req" }
+    "valid_until": "date"
+    "decision": "decision"
+  }
+  "record_manufacturing_capabilities__calibration__scope": {
+    class: owned
+    label: "calibration.scope"
+    shape: sql_table
+    "material": "profile_id" { constraint: "req" }
+    "condition": "text"
+    "feature": "text"
+    "size": "quantity"
+    "thickness": "quantity"
+    "orientation": "text"
+    "setup": "text"
+    "tool": "semantic_id"
+    "finish": "text"
+  }
+  "record_manufacturing_capabilities__calibration__result": {
+    class: owned
+    label: "calibration.result"
+    shape: sql_table
+    "limits": "quantity" { constraint: "req" }
+    "distribution": "text"
+    "uncertainty": "quantity"
+    "samples": "integer" { constraint: "req" }
+  }
+}
+"stub__record_common__fact": {
+  class: stub
+  label: "fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__quantity": {
+  class: stub
+  label: "quantity\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile" -> "stub__record_common__text_fact": "supplier, operator, workholding [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile__machine"."identity" -> "stub__record_common__text_fact": "identity [1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."machine" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile__machine": "machine [0..1]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile__envelope" -> "stub__record_common__quantity_fact": "x, y, z [1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."envelope" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile__envelope": "envelope [0..1]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__material_approval"."thickness" -> "stub__record_common__quantity_fact": "thickness [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__material_approval" -> "stub__record_common__text_fact": "coating, extraction [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__material_approval"."source" -> "stub__record_common__source": "source [1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."materials" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__material_approval": "materials [0..*]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."materials" -> "stub__record_common__fact_open": "materials [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__parameters" -> "stub__record_common__fact": "nozzle_diameter, layer_height, hotend_max_temperature, bed_max_temperature, max_speed, travel_x, travel_y, travel_z, spindle_max_speed, power, pump_pressure, press_brake_force [0..1]\n[key] [0..*]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."parameters" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__parameters": "parameters [1]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile__tools"."parameters" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__parameters": "parameters [1]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."tools" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile__tools": "tools [0..*]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration__scope" -> "stub__record_common__quantity": "size, thickness [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration"."scope" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration__scope": "scope [1]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration__result" -> "stub__record_common__quantity": "limits [1]\nuncertainty [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration"."result" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration__result": "result [1]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration"."source" -> "stub__record_common__source": "source [1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."calibrations" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__calibration": "calibrations [0..*]" { class: composition }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile"."source" -> "stub__record_common__source": "source [0..1]" { class: association }
+"aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities"."profiles" -> "aggregate__record_manufacturing_capabilities"."record_manufacturing_capabilities__profile": "profiles [0..*]" { class: composition }

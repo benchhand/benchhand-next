@@ -1,0 +1,88 @@
+...@../../classes
+direction: right
+
+"record_manufacturing_capabilities__qty_nozzle_diameter": {
+  class: owned
+  label: "qty_nozzle_diameter"
+  shape: sql_table
+  "units": "enum mm|m|um"
+}
+"record_manufacturing_capabilities__qty_layer_height": {
+  class: owned
+  label: "qty_layer_height"
+  shape: sql_table
+  "units": "enum mm|m|um"
+}
+"record_manufacturing_capabilities__qty_hotend_max_temperature": {
+  class: owned
+  label: "qty_hotend_max_temperature"
+  shape: sql_table
+  "units": "enum deg_C|K"
+}
+"record_manufacturing_capabilities__qty_bed_max_temperature": {
+  class: owned
+  label: "qty_bed_max_temperature"
+  shape: sql_table
+  "units": "enum deg_C|K"
+}
+"record_manufacturing_capabilities__qty_max_speed": {
+  class: owned
+  label: "qty_max_speed"
+  shape: sql_table
+  "units": "enum mm_s|m_s"
+}
+"record_manufacturing_capabilities__qty_travel_x": {
+  class: owned
+  label: "qty_travel_x"
+  shape: sql_table
+  "units": "enum mm|m|um"
+}
+"record_manufacturing_capabilities__qty_travel_y": {
+  class: owned
+  label: "qty_travel_y"
+  shape: sql_table
+  "units": "enum mm|m|um"
+}
+"record_manufacturing_capabilities__qty_travel_z": {
+  class: owned
+  label: "qty_travel_z"
+  shape: sql_table
+  "units": "enum mm|m|um"
+}
+"record_manufacturing_capabilities__qty_spindle_max_speed": {
+  class: owned
+  label: "qty_spindle_max_speed"
+  shape: sql_table
+  "units": "enum rpm|Hz"
+}
+"record_manufacturing_capabilities__qty_power": {
+  class: owned
+  label: "qty_power"
+  shape: sql_table
+  "units": "enum kW|W"
+}
+"record_manufacturing_capabilities__qty_pump_pressure": {
+  class: owned
+  label: "qty_pump_pressure"
+  shape: sql_table
+  "units": "enum MPa|GPa|bar"
+}
+"record_manufacturing_capabilities__qty_press_brake_force": {
+  class: owned
+  label: "qty_press_brake_force"
+  shape: sql_table
+  "units": "enum kN|N"
+}
+"stub__record_manufacturing_guideline__limit__quantities": {
+  class: stub
+  label: "limit.quantities\n(record/manufacturing-guideline)"
+  link: "../manufacturing-guideline/01-manufacturing-guideline.svg"
+}
+"stub__record_manufacturing_guideline__scope__nozzle_diameter": {
+  class: stub
+  label: "scope.nozzle_diameter\n(record/manufacturing-guideline)"
+  link: "../manufacturing-guideline/01-manufacturing-guideline.svg"
+}
+
+"stub__record_manufacturing_guideline__scope__nozzle_diameter" -> "record_manufacturing_capabilities__qty_nozzle_diameter": { class: inheritance }
+"stub__record_manufacturing_guideline__limit__quantities" -> "record_manufacturing_capabilities__qty_nozzle_diameter": { class: inheritance }

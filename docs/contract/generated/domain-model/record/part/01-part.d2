@@ -1,0 +1,181 @@
+...@../../classes
+direction: right
+
+"aggregate__record_part": {
+  class: aggregate
+  label: "part"
+  "record_part": {
+    class: document
+    label: "part"
+    shape: sql_table
+    "PN": "pn" { constraint: "req" }
+    "rev": "revision" { constraint: "req" }
+    "title": "string" { constraint: "req" }
+    "material": "string" { constraint: "req" }
+    "process": "primary_process" { constraint: "req" }
+    "finish": "string" { constraint: "req" }
+    "mass_target": "number or null" { constraint: "req" }
+    "make_buy": "enum make|buy" { constraint: "req" }
+    "supplier": "string or null"
+    "decisions": "decision[]"
+    "model_frame": "enum assembly_zero|part_local"
+    "form_class": "enum solid|frame|plate|skeleton|shell"
+    "transparency": "enum opaque|translucent|transparent"
+    "procurement": "procurement"
+    "drawing": "part_drawing"
+    "manufacture": "object"
+    "intent": "intent"
+  }
+  "record_part__manufacture": {
+    class: owned
+    label: "part.manufacture"
+    shape: sql_table
+    "relationship": "enum same|different" { constraint: "req" }
+    "state": "string"
+    "reason": "string"
+    "decision": "decision"
+    "volume_rel_tolerance": "number"
+    "volume_abs_tolerance_mm3": "number"
+    "mesh": "object"
+  }
+  "record_part__manufacture__mesh": {
+    class: owned
+    label: "part.manufacture.mesh"
+    shape: sql_table
+    "linear_deflection_mm": "number"
+    "angular_deflection_rad": "number"
+  }
+  "record_part__intent": {
+    class: owned
+    label: "intent"
+    shape: sql_table
+    "functions": "function_entry[1..*] or fact_unknown" { constraint: "req" }
+    "material_profile": "profile_id or fact_open" { constraint: "req" }
+    "color": "string"
+    "selection": "semantic_id"
+    "service": "object or fact_open" { constraint: "req" }
+    "components": "component[1..*]"
+    "critical_surfaces": "critical_surface[1..*] or fact_open" { constraint: "req" }
+    "route": "operation[1..*] or fact_unknown" { constraint: "req" }
+    "rationale": "object"
+  }
+  "record_part__intent__service": {
+    class: union
+    label: "intent.service  «union»"
+    shape: sql_table
+  }
+  "record_part__intent__service__1": {
+    class: owned
+    label: "intent.service.1"
+    shape: sql_table
+    "requirements": "requirement_ids"
+    "loads": "semantic_ids"
+    "environment": "text"
+    "duty": "text"
+    "life": "quantity_fact"
+    "differences": "text"
+  }
+  "record_part__component": {
+    class: owned
+    label: "component"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "witness": "vector"
+    "locator": "target"
+    "material_profile": "profile_id or fact_open"
+    "functions": "function_entry[1..*]"
+    "multiplicity": "integer"
+    "note": "text"
+  }
+  "record_part__critical_surface": {
+    class: owned
+    label: "critical_surface"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "feature": "semantic_id" { constraint: "req" }
+    "region": "semantic_id"
+    "component": "semantic_id"
+    "role": "enum" { constraint: "req" }
+    "interfaces": "interface_id[1..*]"
+    "requirements": "requirement_ids"
+    "criteria": "criterion[1..*]"
+    "finish": "text"
+    "inspection": "semantic_id"
+    "dimension_state": "dimension_state = as_manufactured|after_finish|assembled" { constraint: "req" }
+  }
+  "record_part__intent__rationale": {
+    class: owned
+    label: "intent.rationale"
+    shape: sql_table
+    "decision": "decision"
+    "selection": "semantic_id"
+    "alternatives": "texts"
+    "tradeoffs": "text"
+  }
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__function_entry": {
+  class: stub
+  label: "function_entry\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__target": {
+  class: stub
+  label: "target\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_drawing__part_drawing": {
+  class: stub
+  label: "part_drawing\n(record/drawing)"
+  link: "../drawing/01-part-drawing.svg"
+}
+"stub__record_drawing__procurement": {
+  class: stub
+  label: "procurement\n(record/drawing)"
+  link: "../drawing/06-procurement.svg"
+}
+"stub__record_part__operation": {
+  class: stub
+  label: "operation"
+  link: "02-operation.svg"
+}
+
+"aggregate__record_part"."record_part__intent__service__1" -> "aggregate__record_part"."record_part__intent__service": { class: inheritance }
+"stub__record_common__fact_open" -> "aggregate__record_part"."record_part__intent__service": { class: inheritance }
+"aggregate__record_part"."record_part"."procurement" -> "stub__record_drawing__procurement": "procurement [0..1]" { class: association }
+"aggregate__record_part"."record_part"."drawing" -> "stub__record_drawing__part_drawing": "drawing [0..1]" { class: association }
+"aggregate__record_part"."record_part__manufacture"."mesh" -> "aggregate__record_part"."record_part__manufacture__mesh": "mesh [0..1]" { class: composition }
+"aggregate__record_part"."record_part"."manufacture" -> "aggregate__record_part"."record_part__manufacture": "manufacture [0..1]" { class: composition }
+"aggregate__record_part"."record_part__intent"."functions" -> "stub__record_common__function_entry": "functions [0..*]" { class: association }
+"aggregate__record_part"."record_part__intent" -> "stub__record_common__fact_unknown": "functions, route [0..1]" { class: association }
+"aggregate__record_part"."record_part__intent" -> "stub__record_common__fact_open": "material_profile, critical_surfaces [0..1]" { class: association }
+"aggregate__record_part"."record_part__intent__service__1"."life" -> "stub__record_common__quantity_fact": "life [0..1]" { class: association }
+"aggregate__record_part"."record_part__intent"."service" -> "aggregate__record_part"."record_part__intent__service": "service [1]" { class: composition }
+"aggregate__record_part"."record_part__component"."locator" -> "stub__record_common__target": "locator [0..1]" { class: association }
+"aggregate__record_part"."record_part__component"."material_profile" -> "stub__record_common__fact_open": "material_profile [0..1]" { class: association }
+"aggregate__record_part"."record_part__component"."functions" -> "stub__record_common__function_entry": "functions [0..*]" { class: association }
+"aggregate__record_part"."record_part__intent"."components" -> "aggregate__record_part"."record_part__component": "components [0..*]" { class: composition }
+"aggregate__record_part"."record_part__critical_surface"."criteria" -> "stub__record_common__criterion": "criteria [0..*]" { class: association }
+"aggregate__record_part"."record_part__intent"."critical_surfaces" -> "aggregate__record_part"."record_part__critical_surface": "critical_surfaces [0..*]" { class: composition }
+"aggregate__record_part"."record_part__intent"."route" -> "stub__record_part__operation": "route [0..*]" { class: composition }
+"aggregate__record_part"."record_part__intent"."rationale" -> "aggregate__record_part"."record_part__intent__rationale": "rationale [0..1]" { class: composition }
+"aggregate__record_part"."record_part"."intent" -> "aggregate__record_part"."record_part__intent": "intent [0..1]" { class: composition }

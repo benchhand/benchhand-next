@@ -1,0 +1,16 @@
+...@../../classes
+direction: right
+
+"common_finding": {
+  class: document
+  label: "finding"
+  shape: sql_table
+  "code": "string" { constraint: "req" }
+  "severity": "enum error|warning|info" { constraint: "req" }
+  "path": "string" { constraint: "req" }
+  "pointer": "string"
+  "message": "string" { constraint: "req" }
+  "action": "string"
+  "subject": "string"
+}
+

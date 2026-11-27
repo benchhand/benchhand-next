@@ -1,0 +1,196 @@
+...@../../classes
+direction: right
+
+"record_common__function_entry": {
+  class: owned
+  label: "function_entry"
+  shape: sql_table
+  "function": "function" { constraint: "req" }
+  "description": "text"
+  "requirements": "requirement_ids"
+}
+"record_common__target": {
+  class: owned
+  label: "target"
+  shape: sql_table
+  "feature": "semantic_id" { constraint: "req" }
+  "region": "semantic_id"
+  "component": "semantic_id"
+}
+"record_common__obligation": {
+  class: owned
+  label: "obligation"
+  shape: sql_table
+  "id": "obligation_id" { constraint: "req" }
+  "family": "check_family" { constraint: "req" }
+  "subject": "subject" { constraint: "req" }
+  "level": "evidence_level = cad_valid|geometrically_manufacturable|pro…" { constraint: "req" }
+  "stage": "stage" { constraint: "req" }
+  "basis": "text" { constraint: "req" }
+  "requirement": "requirement_id"
+  "criterion": "semantic_id"
+}
+"record_common__obligation_outcome": {
+  class: owned
+  label: "obligation_outcome"
+  shape: sql_table
+  "obligation": "obligation_id" { constraint: "req" }
+  "outcome": "outcome = pass|fail|unknown|not_applicable|not_assessed" { constraint: "req" }
+  "reason": "not_assessed_reason = calibration_off|no_capability_profile"
+  "level": "evidence_level = cad_valid|geometrically_manufacturable|pro…"
+  "method": "text" { constraint: "req" }
+  "source": "source"
+  "uncertainty": "text"
+  "coverage": "text" { constraint: "req" }
+  "findings": "semantic_ids"
+}
+"record_common__waiver": {
+  class: owned
+  label: "waiver"
+  shape: sql_table
+  "decision": "decision" { constraint: "req" }
+  "subject": "subject" { constraint: "req" }
+  "obligation": "obligation_id"
+  "criterion": "text" { constraint: "req" }
+  "operating_envelope": "text" { constraint: "req" }
+  "valid_until": "date"
+  "until_change": "text"
+  "reason": "text" { constraint: "req" }
+  "consequence": "text" { constraint: "req" }
+  "authority": "text" { constraint: "req" }
+}
+"record_common__quantity_fact__known": {
+  class: owned
+  label: "quantity_fact.known"
+  shape: sql_table
+  "value": "quantity"
+}
+"record_common__fact_not_applicable": {
+  class: owned
+  label: "fact_not_applicable"
+  shape: sql_table
+  "status": "const not_applicable" { constraint: "req" }
+  "reason": "text" { constraint: "req" }
+  "decision": "decision"
+}
+"record_common__text_fact__known": {
+  class: owned
+  label: "text_fact.known"
+  shape: sql_table
+  "value": "text"
+}
+"record_common__texts_fact__known": {
+  class: owned
+  label: "texts_fact.known"
+  shape: sql_table
+  "value": "texts"
+}
+"record_common__boolean_fact__known": {
+  class: owned
+  label: "boolean_fact.known"
+  shape: sql_table
+  "value": "boolean"
+}
+"record_common__quantity": {
+  class: owned
+  label: "quantity"
+  shape: sql_table
+  "value": "number"
+  "lower": "number"
+  "upper": "number"
+  "units": "units" { constraint: "req" }
+}
+"stub__record_common__boolean_fact": {
+  class: stub
+  label: "boolean_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__fact": {
+  class: stub
+  label: "fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__fact_known": {
+  class: stub
+  label: "fact_known"
+  link: "02-fact.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open"
+  link: "02-fact.svg"
+}
+"stub__record_common__finding__measured": {
+  class: stub
+  label: "finding.measured"
+  link: "01-finding.svg"
+}
+"stub__record_common__money_fact": {
+  class: stub
+  label: "money_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source"
+  link: "01-finding.svg"
+}
+"stub__record_common__subject": {
+  class: stub
+  label: "subject"
+  link: "01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__texts_fact": {
+  class: stub
+  label: "texts_fact"
+  link: "02-fact.svg"
+}
+"stub__record_manufacturing_guideline__limit__quantities": {
+  class: stub
+  label: "limit.quantities\n(record/manufacturing-guideline)"
+  link: "../manufacturing-guideline/01-manufacturing-guideline.svg"
+}
+"stub__record_manufacturing_guideline__relative__floor": {
+  class: stub
+  label: "relative.floor\n(record/manufacturing-guideline)"
+  link: "../manufacturing-guideline/01-manufacturing-guideline.svg"
+}
+"stub__record_manufacturing_guideline__scope__nozzle_diameter": {
+  class: stub
+  label: "scope.nozzle_diameter\n(record/manufacturing-guideline)"
+  link: "../manufacturing-guideline/01-manufacturing-guideline.svg"
+}
+
+"record_common__quantity_fact__known" -> "stub__record_common__fact_known": { class: inheritance }
+"record_common__quantity_fact__known" -> "stub__record_common__quantity_fact": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__quantity_fact": { class: inheritance }
+"record_common__text_fact__known" -> "stub__record_common__fact_known": { class: inheritance }
+"record_common__text_fact__known" -> "stub__record_common__text_fact": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__text_fact": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__fact_open": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__fact": { class: inheritance }
+"record_common__texts_fact__known" -> "stub__record_common__fact_known": { class: inheritance }
+"record_common__texts_fact__known" -> "stub__record_common__texts_fact": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__texts_fact": { class: inheritance }
+"record_common__boolean_fact__known" -> "stub__record_common__fact_known": { class: inheritance }
+"record_common__boolean_fact__known" -> "stub__record_common__boolean_fact": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__boolean_fact": { class: inheritance }
+"record_common__fact_not_applicable" -> "stub__record_common__money_fact": { class: inheritance }
+"record_common__quantity" -> "stub__record_common__finding__measured": { class: inheritance }
+"stub__record_manufacturing_guideline__scope__nozzle_diameter" -> "record_common__quantity": { class: inheritance }
+"stub__record_manufacturing_guideline__relative__floor" -> "record_common__quantity": { class: inheritance }
+"stub__record_manufacturing_guideline__limit__quantities" -> "record_common__quantity": { class: inheritance }
+"record_common__quantity_fact__known"."value" -> "record_common__quantity": "value [0..1]" { class: composition }
+"record_common__obligation"."subject" -> "stub__record_common__subject": "subject [1]" { class: composition }
+"record_common__obligation_outcome"."source" -> "stub__record_common__source": "source [0..1]" { class: composition }
+"record_common__waiver"."subject" -> "stub__record_common__subject": "subject [1]" { class: composition }

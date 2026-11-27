@@ -1,0 +1,142 @@
+...@../../classes
+direction: right
+
+"aggregate__record_requirements": {
+  class: aggregate
+  label: "requirements"
+  "record_requirements": {
+    class: document
+    label: "requirements"
+    shape: sql_table
+    "preferences": "object[]"
+    "assumptions": "object[]"
+    "open_questions": "object[]"
+    "requirements": "object[1..*]" { constraint: "req" }
+  }
+  "record_requirements__preferences": {
+    class: owned
+    label: "requirements.preferences"
+    shape: sql_table
+    "id": "preference_id" { constraint: "req" }
+    "text": "text" { constraint: "req" }
+    "source": "source" { constraint: "req" }
+    "weight": "number" { constraint: "req" }
+    "criterion": "criterion"
+    "subjects": "subject[1..*]"
+  }
+  "record_requirements__assumptions": {
+    class: owned
+    label: "requirements.assumptions"
+    shape: sql_table
+    "id": "assumption_id" { constraint: "req" }
+    "text": "text" { constraint: "req" }
+    "origin": "text" { constraint: "req" }
+    "reason": "text" { constraint: "req" }
+    "bounds": "quantity or text"
+    "requirements": "requirement_ids"
+    "owner": "text" { constraint: "req" }
+    "validation": "text" { constraint: "req" }
+    "status": "enum open|validated|invalidated" { constraint: "req" }
+    "decision": "decision"
+  }
+  "record_requirements__open_questions": {
+    class: owned
+    label: "requirements.open_questions"
+    shape: sql_table
+    "id": "question_id" { constraint: "req" }
+    "question": "text" { constraint: "req" }
+    "subjects": "subject[1..*]"
+    "owner": "text" { constraint: "req" }
+    "material_to_choice": "boolean" { constraint: "req" }
+    "safety_relevant": "boolean" { constraint: "req" }
+    "status": "enum open|resolved" { constraint: "req" }
+    "resolution": "object"
+  }
+  "record_requirements__open_questions__resolution": {
+    class: owned
+    label: "requirements.open_questions.resolution"
+    shape: sql_table
+    "answer": "text" { constraint: "req" }
+    "source": "source"
+    "decision": "decision"
+  }
+  "record_requirements__requirements": {
+    class: owned
+    label: "requirements.requirements"
+    shape: sql_table
+    "id": "requirement_id" { constraint: "req" }
+    "text": "string" { constraint: "req" }
+    "rationale": "string" { constraint: "req" }
+    "source": "string" { constraint: "req" }
+    "priority": "enum must|should|could|MUST|SHOULD|COULD" { constraint: "req" }
+    "verification": "object" { constraint: "req" }
+    "subjects": "subject[1..*]"
+    "acceptance": "criterion[1..*]"
+    "conditions": "text"
+    "risk": "object"
+    "evidence_required": "evidence_level = cad_valid|geometrically_manufacturable|pro…"
+    "waiver_policy": "enum forbidden|approval_required"
+    "visibility": "object[1..*]"
+  }
+  "record_requirements__requirements__verification": {
+    class: owned
+    label: "requirements.requirements.verification"
+    shape: sql_table
+    "method": "enum I|A|D|T" { constraint: "req" }
+    "criteria": "string" { constraint: "req" }
+    "step": "enum"
+  }
+  "record_requirements__requirements__risk": {
+    class: owned
+    label: "requirements.requirements.risk"
+    shape: sql_table
+    "severity": "consequence_severity = negligible|minor|major|critical" { constraint: "req" }
+    "consequence": "text" { constraint: "req" }
+  }
+  "record_requirements__requirements__visibility": {
+    class: owned
+    label: "requirements.requirements.visibility"
+    shape: sql_table
+    "view": "string" { constraint: "req" }
+    "window": "part_ref[1..*]" { constraint: "req" }
+    "targets": "part_ref[1..*]" { constraint: "req" }
+    "min_visible_fraction": "number"
+  }
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__quantity": {
+  class: stub
+  label: "quantity\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__subject": {
+  class: stub
+  label: "subject\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+
+"aggregate__record_requirements"."record_requirements__preferences"."source" -> "stub__record_common__source": "source [1]" { class: association }
+"aggregate__record_requirements"."record_requirements__preferences"."criterion" -> "stub__record_common__criterion": "criterion [0..1]" { class: association }
+"aggregate__record_requirements"."record_requirements__preferences"."subjects" -> "stub__record_common__subject": "subjects [0..*]" { class: association }
+"aggregate__record_requirements"."record_requirements"."preferences" -> "aggregate__record_requirements"."record_requirements__preferences": "preferences [0..*]" { class: composition }
+"aggregate__record_requirements"."record_requirements__assumptions"."bounds" -> "stub__record_common__quantity": "bounds [0..1]" { class: association }
+"aggregate__record_requirements"."record_requirements"."assumptions" -> "aggregate__record_requirements"."record_requirements__assumptions": "assumptions [0..*]" { class: composition }
+"aggregate__record_requirements"."record_requirements__open_questions"."subjects" -> "stub__record_common__subject": "subjects [0..*]" { class: association }
+"aggregate__record_requirements"."record_requirements__open_questions__resolution"."source" -> "stub__record_common__source": "source [0..1]" { class: association }
+"aggregate__record_requirements"."record_requirements__open_questions"."resolution" -> "aggregate__record_requirements"."record_requirements__open_questions__resolution": "resolution [0..1]" { class: composition }
+"aggregate__record_requirements"."record_requirements"."open_questions" -> "aggregate__record_requirements"."record_requirements__open_questions": "open_questions [0..*]" { class: composition }
+"aggregate__record_requirements"."record_requirements__requirements"."verification" -> "aggregate__record_requirements"."record_requirements__requirements__verification": "verification [1]" { class: composition }
+"aggregate__record_requirements"."record_requirements__requirements"."subjects" -> "stub__record_common__subject": "subjects [0..*]" { class: association }
+"aggregate__record_requirements"."record_requirements__requirements"."acceptance" -> "stub__record_common__criterion": "acceptance [0..*]" { class: association }
+"aggregate__record_requirements"."record_requirements__requirements"."risk" -> "aggregate__record_requirements"."record_requirements__requirements__risk": "risk [0..1]" { class: composition }
+"aggregate__record_requirements"."record_requirements__requirements"."visibility" -> "aggregate__record_requirements"."record_requirements__requirements__visibility": "visibility [0..*]" { class: composition }
+"aggregate__record_requirements"."record_requirements"."requirements" -> "aggregate__record_requirements"."record_requirements__requirements": "requirements [1..*]" { class: composition }

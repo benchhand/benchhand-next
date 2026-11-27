@@ -12,7 +12,7 @@ Each page cites where every element comes from, and marks what is planned, in re
 | [data-flow.md](data-flow.md) | Sequences: one MCP tool call, a long job, evidence and freeze, release, and migrate | hand-written |
 | [flow.md](flow.md) | The design flow as a state machine: stages, gates, PROVISIONAL, APPROVED and VOID, the VOID cascade and engineering change | hand-written until Phase 2 generates it from `flow.yaml` |
 | [layers.md](layers.md) | The layered architecture, the repository layout, and the package dependencies as `pyproject.toml` declares them | hand-written |
-| [domain-model.md](../contract/generated/domain-model.md) | The domain model of the contracts | generated |
+| [domain-model](../contract/generated/domain-model/README.md) | The domain model of the contracts: D2 diagrams and field tables, one page per contract | generated |
 | [function-map.md](function-map.md) | The function map: where each prototype file ends up, with its status (ported, partial, in progress, planned or dropped) and phase, from [`reference-map.yaml`](reference-map.yaml) | generated |
 
 The generated pages come from their own generator. Don't edit them by hand.

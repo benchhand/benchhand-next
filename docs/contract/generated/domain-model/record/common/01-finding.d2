@@ -1,0 +1,220 @@
+...@../../classes
+direction: right
+
+"aggregate__record_common__finding": {
+  class: aggregate
+  label: "finding"
+  "record_common__criterion": {
+    class: owned
+    label: "criterion"
+    shape: sql_table
+    "id": "semantic_id"
+    "property": "semantic_id" { constraint: "req" }
+    "operator": "enum" { constraint: "req" }
+    "value": "any" { constraint: "req" }
+    "units": "units"
+    "state": "dimension_state = as_manufactured|after_finish|assembled"
+    "source": "source" { constraint: "req" }
+    "conditions": "text"
+    "note": "text"
+  }
+  "record_common__criterion_or_unknown": {
+    class: union
+    label: "criterion_or_unknown  «union»"
+    shape: sql_table
+  }
+  "record_common__file_hash": {
+    class: owned
+    label: "file_hash"
+    shape: sql_table
+    "path": "project_path" { constraint: "req" }
+    "sha256": "sha256" { constraint: "req" }
+  }
+  "record_common__finding": {
+    class: owned
+    label: "finding"
+    shape: sql_table
+    "id": "semantic_id" { constraint: "req" }
+    "code": "finding_code" { constraint: "req" }
+    "obligation": "obligation_id"
+    "subject": "subject" { constraint: "req" }
+    "severity": "severity = critical|major|minor|info" { constraint: "req" }
+    "outcome": "outcome = pass|fail|unknown|not_applicable|not_assessed" { constraint: "req" }
+    "reason": "not_assessed_reason = calibration_off|no_capability_profile"
+    "measured": "quantity or object or fact_unknown" { constraint: "req" }
+    "criterion": "criterion_or_unknown" { constraint: "req" }
+    "requirements": "requirement_ids"
+    "method": "object" { constraint: "req" }
+    "uncertainty": "text" { constraint: "req" }
+    "assumptions": "texts"
+    "coverage": "text"
+    "consequence": "text" { constraint: "req" }
+    "remedy": "text"
+    "alternatives": "object[1..*]"
+    "recheck": "object" { constraint: "req" }
+    "decisions": "decision[1..*]"
+  }
+  "record_common__finding__measured": {
+    class: union
+    label: "finding.measured  «union»"
+    shape: sql_table
+  }
+  "record_common__finding__measured__2": {
+    class: owned
+    label: "finding.measured.2"
+    shape: sql_table
+    "text": "text" { constraint: "req" }
+  }
+  "record_common__finding__method": {
+    class: owned
+    label: "finding.method"
+    shape: sql_table
+    "name": "text" { constraint: "req" }
+    "tool": "text"
+    "evidence": "file_hash[1..*]"
+  }
+  "record_common__finding__alternatives": {
+    class: owned
+    label: "finding.alternatives"
+    shape: sql_table
+    "text": "text" { constraint: "req" }
+    "tradeoffs": "text" { constraint: "req" }
+  }
+  "record_common__finding__recheck": {
+    class: owned
+    label: "finding.recheck"
+    shape: sql_table
+    "families": "check_family[1..*]" { constraint: "req" }
+    "scope": "subject[1..*]"
+    "inputs": "texts"
+    "earliest_stage": "stage" { constraint: "req" }
+  }
+}
+"record_common__fact_unknown": {
+  class: owned
+  label: "fact_unknown"
+  shape: sql_table
+  "status": "const unknown" { constraint: "req" }
+  "reason": "text" { constraint: "req" }
+  "question": "question_id"
+}
+"record_common__subject": {
+  class: owned
+  label: "subject"
+  shape: sql_table
+  "product": "const true"
+  "PN": "pn"
+  "occurrence": "occurrence_ref"
+  "component": "semantic_id"
+  "operation": "semantic_id"
+  "feature": "semantic_id"
+  "region": "semantic_id"
+  "interface": "interface_id"
+  "assembly_operation": "assembly_operation_id"
+  "requirements": "requirement_ids"
+}
+"record_common__source": {
+  class: owned
+  label: "source"
+  shape: sql_table
+  "kind": "enum" { constraint: "req" }
+  "reference": "text" { constraint: "req" }
+  "revision": "text"
+  "url": "url"
+  "accessed": "date"
+  "artifact": "artifact_path"
+  "sha256": "sha256"
+  "conditions": "text"
+  "origin": "text"
+  "document": "text"
+  "reason": "text"
+  "decision": "decision"
+  "date": "date"
+  "locator": "text"
+}
+"stub__record_assembly__assembly_operation__edge_distance__criterion": {
+  class: stub
+  label: "assembly_operation.edge_distance.criterion\n(record/assembly)"
+  link: "../assembly/02-assembly-operation.svg"
+}
+"stub__record_common__boolean_fact": {
+  class: stub
+  label: "boolean_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__fact": {
+  class: stub
+  label: "fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open"
+  link: "02-fact.svg"
+}
+"stub__record_common__money_fact": {
+  class: stub
+  label: "money_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__quantity": {
+  class: stub
+  label: "quantity"
+  link: "03-function-entry.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact"
+  link: "02-fact.svg"
+}
+"stub__record_common__texts_fact": {
+  class: stub
+  label: "texts_fact"
+  link: "02-fact.svg"
+}
+"stub__record_product__use_case__consequences__severity": {
+  class: stub
+  label: "use_case.consequences.severity\n(record/product)"
+  link: "../product/04-use-case-consequences.svg"
+}
+"stub__record_product__use_case__evidence_policy": {
+  class: stub
+  label: "use_case.evidence_policy\n(record/product)"
+  link: "../product/02-use-case.svg"
+}
+"stub__record_product__use_case__service_class": {
+  class: stub
+  label: "use_case.service_class\n(record/product)"
+  link: "../product/02-use-case.svg"
+}
+
+"record_common__fact_unknown" -> "stub__record_common__quantity_fact": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_common__text_fact": { class: inheritance }
+"stub__record_assembly__assembly_operation__edge_distance__criterion" -> "aggregate__record_common__finding"."record_common__criterion": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_common__fact_open": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_common__fact": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_common__texts_fact": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_common__boolean_fact": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_common__money_fact": { class: inheritance }
+"aggregate__record_common__finding"."record_common__criterion" -> "aggregate__record_common__finding"."record_common__criterion_or_unknown": { class: inheritance }
+"record_common__fact_unknown" -> "aggregate__record_common__finding"."record_common__criterion_or_unknown": { class: inheritance }
+"stub__record_common__quantity" -> "aggregate__record_common__finding"."record_common__finding__measured": { class: inheritance }
+"aggregate__record_common__finding"."record_common__finding__measured__2" -> "aggregate__record_common__finding"."record_common__finding__measured": { class: inheritance }
+"record_common__fact_unknown" -> "aggregate__record_common__finding"."record_common__finding__measured": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_product__use_case__service_class": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_product__use_case__consequences__severity": { class: inheritance }
+"record_common__fact_unknown" -> "stub__record_product__use_case__evidence_policy": { class: inheritance }
+"aggregate__record_common__finding"."record_common__criterion"."source" -> "record_common__source": "source [1]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding"."subject" -> "record_common__subject": "subject [1]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding"."measured" -> "aggregate__record_common__finding"."record_common__finding__measured": "measured [1]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding"."criterion" -> "aggregate__record_common__finding"."record_common__criterion_or_unknown": "criterion [1]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding__method"."evidence" -> "aggregate__record_common__finding"."record_common__file_hash": "evidence [0..*]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding"."method" -> "aggregate__record_common__finding"."record_common__finding__method": "method [1]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding"."alternatives" -> "aggregate__record_common__finding"."record_common__finding__alternatives": "alternatives [0..*]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding__recheck"."scope" -> "record_common__subject": "scope [0..*]" { class: composition }
+"aggregate__record_common__finding"."record_common__finding"."recheck" -> "aggregate__record_common__finding"."record_common__finding__recheck": "recheck [1]" { class: composition }

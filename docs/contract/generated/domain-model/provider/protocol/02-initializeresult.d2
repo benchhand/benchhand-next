@@ -1,0 +1,60 @@
+...@../../classes
+direction: right
+
+"aggregate__provider_protocol__InitializeResult": {
+  class: aggregate
+  label: "InitializeResult"
+  "provider_protocol__HookDecl": {
+    class: owned
+    label: "HookDecl"
+    shape: sql_table
+    "kind": "HookKind" { constraint: "req" }
+    "id": "HookId" { constraint: "req" }
+  }
+  "provider_protocol__Needs": {
+    class: owned
+    label: "Needs"
+    shape: sql_table
+    "freecad": "boolean" { constraint: "req" }
+    "chromium": "boolean" { constraint: "req" }
+    "network": "boolean" { constraint: "req" }
+  }
+  "provider_protocol__InitializeResult": {
+    class: owned
+    label: "InitializeResult"
+    shape: sql_table
+    "protocolVersion": "ProtocolVersion" { constraint: "req" }
+    "provider": "object" { constraint: "req" }
+    "hooks": "HookDecl[1..*]" { constraint: "req" }
+    "features": "object" { constraint: "req" }
+    "limits": "Limits" { constraint: "req" }
+    "needs": "Needs" { constraint: "req" }
+  }
+  "provider_protocol__InitializeResult__provider": {
+    class: owned
+    label: "InitializeResult.provider"
+    shape: sql_table
+    "name": "string" { constraint: "req" }
+    "version": "string" { constraint: "req" }
+  }
+  "provider_protocol__InitializeResult__features": {
+    class: owned
+    label: "InitializeResult.features"
+    shape: sql_table
+    "required": "FeatureName[]" { constraint: "req" }
+    "optional": "FeatureName[]" { constraint: "req" }
+  }
+}
+"provider_protocol__Limits": {
+  class: owned
+  label: "Limits"
+  shape: sql_table
+  "maxMessageBytes": "integer"
+  "maxInFlight": "integer"
+}
+
+"aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult"."provider" -> "aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult__provider": "provider [1]" { class: composition }
+"aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult"."hooks" -> "aggregate__provider_protocol__InitializeResult"."provider_protocol__HookDecl": "hooks [1..*]" { class: composition }
+"aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult"."features" -> "aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult__features": "features [1]" { class: composition }
+"aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult"."limits" -> "provider_protocol__Limits": "limits [1]" { class: composition }
+"aggregate__provider_protocol__InitializeResult"."provider_protocol__InitializeResult"."needs" -> "aggregate__provider_protocol__InitializeResult"."provider_protocol__Needs": "needs [1]" { class: composition }

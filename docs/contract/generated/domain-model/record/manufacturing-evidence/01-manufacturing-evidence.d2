@@ -1,0 +1,106 @@
+...@../../classes
+direction: right
+
+"aggregate__record_manufacturing_evidence": {
+  class: aggregate
+  label: "manufacturing-evidence"
+  "record_manufacturing_evidence": {
+    class: document
+    label: "manufacturing-evidence"
+    shape: sql_table
+    "entries": "entry[]" { constraint: "req" }
+  }
+  "record_manufacturing_evidence__entry": {
+    class: owned
+    label: "entry"
+    shape: sql_table
+    "id": "evidence_id" { constraint: "req" }
+    "requirement": "requirement_id"
+    "obligation": "obligation_id"
+    "subject": "subject" { constraint: "req" }
+    "level": "evidence_level = cad_valid|geometrically_manufacturable|pro…" { constraint: "req" }
+    "result": "enum unknown|planned|pass|fail|waived" { constraint: "req" }
+    "method": "text" { constraint: "req" }
+    "criterion": "criterion"
+    "source": "source"
+    "configuration": "object"
+    "fingerprints": "sha256 by key"
+    "artifacts": "file_hash[1..*]"
+    "bundle": "object"
+    "tool": "text"
+    "producer": "text"
+    "uncertainty": "text"
+    "coverage": "text"
+    "physical": "object"
+    "waiver": "waiver"
+    "decisions": "decision[1..*]"
+    "note": "text"
+  }
+  "record_manufacturing_evidence__entry__configuration": {
+    class: owned
+    label: "entry.configuration"
+    shape: sql_table
+    "version": "version" { constraint: "req" }
+    "manifest_sha256": "sha256" { constraint: "req" }
+    "rev": "revision"
+    "geometry_sha256": "sha256"
+  }
+  "record_manufacturing_evidence__entry__bundle": {
+    class: owned
+    label: "entry.bundle"
+    shape: sql_table
+    "path": "project_path" { constraint: "req" }
+    "manifest_sha256": "sha256" { constraint: "req" }
+  }
+  "record_manufacturing_evidence__entry__physical": {
+    class: owned
+    label: "entry.physical"
+    shape: sql_table
+    "specimen": "text" { constraint: "req" }
+    "configuration": "text" { constraint: "req" }
+    "material": "text" { constraint: "req" }
+    "process": "text" { constraint: "req" }
+    "protocol": "text" { constraint: "req" }
+    "setup": "text"
+    "instrument": "text" { constraint: "req" }
+    "results": "text" { constraint: "req" }
+    "date": "date" { constraint: "req" }
+    "approver": "text" { constraint: "req" }
+    "scope": "text" { constraint: "req" }
+  }
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__file_hash": {
+  class: stub
+  label: "file_hash\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__subject": {
+  class: stub
+  label: "subject\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__waiver": {
+  class: stub
+  label: "waiver\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."subject" -> "stub__record_common__subject": "subject [1]" { class: association }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."criterion" -> "stub__record_common__criterion": "criterion [0..1]" { class: association }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."source" -> "stub__record_common__source": "source [0..1]" { class: association }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."configuration" -> "aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry__configuration": "configuration [0..1]" { class: composition }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."artifacts" -> "stub__record_common__file_hash": "artifacts [0..*]" { class: association }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."bundle" -> "aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry__bundle": "bundle [0..1]" { class: composition }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."physical" -> "aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry__physical": "physical [0..1]" { class: composition }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry"."waiver" -> "stub__record_common__waiver": "waiver [0..1]" { class: association }
+"aggregate__record_manufacturing_evidence"."record_manufacturing_evidence"."entries" -> "aggregate__record_manufacturing_evidence"."record_manufacturing_evidence__entry": "entries [0..*]" { class: composition }

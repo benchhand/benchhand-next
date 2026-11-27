@@ -1,0 +1,185 @@
+...@../../classes
+direction: right
+
+"aggregate__record_interfaces__functional": {
+  class: aggregate
+  label: "functional"
+  "record_interfaces__functional": {
+    class: owned
+    label: "functional"
+    shape: sql_table
+    "critical": "boolean_fact" { constraint: "req" }
+    "functions": "function_entry[1..*] or fact_unknown" { constraint: "req" }
+    "requirements": "requirement_ids"
+    "failure_consequence": "text_fact"
+    "loads": "semantic_ids"
+    "environment": "text"
+    "surfaces": "object[1..*]"
+    "acceptance": "object[1..*]"
+    "variation": "object"
+    "contact": "object"
+    "play": "object"
+    "assembly_operations": "assembly_operation_id[1..*]"
+    "print_in_place": "object[1..*]"
+    "inspections": "semantic_ids"
+    "decisions": "decision[1..*]"
+  }
+  "record_interfaces__functional__surfaces": {
+    class: owned
+    label: "functional.surfaces"
+    shape: sql_table
+    "PN": "pn" { constraint: "req" }
+    "occurrence": "occurrence_ref"
+    "component": "semantic_id"
+    "feature": "semantic_id" { constraint: "req" }
+    "region": "semantic_id"
+    "role": "enum" { constraint: "req" }
+    "datum": "datum_label"
+    "source": "source"
+    "dimension_state": "dimension_state = as_manufactured|after_finish|assembled" { constraint: "req" }
+  }
+  "record_interfaces__functional__acceptance": {
+    class: owned
+    label: "functional.acceptance"
+    shape: sql_table
+    "criterion": "criterion" { constraint: "req" }
+    "verification": "object" { constraint: "req" }
+  }
+  "record_interfaces__functional__acceptance__verification": {
+    class: owned
+    label: "functional.acceptance.verification"
+    shape: sql_table
+    "method": "enum I|A|D|T" { constraint: "req" }
+    "evidence_required": "evidence_level = cad_valid|geometrically_manufacturable|pro…" { constraint: "req" }
+    "stage": "stage" { constraint: "req" }
+  }
+  "record_interfaces__functional__variation": {
+    class: owned
+    label: "functional.variation"
+    shape: sql_table
+    "stack_case": "string" { constraint: "req" }
+    "contributors": "enum[1..*]" { constraint: "req" }
+    "method": "enum worst_case|justified_rss" { constraint: "req" }
+    "decision": "decision"
+  }
+  "record_interfaces__functional__contact": {
+    class: owned
+    label: "functional.contact"
+    shape: sql_table
+    "materials": "profile_id or fact_open[2]" { constraint: "req" }
+    "finish": "text_fact"
+    "lubrication": "text_fact"
+    "load": "quantity_fact"
+    "speed": "quantity_fact"
+    "duty": "text_fact"
+    "life": "quantity_fact"
+    "evidence": "evidence_id[1..*]"
+  }
+  "record_interfaces__functional__play": {
+    class: owned
+    label: "functional.play"
+    shape: sql_table
+    "axial": "quantity_fact"
+    "radial": "quantity_fact"
+    "angular": "quantity_fact"
+    "backlash": "quantity_fact"
+    "compliance": "object"
+    "scenario_cases": "string[1..*]"
+  }
+  "record_interfaces__functional__play__compliance": {
+    class: owned
+    label: "functional.play.compliance"
+    shape: sql_table
+    "axial": "quantity_fact"
+    "radial": "quantity_fact"
+    "angular": "quantity_fact"
+  }
+  "record_interfaces__functional__print_in_place": {
+    class: owned
+    label: "functional.print_in_place"
+    shape: sql_table
+    "joint": "enum hinge|pin|ball|captive|living_hinge" { constraint: "req" }
+    "print_pose": "number by key" { constraint: "req" }
+    "gap_features": "face[2][1..*]" { constraint: "req" }
+    "break_free": "object" { constraint: "req" }
+  }
+  "record_interfaces__face": {
+    class: owned
+    label: "face"
+    shape: sql_table
+    "PN": "pn" { constraint: "req" }
+    "occurrence": "occurrence_ref"
+    "component": "semantic_id"
+    "feature": "semantic_id" { constraint: "req" }
+    "region": "semantic_id"
+  }
+  "record_interfaces__functional__print_in_place__break_free": {
+    class: owned
+    label: "functional.print_in_place.break_free"
+    shape: sql_table
+    "method": "text" { constraint: "req" }
+    "force_n": "number"
+  }
+}
+"stub__record_common__boolean_fact": {
+  class: stub
+  label: "boolean_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__criterion": {
+  class: stub
+  label: "criterion\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__fact_open": {
+  class: stub
+  label: "fact_open\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__function_entry": {
+  class: stub
+  label: "function_entry\n(record/common)"
+  link: "../common/03-function-entry.svg"
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."critical" -> "stub__record_common__boolean_fact": "critical [1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."functions" -> "stub__record_common__function_entry": "functions [0..*]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."functions" -> "stub__record_common__fact_unknown": "functions [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."failure_consequence" -> "stub__record_common__text_fact": "failure_consequence [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__surfaces"."source" -> "stub__record_common__source": "source [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."surfaces" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__surfaces": "surfaces [0..*]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__acceptance"."criterion" -> "stub__record_common__criterion": "criterion [1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__acceptance"."verification" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__acceptance__verification": "verification [1]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."acceptance" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__acceptance": "acceptance [0..*]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."variation" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__variation": "variation [0..1]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__contact"."materials" -> "stub__record_common__fact_open": "materials [0..2]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__contact" -> "stub__record_common__text_fact": "finish, lubrication, duty [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__contact" -> "stub__record_common__quantity_fact": "load, speed, life [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."contact" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__contact": "contact [0..1]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__play" -> "stub__record_common__quantity_fact": "axial, radial, angular, backlash [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__play__compliance" -> "stub__record_common__quantity_fact": "axial, radial, angular [0..1]" { class: association }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__play"."compliance" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__play__compliance": "compliance [0..1]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."play" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__play": "play [0..1]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__print_in_place"."gap_features" -> "aggregate__record_interfaces__functional"."record_interfaces__face": "gap_features [2..*]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional__print_in_place"."break_free" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__print_in_place__break_free": "break_free [1]" { class: composition }
+"aggregate__record_interfaces__functional"."record_interfaces__functional"."print_in_place" -> "aggregate__record_interfaces__functional"."record_interfaces__functional__print_in_place": "print_in_place [0..*]" { class: composition }

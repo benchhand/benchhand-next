@@ -1,0 +1,53 @@
+...@../../classes
+direction: right
+
+"aggregate__record_drawing__fit": {
+  class: aggregate
+  label: "fit"
+  "record_drawing__fit_endpoint": {
+    class: owned
+    label: "fit_endpoint"
+    shape: sql_table
+    "PN": "pn" { constraint: "req" }
+    "occurrence": "occurrence_ref"
+    "feature": "semantic_id" { constraint: "req" }
+    "region": "semantic_id"
+  }
+  "record_drawing__fit": {
+    class: owned
+    label: "fit"
+    shape: sql_table
+    "fit": "string" { constraint: "req" }
+    "pair": "part_ref[2]"
+    "hole": "fit_endpoint"
+    "shaft": "fit_endpoint"
+    "engagement_length_mm": "number"
+    "note": "string"
+    "axial_retainer": "axial_retainer"
+  }
+  "record_drawing__axial_retainer": {
+    class: owned
+    label: "axial_retainer"
+    shape: sql_table
+    "type": "enum" { constraint: "req" }
+    "parts": "part_ref[1..*]"
+    "decision": "decision"
+  }
+}
+"record_drawing__heat_set": {
+  class: owned
+  label: "heat_set"
+  shape: sql_table
+  "pair": "part_ref[2]" { constraint: "req" }
+  "hole_diameter_mm": "number" { constraint: "req" }
+  "hole_deviation_mm": "number[2]"
+  "min_depth_mm": "number"
+  "engagement_length_mm": "number"
+  "insert": "string" { constraint: "req" }
+  "source": "string" { constraint: "req" }
+  "note": "string"
+  "feature": "semantic_id"
+}
+
+"aggregate__record_drawing__fit"."record_drawing__fit" -> "aggregate__record_drawing__fit"."record_drawing__fit_endpoint": "hole, shaft [0..1]" { class: composition }
+"aggregate__record_drawing__fit"."record_drawing__fit"."axial_retainer" -> "aggregate__record_drawing__fit"."record_drawing__axial_retainer": "axial_retainer [0..1]" { class: composition }

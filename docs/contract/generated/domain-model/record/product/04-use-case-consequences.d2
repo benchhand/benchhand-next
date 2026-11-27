@@ -1,0 +1,57 @@
+...@../../classes
+direction: right
+
+"aggregate__record_product__use_case__consequences": {
+  class: aggregate
+  label: "use_case.consequences"
+  "record_product__use_case__consequences": {
+    class: owned
+    label: "use_case.consequences"
+    shape: sql_table
+    "failure": "text_fact" { constraint: "req" }
+    "severity": "fact_known or fact_unknown" { constraint: "req" }
+    "forbidden_outcomes": "texts_fact" { constraint: "req" }
+    "standards": "texts_fact" { constraint: "req" }
+    "supervision": "text_fact" { constraint: "req" }
+    "approval_authority": "text_fact" { constraint: "req" }
+  }
+  "record_product__use_case__consequences__severity": {
+    class: union
+    label: "use_case.consequences.severity  «abstract»"
+    shape: sql_table
+    "status": "discriminator" { constraint: "req" }
+  }
+  "record_product__use_case__consequences__severity__known": {
+    class: owned
+    label: "use_case.consequences.severity.known"
+    shape: sql_table
+    "value": "consequence_severity = negligible|minor|major|critical"
+  }
+}
+"stub__record_common__fact_known": {
+  class: stub
+  label: "fact_known\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__fact_unknown": {
+  class: stub
+  label: "fact_unknown\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__texts_fact": {
+  class: stub
+  label: "texts_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_product__use_case__consequences"."record_product__use_case__consequences__severity__known" -> "stub__record_common__fact_known": { class: inheritance }
+"aggregate__record_product__use_case__consequences"."record_product__use_case__consequences__severity__known" -> "aggregate__record_product__use_case__consequences"."record_product__use_case__consequences__severity": { class: inheritance }
+"stub__record_common__fact_unknown" -> "aggregate__record_product__use_case__consequences"."record_product__use_case__consequences__severity": { class: inheritance }
+"aggregate__record_product__use_case__consequences"."record_product__use_case__consequences" -> "stub__record_common__text_fact": "failure, supervision, approval_authority [1]" { class: association }
+"aggregate__record_product__use_case__consequences"."record_product__use_case__consequences"."severity" -> "aggregate__record_product__use_case__consequences"."record_product__use_case__consequences__severity": "severity [1]" { class: composition }
+"aggregate__record_product__use_case__consequences"."record_product__use_case__consequences" -> "stub__record_common__texts_fact": "forbidden_outcomes, standards [1]" { class: association }
