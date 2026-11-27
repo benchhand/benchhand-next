@@ -401,6 +401,7 @@ union designation {
   PartDesignation1,
 }
 
+/** A part standard and its designation items: size; length in mm, or not_applicable for an item without a length (a nut, a washer); property_class, the strength class or material (8.8, A2-70, 300 HV); and an optional finish */
 @extension("x-inline", true)
 model PartDesignation0 {
   kind: "standard_designation";
@@ -411,11 +412,9 @@ model PartDesignation0 {
   @minLength(1)
   size: string;
 
-  /** mm; `not_applicable` for an item without a length (nut, washer) */
   @oneOf
   length: PartDesignation0Length0 | "not_applicable";
 
-  /** strength class or material, e.g. 8.8, A2-70, 300 HV */
   @minLength(1)
   property_class: string;
 
@@ -427,6 +426,7 @@ model PartDesignation0 {
 @minValueExclusive(0)
 scalar PartDesignation0Length0 extends float64;
 
+/** A commodity family no ISO standard defines, such as heat_set_insert: its thread, and its length, outside diameter and recommended hole in mm */
 @extension("x-inline", true)
 model PartDesignation1 {
   kind: "family_designation";

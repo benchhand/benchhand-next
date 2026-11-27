@@ -449,13 +449,7 @@ export type Designation =
       kind: "standard_designation";
       standard: string;
       size: string;
-      /**
-       * mm; `not_applicable` for an item without a length (nut, washer)
-       */
       length: number | "not_applicable";
-      /**
-       * strength class or material, e.g. 8.8, A2-70, 300 HV
-       */
       property_class: string;
       finish?: string;
     }

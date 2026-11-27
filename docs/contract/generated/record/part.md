@@ -627,6 +627,11 @@ A commodity item identified by standard or family instead of a vendor part numbe
 
 Type: object or object
 
+Variants:
+
+- object: A part standard and its designation items: size; length in mm, or not_applicable for an item without a length (a nut, a washer); property_class, the strength class or material (8.8, A2-70, 300 HV); and an optional finish
+- object: A commodity family no ISO standard defines, such as heat_set_insert: its thread, and its length, outside diameter and recommended hole in mm
+
 ### `setup`
 
 Stock, datums, workholding and access of one operation. Nothing here is guessed from a bounding box

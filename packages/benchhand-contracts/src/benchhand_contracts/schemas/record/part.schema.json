@@ -1160,6 +1160,7 @@
       "description": "A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)",
       "oneOf": [
         {
+          "description": "A part standard and its designation items: size; length in mm, or not_applicable for an item without a length (a nut, a washer); property_class, the strength class or material (8.8, A2-70, 300 HV); and an optional finish",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -1182,7 +1183,6 @@
               "minLength": 1
             },
             "length": {
-              "description": "mm; `not_applicable` for an item without a length (nut, washer)",
               "oneOf": [
                 {
                   "type": "number",
@@ -1194,7 +1194,6 @@
               ]
             },
             "property_class": {
-              "description": "strength class or material, e.g. 8.8, A2-70, 300 HV",
               "type": "string",
               "minLength": 1
             },
@@ -1205,6 +1204,7 @@
           }
         },
         {
+          "description": "A commodity family no ISO standard defines, such as heat_set_insert: its thread, and its length, outside diameter and recommended hole in mm",
           "type": "object",
           "additionalProperties": false,
           "required": [

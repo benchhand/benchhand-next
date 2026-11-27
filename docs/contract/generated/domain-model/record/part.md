@@ -331,18 +331,22 @@ A commodity item identified by standard or family instead of a vendor part numbe
 
 In diagram 3.
 
+A part standard and its designation items: size; length in mm, or not_applicable for an item without a length (a nut, a washer); property_class, the strength class or material (8.8, A2-70, 300 HV); and an optional finish
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `kind` | `const standard_designation` | yes |  |
 | `standard` | `string` | yes |  |
 | `size` | `string` | yes |  |
-| `length` | `number or const not_applicable` | yes | mm; `not_applicable` for an item without a length (nut, washer) |
-| `property_class` | `string` | yes | strength class or material, e.g. 8.8, A2-70, 300 HV |
+| `length` | `number or const not_applicable` | yes |  |
+| `property_class` | `string` | yes |  |
 | `finish` | `string` | no |  |
 
 ### `designation.family_designation`
 
 In diagram 3.
+
+A commodity family no ISO standard defines, such as heat_set_insert: its thread, and its length, outside diameter and recommended hole in mm
 
 | Field | Type | Required | Description |
 |---|---|---|---|

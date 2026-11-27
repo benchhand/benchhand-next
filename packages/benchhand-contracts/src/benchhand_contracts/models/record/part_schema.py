@@ -259,14 +259,11 @@ class ReferenceCatalogueItem(ContractModel):
 
 class Length(RootModel[float]):
     root: Annotated[float, Field(gt=0.0)]
-    """
-    mm; `not_applicable` for an item without a length (nut, washer)
-    """
 
 
 class Designation1(ContractModel):
     """
-    A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
+    A part standard and its designation items: size; length in mm, or not_applicable for an item without a length (a nut, a washer); property_class, the strength class or material (8.8, A2-70, 300 HV); and an optional finish
     """
 
     model_config = ConfigDict(
@@ -282,19 +279,13 @@ class Designation1(ContractModel):
     ]
     size: Annotated[str, Field(min_length=1)]
     length: Length | Literal["not_applicable"]
-    """
-    mm; `not_applicable` for an item without a length (nut, washer)
-    """
     property_class: Annotated[str, Field(min_length=1)]
-    """
-    strength class or material, e.g. 8.8, A2-70, 300 HV
-    """
     finish: Annotated[str | None, Field(min_length=1)] = None
 
 
 class Designation2(ContractModel):
     """
-    A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
+    A commodity family no ISO standard defines, such as heat_set_insert: its thread, and its length, outside diameter and recommended hole in mm
     """
 
     model_config = ConfigDict(
