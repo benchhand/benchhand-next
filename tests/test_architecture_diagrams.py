@@ -14,8 +14,8 @@ from mermaid_render import mermaid_blocks, needs_mermaid, render_markdown
 from reference_map.cli import OUTPUT_FILE
 
 ARCHITECTURE_DIR = REPO_ROOT / "docs" / "architecture"
-GENERATED = {Path(OUTPUT_FILE).name}
-"""function-map.md has its own render test, beside its generator's."""
+GENERATED = {Path(OUTPUT_FILE).name, "prototype-inventory.md"}
+"""function-map.md has its own render test, beside its generator's; prototype-inventory.md (tools/inventory) has no diagrams."""
 D2_PAGES = {"overview.md"}
 """Pages whose diagrams are D2; test_architecture_d2.py renders them."""
 HAND_WRITTEN = sorted(page for page in ARCHITECTURE_DIR.glob("*.md") if page.name not in GENERATED)
