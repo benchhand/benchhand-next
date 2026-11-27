@@ -24,26 +24,28 @@ import PlannedAside from "../../components/PlannedAside.astro";
 import { siteLink } from "../../site-link";
 import layers from "./architecture/overview/layers.svg";
 
-benchhand is being rebuilt in `benchhand/benchhand-next`, so this site documents the whole design and marks what runs today.
-The cards and the two lists below keep that split.
+Your coding agent does the design work, and benchhand holds the process around it.
+The agent reaches benchhand through MCP, and benchhand tells it which stage the design is at and what to do next.
+benchhand asks you to approve each stage, runs the checks through providers, and writes every decision, check and approval to a record in your repository.
+These pages describe the whole system. Each part is marked as available or planned, and planned parts are never described as working.
 
 ## The parts of benchhand
 
 <div class="bh-grid">
-  <NavCard title="Design record" href="/manual/record/layout/" icon="document" status="Works today" statusVariant="success">
+  <NavCard title="Design record" href="/manual/record/layout/" icon="document" status="Available" statusVariant="success">
     A project's requirements, parts, decisions and approvals live as files under `hw/`. The record library reads, validates and writes them, and reports every problem in a record.
   </NavCard>
-  <NavCard title="Contracts" href="/reference/contracts/" icon="list-format" status="Works today" statusVariant="success">
-    Every record, job, finding and provider-protocol shape is defined once in TypeSpec. JSON Schemas, Python models and TypeScript types are generated from it.
+  <NavCard title="Contracts" href="/reference/contracts/" icon="list-format" status="Available" statusVariant="success">
+    Every record, job, finding and provider-protocol shape is defined once in TypeSpec. The JSON Schemas, Python models and TypeScript types are generated from it.
   </NavCard>
-  <NavCard title="Evidence" href="/manual/record/evidence/" icon="approve-check-circle" status="Library today, tools planned" statusVariant="caution">
-    The record library assesses one built version: the status of every check it owes, and a digest of what was accepted. The agent reaches it through MCP from Phase 3.
+  <NavCard title="Evidence" href="/manual/record/evidence/" icon="approve-check-circle" status="Library available, MCP tools planned" statusVariant="caution">
+    For one built version, the record library works out the status of every check it owes and a digest of what was accepted. The agent is to reach it through MCP tools.
   </NavCard>
-  <NavCard title="Gates" href="/manual/process/gates/" icon="padlock" status="Planned: Phase 2" statusVariant="default">
-    The flow engine is to ask for your approval at each stage of the design process. A project can relax a gate in `hw/policy.yaml`, and the record keeps each relaxation.
+  <NavCard title="Gates" href="/manual/process/gates/" icon="padlock" status="Planned" statusVariant="default">
+    The flow engine is to ask for your approval at each stage of the design. A project can relax a gate in `hw/policy.yaml`, and the record keeps each relaxation.
   </NavCard>
-  <NavCard title="Providers" href="/manual/providers/overview/" icon="puzzle" status="Planned: Phase 4" statusVariant="default">
-    CAD kernels (build123d and CadQuery), FreeCAD for drawings and FEA, solvers and renderers are to plug in behind one provider protocol.
+  <NavCard title="Providers" href="/manual/providers/overview/" icon="puzzle" status="Planned" statusVariant="default">
+    CAD kernels (build123d and CadQuery), FreeCAD for drawings and FEA, solvers and renderers are to plug in behind one provider&nbsp;protocol.
   </NavCard>
 </div>
 
@@ -53,33 +55,36 @@ The cards and the two lists below keep that split.
   <a href={siteLink("/architecture/overview/")}>
     <img src={layers.src} width={layers.width} height={layers.height} alt="The benchhand software in layers, from the agent hosts down to storage, with the contracts beside every layer. Open the architecture overview." loading="lazy" decoding="async" />
   </a>
-  <figcaption>The software in layers. Green boxes are on `main`, dashed boxes are a later phase, and grey is outside benchhand. The [architecture overview](/architecture/overview/) cites each box.</figcaption>
+  <figcaption>The software in layers, from the agent hosts down to storage. Green boxes are built, dashed boxes are planned, and grey is outside benchhand. The contracts sit beside every layer, because each layer reads its shapes from them. The [architecture overview](/architecture/overview/) cites each box.</figcaption>
 </figure>
 
+## The workflow
+
 <div class="bh-split">
-<section class="bh-today" aria-labelledby="what-works-today">
+<section class="bh-available" aria-labelledby="the-record-and-its-contracts">
 
-## What works today
+### The record and its contracts
 
-- **The contracts.** The record, job, finding and provider-protocol shapes are defined once in `contracts/`. The repository generates the JSON Schemas, Python models and TypeScript types from them. [Read the contracts](/reference/contracts/).
-- **The record library.** `benchhand-core` reads, validates and writes a project's `hw/` record against those contracts. It reports every problem it finds in a record, not only the first.
-- **Two commands.** `benchhand version` prints the version. `benchhand record migrate HW` converts a prototype record (`record_version` 2) to version 3. It is a dry run until you add `--apply`, and an apply backs up the files it changes first.
+- **One source of shapes.** The record, job, finding and provider-protocol shapes are defined once in `contracts/`. The JSON Schemas, Python models and TypeScript types are generated from them. [Read the contracts](/reference/contracts/).
+- **A record you can audit.** `benchhand-core` reads, validates and writes a project's `hw/` record against those contracts. It reports every problem it finds in a record, not only the first.
+- **Two commands.** `benchhand version` prints the version. `benchhand record migrate HW` converts a record from `record_version` 2 to version 3. It is a dry run until you add `--apply`, and an apply backs up the files it changes first.
 
-Nothing else runs yet: there is no MCP server, no flow engine and no provider to start.
+The MCP server, the flow engine and the providers are planned, and the next panel describes them.
 
 </section>
-<section class="bh-planned" aria-labelledby="the-planned-workflow">
+<section class="bh-planned" aria-labelledby="the-guided-design-flow">
 
-## The planned workflow
+### The guided design flow
 
 <PlannedAside phases={[2, 3, 4]} />
 
 - **One interface.** You run the workflow through MCP. The `benchhand` command is a thin launcher and admin tool.
 - **Guidance from the server.** The agent calls `flow.guide`, and the server answers with the current stage, its tools and the next action.
 - **Gates guide, they don't guard.** Each gate asks for your approval by default. A project can set a gate to `chat` or `auto` in `hw/policy.yaml`, and the record keeps every relaxation.
+- **Scoped approvals.** An approval names the items it covers. A later change to one of them reopens only that item.
 - **Providers for everything.** Kernels, FreeCAD, solvers, renderers, process checks and storage plug in behind one provider protocol.
 
-Most manual and tutorial pages describe this workflow. [The list of outlines](/planned/) shows which pages are outlines, and the phase that writes each.
+Most manual and tutorial pages describe this flow. [The list of outlines](/planned/) shows which pages are outlines, and the phase that writes each.
 
 </section>
 </div>

@@ -147,7 +147,7 @@
 .sl-markdown-content .bh-split > section > :first-child {
   margin-top: 0;
 }
-.sl-markdown-content .bh-split > section.bh-today {
+.sl-markdown-content .bh-split > section.bh-available {
   border-top: 3px solid var(--sl-color-text-accent);
 }
 .sl-markdown-content .bh-split > section.bh-planned {
