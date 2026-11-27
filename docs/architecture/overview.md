@@ -13,10 +13,10 @@ The diagrams are D2, the format of the domain model. Each has its source and its
 ## The diagram rule
 
 - A solid box or arrow is on `main`, checked against the code at `518c2ae`.
-- A dashed box or arrow is in a later phase, on a branch, or open. Its label gives its phase from the [Steps](../design-plan.md#steps-phased) of the design plan, or says why it has none.
+- A dashed box or arrow is in a later phase, or open. Its label gives its phase from the [Steps](../design-plan.md#steps-phased) of the design plan, or says why it has none. Work that exists only on an unmerged branch is drawn with its phase, like work not yet started.
 - A count comes from generated output only. The record count is from the generated [domain model](../contract/generated/domain-model.md#overview-the-record-documents).
 - Each box names a package path or a doc. The tables below cite why each box has its style.
-- The colours follow the [legend](README.md#legend) of the other pages. Green is on `main`, orange is on a branch, white is a later phase, red is open and grey is outside benchhand.
+- The colours follow the [legend](README.md#legend) of the other pages. Green is on `main`, white is a later phase, red is open and grey is outside benchhand.
 
 ## The software in layers
 
@@ -39,14 +39,14 @@ Six layers stack from the clients down to storage. The contracts sit beside them
 | Jobs | On `main` | `packages/benchhand-core/src/benchhand_core/jobs/`: `service.py`, `supervisor.py`, `store.py` |
 | Policy service | Phase 2 | Phase 2 lists policy (`hw/policy.yaml`) with the interpreter. On `main` the record already reads `hw/policy.yaml` (`record/documents.py`), and `rules/decisions.py` checks an approved gate against its mode |
 | Provider protocol | On `main` | `contracts/provider/protocol.tsp`, `contracts/provider/manifest.tsp` and [provider-protocol.md](../contract/provider-protocol.md) |
-| Provider runtime and conformance kit | Phase 4, on a branch | `packages/benchhand-provider/src/benchhand_provider/__init__.py` is a one-line stub on `main`. The runtime and kit are on `pi-subagents/task-4-a307ae9-5a16-s0-t0` |
+| Provider runtime and conformance kit | Phase 4 | `packages/benchhand-provider/src/benchhand_provider/__init__.py` is a one-line stub on `main` |
 | Provider host, the arrow from core | Open | No phase in the Steps ([containers.md](containers.md#legend)) |
 | Kernels, FreeCAD, solvers, render, checks, store | Phase 4 | No `providers/` directory on `main`. Phase 4 lists the freecad provider with its managed install and compatibility probe |
 | Project `hw/` | On `main` | The record service reads and writes it |
 | Project `.benchhand/` | On `main` | `jobs/store.py` `RecordStore` writes `.benchhand/runs/<jobId>.json` |
 | User cache with managed FreeCAD | Phase 4 | Plan section 8 and D5: the freecad provider installs a supported FreeCAD there |
 | TypeSpec, JSON Schema, Pydantic, TypeScript | On `main` | `contracts/*.tsp`, `benchhand_contracts/schemas/`, `benchhand_contracts/models/`, `ui/shared/contracts/`. `benchhand-core` imports the models and `validate` |
-| Envelope, flow, flow rules and policy contribution contracts | Phase 1 list, on a branch | On `pi-subagents/task-1-3d530ac-2da9-s0-t0`, provisional. `main` has no `contracts/envelope/`, `contracts/flow/` or `contracts/policy/` |
+| Envelope, flow, flow rules and policy contribution contracts | Phase 1 | The Phase 1 step lists them. `main` has no `contracts/envelope/`, `contracts/flow/` or `contracts/policy/` |
 | CEL environment: descriptor set and profile manifest | Phase 2 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): `contracts_gen` generates them from the published schemas. Not on `main` |
 
 ## Deployment and runtime
@@ -92,4 +92,3 @@ d2 --layout elk --pad 40 deployment.d2 deployment.svg
 - `docs/adr/`: [0002](../adr/0002-install-uvx-and-container.md) (install and container), [0010](../adr/0010-stdio-transport.md) (stdio), [0013](../adr/0013-provider-protocol.md) (provider protocol), [0014](../adr/0014-flow-rules-cel.md) (CEL), [0016](../adr/0016-dev-only-probe.md) (probe), [0017](../adr/0017-contracts.md) (contracts) and [0020](../adr/0020-cel-rule-pipeline.md) (the CEL rule pipeline).
 - [docs/client-support.md](../client-support.md) and [docs/contract/provider-protocol.md](../contract/provider-protocol.md).
 - Code on `main` at `518c2ae`: `packages/*/src/`, `contracts/`, `ui/shared/contracts/` and `tools/probe/`.
-- Branches, for the orange boxes: `pi-subagents/task-1-3d530ac-2da9-s0-t0` (envelope, flow and policy contracts), `pi-subagents/task-4-a307ae9-5a16-s0-t0` (provider runtime and kit) and `pi-subagents/task-5-e1402fe-4bd3-s0-t0` (FreeCAD install and probe).

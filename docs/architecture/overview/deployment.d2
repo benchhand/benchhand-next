@@ -1,11 +1,10 @@
 # Deployment and runtime: docs/architecture/overview.md.
-# Solid: on main, checked against the code. Dashed: planned, on a branch, or open, labelled with the phase
+# Solid: on main, checked against the code. Dashed: planned or open, labelled with the phase that
 # docs/design-plan.md "Steps (phased)" gives it. Render: d2 --layout elk --pad 40 deployment.d2 deployment.svg (d2 0.9.0).
 
 vars: {
   d2-legend: {
     main: "On main" {class: main}
-    branch: "On a branch, Phase N" {class: branch}
     planned: "Planned, Phase N" {class: planned}
     open: "Open: no phase in Steps" {class: open}
     external: "Outside benchhand" {class: external}
@@ -14,7 +13,6 @@ vars: {
 
 classes: {
   main: {style: {fill: "#e8f5e9"; stroke: "#2e7d32"; stroke-width: 2; font-color: "#1b1b1b"}}
-  branch: {style: {fill: "#fff3e0"; stroke: "#e65100"; stroke-width: 2; stroke-dash: 4; font-color: "#1b1b1b"}}
   planned: {style: {fill: "#ffffff"; stroke: "#616161"; stroke-width: 1; stroke-dash: 4; font-color: "#1b1b1b"}}
   open: {style: {fill: "#ffebee"; stroke: "#c62828"; stroke-width: 2; stroke-dash: 2; font-color: "#1b1b1b"}}
   external: {style: {fill: "#eceff1"; stroke: "#37474f"; stroke-width: 1; font-color: "#1b1b1b"}}
