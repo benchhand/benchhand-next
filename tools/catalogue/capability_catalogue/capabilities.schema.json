@@ -473,9 +473,11 @@
           "$ref": "#/$defs/Phase"
         },
         "status": {
+          "description": "built: on main. planned: a plan phase or ADR names it. unresolved: a source names it only in an example, and an open question asks whether it exists; it has no phase until that is answered. proposed: no source names it. dropped: not carried over; the note says why.",
           "enum": [
             "built",
             "planned",
+            "unresolved",
             "proposed",
             "dropped"
           ]
@@ -508,6 +510,28 @@
         }
       },
       "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unresolved"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "open_questions"
+            ],
+            "properties": {
+              "phase": {
+                "const": null
+              },
+              "open_questions": {
+                "minItems": 1
+              }
+            }
+          }
+        },
         {
           "if": {
             "properties": {

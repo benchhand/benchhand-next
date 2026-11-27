@@ -7,7 +7,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 - **built**: on `main`; its evidence points at the code. **partial**: part of it is on `main`; its note says what is left.
 - **planned**: a phase of the design plan's Steps builds it. **proposed**: no source plans it. A proposed name comes from this catalogue (`catalogue`), for a prototype command or a gap the plan implies, or from the CAD-libraries study (`study`), whose reports aren't in this repository.
 - `P2` is Phase 2 of the plan's Steps. `no phase` means no phase delivers it; an open question says why.
-- A capability's status is its core's. Each tool and CLI command has its own status and phase.
+- A capability's status is its core's. Each tool and CLI command has its own status and phase. A tool is **unresolved** when a source names it only in an example and an open question asks whether it exists; it has no phase until that is answered.
 
 | Phase | Capabilities | built | partial | planned | proposed | dropped |
 |---|---|---|---|---|---|---|
@@ -22,7 +22,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 |
 | **all** | **77** | 6 | 5 | 60 | 6 | 0 |
 
-MCP tools: 105 (39 planned, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28.
+MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28.
 
 ## Capabilities by phase
 
@@ -314,6 +314,7 @@ flowchart LR
   model_build -.-> provider_host
   model_build -.-> provider_environments
   model_build -.-> version_snapshots
+  model_build -.-> existing_equipment
   model_export -.-> model_build
   model_inspect -.-> model_build
   model_diff -.-> model_inspect
@@ -438,7 +439,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `flow.guide` | [guide-service](#guide-service) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:309` | – |
 | `flow.impact` | [change-impact](#change-impact) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `impact.py` | `impact.py` |
 | `flow.record_decision` | [decision-records](#decision-records) | write | `flow/flow.schema.json#/$defs/GateDecisionRequest` | not yet defined | sync | records-decision | P3 | planned | plan: `docs/design-plan.md:341` | – |
-| `flow.record_provisional` | [decision-records](#decision-records) | write | not yet defined | not yet defined | sync | records-decision | P3 | planned | contract: `contracts/envelope/envelope.tsp:105` | – |
+| `flow.record_provisional` | [decision-records](#decision-records) | write | not yet defined | not yet defined | sync | records-decision | no phase | unresolved | contract: `contracts/envelope/envelope.tsp:105` | – |
 | `jobs.cancel` | [job-service](#job-service) | write | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `tasks/cancel without its baseline` | – |
 | `jobs.result` | [job-service](#job-service) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:345` | – |
 | `jobs.start` | [job-service](#job-service) | write | not yet defined | not yet defined | job-handle | unspecified | P3 | planned | plan: `docs/design-plan.md:345` | – |
@@ -487,7 +488,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `record.add_requirement` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
 | `record.check_machine_profile` | [machine-profile](#machine-profile) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `machine_profile.py` | `machine_profile.py check` |
 | `record.cite_source` | [standards-parts-data](#standards-parts-data) | write | not yet defined | not yet defined | sync | unspecified | P4 | proposed | study: `lane8-agentcad.md section 6, item 7` | – |
-| `record.migrate` | [record-migrate](#record-migrate) | write | not yet defined | not yet defined | sync | unspecified | no phase | planned | contract: `contracts/envelope/envelope.tsp:183` | – |
+| `record.migrate` | [record-migrate](#record-migrate) | write | not yet defined | not yet defined | sync | unspecified | no phase | unresolved | contract: `contracts/envelope/envelope.tsp:183` | – |
 | `record.propose_coupons` | [assembly-steps-and-coupons](#assembly-steps-and-coupons) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `plan section 12b, coupons from the requirement` | – |
 | `record.read` | [record-store](#record-store) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `ADR-0018 readable content` | – |
 | `record.set_machine_profile` | [machine-profile](#machine-profile) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `machine_profile.py` | `machine_profile.py write` |
@@ -1367,7 +1368,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 
 ### existing-equipment
 
-**Existing equipment and occurrence roles.** make_buy `existing` for customer equipment, with a dimension range and its basis, and an occurrence role (product, context or tooling). Each version exports product.step and product.glb with product occurrences only, and scene.step and scene.glb with all of them; the release refuses a product export with a context or tooling part, and obligations nobody orders are not_applicable with a reason.
+**Existing equipment and occurrence roles.** The record side, which Phase 2 adds: make_buy `existing` for customer equipment, with a dimension range and its basis, the occurrence role (product, context or tooling), and obligation generation that marks parts nobody orders not_applicable with a reason. Its Phase 4 consumers are model-build, which exports product and scene files by role, and release-packaging, which refuses a product export with a context or tooling part.
 
 - Layer and container: core, `containers.md:record`
 - Phase and status: P2, planned
@@ -1656,7 +1657,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 
 ### model-build
 
-**Build a version.** Build a version from the agent's model.py in the CadQuery or build123d kernel provider and return STEP AP242, GLB and the build manifest as artifacts. The agent writes geometry, and nothing else is scripted.
+**Build a version.** Build a version from the agent's model.py in the CadQuery or build123d kernel provider and return STEP AP242, GLB and the build manifest as artifacts. The agent writes geometry, and nothing else is scripted. Each version exports product.step and product.glb with product occurrences only, and scene.step and scene.glb with all of them (plan section 12a).
 
 - Layer and container: providers, `containers.md:kernels`
 - Phase and status: P4, planned
@@ -1664,7 +1665,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Contracts: `provider/protocol.schema.json#/$defs/KernelBuildParams`, `provider/protocol.schema.json#/$defs/KernelBuildResult`
 - MCP tools: `model.build`
 - CLI: –
-- Depends on: [provider-host](#provider-host), [provider-environments](#provider-environments), [version-snapshots](#version-snapshots)
+- Depends on: [provider-host](#provider-host), [provider-environments](#provider-environments), [version-snapshots](#version-snapshots), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0007, ADR-0013
 - Prototype: `skills/cad-model/scripts/cad_model.py`, `skills/cad-model/scripts/cadmodel/build.py`, `skills/cad-model/scripts/cadmodel/agreement.py`, `skills/cad-model/scripts/cadmodel/stepfile.py`, `skills/cad-model/scripts/cadmodel/manufacture.py`, `skills/cad-model/scripts/run_cadquery.py`, `skills/cad-model/scripts/run_build123d.py`, `skills/cad-design/scripts/build_reference.py`
 - Open questions: [tool-stage-check](#tool-stage-check), [artifact-placement](#artifact-placement)
@@ -1853,7 +1854,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 
 ### release-packaging
 
-**Release packaging.** Seal a release of the frozen version under hw/releases/<REV>/: byte copies and a manifest, the refusal checks, and the acceptance digest checked against the freeze.
+**Release packaging.** Seal a release of the frozen version under hw/releases/<REV>/: byte copies and a manifest, the refusal checks, and the acceptance digest checked against the freeze. One refusal is a product export that holds a context or tooling part (plan section 12a).
 
 - Layer and container: core, `containers.md:release`
 - Phase and status: P4, planned

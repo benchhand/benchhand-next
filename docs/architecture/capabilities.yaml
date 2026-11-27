@@ -900,13 +900,13 @@ capabilities:
       - 19
   - id: existing-equipment
     title: Existing equipment and occurrence roles
-    purpose: make_buy `existing` for customer equipment, with a dimension
-      range and its basis, and an occurrence role (product, context
-      or tooling). Each version exports product.step and product.glb
-      with product occurrences only, and scene.step and scene.glb
-      with all of them; the release refuses a product export with
-      a context or tooling part, and obligations nobody orders are
-      not_applicable with a reason.
+    purpose: 'The record side, which Phase 2 adds: make_buy `existing`
+      for customer equipment, with a dimension range and its basis,
+      the occurrence role (product, context or tooling), and obligation
+      generation that marks parts nobody orders not_applicable with
+      a reason. Its Phase 4 consumers are model-build, which exports
+      product and scene files by role, and release-packaging, which
+      refuses a product export with a context or tooling part.'
     layer: core
     container: containers.md:record
     phase: 2
@@ -1411,7 +1411,9 @@ capabilities:
     purpose: Build a version from the agent's model.py in the CadQuery
       or build123d kernel provider and return STEP AP242, GLB and
       the build manifest as artifacts. The agent writes geometry,
-      and nothing else is scripted.
+      and nothing else is scripted. Each version exports product.step
+      and product.glb with product occurrences only, and scene.step
+      and scene.glb with all of them (plan section 12a).
     layer: providers
     container: containers.md:kernels
     phase: 4
@@ -1435,6 +1437,7 @@ capabilities:
       - provider-host
       - provider-environments
       - version-snapshots
+      - existing-equipment
     open_questions:
       - tool-stage-check
       - artifact-placement
@@ -1801,7 +1804,8 @@ capabilities:
     title: Release packaging
     purpose: 'Seal a release of the frozen version under hw/releases/<REV>/:
       byte copies and a manifest, the refusal checks, and the acceptance
-      digest checked against the freeze.'
+      digest checked against the freeze. One refusal is a product
+      export that holds a context or tooling part (plan section 12a).'
     layer: core
     container: containers.md:release
     phase: 4
@@ -2380,8 +2384,8 @@ tools:
     output: not yet defined
     envelope: sync
     gate: records-decision
-    phase: 3
-    status: planned
+    phase: null
+    status: unresolved
     source:
       kind: contract
       ref: contracts/envelope/envelope.tsp:105
@@ -2531,7 +2535,7 @@ tools:
     envelope: sync
     gate: unspecified
     phase: null
-    status: planned
+    status: unresolved
     source:
       kind: contract
       ref: contracts/envelope/envelope.tsp:183
