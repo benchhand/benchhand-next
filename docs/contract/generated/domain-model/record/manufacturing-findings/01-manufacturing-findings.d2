@@ -6,13 +6,13 @@ direction: right
   label: "manufacturing-findings"
   "record_manufacturing_findings": {
     class: document
-    label: "manufacturing-findings"
+    label: "manufacturing-findings  «document»"
     shape: sql_table
     "dispositions": "disposition[]" { constraint: "req" }
   }
   "record_manufacturing_findings__disposition": {
     class: owned
-    label: "disposition"
+    label: "disposition  «type»"
     shape: sql_table
     "finding": "semantic_id" { constraint: "req" }
     "code": "finding_code"
@@ -25,7 +25,7 @@ direction: right
   }
   "record_manufacturing_findings__disposition__producer": {
     class: owned
-    label: "disposition.producer"
+    label: "disposition.producer  «type»"
     shape: sql_table
     "bundle": "project_path" { constraint: "req" }
     "manifest_sha256": "sha256" { constraint: "req" }

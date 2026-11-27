@@ -6,7 +6,7 @@ direction: right
   label: "setup"
   "record_part__setup": {
     class: owned
-    label: "setup"
+    label: "setup  «type»"
     shape: sql_table
     "stock": "object"
     "datums": "semantic_ids"
@@ -16,7 +16,7 @@ direction: right
   }
   "record_part__setup__stock": {
     class: owned
-    label: "setup.stock"
+    label: "setup.stock  «type»"
     shape: sql_table
     "material_profile": "profile_id or fact_open"
     "grade": "text_fact"
@@ -28,7 +28,7 @@ direction: right
   }
   "record_part__setup__workholding": {
     class: owned
-    label: "setup.workholding"
+    label: "setup.workholding  «type»"
     shape: sql_table
     "method": "text_fact" { constraint: "req" }
     "contact_regions": "target[1..*]"
@@ -38,14 +38,14 @@ direction: right
   }
   "record_part__setup__access": {
     class: owned
-    label: "setup.access"
+    label: "setup.access  «type»"
     shape: sql_table
     "sides": "texts"
     "tools": "object[1..*]"
   }
   "record_part__setup__access__tools": {
     class: owned
-    label: "setup.access.tools"
+    label: "setup.access.tools  «type»"
     shape: sql_table
     "description": "text" { constraint: "req" }
     "capability": "profile_id"

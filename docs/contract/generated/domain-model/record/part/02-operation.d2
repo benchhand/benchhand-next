@@ -6,7 +6,7 @@ direction: right
   label: "operation"
   "record_part__operation": {
     class: owned
-    label: "operation"
+    label: "operation  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "kind": "semantic_id" { constraint: "req" }
@@ -39,7 +39,7 @@ direction: right
   }
   "record_part__orientation": {
     class: owned
-    label: "orientation"
+    label: "orientation  «type»"
     shape: sql_table
     "status": "enum proposed|approved" { constraint: "req" }
     "rotation": "object" { constraint: "req" }
@@ -54,13 +54,13 @@ direction: right
   }
   "record_part__orientation__rotation__1": {
     class: owned
-    label: "orientation.rotation.1"
+    label: "orientation.rotation.1  «type»"
     shape: sql_table
     "quaternion": "number[4]" { constraint: "req" }
   }
   "record_part__orientation__rotation__2": {
     class: owned
-    label: "orientation.rotation.2"
+    label: "orientation.rotation.2  «type»"
     shape: sql_table
     "axis": "vector" { constraint: "req" }
     "angle_deg": "number" { constraint: "req" }
@@ -72,7 +72,7 @@ direction: right
   }
   "record_part__supports": {
     class: owned
-    label: "supports"
+    label: "supports  «type»"
     shape: sql_table
     "strategy": "enum none|reachable_noncritical|finished_critical" { constraint: "req" }
     "start_regions": "target[1..*]"
@@ -86,7 +86,7 @@ direction: right
   }
   "record_part__supports__removal": {
     class: owned
-    label: "supports.removal"
+    label: "supports.removal  «type»"
     shape: sql_table
     "tools": "texts" { constraint: "req" }
     "access": "text" { constraint: "req" }
@@ -94,7 +94,7 @@ direction: right
   }
   "record_part__allowance": {
     class: owned
-    label: "allowance"
+    label: "allowance  «type»"
     shape: sql_table
     "feature": "semantic_id" { constraint: "req" }
     "region": "semantic_id"
@@ -106,7 +106,7 @@ direction: right
   }
   "record_part__inspection": {
     class: owned
-    label: "inspection"
+    label: "inspection  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "feature": "semantic_id"

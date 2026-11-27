@@ -1,10 +1,18 @@
 # The colours of every diagram, set once. A sql_table takes its header from `fill` and its body from `stroke`.
+# Colour is never the only cue: a table's header names its type, the overview's documents and libraries are
+# different shapes, a stub has a dashed border, and the line styles tell the relations apart.
 classes: {
   document: { style: { fill: "#1d4ed8"; stroke: "#eff6ff"; font-color: "#ffffff" } }
   owned: { style: { fill: "#0f766e"; stroke: "#f0fdfa"; font-color: "#ffffff" } }
   union: { style: { fill: "#7c3aed"; stroke: "#f5f3ff"; font-color: "#ffffff" } }
-  overview_document: { style: { fill: "#1d4ed8"; stroke: "#1e3a8a"; font-color: "#ffffff"; font-size: 20 } }
-  overview_library: { style: { fill: "#b45309"; stroke: "#78350f"; font-color: "#ffffff"; font-size: 20 } }
+  overview_document: {
+    shape: page
+    style: { fill: "#1d4ed8"; stroke: "#1e3a8a"; font-color: "#ffffff"; font-size: 20 }
+  }
+  overview_library: {
+    shape: package
+    style: { fill: "#b45309"; stroke: "#78350f"; font-color: "#ffffff"; font-size: 20 }
+  }
   stub: {
     style: { fill: "#e5e7eb"; stroke: "#9ca3af"; font-color: "#4b5563"; font-size: 14; stroke-dash: 2 }
   }

@@ -6,13 +6,13 @@ direction: right
   label: "manufacturing-capabilities"
   "record_manufacturing_capabilities": {
     class: document
-    label: "manufacturing-capabilities"
+    label: "manufacturing-capabilities  «document»"
     shape: sql_table
     "profiles": "profile[]" { constraint: "req" }
   }
   "record_manufacturing_capabilities__profile": {
     class: owned
-    label: "profile"
+    label: "profile  «type»"
     shape: sql_table
     "id": "profile_id" { constraint: "req" }
     "revision": "integer" { constraint: "req" }
@@ -36,14 +36,14 @@ direction: right
   }
   "record_manufacturing_capabilities__profile__machine": {
     class: owned
-    label: "profile.machine"
+    label: "profile.machine  «type»"
     shape: sql_table
     "identity": "text_fact" { constraint: "req" }
     "location": "text"
   }
   "record_manufacturing_capabilities__profile__envelope": {
     class: owned
-    label: "profile.envelope"
+    label: "profile.envelope  «type»"
     shape: sql_table
     "x": "quantity_fact" { constraint: "req" }
     "y": "quantity_fact" { constraint: "req" }
@@ -51,7 +51,7 @@ direction: right
   }
   "record_manufacturing_capabilities__material_approval": {
     class: owned
-    label: "material_approval"
+    label: "material_approval  «type»"
     shape: sql_table
     "material": "profile_id" { constraint: "req" }
     "status": "enum approved|forbidden" { constraint: "req" }
@@ -64,7 +64,7 @@ direction: right
   }
   "record_manufacturing_capabilities__parameters": {
     class: owned
-    label: "parameters"
+    label: "parameters  «type»"
     shape: sql_table
     "nozzle_diameter": "fact and fact_nozzle_diameter"
     "layer_height": "fact and fact_layer_height"
@@ -82,7 +82,7 @@ direction: right
   }
   "record_manufacturing_capabilities__profile__tools": {
     class: owned
-    label: "profile.tools"
+    label: "profile.tools  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "description": "text" { constraint: "req" }
@@ -90,7 +90,7 @@ direction: right
   }
   "record_manufacturing_capabilities__calibration": {
     class: owned
-    label: "calibration"
+    label: "calibration  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "characteristic": "semantic_id" { constraint: "req" }
@@ -103,7 +103,7 @@ direction: right
   }
   "record_manufacturing_capabilities__calibration__scope": {
     class: owned
-    label: "calibration.scope"
+    label: "calibration.scope  «type»"
     shape: sql_table
     "material": "profile_id" { constraint: "req" }
     "condition": "text"
@@ -117,7 +117,7 @@ direction: right
   }
   "record_manufacturing_capabilities__calibration__result": {
     class: owned
-    label: "calibration.result"
+    label: "calibration.result  «type»"
     shape: sql_table
     "limits": "quantity" { constraint: "req" }
     "distribution": "text"

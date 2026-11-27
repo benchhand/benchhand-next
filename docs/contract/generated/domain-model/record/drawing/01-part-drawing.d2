@@ -6,7 +6,7 @@ direction: right
   label: "part_drawing"
   "record_drawing__sheet": {
     class: owned
-    label: "sheet"
+    label: "sheet  «type»"
     shape: sql_table
     "sizes": "sheet_size[1..*]"
     "orientation": "enum landscape|portrait"
@@ -15,7 +15,7 @@ direction: right
   }
   "record_drawing__view": {
     class: owned
-    label: "view"
+    label: "view  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "kind": "enum orthographic|auxiliary|section|detail" { constraint: "req" }
@@ -33,7 +33,7 @@ direction: right
   }
   "record_drawing__geometric_tolerance": {
     class: owned
-    label: "geometric_tolerance"
+    label: "geometric_tolerance  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "characteristic": "enum" { constraint: "req" }
@@ -44,7 +44,7 @@ direction: right
   }
   "record_drawing__part_drawing": {
     class: owned
-    label: "part_drawing"
+    label: "part_drawing  «type»"
     shape: sql_table
     "type": "enum detail|vendor_specification|source_control" { constraint: "req" }
     "tolerance_policy": "policy_name"
@@ -62,14 +62,14 @@ direction: right
   }
   "record_drawing__part_drawing__datum_features": {
     class: owned
-    label: "part_drawing.datum_features"
+    label: "part_drawing.datum_features  «type»"
     shape: sql_table
     "feature": "semantic_id" { constraint: "req" }
     "role": "enum plane|axis|point|center_plane|clocking_feature" { constraint: "req" }
   }
   "record_drawing__part_drawing__edges": {
     class: owned
-    label: "part_drawing.edges"
+    label: "part_drawing.edges  «type»"
     shape: sql_table
   }
   "record_drawing__part_drawing__surface_texture": {
@@ -79,13 +79,13 @@ direction: right
   }
   "record_drawing__part_drawing__surface_texture__2": {
     class: owned
-    label: "part_drawing.surface_texture.2"
+    label: "part_drawing.surface_texture.2  «type»"
     shape: sql_table
     "open": "string" { constraint: "req" }
   }
   "record_drawing__part_drawing__notes": {
     class: owned
-    label: "part_drawing.notes"
+    label: "part_drawing.notes  «type»"
     shape: sql_table
     "kind": "enum process|finish|material|inspection|general" { constraint: "req" }
     "text": "string" { constraint: "req" }
@@ -93,7 +93,7 @@ direction: right
   }
   "record_drawing__part_drawing__manufacturing": {
     class: owned
-    label: "part_drawing.manufacturing"
+    label: "part_drawing.manufacturing  «type»"
     shape: sql_table
     "build_direction": "direction"
     "interface_condition": "enum as_printed|post_processed|finish_machined"
@@ -104,7 +104,7 @@ direction: right
 }
 "record_drawing__product_drawing__default_sheet": {
   class: owned
-  label: "product_drawing.default_sheet"
+  label: "product_drawing.default_sheet  «type»"
   shape: sql_table
 }
 "stub__record_drawing__dimension_request": {

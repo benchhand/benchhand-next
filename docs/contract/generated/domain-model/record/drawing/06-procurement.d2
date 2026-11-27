@@ -6,7 +6,7 @@ direction: right
   label: "procurement"
   "record_drawing__procurement": {
     class: owned
-    label: "procurement"
+    label: "procurement  «type»"
     shape: sql_table
     "mode": "enum catalog|made_to_drawing" { constraint: "req" }
     "manufacturer": "string"
@@ -22,7 +22,7 @@ direction: right
   }
   "record_drawing__procurement__specification": {
     class: owned
-    label: "procurement.specification"
+    label: "procurement.specification  «type»"
     shape: sql_table
     "reference": "string" { constraint: "req" }
     "revision": "string" { constraint: "req" }
@@ -32,7 +32,7 @@ direction: right
   }
   "record_drawing__procurement__open": {
     class: owned
-    label: "procurement.open"
+    label: "procurement.open  «type»"
     shape: sql_table
     "manufacturer": "string"
     "manufacturer_part_number": "string"
@@ -40,7 +40,7 @@ direction: right
   }
   "record_drawing__procurement__approved_sources": {
     class: owned
-    label: "procurement.approved_sources"
+    label: "procurement.approved_sources  «type»"
     shape: sql_table
     "name": "string" { constraint: "req" }
     "part_number": "string"

@@ -6,7 +6,7 @@ direction: right
   label: "manifest"
   "provider_manifest": {
     class: document
-    label: "manifest"
+    label: "manifest  «document»"
     shape: sql_table
     "name": "string" { constraint: "req" }
     "version": "string" { constraint: "req" }
@@ -23,7 +23,7 @@ direction: right
   }
   "provider_manifest__protocol": {
     class: owned
-    label: "manifest.protocol"
+    label: "manifest.protocol  «type»"
     shape: sql_table
     "min": "integer" { constraint: "req" }
     "max": "integer" { constraint: "req" }
@@ -36,7 +36,7 @@ direction: right
   }
   "provider_manifest__environment__uv": {
     class: owned
-    label: "manifest.environment.uv"
+    label: "manifest.environment.uv  «type»"
     shape: sql_table
     "kind": "const uv" { constraint: "req" }
     "requires-python": "string" { constraint: "req" }
@@ -44,19 +44,19 @@ direction: right
   }
   "provider_manifest__environment__freecad": {
     class: owned
-    label: "manifest.environment.freecad"
+    label: "manifest.environment.freecad  «type»"
     shape: sql_table
     "kind": "const freecad" { constraint: "req" }
   }
   "provider_manifest__environment__system": {
     class: owned
-    label: "manifest.environment.system"
+    label: "manifest.environment.system  «type»"
     shape: sql_table
     "kind": "const system" { constraint: "req" }
   }
   "provider_manifest__cli": {
     class: owned
-    label: "manifest.cli"
+    label: "manifest.cli  «type»"
     shape: sql_table
     "name": "string" { constraint: "req" }
     "summary": "string" { constraint: "req" }

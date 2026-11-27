@@ -6,13 +6,13 @@ direction: right
   label: "interfaces"
   "record_interfaces": {
     class: document
-    label: "interfaces"
+    label: "interfaces  «document»"
     shape: sql_table
     "interfaces": "object[]" { constraint: "req" }
   }
   "record_interfaces__interfaces": {
     class: owned
-    label: "interfaces.interfaces"
+    label: "interfaces.interfaces  «type»"
     shape: sql_table
     "id": "interface_id" { constraint: "req" }
     "from": "string" { constraint: "req" }
@@ -27,7 +27,7 @@ direction: right
   }
   "record_interfaces__interfaces__limits": {
     class: owned
-    label: "interfaces.interfaces.limits"
+    label: "interfaces.interfaces.limits  «type»"
     shape: sql_table
     "press_fit": "fit"
     "running_fit": "fit"

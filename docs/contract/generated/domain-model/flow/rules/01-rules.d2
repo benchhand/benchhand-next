@@ -6,20 +6,20 @@ direction: right
   label: "rules"
   "flow_rules": {
     class: document
-    label: "rules"
+    label: "rules  «document»"
     shape: sql_table
     "name": "RuleName" { constraint: "req" }
     "rule": "Rule" { constraint: "req" }
   }
   "flow_rules__Rule": {
     class: owned
-    label: "Rule"
+    label: "Rule  «type»"
     shape: sql_table
     "match": "any" { constraint: "req" }
   }
   "flow_rules__RuleMatch": {
     class: owned
-    label: "RuleMatch"
+    label: "RuleMatch  «type»"
     shape: sql_table
     "condition": "CelExpression"
     "output": "CelExpression" { constraint: "req" }
@@ -31,7 +31,7 @@ direction: right
   label: "FlowRuleLists"
   "flow_rules__FlowRuleLists": {
     class: owned
-    label: "FlowRuleLists"
+    label: "FlowRuleLists  «type»"
     shape: sql_table
     "checks_by_iteration": "RuleListReference" { constraint: "req" }
     "dispatch": "RuleListReference" { constraint: "req" }
@@ -40,7 +40,7 @@ direction: right
   }
   "flow_rules__RuleListReference": {
     class: owned
-    label: "RuleListReference"
+    label: "RuleListReference  «type»"
     shape: sql_table
     "file": "RuleListFile" { constraint: "req" }
     "rules_version": "const 1" { constraint: "req" }

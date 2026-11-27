@@ -6,7 +6,7 @@ direction: right
   label: "job"
   "jobs_job__JobHandle": {
     class: owned
-    label: "JobHandle"
+    label: "JobHandle  «type»"
     shape: sql_table
     "jobId": "JobId" { constraint: "req" }
     "kind": "JobKind" { constraint: "req" }
@@ -22,7 +22,7 @@ direction: right
   }
   "jobs_job__JobProgress": {
     class: owned
-    label: "JobProgress"
+    label: "JobProgress  «type»"
     shape: sql_table
     "fraction": "number or null" { constraint: "req" }
     "message": "string or null" { constraint: "req" }
@@ -34,7 +34,7 @@ direction: right
   }
   "jobs_job__JobRecord": {
     class: owned
-    label: "JobRecord"
+    label: "JobRecord  «type»"
     shape: sql_table
     "jobId": "JobId" { constraint: "req" }
     "kind": "JobKind" { constraint: "req" }
@@ -55,7 +55,7 @@ direction: right
   }
   "jobs_job__ProcessIdentity": {
     class: owned
-    label: "ProcessIdentity"
+    label: "ProcessIdentity  «type»"
     shape: sql_table
     "pid": "integer" { constraint: "req" }
     "identity": "string" { constraint: "req" }

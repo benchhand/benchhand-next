@@ -162,9 +162,11 @@ def _legend() -> list[str]:
         "inline. An inline object `b` of property `a` is named `a.b`. Each row is a field, and `req` marks "
         "a required one. A box with a dashed border groups the types that one root owns.",
         "",
-        "- Colours: blue is a contract root, teal is any other type, purple is a union (`«union»`, or "
-        "`«abstract»` when every branch fixes one property with a `const`). A grey dashed box is a stub: "
-        "a type that another diagram of the same contract or another contract owns. It has no fields.",
+        "- Types: the header of a table names its type, so that colour is never the only cue. "
+        "`«document»` (blue) is a contract root, `«type»` (teal) is any other type, and a "
+        "union (purple) is `«union»`, or `«abstract»` when every branch fixes one property "
+        "with a `const`. A grey box with a dashed border is a stub: a type that another diagram of the same "
+        "contract or another contract owns. It has no fields.",
         "- **Enums have no colour.** D2 cannot colour one table cell, and the model has no node for an "
         "enum. An enum shows in the type of its field: its values when there are six or fewer, and its "
         "name when it is a named definition. Each contract page lists its enums in one table.",
@@ -177,8 +179,9 @@ def _legend() -> list[str]:
         "`[A, B]` is a tuple. `T by key` is an object whose every value is a T, and a `[key]` row holds "
         "the other keys of an object that also has named properties. Values are JSON: `null`, `true`, and "
         "a string bare.",
-        "- In the overview, blue is a record document, amber is a library (shared definitions and no "
-        "document of its own), and an arrow counts the `$ref`s from one record contract to another.",
+        "- In the overview, a blue page shape is a record document, an amber package shape is a library "
+        "(shared definitions and no document of its own), and an arrow counts the `$ref`s from one record "
+        "contract to another.",
         "- Every diagram has a text alternative: a table of its relationships follows it, with the source, the "
         "relation, the target and the cardinality of each arrow, and its `.svg` file has a title and a "
         "description that spell out the same arrows.",

@@ -12,7 +12,7 @@ direction: right
   }
   "record_drawing__tolerance_policy__standard": {
     class: owned
-    label: "tolerance_policy.standard"
+    label: "tolerance_policy.standard  «type»"
     shape: sql_table
     "kind": "const standard" { constraint: "req" }
     "standard": "const ISO 2768-1:1989" { constraint: "req" }
@@ -21,7 +21,7 @@ direction: right
   }
   "record_drawing__tolerance_policy__limits": {
     class: owned
-    label: "tolerance_policy.limits"
+    label: "tolerance_policy.limits  «type»"
     shape: sql_table
     "kind": "const limits" { constraint: "req" }
     "linear_mm": "number" { constraint: "req" }
@@ -31,7 +31,7 @@ direction: right
   }
   "record_drawing__product_drawing": {
     class: owned
-    label: "product_drawing"
+    label: "product_drawing  «type»"
     shape: sql_table
     "definition": "const model_and_drawing" { constraint: "req" }
     "projection": "enum first_angle|third_angle" { constraint: "req" }

@@ -6,7 +6,7 @@ direction: right
   label: "fact"
   "record_common__fact_known": {
     class: owned
-    label: "fact_known"
+    label: "fact_known  «type»"
     shape: sql_table
     "status": "const known" { constraint: "req" }
     "value": "any" { constraint: "req" }
@@ -21,7 +21,7 @@ direction: right
   }
   "record_common__uncertainty": {
     class: owned
-    label: "uncertainty"
+    label: "uncertainty  «type»"
     shape: sql_table
     "lower": "number"
     "upper": "number"
@@ -46,7 +46,7 @@ direction: right
   }
   "record_common__load": {
     class: owned
-    label: "load"
+    label: "load  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "kind": "enum static|sustained|cyclic|impact|vibration" { constraint: "req" }
@@ -65,14 +65,14 @@ direction: right
   label: "money_fact.known"
   "record_common__money": {
     class: owned
-    label: "money"
+    label: "money  «type»"
     shape: sql_table
     "amount": "number" { constraint: "req" }
     "currency": "string" { constraint: "req" }
   }
   "record_common__money_fact__known": {
     class: owned
-    label: "money_fact.known"
+    label: "money_fact.known  «type»"
     shape: sql_table
     "value": "money" { constraint: "req" }
   }

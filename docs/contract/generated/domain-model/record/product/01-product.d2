@@ -6,7 +6,7 @@ direction: right
   label: "product"
   "record_product": {
     class: document
-    label: "product"
+    label: "product  «document»"
     shape: sql_table
     "record_version": "record_version" { constraint: "req" }
     "id": "string" { constraint: "req" }
@@ -24,14 +24,14 @@ direction: right
   }
   "record_product__license": {
     class: owned
-    label: "product.license"
+    label: "product.license  «type»"
     shape: sql_table
     "hardware": "string"
     "documentation": "string"
   }
   "record_product__build_volume": {
     class: owned
-    label: "product.build_volume"
+    label: "product.build_volume  «type»"
     shape: sql_table
     "x_mm": "number" { constraint: "req" }
     "y_mm": "number" { constraint: "req" }
@@ -41,27 +41,27 @@ direction: right
   }
   "record_product__design": {
     class: owned
-    label: "product.design"
+    label: "product.design  «type»"
     shape: sql_table
     "clearance_margin_mm": "number"
   }
   "record_product__manufacturing": {
     class: owned
-    label: "product.manufacturing"
+    label: "product.manufacturing  «type»"
     shape: sql_table
     "processes": "primary_process[1..*]"
     "min_wall_mm": "object"
   }
   "record_product__manufacturing__min_wall_mm": {
     class: owned
-    label: "product.manufacturing.min_wall_mm"
+    label: "product.manufacturing.min_wall_mm  «type»"
     shape: sql_table
     "fdm": "number"
     "cnc": "number"
   }
   "record_product__storage": {
     class: owned
-    label: "product.storage"
+    label: "product.storage  «type»"
     shape: sql_table
     "results_in_git": "boolean"
   }

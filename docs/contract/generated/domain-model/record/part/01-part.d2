@@ -6,7 +6,7 @@ direction: right
   label: "part"
   "record_part": {
     class: document
-    label: "part"
+    label: "part  «document»"
     shape: sql_table
     "PN": "pn" { constraint: "req" }
     "rev": "revision" { constraint: "req" }
@@ -29,7 +29,7 @@ direction: right
   }
   "record_part__manufacture": {
     class: owned
-    label: "part.manufacture"
+    label: "part.manufacture  «type»"
     shape: sql_table
     "relationship": "enum same|different" { constraint: "req" }
     "state": "string"
@@ -41,14 +41,14 @@ direction: right
   }
   "record_part__manufacture__mesh": {
     class: owned
-    label: "part.manufacture.mesh"
+    label: "part.manufacture.mesh  «type»"
     shape: sql_table
     "linear_deflection_mm": "number"
     "angular_deflection_rad": "number"
   }
   "record_part__intent": {
     class: owned
-    label: "intent"
+    label: "intent  «type»"
     shape: sql_table
     "functions": "function_entry[1..*] or fact_unknown" { constraint: "req" }
     "material_profile": "profile_id or fact_open" { constraint: "req" }
@@ -67,7 +67,7 @@ direction: right
   }
   "record_part__intent__service__1": {
     class: owned
-    label: "intent.service.1"
+    label: "intent.service.1  «type»"
     shape: sql_table
     "requirements": "requirement_ids"
     "loads": "semantic_ids"
@@ -78,7 +78,7 @@ direction: right
   }
   "record_part__component": {
     class: owned
-    label: "component"
+    label: "component  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "witness": "vector"
@@ -90,7 +90,7 @@ direction: right
   }
   "record_part__critical_surface": {
     class: owned
-    label: "critical_surface"
+    label: "critical_surface  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "feature": "semantic_id" { constraint: "req" }
@@ -106,7 +106,7 @@ direction: right
   }
   "record_part__intent__rationale": {
     class: owned
-    label: "intent.rationale"
+    label: "intent.rationale  «type»"
     shape: sql_table
     "decision": "decision"
     "selection": "semantic_id"

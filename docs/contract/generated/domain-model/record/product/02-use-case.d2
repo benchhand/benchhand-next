@@ -6,7 +6,7 @@ direction: right
   label: "use_case"
   "record_product__use_case": {
     class: owned
-    label: "use_case"
+    label: "use_case  «type»"
     shape: sql_table
     "status": "enum unknown|draft|confirmed" { constraint: "req" }
     "decision": "decision"
@@ -31,13 +31,13 @@ direction: right
   }
   "record_product__use_case__service_class__known": {
     class: owned
-    label: "use_case.service_class.known"
+    label: "use_case.service_class.known  «type»"
     shape: sql_table
     "value": "service_class" { constraint: "req" }
   }
   "record_product__use_case__environment": {
     class: owned
-    label: "use_case.environment"
+    label: "use_case.environment  «type»"
     shape: sql_table
     "temperature": "quantity_fact" { constraint: "req" }
     "heat_sources": "text_fact" { constraint: "req" }
@@ -48,7 +48,7 @@ direction: right
   }
   "record_product__use_case__motion": {
     class: owned
-    label: "use_case.motion"
+    label: "use_case.motion  «type»"
     shape: sql_table
     "speed": "quantity_fact" { constraint: "req" }
     "range": "quantity_fact" { constraint: "req" }
@@ -59,7 +59,7 @@ direction: right
   }
   "record_product__use_case__accuracy": {
     class: owned
-    label: "use_case.accuracy"
+    label: "use_case.accuracy  «type»"
     shape: sql_table
     "tolerance": "text_fact" { constraint: "req" }
     "repeatability": "text_fact" { constraint: "req" }
@@ -68,7 +68,7 @@ direction: right
   }
   "record_product__use_case__logistics": {
     class: owned
-    label: "use_case.logistics"
+    label: "use_case.logistics  «type»"
     shape: sql_table
     "quantity": "quantity_fact" { constraint: "req" }
     "budget": "money_fact" { constraint: "req" }
@@ -78,7 +78,7 @@ direction: right
   }
   "record_product__use_case__capability": {
     class: owned
-    label: "use_case.capability"
+    label: "use_case.capability  «type»"
     shape: sql_table
     "equipment": "profile_id[1..*] or fact_open" { constraint: "req" }
     "operator": "text_fact" { constraint: "req" }
@@ -86,7 +86,7 @@ direction: right
   }
   "record_product__use_case__release_scope": {
     class: owned
-    label: "use_case.release_scope"
+    label: "use_case.release_scope  «type»"
     shape: sql_table
     "purpose": "text_fact" { constraint: "req" }
     "operating_limits": "texts_fact" { constraint: "req" }
@@ -99,14 +99,14 @@ direction: right
   }
   "record_product__use_case__evidence_policy__2": {
     class: owned
-    label: "use_case.evidence_policy.2"
+    label: "use_case.evidence_policy.2  «type»"
     shape: sql_table
     "obligations": "object[1..*]" { constraint: "req" }
     "decision": "decision" { constraint: "req" }
   }
   "record_product__use_case__evidence_policy__2__obligations": {
     class: owned
-    label: "use_case.evidence_policy.2.obligations"
+    label: "use_case.evidence_policy.2.obligations  «type»"
     shape: sql_table
     "requirement": "requirement_id"
     "subject": "subject"

@@ -6,14 +6,14 @@ direction: right
   label: "InitializeResult"
   "provider_protocol__HookDecl": {
     class: owned
-    label: "HookDecl"
+    label: "HookDecl  «type»"
     shape: sql_table
     "kind": "HookKind" { constraint: "req" }
     "id": "HookId" { constraint: "req" }
   }
   "provider_protocol__Needs": {
     class: owned
-    label: "Needs"
+    label: "Needs  «type»"
     shape: sql_table
     "freecad": "boolean" { constraint: "req" }
     "chromium": "boolean" { constraint: "req" }
@@ -21,7 +21,7 @@ direction: right
   }
   "provider_protocol__InitializeResult": {
     class: owned
-    label: "InitializeResult"
+    label: "InitializeResult  «type»"
     shape: sql_table
     "protocolVersion": "ProtocolVersion" { constraint: "req" }
     "provider": "object" { constraint: "req" }
@@ -32,14 +32,14 @@ direction: right
   }
   "provider_protocol__InitializeResult__provider": {
     class: owned
-    label: "InitializeResult.provider"
+    label: "InitializeResult.provider  «type»"
     shape: sql_table
     "name": "string" { constraint: "req" }
     "version": "string" { constraint: "req" }
   }
   "provider_protocol__InitializeResult__features": {
     class: owned
-    label: "InitializeResult.features"
+    label: "InitializeResult.features  «type»"
     shape: sql_table
     "required": "FeatureName[]" { constraint: "req" }
     "optional": "FeatureName[]" { constraint: "req" }
@@ -47,7 +47,7 @@ direction: right
 }
 "provider_protocol__Limits": {
   class: owned
-  label: "Limits"
+  label: "Limits  «type»"
   shape: sql_table
   "maxMessageBytes": "integer"
   "maxInFlight": "integer"

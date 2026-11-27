@@ -6,7 +6,7 @@ direction: right
   label: "product.flow"
   "record_product__flow": {
     class: owned
-    label: "product.flow"
+    label: "product.flow  «type»"
     shape: sql_table
     "stage": "stage" { constraint: "req" }
     "recheck_from": "stage" { constraint: "req" }
@@ -16,7 +16,7 @@ direction: right
   }
   "record_product__frozen": {
     class: owned
-    label: "frozen"
+    label: "frozen  «type»"
     shape: sql_table
     "version": "version" { constraint: "req" }
     "manifest_sha256": "sha256" { constraint: "req" }
@@ -25,7 +25,7 @@ direction: right
   }
   "record_product__change": {
     class: owned
-    label: "change"
+    label: "change  «type»"
     shape: sql_table
     "decision": "decision" { constraint: "req" }
     "baseline_version": "version" { constraint: "req" }
@@ -33,7 +33,7 @@ direction: right
   }
   "record_product__profile": {
     class: owned
-    label: "profile"
+    label: "profile  «type»"
     shape: sql_table
     "decision": "decision"
     "fea": "fea" { constraint: "req" }
@@ -46,7 +46,7 @@ direction: right
   }
   "record_product__fea": {
     class: owned
-    label: "fea"
+    label: "fea  «type»"
     shape: sql_table
     "enabled": "boolean" { constraint: "req" }
     "mode": "enum fast|accurate"
@@ -54,13 +54,13 @@ direction: right
   }
   "record_product__profile__processes": {
     class: owned
-    label: "profile.processes"
+    label: "profile.processes  «type»"
     shape: sql_table
     "fdm": "fdm_profile"
   }
   "record_product__fdm_profile": {
     class: owned
-    label: "fdm_profile"
+    label: "fdm_profile  «type»"
     shape: sql_table
     "orientation": "enum user|propose" { constraint: "req" }
     "supports": "enum allowed|free|off" { constraint: "req" }
@@ -75,7 +75,7 @@ direction: right
   }
   "record_product__fdm_profile__pip_clearance_mm": {
     class: owned
-    label: "fdm_profile.pip_clearance_mm"
+    label: "fdm_profile.pip_clearance_mm  «type»"
     shape: sql_table
     "xy": "clearance" { constraint: "req" }
     "z": "clearance" { constraint: "req" }

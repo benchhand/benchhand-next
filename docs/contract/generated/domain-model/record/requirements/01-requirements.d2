@@ -6,7 +6,7 @@ direction: right
   label: "requirements"
   "record_requirements": {
     class: document
-    label: "requirements"
+    label: "requirements  «document»"
     shape: sql_table
     "preferences": "object[]"
     "assumptions": "object[]"
@@ -15,7 +15,7 @@ direction: right
   }
   "record_requirements__preferences": {
     class: owned
-    label: "requirements.preferences"
+    label: "requirements.preferences  «type»"
     shape: sql_table
     "id": "preference_id" { constraint: "req" }
     "text": "text" { constraint: "req" }
@@ -26,7 +26,7 @@ direction: right
   }
   "record_requirements__assumptions": {
     class: owned
-    label: "requirements.assumptions"
+    label: "requirements.assumptions  «type»"
     shape: sql_table
     "id": "assumption_id" { constraint: "req" }
     "text": "text" { constraint: "req" }
@@ -41,7 +41,7 @@ direction: right
   }
   "record_requirements__open_questions": {
     class: owned
-    label: "requirements.open_questions"
+    label: "requirements.open_questions  «type»"
     shape: sql_table
     "id": "question_id" { constraint: "req" }
     "question": "text" { constraint: "req" }
@@ -54,7 +54,7 @@ direction: right
   }
   "record_requirements__open_questions__resolution": {
     class: owned
-    label: "requirements.open_questions.resolution"
+    label: "requirements.open_questions.resolution  «type»"
     shape: sql_table
     "answer": "text" { constraint: "req" }
     "source": "source"
@@ -62,7 +62,7 @@ direction: right
   }
   "record_requirements__requirements": {
     class: owned
-    label: "requirements.requirements"
+    label: "requirements.requirements  «type»"
     shape: sql_table
     "id": "requirement_id" { constraint: "req" }
     "text": "string" { constraint: "req" }
@@ -80,7 +80,7 @@ direction: right
   }
   "record_requirements__requirements__verification": {
     class: owned
-    label: "requirements.requirements.verification"
+    label: "requirements.requirements.verification  «type»"
     shape: sql_table
     "method": "enum I|A|D|T" { constraint: "req" }
     "criteria": "string" { constraint: "req" }
@@ -88,14 +88,14 @@ direction: right
   }
   "record_requirements__requirements__risk": {
     class: owned
-    label: "requirements.requirements.risk"
+    label: "requirements.requirements.risk  «type»"
     shape: sql_table
     "severity": "consequence_severity = negligible|minor|major|critical" { constraint: "req" }
     "consequence": "text" { constraint: "req" }
   }
   "record_requirements__requirements__visibility": {
     class: owned
-    label: "requirements.requirements.visibility"
+    label: "requirements.requirements.visibility  «type»"
     shape: sql_table
     "view": "string" { constraint: "req" }
     "window": "part_ref[1..*]" { constraint: "req" }

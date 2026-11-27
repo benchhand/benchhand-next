@@ -6,13 +6,13 @@ direction: right
   label: "manufacturing-materials"
   "record_manufacturing_materials": {
     class: document
-    label: "manufacturing-materials"
+    label: "manufacturing-materials  «document»"
     shape: sql_table
     "profiles": "profile[]" { constraint: "req" }
   }
   "record_manufacturing_materials__profile": {
     class: owned
-    label: "profile"
+    label: "profile  «type»"
     shape: sql_table
     "id": "profile_id" { constraint: "req" }
     "revision": "integer" { constraint: "req" }
@@ -34,7 +34,7 @@ direction: right
   }
   "record_manufacturing_materials__profile__process_state": {
     class: owned
-    label: "profile.process_state"
+    label: "profile.process_state  «type»"
     shape: sql_table
     "process": "semantic_id or fact_open" { constraint: "req" }
     "orientation": "text"
@@ -46,7 +46,7 @@ direction: right
   }
   "record_manufacturing_materials__property": {
     class: owned
-    label: "property"
+    label: "property  «type»"
     shape: sql_table
     "name": "semantic_id" { constraint: "req" }
     "value": "quantity_fact" { constraint: "req" }
@@ -54,7 +54,7 @@ direction: right
   }
   "record_manufacturing_materials__property__conditions": {
     class: owned
-    label: "property.conditions"
+    label: "property.conditions  «type»"
     shape: sql_table
     "test_standard": "text_fact" { constraint: "req" }
     "temperature": "quantity_fact" { constraint: "req" }

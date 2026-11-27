@@ -6,7 +6,7 @@ direction: right
   label: "assembly.joints"
   "record_assembly__joints": {
     class: owned
-    label: "assembly.joints"
+    label: "assembly.joints  «type»"
     shape: sql_table
     "id": "joint_id" { constraint: "req" }
     "type": "enum revolute|prismatic|fixed" { constraint: "req" }
@@ -29,7 +29,7 @@ direction: right
   }
   "record_assembly__coupling__linear": {
     class: owned
-    label: "coupling.linear"
+    label: "coupling.linear  «type»"
     shape: sql_table
     "type": "const linear" { constraint: "req" }
     "driver": "joint_id" { constraint: "req" }
@@ -38,7 +38,7 @@ direction: right
   }
   "record_assembly__coupling__periodic_table": {
     class: owned
-    label: "coupling.periodic_table"
+    label: "coupling.periodic_table  «type»"
     shape: sql_table
     "type": "const periodic_table" { constraint: "req" }
     "driver": "joint_id" { constraint: "req" }
@@ -47,7 +47,7 @@ direction: right
   }
   "record_assembly__coupling__slider_crank": {
     class: owned
-    label: "coupling.slider_crank"
+    label: "coupling.slider_crank  «type»"
     shape: sql_table
     "type": "const slider_crank" { constraint: "req" }
     "mechanism": "string" { constraint: "req" }
@@ -55,7 +55,7 @@ direction: right
   }
   "record_assembly__torque_path": {
     class: owned
-    label: "torque_path"
+    label: "torque_path  «type»"
     shape: sql_table
     "type": "enum" { constraint: "req" }
     "parts": "part_ref[1..*]"

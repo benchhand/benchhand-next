@@ -6,7 +6,7 @@ direction: right
   label: "use_case.consequences"
   "record_product__use_case__consequences": {
     class: owned
-    label: "use_case.consequences"
+    label: "use_case.consequences  «type»"
     shape: sql_table
     "failure": "text_fact" { constraint: "req" }
     "severity": "fact_known or fact_unknown" { constraint: "req" }
@@ -23,7 +23,7 @@ direction: right
   }
   "record_product__use_case__consequences__severity__known": {
     class: owned
-    label: "use_case.consequences.severity.known"
+    label: "use_case.consequences.severity.known  «type»"
     shape: sql_table
     "value": "consequence_severity = negligible|minor|major|critical" { constraint: "req" }
   }

@@ -11,7 +11,7 @@ direction: right
   }
   "provider_protocol__Request": {
     class: owned
-    label: "Request"
+    label: "Request  «type»"
     shape: sql_table
     "jsonrpc": "const \"2.0\"" { constraint: "req" }
     "id": "RequestId" { constraint: "req" }
@@ -20,7 +20,7 @@ direction: right
   }
   "provider_protocol__Notification": {
     class: owned
-    label: "Notification"
+    label: "Notification  «type»"
     shape: sql_table
     "jsonrpc": "const \"2.0\"" { constraint: "req" }
     "method": "Method" { constraint: "req" }
@@ -28,7 +28,7 @@ direction: right
   }
   "provider_protocol__SuccessResponse": {
     class: owned
-    label: "SuccessResponse"
+    label: "SuccessResponse  «type»"
     shape: sql_table
     "jsonrpc": "const \"2.0\"" { constraint: "req" }
     "id": "RequestId" { constraint: "req" }
@@ -36,7 +36,7 @@ direction: right
   }
   "provider_protocol__ErrorResponse": {
     class: owned
-    label: "ErrorResponse"
+    label: "ErrorResponse  «type»"
     shape: sql_table
     "jsonrpc": "const \"2.0\"" { constraint: "req" }
     "id": "RequestId or null" { constraint: "req" }
@@ -44,7 +44,7 @@ direction: right
   }
   "provider_protocol__ErrorObject": {
     class: owned
-    label: "ErrorObject"
+    label: "ErrorObject  «type»"
     shape: sql_table
     "code": "integer" { constraint: "req" }
     "message": "string" { constraint: "req" }
@@ -52,7 +52,7 @@ direction: right
   }
   "provider_protocol__ErrorObject__data": {
     class: owned
-    label: "ErrorObject.data"
+    label: "ErrorObject.data  «type»"
     shape: sql_table
     "code": "enum" { constraint: "req" }
     "supported": "object"
@@ -61,7 +61,7 @@ direction: right
   }
   "provider_protocol__ErrorObject__data__supported": {
     class: owned
-    label: "ErrorObject.data.supported"
+    label: "ErrorObject.data.supported  «type»"
     shape: sql_table
     "min": "ProtocolVersion" { constraint: "req" }
     "max": "ProtocolVersion" { constraint: "req" }

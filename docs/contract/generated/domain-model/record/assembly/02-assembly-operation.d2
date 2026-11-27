@@ -6,7 +6,7 @@ direction: right
   label: "assembly_operation"
   "record_assembly__assembly_operation": {
     class: owned
-    label: "assembly_operation"
+    label: "assembly_operation  «type»"
     shape: sql_table
     "id": "string" { constraint: "req" }
     "kind": "enum" { constraint: "req" }
@@ -31,14 +31,14 @@ direction: right
   }
   "record_assembly__assembly_operation__acceptance": {
     class: owned
-    label: "assembly_operation.acceptance"
+    label: "assembly_operation.acceptance  «type»"
     shape: sql_table
     "kind": "enum" { constraint: "req" }
     "features": "string[1..2]" { constraint: "req" }
   }
   "record_assembly__assembly_operation__tool_access": {
     class: owned
-    label: "assembly_operation.tool_access"
+    label: "assembly_operation.tool_access  «type»"
     shape: sql_table
     "tool": "string" { constraint: "req" }
     "capability": "profile_id"
@@ -48,14 +48,14 @@ direction: right
   }
   "record_assembly__assembly_operation__edge_distance": {
     class: owned
-    label: "assembly_operation.edge_distance"
+    label: "assembly_operation.edge_distance  «type»"
     shape: sql_table
     "criterion": "criterion" { constraint: "req" }
     "distance": "quantity_fact" { constraint: "req" }
   }
   "record_assembly__assembly_operation__edge_distance__criterion": {
     class: owned
-    label: "assembly_operation.edge_distance.criterion"
+    label: "assembly_operation.edge_distance.criterion  «type»"
     shape: sql_table
     "property": "const edge_distance" { constraint: "req" }
     "operator": "enum >=|between" { constraint: "req" }
@@ -63,7 +63,7 @@ direction: right
   }
   "record_assembly__assembly_operation__path": {
     class: owned
-    label: "assembly_operation.path"
+    label: "assembly_operation.path  «type»"
     shape: sql_table
     "start": "vector" { constraint: "req" }
     "via": "vector[1..*]"

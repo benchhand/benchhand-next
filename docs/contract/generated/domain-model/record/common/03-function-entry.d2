@@ -3,7 +3,7 @@ direction: right
 
 "record_common__function_entry": {
   class: owned
-  label: "function_entry"
+  label: "function_entry  «type»"
   shape: sql_table
   "function": "function" { constraint: "req" }
   "description": "text"
@@ -11,7 +11,7 @@ direction: right
 }
 "record_common__target": {
   class: owned
-  label: "target"
+  label: "target  «type»"
   shape: sql_table
   "feature": "semantic_id" { constraint: "req" }
   "region": "semantic_id"
@@ -19,7 +19,7 @@ direction: right
 }
 "record_common__obligation": {
   class: owned
-  label: "obligation"
+  label: "obligation  «type»"
   shape: sql_table
   "id": "obligation_id" { constraint: "req" }
   "family": "check_family" { constraint: "req" }
@@ -32,7 +32,7 @@ direction: right
 }
 "record_common__obligation_outcome": {
   class: owned
-  label: "obligation_outcome"
+  label: "obligation_outcome  «type»"
   shape: sql_table
   "obligation": "obligation_id" { constraint: "req" }
   "outcome": "outcome = pass|fail|unknown|not_applicable|not_assessed" { constraint: "req" }
@@ -46,7 +46,7 @@ direction: right
 }
 "record_common__waiver": {
   class: owned
-  label: "waiver"
+  label: "waiver  «type»"
   shape: sql_table
   "decision": "decision" { constraint: "req" }
   "subject": "subject" { constraint: "req" }
@@ -61,13 +61,13 @@ direction: right
 }
 "record_common__quantity_fact__known": {
   class: owned
-  label: "quantity_fact.known"
+  label: "quantity_fact.known  «type»"
   shape: sql_table
   "value": "quantity" { constraint: "req" }
 }
 "record_common__fact_not_applicable": {
   class: owned
-  label: "fact_not_applicable"
+  label: "fact_not_applicable  «type»"
   shape: sql_table
   "status": "const not_applicable" { constraint: "req" }
   "reason": "text" { constraint: "req" }
@@ -75,25 +75,25 @@ direction: right
 }
 "record_common__text_fact__known": {
   class: owned
-  label: "text_fact.known"
+  label: "text_fact.known  «type»"
   shape: sql_table
   "value": "text" { constraint: "req" }
 }
 "record_common__texts_fact__known": {
   class: owned
-  label: "texts_fact.known"
+  label: "texts_fact.known  «type»"
   shape: sql_table
   "value": "texts" { constraint: "req" }
 }
 "record_common__boolean_fact__known": {
   class: owned
-  label: "boolean_fact.known"
+  label: "boolean_fact.known  «type»"
   shape: sql_table
   "value": "boolean" { constraint: "req" }
 }
 "record_common__quantity": {
   class: owned
-  label: "quantity"
+  label: "quantity  «type»"
   shape: sql_table
   "value": "number"
   "lower": "number"

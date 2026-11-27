@@ -6,7 +6,7 @@ direction: right
   label: "manufacturing-selection"
   "record_manufacturing_selection": {
     class: document
-    label: "manufacturing-selection"
+    label: "manufacturing-selection  «document»"
     shape: sql_table
     "status": "enum not_assessed|assessed|confirmed" { constraint: "req" }
     "assessment": "object"
@@ -15,7 +15,7 @@ direction: right
   }
   "record_manufacturing_selection__assessment": {
     class: owned
-    label: "manufacturing-selection.assessment"
+    label: "manufacturing-selection.assessment  «type»"
     shape: sql_table
     "input_sha256": "sha256" { constraint: "req" }
     "method": "text" { constraint: "req" }
@@ -24,7 +24,7 @@ direction: right
   }
   "record_manufacturing_selection__candidate": {
     class: owned
-    label: "candidate"
+    label: "candidate  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "title": "text" { constraint: "req" }
@@ -46,7 +46,7 @@ direction: right
   }
   "record_manufacturing_selection__candidate_part": {
     class: owned
-    label: "candidate_part"
+    label: "candidate_part  «type»"
     shape: sql_table
     "PN": "pn" { constraint: "req" }
     "material_profile": "profile_id or fact_open" { constraint: "req" }
@@ -56,7 +56,7 @@ direction: right
   }
   "record_manufacturing_selection__step": {
     class: owned
-    label: "step"
+    label: "step  «type»"
     shape: sql_table
     "kind": "semantic_id" { constraint: "req" }
     "capability": "profile_id or fact_open" { constraint: "req" }
@@ -65,7 +65,7 @@ direction: right
   }
   "record_manufacturing_selection__proposed_part": {
     class: owned
-    label: "proposed_part"
+    label: "proposed_part  «type»"
     shape: sql_table
     "title": "text" { constraint: "req" }
     "sourcing": "enum make|made_to_drawing|catalogue" { constraint: "req" }
@@ -75,7 +75,7 @@ direction: right
   }
   "record_manufacturing_selection__candidate__evaluations": {
     class: owned
-    label: "candidate.evaluations"
+    label: "candidate.evaluations  «type»"
     shape: sql_table
     "requirement": "requirement_id" { constraint: "req" }
     "outcome": "outcome = pass|fail|unknown|not_applicable|not_assessed" { constraint: "req" }
@@ -89,7 +89,7 @@ direction: right
   }
   "record_manufacturing_selection__candidate__changes": {
     class: owned
-    label: "candidate.changes"
+    label: "candidate.changes  «type»"
     shape: sql_table
     "design": "texts"
     "equipment": "texts"
@@ -100,7 +100,7 @@ direction: right
   }
   "record_manufacturing_selection__candidate__preference_scores": {
     class: owned
-    label: "candidate.preference_scores"
+    label: "candidate.preference_scores  «type»"
     shape: sql_table
     "preference": "preference_id" { constraint: "req" }
     "score": "number" { constraint: "req" }
@@ -108,7 +108,7 @@ direction: right
   }
   "record_manufacturing_selection__recommendation": {
     class: owned
-    label: "recommendation"
+    label: "recommendation  «type»"
     shape: sql_table
     "status": "enum conditional|final" { constraint: "req" }
     "primary": "semantic_id" { constraint: "req" }

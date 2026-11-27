@@ -6,7 +6,7 @@ direction: right
   label: "flow"
   "flow_flow": {
     class: document
-    label: "flow"
+    label: "flow  «document»"
     shape: sql_table
     "flow_version": "const 1" { constraint: "req" }
     "stages": "FlowStages" { constraint: "req" }
@@ -18,7 +18,7 @@ direction: right
   }
   "flow_flow__FlowStages": {
     class: owned
-    label: "FlowStages"
+    label: "FlowStages  «type»"
     shape: sql_table
     "ground": "FlowStage" { constraint: "req" }
     "intent": "FlowStage" { constraint: "req" }
@@ -36,13 +36,13 @@ direction: right
   }
   "flow_flow__FlowStage": {
     class: owned
-    label: "FlowStage"
+    label: "FlowStage  «type»"
     shape: sql_table
     "guides": "FlowGuides" { constraint: "req" }
   }
   "flow_flow__FlowGuides": {
     class: owned
-    label: "FlowGuides"
+    label: "FlowGuides  «type»"
     shape: sql_table
     "lead": "FlowGuideFragment" { constraint: "req" }
     "[key]": "FlowGuideFragment"
@@ -55,7 +55,7 @@ direction: right
   }
   "flow_flow__FlowSingleHumanGate": {
     class: owned
-    label: "FlowSingleHumanGate"
+    label: "FlowSingleHumanGate  «type»"
     shape: sql_table
     "id": "gate_id" { constraint: "req" }
     "stage": "stage" { constraint: "req" }
@@ -64,13 +64,13 @@ direction: right
   }
   "flow_flow__FlowSingleHumanGate__requires": {
     class: owned
-    label: "FlowSingleHumanGate.requires"
+    label: "FlowSingleHumanGate.requires  «type»"
     shape: sql_table
     "human": "CelExpressions" { constraint: "req" }
   }
   "flow_flow__FlowStagedGate": {
     class: owned
-    label: "FlowStagedGate"
+    label: "FlowStagedGate  «type»"
     shape: sql_table
     "id": "gate_id" { constraint: "req" }
     "stage": "stage" { constraint: "req" }
@@ -79,7 +79,7 @@ direction: right
   }
   "flow_flow__FlowStagedGate__requires": {
     class: owned
-    label: "FlowStagedGate.requires"
+    label: "FlowStagedGate.requires  «type»"
     shape: sql_table
     "provisional": "CelExpressions" { constraint: "req" }
     "full": "CelExpressions" { constraint: "req" }
@@ -87,7 +87,7 @@ direction: right
   }
   "flow_flow__FlowEdge": {
     class: owned
-    label: "FlowEdge"
+    label: "FlowEdge  «type»"
     shape: sql_table
     "from": "stage" { constraint: "req" }
     "to": "stage" { constraint: "req" }

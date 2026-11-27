@@ -6,7 +6,7 @@ direction: right
   label: "part_drawing.coordinate_frame"
   "record_drawing__direction": {
     class: owned
-    label: "direction"
+    label: "direction  «type»"
     shape: sql_table
     "normal_to": "reference"
     "parallel_to": "reference"
@@ -15,7 +15,7 @@ direction: right
   }
   "record_drawing__part_drawing__coordinate_frame": {
     class: owned
-    label: "part_drawing.coordinate_frame"
+    label: "part_drawing.coordinate_frame  «type»"
     shape: sql_table
     "origin": "object" { constraint: "req" }
     "x": "direction"
@@ -29,13 +29,13 @@ direction: right
   }
   "record_drawing__part_drawing__coordinate_frame__origin__1": {
     class: owned
-    label: "part_drawing.coordinate_frame.origin.1"
+    label: "part_drawing.coordinate_frame.origin.1  «type»"
     shape: sql_table
     "intersection": "reference[2..3]" { constraint: "req" }
   }
   "record_drawing__part_drawing__coordinate_frame__origin__2": {
     class: owned
-    label: "part_drawing.coordinate_frame.origin.2"
+    label: "part_drawing.coordinate_frame.origin.2  «type»"
     shape: sql_table
     "at": "reference" { constraint: "req" }
   }

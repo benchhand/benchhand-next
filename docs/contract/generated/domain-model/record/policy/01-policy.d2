@@ -6,7 +6,7 @@ direction: right
   label: "policy"
   "record_policy": {
     class: document
-    label: "policy"
+    label: "policy  «document»"
     shape: sql_table
     "policy_version": "const 1" { constraint: "req" }
     "default": "mode = ask|chat|auto"
@@ -16,7 +16,7 @@ direction: right
   }
   "record_policy__gate": {
     class: owned
-    label: "gate"
+    label: "gate  «type»"
     shape: sql_table
     "mode": "mode = ask|chat|auto" { constraint: "req" }
     "decision": "decision"

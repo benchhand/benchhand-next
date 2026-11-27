@@ -6,7 +6,7 @@ direction: right
   label: "manufacturing-guideline"
   "record_manufacturing_guideline": {
     class: document
-    label: "manufacturing-guideline"
+    label: "manufacturing-guideline  «document»"
     shape: sql_table
     "schema_version": "const 1" { constraint: "req" }
     "id": "guideline_id" { constraint: "req" }
@@ -19,7 +19,7 @@ direction: right
   }
   "record_manufacturing_guideline__scope": {
     class: owned
-    label: "scope"
+    label: "scope  «type»"
     shape: sql_table
     "process": "semantic_id" { constraint: "req" }
     "material_family": "names"
@@ -30,12 +30,12 @@ direction: right
   }
   "record_manufacturing_guideline__scope__nozzle_diameter": {
     class: owned
-    label: "scope.nozzle_diameter"
+    label: "scope.nozzle_diameter  «type»"
     shape: sql_table
   }
   "record_manufacturing_guideline__limit": {
     class: owned
-    label: "limit"
+    label: "limit  «type»"
     shape: sql_table
     "characteristic": "enum" { constraint: "req" }
     "operator": "enum" { constraint: "req" }
@@ -50,7 +50,7 @@ direction: right
   }
   "record_manufacturing_guideline__relative": {
     class: owned
-    label: "relative"
+    label: "relative  «type»"
     shape: sql_table
     "relative_to": "enum nozzle_diameter|line_width" { constraint: "req" }
     "factor": "number" { constraint: "req" }
@@ -58,24 +58,24 @@ direction: right
   }
   "record_manufacturing_guideline__relative__floor": {
     class: owned
-    label: "relative.floor"
+    label: "relative.floor  «type»"
     shape: sql_table
   }
   "record_manufacturing_guideline__limit__quantities": {
     class: owned
-    label: "limit.quantities"
+    label: "limit.quantities  «type»"
     shape: sql_table
   }
   "record_manufacturing_guideline__applies_to": {
     class: owned
-    label: "applies_to"
+    label: "applies_to  «type»"
     shape: sql_table
     "orientation": "semantic_id"
     "feature": "semantic_id"
   }
   "record_manufacturing_guideline__relaxes": {
     class: owned
-    label: "relaxes"
+    label: "relaxes  «type»"
     shape: sql_table
     "reason": "text" { constraint: "req" }
     "citation": "source" { constraint: "req" }

@@ -6,14 +6,14 @@ direction: right
   label: "contribution"
   "policy_contribution": {
     class: document
-    label: "contribution"
+    label: "contribution  «document»"
     shape: sql_table
     "rules": "PolicyRuleLists"
     "gates": "PolicyGateRequirements by key"
   }
   "policy_contribution__PolicyRuleLists": {
     class: owned
-    label: "PolicyRuleLists"
+    label: "PolicyRuleLists  «type»"
     shape: sql_table
     "checks_by_iteration": "RuleListReference"
     "dispatch": "RuleListReference"
@@ -22,7 +22,7 @@ direction: right
   }
   "policy_contribution__PolicyGateRequirements": {
     class: owned
-    label: "PolicyGateRequirements"
+    label: "PolicyGateRequirements  «type»"
     shape: sql_table
     "provisional": "CelExpressions"
     "full": "CelExpressions"

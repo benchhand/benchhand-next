@@ -286,6 +286,24 @@ def test_a_class_with_a_stereotype_is_drawn_as_a_union() -> None:
     assert "class: union" in source
 
 
+def test_a_table_header_names_its_type_so_that_colour_is_not_the_only_cue() -> None:
+    model = _model(PERSON, SHOP)
+    plan = plan_diagrams(model)
+    source = render_diagram(model, plan, plan.home["record_shop"])
+    assert 'label: "shop  \u00abdocument\u00bb"' in source
+    assert 'label: "shelf  \u00abtype\u00bb"' in source
+    wide = _model(_flat_union(3))
+    wide_plan = plan_diagrams(wide)
+    assert '  \u00ababstract\u00bb"' in render_diagram(wide, wide_plan, wide_plan.home["record_wide__item"])
+    tables = re.findall(r'label: "[^"]+  \u00ab(\w+)\u00bb"', source)
+    assert tables and set(tables) <= {"document", "type", "union", "abstract"}
+
+
+def test_the_overview_tells_a_document_from_a_library_by_shape_as_well_as_colour() -> None:
+    assert "overview_document: {\n    shape: page" in CLASSES_D2
+    assert "overview_library: {\n    shape: package" in CLASSES_D2
+
+
 def test_every_arrow_of_a_diagram_is_a_relationship_row() -> None:
     model = _model(PERSON, SHOP)
     plan = plan_diagrams(model)

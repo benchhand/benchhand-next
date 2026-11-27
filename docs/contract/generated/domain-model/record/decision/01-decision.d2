@@ -13,7 +13,7 @@ direction: right
   }
   "record_decision__gate_decision": {
     class: owned
-    label: "gate_decision"
+    label: "gate_decision  «type»"
     shape: sql_table
     "id": "decision" { constraint: "req" }
     "kind": "const gate" { constraint: "req" }
@@ -29,7 +29,7 @@ direction: right
   }
   "record_decision__approval": {
     class: owned
-    label: "approval"
+    label: "approval  «type»"
     shape: sql_table
     "channel": "enum app|form|chat|auto" { constraint: "req" }
     "by": "text"
@@ -37,7 +37,7 @@ direction: right
   }
   "record_decision__design_decision": {
     class: owned
-    label: "design_decision"
+    label: "design_decision  «type»"
     shape: sql_table
     "id": "decision" { constraint: "req" }
     "kind": "const design" { constraint: "req" }

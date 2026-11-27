@@ -6,7 +6,7 @@ direction: right
   label: "finding"
   "record_common__criterion": {
     class: owned
-    label: "criterion"
+    label: "criterion  «type»"
     shape: sql_table
     "id": "semantic_id"
     "property": "semantic_id" { constraint: "req" }
@@ -25,14 +25,14 @@ direction: right
   }
   "record_common__file_hash": {
     class: owned
-    label: "file_hash"
+    label: "file_hash  «type»"
     shape: sql_table
     "path": "project_path" { constraint: "req" }
     "sha256": "sha256" { constraint: "req" }
   }
   "record_common__finding": {
     class: owned
-    label: "finding"
+    label: "finding  «type»"
     shape: sql_table
     "id": "semantic_id" { constraint: "req" }
     "code": "finding_code" { constraint: "req" }
@@ -61,13 +61,13 @@ direction: right
   }
   "record_common__finding__measured__2": {
     class: owned
-    label: "finding.measured.2"
+    label: "finding.measured.2  «type»"
     shape: sql_table
     "text": "text" { constraint: "req" }
   }
   "record_common__finding__method": {
     class: owned
-    label: "finding.method"
+    label: "finding.method  «type»"
     shape: sql_table
     "name": "text" { constraint: "req" }
     "tool": "text"
@@ -75,14 +75,14 @@ direction: right
   }
   "record_common__finding__alternatives": {
     class: owned
-    label: "finding.alternatives"
+    label: "finding.alternatives  «type»"
     shape: sql_table
     "text": "text" { constraint: "req" }
     "tradeoffs": "text" { constraint: "req" }
   }
   "record_common__finding__recheck": {
     class: owned
-    label: "finding.recheck"
+    label: "finding.recheck  «type»"
     shape: sql_table
     "families": "check_family[1..*]" { constraint: "req" }
     "scope": "subject[1..*]"
@@ -92,7 +92,7 @@ direction: right
 }
 "record_common__fact_unknown": {
   class: owned
-  label: "fact_unknown"
+  label: "fact_unknown  «type»"
   shape: sql_table
   "status": "const unknown" { constraint: "req" }
   "reason": "text" { constraint: "req" }
@@ -100,7 +100,7 @@ direction: right
 }
 "record_common__subject": {
   class: owned
-  label: "subject"
+  label: "subject  «type»"
   shape: sql_table
   "product": "const true"
   "PN": "pn"
@@ -115,7 +115,7 @@ direction: right
 }
 "record_common__source": {
   class: owned
-  label: "source"
+  label: "source  «type»"
   shape: sql_table
   "kind": "enum" { constraint: "req" }
   "reference": "text" { constraint: "req" }

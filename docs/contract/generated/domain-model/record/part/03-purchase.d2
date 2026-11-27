@@ -6,7 +6,7 @@ direction: right
   label: "purchase"
   "record_part__purchase": {
     class: owned
-    label: "purchase"
+    label: "purchase  «type»"
     shape: sql_table
     "identity": "text_fact"
     "designation": "designation"
@@ -26,7 +26,7 @@ direction: right
   }
   "record_part__designation__standard_designation": {
     class: owned
-    label: "designation.standard_designation"
+    label: "designation.standard_designation  «type»"
     shape: sql_table
     "kind": "const standard_designation" { constraint: "req" }
     "standard": "string" { constraint: "req" }
@@ -37,7 +37,7 @@ direction: right
   }
   "record_part__designation__family_designation": {
     class: owned
-    label: "designation.family_designation"
+    label: "designation.family_designation  «type»"
     shape: sql_table
     "kind": "const family_designation" { constraint: "req" }
     "family": "string" { constraint: "req" }
@@ -50,7 +50,7 @@ direction: right
   }
   "record_part__purchase__reference_catalogue": {
     class: owned
-    label: "purchase.reference_catalogue"
+    label: "purchase.reference_catalogue  «type»"
     shape: sql_table
     "vendor": "text" { constraint: "req" }
     "part_number": "text" { constraint: "req" }

@@ -6,7 +6,7 @@ direction: right
   label: "bundle-manifest"
   "record_bundle_manifest": {
     class: document
-    label: "bundle-manifest"
+    label: "bundle-manifest  «document»"
     shape: sql_table
     "files": "sha256 by key" { constraint: "req" }
     "version_manifest_sha256": "sha256"
@@ -14,7 +14,7 @@ direction: right
   }
   "record_bundle_manifest__version_part": {
     class: owned
-    label: "version_part"
+    label: "version_part  «type»"
     shape: sql_table
     "source_sha256": "sha256"
   }

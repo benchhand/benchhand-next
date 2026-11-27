@@ -6,7 +6,7 @@ direction: right
   label: "evidence-assessment"
   "record_evidence_assessment": {
     class: document
-    label: "evidence-assessment"
+    label: "evidence-assessment  «document»"
     shape: sql_table
     "version": "version" { constraint: "req" }
     "manifest_sha256": "sha256" { constraint: "req" }
@@ -21,7 +21,7 @@ direction: right
   }
   "record_evidence_assessment__obligation_status": {
     class: owned
-    label: "obligation_status"
+    label: "obligation_status  «type»"
     shape: sql_table
     "obligation": "obligation" { constraint: "req" }
     "result": "evidence_result" { constraint: "req" }
@@ -31,7 +31,7 @@ direction: right
   }
   "record_evidence_assessment__facets": {
     class: owned
-    label: "facets"
+    label: "facets  «type»"
     shape: sql_table
     "cad_valid": "facet_result" { constraint: "req" }
     "geometrically_manufacturable": "facet_result" { constraint: "req" }
@@ -41,7 +41,7 @@ direction: right
   }
   "record_evidence_assessment__critical_finding": {
     class: owned
-    label: "critical_finding"
+    label: "critical_finding  «type»"
     shape: sql_table
     "finding": "semantic_id" { constraint: "req" }
     "code": "finding_code"
@@ -57,7 +57,7 @@ direction: right
   }
   "record_evidence_assessment__acceptance_formed": {
     class: owned
-    label: "acceptance_formed"
+    label: "acceptance_formed  «type»"
     shape: sql_table
     "status": "const formed" { constraint: "req" }
     "evidence_sha256": "sha256" { constraint: "req" }
@@ -65,7 +65,7 @@ direction: right
   }
   "record_evidence_assessment__acceptance_refused": {
     class: owned
-    label: "acceptance_refused"
+    label: "acceptance_refused  «type»"
     shape: sql_table
     "status": "const refused" { constraint: "req" }
     "reason": "text" { constraint: "req" }

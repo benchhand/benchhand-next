@@ -6,7 +6,7 @@ direction: right
   label: "fit"
   "record_drawing__fit_endpoint": {
     class: owned
-    label: "fit_endpoint"
+    label: "fit_endpoint  «type»"
     shape: sql_table
     "PN": "pn" { constraint: "req" }
     "occurrence": "occurrence_ref"
@@ -15,7 +15,7 @@ direction: right
   }
   "record_drawing__fit": {
     class: owned
-    label: "fit"
+    label: "fit  «type»"
     shape: sql_table
     "fit": "string" { constraint: "req" }
     "pair": "part_ref[2]"
@@ -27,7 +27,7 @@ direction: right
   }
   "record_drawing__axial_retainer": {
     class: owned
-    label: "axial_retainer"
+    label: "axial_retainer  «type»"
     shape: sql_table
     "type": "enum" { constraint: "req" }
     "parts": "part_ref[1..*]"
@@ -36,7 +36,7 @@ direction: right
 }
 "record_drawing__heat_set": {
   class: owned
-  label: "heat_set"
+  label: "heat_set  «type»"
   shape: sql_table
   "pair": "part_ref[2]" { constraint: "req" }
   "hole_diameter_mm": "number" { constraint: "req" }

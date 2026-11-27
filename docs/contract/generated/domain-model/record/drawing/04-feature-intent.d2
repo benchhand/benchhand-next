@@ -6,7 +6,7 @@ direction: right
   label: "feature_intent"
   "record_drawing__feature_intent": {
     class: owned
-    label: "feature_intent"
+    label: "feature_intent  «type»"
     shape: sql_table
     "size": "enum general|interface"
     "location": "const datum_coordinates"
@@ -21,7 +21,7 @@ direction: right
   }
   "record_drawing__thread": {
     class: owned
-    label: "thread"
+    label: "thread  «type»"
     shape: sql_table
     "designation": "string" { constraint: "req" }
     "standard": "string" { constraint: "req" }
@@ -30,7 +30,7 @@ direction: right
   }
   "record_drawing__texture_requirement": {
     class: owned
-    label: "texture_requirement"
+    label: "texture_requirement  «type»"
     shape: sql_table
     "parameter": "enum Ra|Rz" { constraint: "req" }
     "limit_um": "number" { constraint: "req" }
@@ -38,7 +38,7 @@ direction: right
   }
   "record_drawing__edges": {
     class: owned
-    label: "edges"
+    label: "edges  «type»"
     shape: sql_table
     "external": "edge_limits"
     "internal": "edge_limits"

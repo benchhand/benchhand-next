@@ -6,7 +6,7 @@ direction: right
   label: "assembly"
   "record_assembly": {
     class: document
-    label: "assembly"
+    label: "assembly  «document»"
     shape: sql_table
     "operations": "assembly_operation[] or fact_unknown"
     "occurrences": "object[1..*]"
@@ -18,7 +18,7 @@ direction: right
   }
   "record_assembly__occurrences": {
     class: owned
-    label: "assembly.occurrences"
+    label: "assembly.occurrences  «type»"
     shape: sql_table
     "id": "occurrence_id" { constraint: "req" }
     "PN": "pn" { constraint: "req" }
@@ -26,21 +26,21 @@ direction: right
   }
   "record_assembly__placement": {
     class: owned
-    label: "placement"
+    label: "placement  «type»"
     shape: sql_table
     "translation_mm": "vector"
     "rotation": "object"
   }
   "record_assembly__placement__rotation": {
     class: owned
-    label: "placement.rotation"
+    label: "placement.rotation  «type»"
     shape: sql_table
     "axis": "vector" { constraint: "req" }
     "angle_deg": "number" { constraint: "req" }
   }
   "record_assembly__profile": {
     class: owned
-    label: "profile"
+    label: "profile  «type»"
     shape: sql_table
     "input_unit": "const deg" { constraint: "req" }
     "output_unit": "enum mm|deg" { constraint: "req" }
@@ -50,7 +50,7 @@ direction: right
   }
   "record_assembly__mechanism": {
     class: owned
-    label: "mechanism"
+    label: "mechanism  «type»"
     shape: sql_table
     "id": "string" { constraint: "req" }
     "type": "const slider_crank" { constraint: "req" }
@@ -64,7 +64,7 @@ direction: right
   }
   "record_assembly__subassemblies": {
     class: owned
-    label: "assembly.subassemblies"
+    label: "assembly.subassemblies  «type»"
     shape: sql_table
     "id": "string" { constraint: "req" }
     "title": "string" { constraint: "req" }
@@ -73,7 +73,7 @@ direction: right
   }
   "record_assembly__assembly_drawing": {
     class: owned
-    label: "assembly_drawing"
+    label: "assembly_drawing  «type»"
     shape: sql_table
     "number": "string" { constraint: "req" }
     "rev": "string" { constraint: "req" }
@@ -87,7 +87,7 @@ direction: right
   }
   "record_assembly__assembly_drawing__views": {
     class: owned
-    label: "assembly_drawing.views"
+    label: "assembly_drawing.views  «type»"
     shape: sql_table
     "id": "string" { constraint: "req" }
     "kind": "enum assembled|exploded" { constraint: "req" }
@@ -95,14 +95,14 @@ direction: right
   }
   "record_assembly__assembly_drawing__explode": {
     class: owned
-    label: "assembly_drawing.explode"
+    label: "assembly_drawing.explode  «type»"
     shape: sql_table
     "ref": "part_ref" { constraint: "req" }
     "offset_mm": "vector" { constraint: "req" }
   }
   "record_assembly__drawing_item": {
     class: owned
-    label: "drawing_item"
+    label: "drawing_item  «type»"
     shape: sql_table
     "item": "integer" { constraint: "req" }
     "PN": "pn" { constraint: "req" }

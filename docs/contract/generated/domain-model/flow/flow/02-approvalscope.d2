@@ -6,13 +6,13 @@ direction: right
   label: "ApprovalScope"
   "flow_flow__ApprovalScope": {
     class: owned
-    label: "ApprovalScope"
+    label: "ApprovalScope  «type»"
     shape: sql_table
     "items": "ApprovedItem[1..*]" { constraint: "req" }
   }
   "flow_flow__ApprovedItem": {
     class: owned
-    label: "ApprovedItem"
+    label: "ApprovedItem  «type»"
     shape: sql_table
     "kind": "ApprovedItemKind = concept|envelope|interface|joint|part" { constraint: "req" }
     "id": "string" { constraint: "req" }
@@ -21,7 +21,7 @@ direction: right
 }
 "flow_flow__GateDecisionRequest": {
   class: owned
-  label: "GateDecisionRequest"
+  label: "GateDecisionRequest  «type»"
   shape: sql_table
   "gate": "gate_id" { constraint: "req" }
   "status": "GateDecisionStatus = approved|void" { constraint: "req" }
@@ -33,7 +33,7 @@ direction: right
 }
 "flow_flow__ApprovedItemState": {
   class: owned
-  label: "ApprovedItemState"
+  label: "ApprovedItemState  «type»"
   shape: sql_table
   "kind": "ApprovedItemKind = concept|envelope|interface|joint|part" { constraint: "req" }
   "id": "string" { constraint: "req" }

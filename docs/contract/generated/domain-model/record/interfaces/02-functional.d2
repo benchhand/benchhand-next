@@ -6,7 +6,7 @@ direction: right
   label: "functional"
   "record_interfaces__functional": {
     class: owned
-    label: "functional"
+    label: "functional  «type»"
     shape: sql_table
     "critical": "boolean_fact" { constraint: "req" }
     "functions": "function_entry[1..*] or fact_unknown" { constraint: "req" }
@@ -26,7 +26,7 @@ direction: right
   }
   "record_interfaces__functional__surfaces": {
     class: owned
-    label: "functional.surfaces"
+    label: "functional.surfaces  «type»"
     shape: sql_table
     "PN": "pn" { constraint: "req" }
     "occurrence": "occurrence_ref"
@@ -40,14 +40,14 @@ direction: right
   }
   "record_interfaces__functional__acceptance": {
     class: owned
-    label: "functional.acceptance"
+    label: "functional.acceptance  «type»"
     shape: sql_table
     "criterion": "criterion" { constraint: "req" }
     "verification": "object" { constraint: "req" }
   }
   "record_interfaces__functional__acceptance__verification": {
     class: owned
-    label: "functional.acceptance.verification"
+    label: "functional.acceptance.verification  «type»"
     shape: sql_table
     "method": "enum I|A|D|T" { constraint: "req" }
     "evidence_required": "evidence_level = cad_valid|geometrically_manufacturable|pro…" { constraint: "req" }
@@ -55,7 +55,7 @@ direction: right
   }
   "record_interfaces__functional__variation": {
     class: owned
-    label: "functional.variation"
+    label: "functional.variation  «type»"
     shape: sql_table
     "stack_case": "string" { constraint: "req" }
     "contributors": "enum[1..*]" { constraint: "req" }
@@ -64,7 +64,7 @@ direction: right
   }
   "record_interfaces__functional__contact": {
     class: owned
-    label: "functional.contact"
+    label: "functional.contact  «type»"
     shape: sql_table
     "materials": "profile_id or fact_open[2]" { constraint: "req" }
     "finish": "text_fact"
@@ -77,7 +77,7 @@ direction: right
   }
   "record_interfaces__functional__play": {
     class: owned
-    label: "functional.play"
+    label: "functional.play  «type»"
     shape: sql_table
     "axial": "quantity_fact"
     "radial": "quantity_fact"
@@ -88,7 +88,7 @@ direction: right
   }
   "record_interfaces__functional__play__compliance": {
     class: owned
-    label: "functional.play.compliance"
+    label: "functional.play.compliance  «type»"
     shape: sql_table
     "axial": "quantity_fact"
     "radial": "quantity_fact"
@@ -96,7 +96,7 @@ direction: right
   }
   "record_interfaces__functional__print_in_place": {
     class: owned
-    label: "functional.print_in_place"
+    label: "functional.print_in_place  «type»"
     shape: sql_table
     "joint": "enum hinge|pin|ball|captive|living_hinge" { constraint: "req" }
     "print_pose": "number by key" { constraint: "req" }
@@ -105,7 +105,7 @@ direction: right
   }
   "record_interfaces__face": {
     class: owned
-    label: "face"
+    label: "face  «type»"
     shape: sql_table
     "PN": "pn" { constraint: "req" }
     "occurrence": "occurrence_ref"
@@ -115,7 +115,7 @@ direction: right
   }
   "record_interfaces__functional__print_in_place__break_free": {
     class: owned
-    label: "functional.print_in_place.break_free"
+    label: "functional.print_in_place.break_free  «type»"
     shape: sql_table
     "method": "text" { constraint: "req" }
     "force_n": "number"

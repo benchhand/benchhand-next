@@ -6,13 +6,13 @@ direction: right
   label: "manufacturing-evidence"
   "record_manufacturing_evidence": {
     class: document
-    label: "manufacturing-evidence"
+    label: "manufacturing-evidence  «document»"
     shape: sql_table
     "entries": "entry[]" { constraint: "req" }
   }
   "record_manufacturing_evidence__entry": {
     class: owned
-    label: "entry"
+    label: "entry  «type»"
     shape: sql_table
     "id": "evidence_id" { constraint: "req" }
     "requirement": "requirement_id"
@@ -38,7 +38,7 @@ direction: right
   }
   "record_manufacturing_evidence__entry__configuration": {
     class: owned
-    label: "entry.configuration"
+    label: "entry.configuration  «type»"
     shape: sql_table
     "version": "version" { constraint: "req" }
     "manifest_sha256": "sha256" { constraint: "req" }
@@ -47,14 +47,14 @@ direction: right
   }
   "record_manufacturing_evidence__entry__bundle": {
     class: owned
-    label: "entry.bundle"
+    label: "entry.bundle  «type»"
     shape: sql_table
     "path": "project_path" { constraint: "req" }
     "manifest_sha256": "sha256" { constraint: "req" }
   }
   "record_manufacturing_evidence__entry__physical": {
     class: owned
-    label: "entry.physical"
+    label: "entry.physical  «type»"
     shape: sql_table
     "specimen": "text" { constraint: "req" }
     "configuration": "text" { constraint: "req" }

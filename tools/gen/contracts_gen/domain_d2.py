@@ -19,7 +19,8 @@ version give the same SVG bytes, so the SVGs are committed and checked for drift
 D2 draws nothing a screen reader can read, so a diagram also yields its text alternative from the same
 model: ``relationship_rows`` and ``overview_rows`` list every arrow as a row, ``diagram_caption`` and
 ``overview_caption`` name the diagram and describe it, and ``render_d2`` writes the caption into the SVG as
-its ``<title>`` and ``<desc>``.
+its ``<title>`` and ``<desc>``. Node types differ by more than colour: a table's header names its type, and
+the overview's documents and libraries have different shapes.
 """
 
 from __future__ import annotations
@@ -60,12 +61,20 @@ _VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+\S*)$")
 
 CLASSES_D2 = """\
 # The colours of every diagram, set once. A sql_table takes its header from `fill` and its body from `stroke`.
+# Colour is never the only cue: a table's header names its type, the overview's documents and libraries are
+# different shapes, a stub has a dashed border, and the line styles tell the relations apart.
 classes: {
   document: { style: { fill: "#1d4ed8"; stroke: "#eff6ff"; font-color: "#ffffff" } }
   owned: { style: { fill: "#0f766e"; stroke: "#f0fdfa"; font-color: "#ffffff" } }
   union: { style: { fill: "#7c3aed"; stroke: "#f5f3ff"; font-color: "#ffffff" } }
-  overview_document: { style: { fill: "#1d4ed8"; stroke: "#1e3a8a"; font-color: "#ffffff"; font-size: 20 } }
-  overview_library: { style: { fill: "#b45309"; stroke: "#78350f"; font-color: "#ffffff"; font-size: 20 } }
+  overview_document: {
+    shape: page
+    style: { fill: "#1d4ed8"; stroke: "#1e3a8a"; font-color: "#ffffff"; font-size: 20 }
+  }
+  overview_library: {
+    shape: package
+    style: { fill: "#b45309"; stroke: "#78350f"; font-color: "#ffffff"; font-size: 20 }
+  }
   stub: {
     style: { fill: "#e5e7eb"; stroke: "#9ca3af"; font-color: "#4b5563"; font-size: 14; stroke-dash: 2 }
   }
@@ -353,8 +362,13 @@ def _node_class(node: ClassNode, stem_root: str) -> str:
     return "document" if node.id == stem_root else "owned"
 
 
+def _node_type(node: ClassNode, stem_root: str) -> str:
+    """What a table's header names, so that colour is not the only cue: ``document``, ``type`` or the stereotype."""
+    return node.stereotype or ("document" if node.id == stem_root else "type")
+
+
 def _table(node: ClassNode, stem_root: str, indent: str) -> list[str]:
-    label = f"{node.label}  «{node.stereotype}»" if node.stereotype else node.label
+    label = f"{node.label}  «{_node_type(node, stem_root)}»"
     lines = [f"{indent}{_quote(node.id)}: {{", f"{indent}  class: {_node_class(node, stem_root)}"]
     lines += [f"{indent}  label: {_quote(label)}", f"{indent}  shape: sql_table"]
     for field in node.fields:

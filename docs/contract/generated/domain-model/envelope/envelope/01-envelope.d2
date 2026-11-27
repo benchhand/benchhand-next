@@ -6,7 +6,7 @@ direction: right
   label: "envelope"
   "envelope_envelope": {
     class: document
-    label: "envelope"
+    label: "envelope  «document»"
     shape: sql_table
     "status": "EnvelopeStatus = ok|refused|pending|error" { constraint: "req" }
     "verdict": "enum pass|fail|unknown"
@@ -20,7 +20,7 @@ direction: right
   }
   "envelope_envelope__EnvelopeNextAction": {
     class: owned
-    label: "EnvelopeNextAction"
+    label: "EnvelopeNextAction  «type»"
     shape: sql_table
     "tool": "string" { constraint: "req" }
     "arguments": "object"

@@ -6,7 +6,7 @@ direction: right
   label: "InitializeParams"
   "provider_protocol__InitializeParams": {
     class: owned
-    label: "InitializeParams"
+    label: "InitializeParams  «type»"
     shape: sql_table
     "protocolVersion": "ProtocolVersion" { constraint: "req" }
     "minProtocolVersion": "ProtocolVersion"
@@ -17,14 +17,14 @@ direction: right
   }
   "provider_protocol__InitializeParams__host": {
     class: owned
-    label: "InitializeParams.host"
+    label: "InitializeParams.host  «type»"
     shape: sql_table
     "name": "const benchhand" { constraint: "req" }
     "version": "string" { constraint: "req" }
   }
   "provider_protocol__InitializeParams__capabilities": {
     class: owned
-    label: "InitializeParams.capabilities"
+    label: "InitializeParams.capabilities  «type»"
     shape: sql_table
     "hooks": "HookKind[]" { constraint: "req" }
     "features": "FeatureName[]" { constraint: "req" }
@@ -35,7 +35,7 @@ direction: right
   label: "HookResultBase"
   "provider_protocol__Artifact": {
     class: owned
-    label: "Artifact"
+    label: "Artifact  «type»"
     shape: sql_table
     "path": "AbsPath" { constraint: "req" }
     "mediaType": "string" { constraint: "req" }
@@ -45,14 +45,14 @@ direction: right
   }
   "provider_protocol__Coverage": {
     class: owned
-    label: "Coverage"
+    label: "Coverage  «type»"
     shape: sql_table
     "status": "enum pass|fail|unknown" { constraint: "req" }
     "reason": "string"
   }
   "provider_protocol__HookResultBase": {
     class: owned
-    label: "HookResultBase"
+    label: "HookResultBase  «type»"
     shape: sql_table
     "coverage": "Coverage" { constraint: "req" }
     "artifacts": "Artifact[]" { constraint: "req" }
@@ -62,13 +62,13 @@ direction: right
 }
 "provider_protocol__CancelParams": {
   class: owned
-  label: "CancelParams"
+  label: "CancelParams  «type»"
   shape: sql_table
   "id": "RequestId" { constraint: "req" }
 }
 "provider_protocol__ProgressParams": {
   class: owned
-  label: "ProgressParams"
+  label: "ProgressParams  «type»"
   shape: sql_table
   "id": "RequestId" { constraint: "req" }
   "fraction": "number"
@@ -77,7 +77,7 @@ direction: right
 }
 "provider_protocol__LogParams": {
   class: owned
-  label: "LogParams"
+  label: "LogParams  «type»"
   shape: sql_table
   "level": "enum debug|info|warning|error" { constraint: "req" }
   "message": "string" { constraint: "req" }
@@ -85,7 +85,7 @@ direction: right
 }
 "provider_protocol__HookParamsBase": {
   class: owned
-  label: "HookParamsBase"
+  label: "HookParamsBase  «type»"
   shape: sql_table
   "projectRoot": "AbsPath" { constraint: "req" }
   "outDir": "AbsPath" { constraint: "req" }
@@ -93,7 +93,7 @@ direction: right
 }
 "provider_protocol__KernelBuildPart": {
   class: owned
-  label: "KernelBuildPart"
+  label: "KernelBuildPart  «type»"
   shape: sql_table
   "pn": "string" { constraint: "req" }
   "name": "string"
@@ -104,7 +104,7 @@ direction: right
 }
 "provider_protocol__KernelBuildPartResult": {
   class: owned
-  label: "KernelBuildPartResult"
+  label: "KernelBuildPartResult  «type»"
   shape: sql_table
   "pn": "string" { constraint: "req" }
   "status": "enum pass|fail" { constraint: "req" }
