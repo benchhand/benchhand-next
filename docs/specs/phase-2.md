@@ -30,10 +30,10 @@ The specs also cover capabilities of other phases: `record-validate` (record-val
 
 | Spec | Title | Status | Capabilities | Blocks | Sizes |
 |---|---|---|---|---|---|
-| [cel-pipeline](cel-pipeline.md) | The CEL pipeline and the flow's rule lists | draft | `cel-rule-pipeline`, `rule-lists` | 8 | 1 S, 4 M, 3 L |
-| [flow-engine](flow-engine.md) | The flow engine, gate policy and next actions | draft | `flow-engine`, `gate-policy`, `result-envelope` | 13 | 3 S, 9 M, 1 L |
-| [approvals](approvals.md) | Decision records and scoped re-approval | draft | `decision-records`, `scoped-reapproval` | 8 | 2 S, 6 M |
-| [record-validation](record-validation.md) | Record validation and migration in Phase 2 | draft | `record-validate`, `record-migrate` | 6 | 4 S, 1 M, 1 L |
+| [cel-pipeline](cel-pipeline.md) | The CEL pipeline and the flow's rule lists | draft | `cel-rule-pipeline`, `rule-lists` | 13 | 3 S, 9 M, 1 L |
+| [flow-engine](flow-engine.md) | The flow engine, gate policy and next actions | draft | `flow-engine`, `gate-policy`, `result-envelope` | 14 | 4 S, 9 M, 1 L |
+| [approvals](approvals.md) | Decision records and scoped re-approval | draft | `decision-records`, `scoped-reapproval` | 9 | 3 S, 6 M |
+| [record-validation](record-validation.md) | Record validation and migration in Phase 2 | draft | `record-validate`, `record-migrate` | 10 | 7 S, 3 M |
 
 ## Block graph
 
@@ -43,13 +43,18 @@ An arrow runs from what a block needs to the block. A hexagon is an open questio
 flowchart TD
   subgraph spec_cel_pipeline["cel-pipeline"]
     CP_1["CP-1 (M): Rule scopes and the structural-scope check"]
-    CP_2["CP-2 (S): The profile-manifest and rules-bundle contracts"]
-    CP_3["CP-3 (L): The descriptor set, the profile manifest and the JCS digest"]
-    CP_4["CP-4 (L): The pinned cel-go tool"]
-    CP_5["CP-5 (M): The host adapter and bundle verification"]
-    CP_6["CP-6 (M): The presence lint"]
-    CP_7["CP-7 (M): The flow's four rule lists and the stale-entry step in CI"]
-    CP_8["CP-8 (L): The supported-profile gate in CI"]
+    CP_2["CP-2 (S): The profile-manifest and rules-bundle contracts, and where a bundle lives"]
+    CP_3["CP-3 (M): The descriptor set for each scope"]
+    CP_4["CP-4 (S): The JCS digest and its test vector"]
+    CP_5["CP-5 (M): The profile manifest and the env YAML for each scope"]
+    CP_6["CP-6 (M): The pinned cel-go tool and its environment checks"]
+    CP_7["CP-7 (M): Compiling a rule list in the restricted profile"]
+    CP_8["CP-8 (S): Writing the rules bundle"]
+    CP_9["CP-9 (M): The host adapter and bundle verification"]
+    CP_10["CP-10 (M): The presence lint"]
+    CP_11["CP-11 (M): The flow's four rule lists and the stale-entry step in CI"]
+    CP_12["CP-12 (M): Both checkers of record on every shipped expression in CI"]
+    CP_13["CP-13 (L): The supported-profile conformance gate in CI"]
   end
   subgraph spec_flow_engine["flow-engine"]
     FE_1["FE-1 (M): The flow loader"]
@@ -65,8 +70,10 @@ flowchart TD
     FE_11["FE-11 (S): Tool calls against flow.stage"]
     FE_12["FE-12 (M): The design freeze"]
     FE_13["FE-13 (M): The flow end to end through the services"]
+    FE_14["FE-14 (S): A version frozen through a provisional and VOID cycle"]
   end
   subgraph spec_approvals["approvals"]
+    AP_9["AP-9 (S): The transition request in the flow contract"]
     AP_1["AP-1 (M): The decision writer"]
     AP_2["AP-2 (S): Decisions for undeclared transitions"]
     AP_3["AP-3 (M): Several chosen options and a carry-forward disposition"]
@@ -80,36 +87,46 @@ flowchart TD
     RV_1["RV-1 (S): Verification rows by header name"]
     RV_2["RV-2 (M): A not_applicable verification result"]
     RV_3["RV-3 (S): Evidence paths that name a current file"]
-    RV_4["RV-4 (L): The design rules of design_rules.py"]
+    RV_4["RV-4 (M): Torque paths from design_rules.py"]
     RV_5["RV-5 (S): Welded, brazed and soldered torque paths"]
     RV_6["RV-6 (S): Missing inputs only from the stage that produces them"]
+    RV_7["RV-7 (M): Axial retainers from design_rules.py"]
+    RV_8["RV-8 (S): Clearance margins from design_rules.py"]
+    RV_9["RV-9 (S): Visibility bindings from design_rules.py"]
+    RV_10["RV-10 (S): Clearance margins read from a version snapshot"]
   end
   question_user_bundle_location{{"question: user-bundle-location"}}
   question_envelope_phase{{"question: envelope-phase"}}
   capability_evidence_assessment(["capability: evidence-assessment"])
   question_key_gate_auto{{"question: key-gate-auto"}}
-  question_provisional_recording{{"question: provisional-recording"}}
   question_tool_stage_check{{"question: tool-stage-check"}}
   capability_version_snapshots(["capability: version-snapshots"])
   question_freeze_digest{{"question: freeze-digest"}}
+  question_storage_layout_adr{{"question: storage-layout-adr"}}
   capability_selection_assessment(["capability: selection-assessment"])
   question_unscoped_confirmation{{"question: unscoped-confirmation"}}
   question_unscoped_freeze{{"question: unscoped-freeze"}}
   question_user_bundle_location --> CP_1
+  question_user_bundle_location --> CP_2
   CP_1 --> CP_3
-  CP_2 --> CP_3
-  CP_3 --> CP_4
+  CP_2 --> CP_4
   CP_3 --> CP_5
   CP_4 --> CP_5
   CP_5 --> CP_6
-  CP_4 --> CP_7
-  CP_5 --> CP_7
-  CP_6 --> CP_8
+  CP_6 --> CP_7
   CP_7 --> CP_8
-  FE_2 --> CP_8
-  CP_5 --> FE_1
+  CP_5 --> CP_9
+  CP_8 --> CP_9
+  CP_9 --> CP_10
+  CP_8 --> CP_11
+  CP_9 --> CP_11
+  CP_11 --> CP_12
+  FE_2 --> CP_12
+  CP_9 --> CP_13
+  CP_10 --> CP_13
+  CP_9 --> FE_1
   FE_1 --> FE_2
-  CP_7 --> FE_2
+  CP_11 --> FE_2
   question_envelope_phase --> FE_3
   FE_2 --> FE_4
   FE_3 --> FE_4
@@ -119,31 +136,35 @@ flowchart TD
   FE_4 --> FE_6
   AP_1 --> FE_6
   FE_4 --> FE_7
+  FE_8 --> FE_7
   AP_1 --> FE_7
   FE_1 --> FE_8
-  CP_7 --> FE_8
+  CP_11 --> FE_8
   FE_7 --> FE_9
   question_key_gate_auto --> FE_9
   FE_4 --> FE_10
-  question_provisional_recording --> FE_10
   FE_4 --> FE_11
   question_tool_stage_check --> FE_11
   FE_5 --> FE_12
   capability_version_snapshots --> FE_12
   question_freeze_digest --> FE_12
+  question_storage_layout_adr --> FE_12
   FE_6 --> FE_13
   FE_7 --> FE_13
   FE_10 --> FE_13
   capability_selection_assessment --> FE_13
+  FE_6 --> FE_14
+  FE_12 --> FE_14
+  AP_9 --> AP_1
   AP_1 --> AP_2
   FE_1 --> AP_2
   AP_1 --> AP_4
   FE_4 --> AP_4
-  question_provisional_recording --> AP_4
   AP_1 --> AP_5
   capability_evidence_assessment --> AP_5
   AP_5 --> AP_6
   FE_1 --> AP_6
+  FE_4 --> AP_6
   AP_6 --> AP_7
   FE_4 --> AP_7
   FE_12 --> AP_7
@@ -151,6 +172,9 @@ flowchart TD
   question_unscoped_confirmation --> AP_8
   question_unscoped_freeze --> AP_8
   RV_4 --> RV_5
+  RV_8 --> RV_10
+  capability_version_snapshots --> RV_10
+  question_storage_layout_adr --> RV_10
 ```
 
 ## Suggested order
@@ -162,68 +186,88 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 ### Wave 1
 
 - **CP-1** (M, cel-pipeline): Rule scopes and the structural-scope check. Waits on `user-bundle-location` (non-blocking).
-- **CP-2** (S, cel-pipeline): The profile-manifest and rules-bundle contracts.
+- **CP-2** (S, cel-pipeline): The profile-manifest and rules-bundle contracts, and where a bundle lives. Waits on `user-bundle-location` (non-blocking).
 - **FE-3** (S, flow-engine): The result envelope in core. Waits on `envelope-phase` (non-blocking).
-- **AP-1** (M, approvals): The decision writer.
+- **AP-9** (S, approvals): The transition request in the flow contract.
 - **AP-3** (M, approvals): Several chosen options and a carry-forward disposition.
 - **RV-1** (S, record-validation): Verification rows by header name.
 - **RV-2** (M, record-validation): A not_applicable verification result.
 - **RV-3** (S, record-validation): Evidence paths that name a current file.
-- **RV-4** (L, record-validation): The design rules of design_rules.py.
+- **RV-4** (M, record-validation): Torque paths from design_rules.py.
 - **RV-6** (S, record-validation): Missing inputs only from the stage that produces them.
+- **RV-7** (M, record-validation): Axial retainers from design_rules.py.
+- **RV-8** (S, record-validation): Clearance margins from design_rules.py.
+- **RV-9** (S, record-validation): Visibility bindings from design_rules.py.
 
 ### Wave 2
 
-- **CP-3** (L, cel-pipeline): The descriptor set, the profile manifest and the JCS digest. After CP-1, CP-2.
-- **AP-5** (M, approvals): The approval scope in the decision contract. After AP-1. Waits on capability `evidence-assessment`.
+- **CP-3** (M, cel-pipeline): The descriptor set for each scope. After CP-1.
+- **CP-4** (S, cel-pipeline): The JCS digest and its test vector. After CP-2.
+- **AP-1** (M, approvals): The decision writer. After AP-9.
 - **RV-5** (S, record-validation): Welded, brazed and soldered torque paths. After RV-4.
+- **RV-10** (S, record-validation): Clearance margins read from a version snapshot. After RV-8. Waits on capability `version-snapshots`, `storage-layout-adr` (blocking).
 
 ### Wave 3
 
-- **CP-4** (L, cel-pipeline): The pinned cel-go tool. After CP-3.
+- **CP-5** (M, cel-pipeline): The profile manifest and the env YAML for each scope. After CP-3, CP-4.
+- **AP-5** (M, approvals): The approval scope in the decision contract. After AP-1. Waits on capability `evidence-assessment`.
 
 ### Wave 4
 
-- **CP-5** (M, cel-pipeline): The host adapter and bundle verification. After CP-3, CP-4.
+- **CP-6** (M, cel-pipeline): The pinned cel-go tool and its environment checks. After CP-5.
 
 ### Wave 5
 
-- **CP-6** (M, cel-pipeline): The presence lint. After CP-5.
-- **CP-7** (M, cel-pipeline): The flow's four rule lists and the stale-entry step in CI. After CP-4, CP-5.
-- **FE-1** (M, flow-engine): The flow loader. After CP-5.
+- **CP-7** (M, cel-pipeline): Compiling a rule list in the restricted profile. After CP-6.
 
 ### Wave 6
 
-- **FE-2** (M, flow-engine): The real flow/flow.yaml. After FE-1, CP-7.
-- **FE-8** (M, flow-engine): Merging contributed rule lists and gate requirements. After FE-1, CP-7.
-- **AP-2** (S, approvals): Decisions for undeclared transitions. After AP-1, FE-1.
-- **AP-6** (M, approvals): Changed since approval. After AP-5, FE-1.
+- **CP-8** (S, cel-pipeline): Writing the rules bundle. After CP-7.
 
 ### Wave 7
 
-- **CP-8** (L, cel-pipeline): The supported-profile gate in CI. After CP-6, CP-7, FE-2.
-- **FE-4** (L, flow-engine): The interpreter, its transitions and refusals. After FE-2, FE-3, AP-1.
+- **CP-9** (M, cel-pipeline): The host adapter and bundle verification. After CP-5, CP-8.
 
 ### Wave 8
 
-- **FE-5** (M, flow-engine): Gate obligations from the evidence assessment. After FE-4. Waits on capability `evidence-assessment`.
-- **FE-6** (M, flow-engine): The VOID cascade. After FE-4, AP-1.
-- **FE-7** (M, flow-engine): Gate modes, rigor and policy changes. After FE-4, AP-1.
-- **FE-10** (M, flow-engine): Next actions from the gate state. After FE-4. Waits on `provisional-recording` (blocking).
-- **FE-11** (S, flow-engine): Tool calls against flow.stage. After FE-4. Waits on `tool-stage-check` (blocking).
-- **AP-4** (S, approvals): Recording a provisional approval. After AP-1, FE-4. Waits on `provisional-recording` (blocking).
+- **CP-10** (M, cel-pipeline): The presence lint. After CP-9.
+- **CP-11** (M, cel-pipeline): The flow's four rule lists and the stale-entry step in CI. After CP-8, CP-9.
+- **FE-1** (M, flow-engine): The flow loader. After CP-9.
 
 ### Wave 9
 
-- **FE-9** (S, flow-engine): Middle gates without the user under the key-gates profile. After FE-7. Waits on `key-gate-auto` (blocking).
-- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`, `freeze-digest` (blocking).
-- **FE-13** (M, flow-engine): The flow end to end through the services. After FE-6, FE-7, FE-10. Waits on capability `selection-assessment`.
+- **CP-13** (L, cel-pipeline): The supported-profile conformance gate in CI. After CP-9, CP-10.
+- **FE-2** (M, flow-engine): The real flow/flow.yaml. After FE-1, CP-11.
+- **FE-8** (M, flow-engine): Merging contributed rule lists and gate requirements. After FE-1, CP-11.
+- **AP-2** (S, approvals): Decisions for undeclared transitions. After AP-1, FE-1.
 
 ### Wave 10
 
-- **AP-7** (M, approvals): Confirmation at the next human gate. After AP-6, FE-4, FE-12.
+- **CP-12** (M, cel-pipeline): Both checkers of record on every shipped expression in CI. After CP-11, FE-2.
+- **FE-4** (L, flow-engine): The interpreter, its transitions and refusals. After FE-2, FE-3, AP-1.
 
 ### Wave 11
+
+- **FE-5** (M, flow-engine): Gate obligations from the evidence assessment. After FE-4. Waits on capability `evidence-assessment`.
+- **FE-6** (M, flow-engine): The VOID cascade. After FE-4, AP-1.
+- **FE-7** (M, flow-engine): Gate modes, rigor and policy changes. After FE-4, FE-8, AP-1.
+- **FE-10** (M, flow-engine): Next actions from the gate state. After FE-4.
+- **FE-11** (S, flow-engine): Tool calls against flow.stage. After FE-4. Waits on `tool-stage-check` (blocking).
+- **AP-4** (S, approvals): Recording a provisional approval. After AP-1, FE-4.
+- **AP-6** (M, approvals): Changed since approval. After AP-5, FE-1, FE-4.
+
+### Wave 12
+
+- **FE-9** (S, flow-engine): Middle gates without the user under the key-gates profile. After FE-7. Waits on `key-gate-auto` (blocking).
+- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`, `freeze-digest` (blocking), `storage-layout-adr` (blocking).
+- **FE-13** (M, flow-engine): The flow end to end through the services. After FE-6, FE-7, FE-10. Waits on capability `selection-assessment`.
+
+### Wave 13
+
+- **FE-14** (S, flow-engine): A version frozen through a provisional and VOID cycle. After FE-6, FE-12.
+- **AP-7** (M, approvals): Confirmation at the next human gate. After AP-6, FE-4, FE-12.
+
+### Wave 14
 
 - **AP-8** (M, approvals): Migrated decisions without a scope. After AP-7. Waits on `unscoped-confirmation` (blocking), `unscoped-freeze` (blocking).
 
@@ -231,18 +275,18 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 
 | Question | Blocking | Owner | Blocks it holds |
 |---|---|---|---|
-| [user-bundle-location](../architecture/capabilities.md#user-bundle-location) | no | none | CP-1 |
+| [user-bundle-location](../architecture/capabilities.md#user-bundle-location) | no | none | CP-1, CP-2 |
 | [envelope-phase](../architecture/capabilities.md#envelope-phase) | no | none | FE-3 |
 | [key-gate-auto](../architecture/capabilities.md#key-gate-auto) | yes | project-owner | FE-9 |
-| [provisional-recording](../architecture/capabilities.md#provisional-recording) | yes | project-owner | FE-10, AP-4 |
 | [tool-stage-check](../architecture/capabilities.md#tool-stage-check) | yes | project-owner | FE-11 |
 | [freeze-digest](../architecture/capabilities.md#freeze-digest) | yes | project-owner | FE-12 |
+| [storage-layout-adr](../architecture/capabilities.md#storage-layout-adr) | yes | project-owner | FE-12, RV-10 |
 | [unscoped-confirmation](../architecture/capabilities.md#unscoped-confirmation) | yes | project-owner | AP-8 |
 | [unscoped-freeze](../architecture/capabilities.md#unscoped-freeze) | yes | project-owner | AP-8 |
 
 ## Phase 2 register entries no spec closes
 
-70 of the 82 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
+71 of the 83 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
 
 | Entry | Disposition | Deferred to | Title |
 |---|---|---|---|
@@ -261,8 +305,8 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-036 | contract | none | There are no assembly configurations, so a sweep can't cover alternative operating envelopes such as several bundle sizes. |
 | IR-039 | contract | none | Validate accepts an operation acceptance with the wrong feature count for its kind, which the access check then refuses. |
 | IR-043 | design-input | check-orchestration | The commit-scope evidence run stops at the first failing step, so later producers never run and their obligations show as unknown. |
-| IR-047 | contract | none | A catalogue or standard part needs a frozen, hashed copy of its specification even when nothing can be frozen or the standard is paywalled. |
-| IR-049 | contract | none | The service-class rules live as code and prose in several copies, and two lists of the service classes can drift apart. |
+| IR-047 | contract | existing-equipment | A catalogue or standard part needs a frozen, hashed copy of its specification even when nothing can be frozen or the standard is paywalled. |
+| IR-049 | contract | evidence-assessment | The service-class rules live as code and prose in several copies, and two lists of the service classes can drift apart. |
 | IR-050 | contract | none | A CAD-and-simulation release can't close a physical obligation as checked before use. |
 | IR-051 | port-fix | version-snapshots | After a release, the next change is validated against the released version's rules and frozen digest, so it can't add a planned row. |
 | IR-052 | port-fix | none | An expired waiver from an earlier version blocks a part that has since been tested. |
@@ -286,8 +330,8 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-078 | design-input | none | A headline status is stronger than its weakest part, such as a form check that passes while its manufacturing result is unknown, or a sweep reported complete that skips pairs. |
 | IR-079 | port-fix | none | The quantity reader overflows on huge integers and labels a non-finite number a units error because of the message text. |
 | IR-080 | port-fix | none | Selection crashes on a list-valued recommendation role when candidates exist. |
-| IR-086 | already-covered | none | Release compares file drift with the built snapshot when no design freeze exists, which invites calling the build frozen. |
-| IR-087 | port-fix | none | Recheck stamps compared dates, so a decision at 23:59 and a recheck at 00:01 failed, and malformed stamp or gate input exits 2. |
+| IR-086 | already-covered | version-snapshots | Release compares file drift with the built snapshot when no design freeze exists, which invites calling the build frozen. |
+| IR-087 | port-fix | design-recheck | Recheck stamps compared dates, so a decision at 23:59 and a recheck at 00:01 failed, and malformed stamp or gate input exits 2. |
 | IR-089 | contract | none | An existing host part can't give the temperature limit of a joint, because its material can only come through make intent. |
 | IR-090 | port-fix | none | Print-in-place members are reported as never installed. |
 | IR-092 | contract | none | Hard schema maxima act as plausibility checks, capping pair clearance and margin at small values. |
@@ -316,3 +360,4 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-176 | port-fix | none | The flow asks for and blocks on a printer profile, and rejects a machine identity the user declares. |
 | IR-177 | design-input | none | There is no guided machine setup that builds a capability profile from published specifications. |
 | IR-190 | port-fix | none | Scratch delivery copies and renames by path name, so a linked parts folder can redirect publication outside the record. |
+| IR-202 | port-fix | none | A killed build leaves its staging folder behind for good, and while it is there the store's garbage collection refuses to run. |

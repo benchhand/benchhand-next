@@ -75,28 +75,6 @@ open_questions:
       - source: docs/architecture/data-flow.md:351
         says: no MCP tool for migration is named; main has the CLI
           subcommand.
-  - id: provisional-recording
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether a tool call or the interpreter records a
-      PROVISIONAL approval, before the decision-records spec.'
-    origin: catalogue
-    question: 'Who records a PROVISIONAL approval: a tool call, or
-      the interpreter? The envelope example names a flow.record_provisional
-      tool; the plan names only flow.record_decision, and the flow
-      contract''s gate request covers human-gate decisions.'
-    pointers:
-      - contracts/envelope/envelope.tsp:105
-      - docs/design-plan.md:341
-      - docs/contract/flow.md:54
-      - docs/contract/flow.md:56
-    positions:
-      - source: contracts/envelope/envelope.tsp:105
-        says: after fast checks pass, the next action is the tool
-          flow.record_provisional.
-      - source: docs/contract/flow.md:56
-        says: GateDecisionRequest records a human-gate decision; the
-          interpreter records the other VOIDs itself.
   - id: policy-resources
     blocking: true
     owner: project-owner
@@ -386,9 +364,11 @@ open_questions:
   - id: unscoped-confirmation
     blocking: true
     owner: project-owner
-    decision_needed: How the next human gate records its confirmation of a
-      migrated decision that has no approval scope, before the blocks that
-      write or read that confirmation.
+    decision_needed: How the engine tells a migrated gate approval from an
+      ordinary design decision after a reload, and how the next human gate
+      records its confirmation of it, before the blocks that write or read
+      that confirmation. Migrate removes the gate key and keeps such a
+      decision kind design, with only an info finding.
     origin: existing
     question: A migrated decision has no approval scope and needs
       confirmation at the next human gate. How is that confirmation
@@ -397,6 +377,33 @@ open_questions:
     pointers:
       - docs/adr/0019-scoped-reapproval.md:37
       - docs/contract/record-migration.md:137
+      - packages/benchhand-core/src/benchhand_core/record/migrate/decisions.py:79
+  - id: standards-sourcing-phase
+    blocking: true
+    owner: project-owner
+    decision_needed: The phase of the standards-data sourcing order and
+      parts.search, which IR-047 and RULE-36 put in Phase 2 and the
+      catalogue's standards-parts-data in Phase 4.
+    origin: catalogue
+    question: The register gives the standards-data package and parts.search
+      to Phase 2, with the not_applicable procurement reason. The
+      catalogue's standards-parts-data, which holds them, is a Phase 4
+      proposal. Which phase builds them?
+    pointers:
+      - docs/migration/issue-register.yaml:1681
+      - docs/architecture/capabilities.yaml:2693
+  - id: storage-layout-adr
+    blocking: true
+    owner: project-owner
+    decision_needed: The storage layout ADR, which renames the authored
+      record folder hw/ to design/ as the owner decided on 2026-11-27, and
+      fixes where versions and their snapshots live under it.
+    origin: catalogue
+    question: Where do the record's folders live under design/? The owner
+      decided the rename; the ADR that sets the layout isn't written, and a
+      separate block renames the paths across the repository.
+    pointers:
+      - docs/specs/README.md:75
   - id: unscoped-freeze
     blocking: true
     owner: project-owner
@@ -901,8 +908,6 @@ capabilities:
     depends_on:
       - flow-engine
       - record-store
-    open_questions:
-      - provisional-recording
     adrs:
       - 3
       - 18
@@ -1058,6 +1063,8 @@ capabilities:
       - skills/cad-record/scripts/prune.py
     depends_on:
       - record-store
+    open_questions:
+      - storage-layout-adr
     adrs:
       - 17
   - id: project-profile
@@ -2498,7 +2505,7 @@ capabilities:
           ref: docs/design-plan.md:344
       baseline:
         - flow.gate_packet
-        - flow.record_decision
+        - flow.transition
         - viewer.show
         - project.questions
         - project.record_profile
@@ -2738,6 +2745,7 @@ capabilities:
       - evidence-assessment
     open_questions:
       - read-only-cli
+      - standards-sourcing-phase
     adrs:
       - 17
   - id: step-import
@@ -2940,10 +2948,13 @@ tools:
     envelope: sync
     gate: records-decision
     phase: 3
-    status: planned
+    status: dropped
     source:
       kind: plan
       ref: docs/design-plan.md:341
+    note: The owner dropped it on 2026-11-27 for flow.transition, which
+      records a human-gate decision as its approval
+      (docs/contract/flow.md:62).
   - name: flow.record_provisional
     capability: decision-records
     access: write
@@ -2951,13 +2962,15 @@ tools:
     output: not yet defined
     envelope: sync
     gate: records-decision
-    phase: null
-    status: unresolved
+    phase: 3
+    status: dropped
     source:
       kind: contract
       ref: contracts/envelope/envelope.tsp:105
-    open_questions:
-      - provisional-recording
+    note: The owner dropped it on 2026-11-27 for flow.transition, whose
+      provisional step the engine records itself (docs/contract/flow.md:62).
+      The envelope example still names it until the Phase 2 contract
+      change.
   - name: flow.advance
     capability: flow-engine
     access: write
@@ -2966,15 +2979,31 @@ tools:
     envelope: sync
     gate: requests-transition
     phase: 3
-    status: proposed
+    status: dropped
     source:
       kind: catalogue
       ref: c7q.2, the stage CLI
     implied_by:
       - docs/design-plan.md:37
       - docs/design-plan.md:161
-    note: The interpreter is the normal writer of flow.stage; the
-      prototype agent wrote it by hand.
+    note: The owner dropped it on 2026-11-27 for flow.transition
+      (docs/contract/flow.md:62). The interpreter is the normal writer of
+      flow.stage; the prototype agent wrote it by hand.
+  - name: flow.transition
+    capability: flow-engine
+    access: write
+    input: not yet defined
+    output: not yet defined
+    envelope: sync
+    gate: requests-transition
+    phase: 3
+    status: planned
+    source:
+      kind: contract
+      ref: docs/contract/flow.md:62
+    note: The one tool that moves the flow, flow.transition {to?, version?,
+      decision?, approval?}. Its request is GateDecisionRequest, which
+      Phase 2 turns into the transition request.
   - name: flow.gate_packet
     capability: gate-packet
     access: read

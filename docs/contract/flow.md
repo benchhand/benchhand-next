@@ -59,6 +59,14 @@ The flow's list is evaluated last, and its result is final, so a flow's `[]` or 
 - `provisional` cites the provisional decision of a `provisional+full+human` gate.
 - The request has no field for the decision that accepts unproved between-sample intervals that the full sweep left. The engine supplies that citation from the record: the decision on the same version that accepts them. The owner decided this on 2026-11-27, at the Phase 0 and 1 gate.
 
+**Decided 2026-11-27: one transition tool.** The owner decided that one tool, `flow.transition {to?, version?, decision?, approval?}`, moves the flow. It replaces `flow.record_decision`, `flow.record_provisional` and the proposed `flow.advance`, and `GateDecisionRequest` becomes its request. The shape above stays on `main` until the Phase 2 contract change.
+
+- Which steps need an approval comes from the gate's `kind` in `flow.yaml` and its mode in `hw/policy.yaml`. A plain edge needs no approval.
+- The provisional step of a staged gate needs `version`. It is refused unless every fast check for that version passed and is current: their fingerprints match. The engine writes the provisional decision itself, with `channel: auto`, and cites the evidence. The step is idempotent per gate and version, and never takes an `approval`.
+- A human gate is refused without `approval {channel: chat|app, by, quote}`, unless its policy mode is `auto`. Then the engine records `channel: auto`.
+- A VOID the user names is `decision: void` with an approval, and cites the provisional decision.
+- A refusal names the missing step or approval in `next_actions`.
+
 ## Approval scope
 
 `ApprovalScope`, `ApprovedItemState` and the flow's `reapproval_scope` are provisional, and Phase 2 owns them (ADR-0019).

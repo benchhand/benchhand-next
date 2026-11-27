@@ -70,6 +70,10 @@ The body has these sections, in this order.
 
 A block is reviewable alone and leaves `main` green. A block that changes a contract changes the TypeSpec source, the generated files and the tests together.
 
+## Record paths
+
+The owner decided on 2026-11-27 that the authored record folder `hw/` becomes `design/`, under the storage layout ADR, which isn't written yet. Specs keep writing `hw/` until a block of that ADR renames the paths across the repository. A block that writes into the record's layout, such as a version snapshot or a freeze, depends on `question:storage-layout-adr`.
+
 ## Register entries
 
 A Phase 2 register entry is joined to a spec when one of its `prototype_paths` matches a prototype path that the catalogue lists for one of the spec's capabilities. It matches when it is the same file, or a file under a listed directory. The spec closes each joined entry, or defers it to the capability whose work closes it. A spec may also close an entry that isn't joined to it, when its blocks do the work. phase-2.md lists every Phase 2 entry that no spec closes.

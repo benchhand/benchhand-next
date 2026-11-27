@@ -23,7 +23,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
 | **all** | **80** | 6 | 5 | 60 | 9 | 0 | 65 | 15 |
 
-MCP tools: 106 (37 planned, 2 unresolved, 65 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 29. Doc corrections: 1.
+MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 30. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -50,7 +50,7 @@ MCP tools: 106 (37 planned, 2 unresolved, 65 proposed, 2 dropped). CLI commands:
 
 | Capability | Title | Layer | Container | Status | Scope | Owner | Tools | CLI |
 |---|---|---|---|---|---|---|---|---|
-| [flow-engine](#flow-engine) | Flow engine | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core`, `flow` | 1 | 0 |
+| [flow-engine](#flow-engine) | Flow engine | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core`, `flow` | 2 | 0 |
 | [cel-rule-pipeline](#cel-rule-pipeline) | CEL rule pipeline | core | `containers.md:celTypes` | planned | baseline | `packages/benchhand-core`, `tools/celcheck`, `tools/gen` | 0 | 1 |
 | [rule-lists](#rule-lists) | Rule lists | core | `layers.md:flowDir` | planned | baseline | `flow` | 0 | 0 |
 | [gate-policy](#gate-policy) | Gate policy | core | `containers.md:flowEngine` | planned | baseline | `packages/benchhand-core` | 2 | 2 |
@@ -452,12 +452,13 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `fea.stop_reaction` | [fea-analysis](#fea-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `stop_reaction.py` | `stop_reaction.py` |
 | `fits.lookup` | [fits-calculators](#fits-calculators) | read | not yet defined | not yet defined | sync | none | P4 | planned | plan: `docs/design-plan.md:379` | `fits.py` |
 | `fits.stackup` | [fits-calculators](#fits-calculators) | write | not yet defined | not yet defined | sync | unspecified | P4 | planned | plan: `docs/design-plan.md:379` | `stackup.py` |
-| `flow.advance` | [flow-engine](#flow-engine) | write | not yet defined | not yet defined | sync | requests-transition | P3 | proposed | catalogue: `c7q.2, the stage CLI` | – |
+| `flow.advance` | [flow-engine](#flow-engine) | write | not yet defined | not yet defined | sync | requests-transition | P3 | dropped | catalogue: `c7q.2, the stage CLI` | – |
 | `flow.gate_packet` | [gate-packet](#gate-packet) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `the chat baseline of the human gate` | – |
 | `flow.guide` | [guide-service](#guide-service) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:309` | – |
 | `flow.impact` | [change-impact](#change-impact) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `impact.py` | `impact.py` |
-| `flow.record_decision` | [decision-records](#decision-records) | write | `flow/flow.schema.json#/$defs/GateDecisionRequest` | not yet defined | sync | records-decision | P3 | planned | plan: `docs/design-plan.md:341` | – |
-| `flow.record_provisional` | [decision-records](#decision-records) | write | not yet defined | not yet defined | sync | records-decision | no phase | unresolved | contract: `contracts/envelope/envelope.tsp:105` | – |
+| `flow.record_decision` | [decision-records](#decision-records) | write | `flow/flow.schema.json#/$defs/GateDecisionRequest` | not yet defined | sync | records-decision | P3 | dropped | plan: `docs/design-plan.md:341` | – |
+| `flow.record_provisional` | [decision-records](#decision-records) | write | not yet defined | not yet defined | sync | records-decision | P3 | dropped | contract: `contracts/envelope/envelope.tsp:105` | – |
+| `flow.transition` | [flow-engine](#flow-engine) | write | not yet defined | not yet defined | sync | requests-transition | P3 | planned | contract: `docs/contract/flow.md:62` | – |
 | `jobs.cancel` | [job-service](#job-service) | write | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `tasks/cancel without its baseline` | – |
 | `jobs.result` | [job-service](#job-service) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:345` | – |
 | `jobs.start` | [job-service](#job-service) | write | not yet defined | not yet defined | job-handle | unspecified | P3 | planned | plan: `docs/design-plan.md:345` | – |
@@ -546,7 +547,7 @@ ADR-0018 makes a tool the baseline for readable content: each resource, prompt a
 | [record-ops](#record-ops) | `record`, `schemas`, `accepted values` | – | – | `record.read` (candidate); **missing:** no tool returns the published schemas or the accepted values. | P3 | plan: `docs/design-plan.md:574` |
 | [part-sdk](#part-sdk) | `sdk://describe` | – | – | **missing:** no tool returns the SDK signatures that sdk://describe lists. | P4 | plan: `docs/design-plan.md:366` |
 | [viewer](#viewer) | – | – | `ui://benchhand/viewer` | `viewer.show`, `preview.serve` | P5 | plan: `docs/design-plan.md:342` |
-| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer`, `structured-question form` | `flow.gate_packet` (candidate), `flow.record_decision`, `viewer.show`, `project.questions` (candidate), `project.record_profile` (candidate) | P5 | plan: `docs/design-plan.md:597`; plan: `docs/design-plan.md:344` |
+| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer`, `structured-question form` | `flow.gate_packet` (candidate), `flow.transition`, `viewer.show`, `project.questions` (candidate), `project.record_profile` (candidate) | P5 | plan: `docs/design-plan.md:597`; plan: `docs/design-plan.md:344` |
 | [docs-index](#docs-index) | `docs://` | – | – | `docs.get` (candidate) | P3 | study: `lane8-agentcad.md section 6, item 5` |
 
 ## CLI commands
@@ -670,7 +671,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 
 *Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped. *Pending decisions* are tools that exist only if an open question is answered yes, so they have no contract to write yet.
 
-### Missing interfaces (114)
+### Missing interfaces (113)
 
 #### Capabilities with no MCP tool (6)
 
@@ -686,7 +687,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [record-ops](#record-ops): no tool returns the published schemas or the accepted values.
 - [part-sdk](#part-sdk): no tool returns the SDK signatures that sdk://describe lists.
 
-#### Tools with no contract (102)
+#### Tools with no contract (101)
 
 - `bom.rollup`: input
 - `checks.form`: input and output
@@ -713,11 +714,10 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - `fea.stop_reaction`: input and output
 - `fits.lookup`: input and output
 - `fits.stackup`: input and output
-- `flow.advance`: input and output
 - `flow.gate_packet`: input and output
 - `flow.guide`: input and output
 - `flow.impact`: input and output
-- `flow.record_decision`: output
+- `flow.transition`: input and output
 - `jobs.cancel`: input and output
 - `jobs.result`: input and output
 - `jobs.start`: input and output
@@ -852,7 +852,7 @@ None.
 - `run_cadquery.py` ([model-build](#model-build)): The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it.
 - `viewer.py host` ([preview-host](#preview-host)): The hidden subcommand the viewer host runs as; the preview host replaces it.
 
-### Proposals awaiting approval (89)
+### Proposals awaiting approval (91)
 
 #### Proposed capabilities (9)
 
@@ -866,7 +866,7 @@ None.
 - [resident-kernels](#resident-kernels) (P4): design: `docs/design/edit-loop-performance.md:105`
 - [edit-loop](#edit-loop) (P4): design: `docs/design/edit-loop-performance.md:132`
 
-#### Proposed tools (65)
+#### Proposed tools (64)
 
 - `bom.rollup` ([bom](#bom), catalogue)
 - `checks.form` ([process-checks](#process-checks), catalogue)
@@ -886,7 +886,6 @@ None.
 - `evidence.digest` ([evidence-assessment](#evidence-assessment), catalogue)
 - `fea.static` ([fea-analysis](#fea-analysis), catalogue)
 - `fea.stop_reaction` ([fea-analysis](#fea-analysis), catalogue)
-- `flow.advance` ([flow-engine](#flow-engine), catalogue): The interpreter is the normal writer of flow.stage; the prototype agent wrote it by hand.
 - `flow.gate_packet` ([gate-packet](#gate-packet), catalogue)
 - `flow.impact` ([change-impact](#change-impact), catalogue)
 - `jobs.cancel` ([job-service](#job-service), catalogue)
@@ -950,16 +949,18 @@ None.
 - `benchhand standards show` ([standards-parts-data](#standards-parts-data), study)
 - `benchhand view` ([viewer](#viewer), study): Opens serve on two versions.
 
-#### Dropped tools (2)
+#### Dropped tools (5)
 
+- `flow.advance` ([flow-engine](#flow-engine), catalogue): The owner dropped it on 2026-11-27 for flow.transition (docs/contract/flow.md:62). The interpreter is the normal writer of flow.stage; the prototype agent wrote it by hand.
+- `flow.record_decision` ([decision-records](#decision-records), plan): The owner dropped it on 2026-11-27 for flow.transition, which records a human-gate decision as its approval (docs/contract/flow.md:62).
+- `flow.record_provisional` ([decision-records](#decision-records), contract): The owner dropped it on 2026-11-27 for flow.transition, whose provisional step the engine records itself (docs/contract/flow.md:62). The envelope example still names it until the Phase 2 contract change.
 - `motion.check` ([motion-analysis](#motion-analysis), catalogue): Proposed for `motion.py check`, which doesn't exist at the pin; `motion.py plan` checks coverage, and motion.plan replaces it.
 - `recheck.diff` ([design-recheck](#design-recheck), catalogue): Proposed for `stamp.py diff`, which doesn't exist at the pin; stamp.py has flag-only modes, and `--verify --committed` goes to recheck.verify.
 
-### Pending decisions (2)
+### Pending decisions (1)
 
-#### Unresolved tools (2)
+#### Unresolved tools (1)
 
-- `flow.record_provisional` ([decision-records](#decision-records)): [provisional-recording](#provisional-recording)
 - `record.migrate` ([record-migrate](#record-migrate)): [record-migrate-tool](#record-migrate-tool)
 
 ### Dependencies on a later phase (14)
@@ -1003,16 +1004,6 @@ Is there a record.migrate MCP tool, and in which phase? The envelope contract's 
 - `docs/architecture/data-flow.md:351`: no MCP tool for migration is named; main has the CLI subcommand.
 - Blocking: yes. Owner: project-owner. Decision needed: Whether record.migrate is an MCP tool and in which phase, or the envelope example names the CLI command instead.
 - Cited by: [record-migrate](#record-migrate), `record.migrate`, `benchhand record migrate`
-
-### provisional-recording
-
-Who records a PROVISIONAL approval: a tool call, or the interpreter? The envelope example names a flow.record_provisional tool; the plan names only flow.record_decision, and the flow contract's gate request covers human-gate decisions. (catalogue)
-
-- Pointers: `contracts/envelope/envelope.tsp:105`, `docs/design-plan.md:341`, `docs/contract/flow.md:54`, `docs/contract/flow.md:56`
-- `contracts/envelope/envelope.tsp:105`: after fast checks pass, the next action is the tool flow.record_provisional.
-- `docs/contract/flow.md:56`: GateDecisionRequest records a human-gate decision; the interpreter records the other VOIDs itself.
-- Blocking: yes. Owner: project-owner. Decision needed: Whether a tool call or the interpreter records a PROVISIONAL approval, before the decision-records spec.
-- Cited by: [decision-records](#decision-records), `flow.record_provisional`
 
 ### policy-resources
 
@@ -1212,9 +1203,25 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 
 A migrated decision has no approval scope and needs confirmation at the next human gate. How is that confirmation recorded? ADR-0019 leaves the mechanics to Phase 2 design, and the owner has approved none. (existing)
 
-- Pointers: `docs/adr/0019-scoped-reapproval.md:37`, `docs/contract/record-migration.md:137`
-- Blocking: yes. Owner: project-owner. Decision needed: How the next human gate records its confirmation of a migrated decision that has no approval scope, before the blocks that write or read that confirmation.
+- Pointers: `docs/adr/0019-scoped-reapproval.md:37`, `docs/contract/record-migration.md:137`, `packages/benchhand-core/src/benchhand_core/record/migrate/decisions.py:79`
+- Blocking: yes. Owner: project-owner. Decision needed: How the engine tells a migrated gate approval from an ordinary design decision after a reload, and how the next human gate records its confirmation of it, before the blocks that write or read that confirmation. Migrate removes the gate key and keeps such a decision kind design, with only an info finding.
 - Cited by: [scoped-reapproval](#scoped-reapproval)
+
+### standards-sourcing-phase
+
+The register gives the standards-data package and parts.search to Phase 2, with the not_applicable procurement reason. The catalogue's standards-parts-data, which holds them, is a Phase 4 proposal. Which phase builds them? (catalogue)
+
+- Pointers: `docs/migration/issue-register.yaml:1681`, `docs/architecture/capabilities.yaml:2693`
+- Blocking: yes. Owner: project-owner. Decision needed: The phase of the standards-data sourcing order and parts.search, which IR-047 and RULE-36 put in Phase 2 and the catalogue's standards-parts-data in Phase 4.
+- Cited by: [standards-parts-data](#standards-parts-data)
+
+### storage-layout-adr
+
+Where do the record's folders live under design/? The owner decided the rename; the ADR that sets the layout isn't written, and a separate block renames the paths across the repository. (catalogue)
+
+- Pointers: `docs/specs/README.md:75`
+- Blocking: yes. Owner: project-owner. Decision needed: The storage layout ADR, which renames the authored record folder hw/ to design/ as the owner decided on 2026-11-27, and fixes where versions and their snapshots live under it.
+- Cited by: [version-snapshots](#version-snapshots)
 
 ### unscoped-freeze
 
@@ -1391,7 +1398,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Phase and status: P2, planned, baseline
 - Owner: `packages/benchhand-core`, `flow`
 - Contracts: `flow/flow.schema.json`, `record/product.schema.json`, `common/cel.schema.json`
-- MCP tools: `flow.advance`
+- MCP tools: `flow.advance`, `flow.transition`
 - CLI: –
 - Depends on: [record-store](#record-store), [cel-rule-pipeline](#cel-rule-pipeline)
 - ADRs: ADR-0003, ADR-0014, ADR-0019, ADR-0020
@@ -1462,7 +1469,6 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Note: The engine supplies the citation of the interval-acceptance decision from the record, and GateDecisionRequest has no field for it; the owner decided this on 2026-11-27 (docs/phases/phase-0-1.md:132, docs/contract/flow.md:60).
 - Source: plan: `docs/design-plan.md:562`
 - Prototype: `skills/cad-record/scripts/decision_records.py`
-- Open questions: [provisional-recording](#provisional-recording)
 
 ### scoped-reapproval
 
@@ -1526,6 +1532,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0017
 - Source: plan: `docs/design-plan.md:561`
 - Prototype: `skills/cad-record/scripts/layout.py`, `skills/cad-record/scripts/prune.py`
+- Open questions: [storage-layout-adr](#storage-layout-adr)
 
 ### project-profile
 
@@ -2372,7 +2379,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [record-store](#record-store), [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0017
 - Source: study: `lane8-agentcad.md section 6, item 7`
-- Open questions: [read-only-cli](#read-only-cli)
+- Open questions: [read-only-cli](#read-only-cli), [standards-sourcing-phase](#standards-sourcing-phase)
 
 ### step-import
 
