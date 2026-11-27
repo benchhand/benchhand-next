@@ -3,7 +3,6 @@ title: A first project
 description: Start a benchhand project and see what the server writes to the record.
 sidebar:
   order: 2
-phase: 3
 ---
 
 ## Start a project

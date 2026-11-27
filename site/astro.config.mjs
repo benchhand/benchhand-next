@@ -14,12 +14,12 @@ import remarkBaseLinks from "./src/remark-base-links.mjs";
 export default defineConfig({
   site,
   base,
-  markdown: { remarkPlugins: [[remarkBaseLinks, { base }]] },
+  markdown: { remarkPlugins: [[remarkBaseLinks, { base, repoUrl }]] },
   // src/site-link.ts links "repo:<path>" to the repository; site-url.mjs reads release.toml, so
   // components get its result as a constant rather than importing it.
   vite: { define: { __BENCHHAND_REPO_URL__: JSON.stringify(repoUrl) } },
   integrations: [
-    // The architecture pages and the domain model draw their diagrams in Mermaid.
+    // The domain model draws its diagrams in Mermaid.
     // astro-mermaid must come before Starlight. Diagrams keep their natural size and scroll sideways
     // (theme.css) instead of shrinking to the column: useMaxWidth makes Mermaid size the SVG to 100%.
     mermaid({
@@ -44,76 +44,67 @@ export default defineConfig({
       social: [{ icon: "github", label: "GitHub", href: repoUrl }],
       editLink: { baseUrl: `${repoUrl}/edit/main/site/` },
       components: {
-        // Adds the "Planned" aside to pages that set `phase` (src/content.config.ts).
-        MarkdownContent: "./src/components/MarkdownContent.astro",
         // Resolves the home page's action links against the site base and the repository.
         Hero: "./src/components/Hero.astro",
       },
       plugins: [starlightLinksValidator()],
       sidebar: [
+        { label: "Get started", items: [{ autogenerate: { directory: "getting-started" } }] },
         {
-          label: "Start",
+          label: "Guides",
           items: [
-            { label: "Home", link: "/" },
-            { label: "Documentation index", link: "/docs/" },
-            { autogenerate: { directory: "getting-started" } },
+            { label: "Tutorials", items: [{ autogenerate: { directory: "guides/tutorials" } }] },
+            "guides/migration",
+            "guides/writing-cel-rules",
+            "guides/testing-rules",
+            "guides/installing-providers",
+            "guides/writing-a-provider",
+            "guides/troubleshooting",
           ],
         },
         {
-          label: "Guides and manual",
+          label: "Concepts",
           items: [
-            { label: "Tutorials", collapsed: true, items: [{ autogenerate: { directory: "tutorials" } }] },
-            { label: "The process", collapsed: true, items: [{ autogenerate: { directory: "manual/process" } }] },
-            { label: "The record", collapsed: true, items: [{ autogenerate: { directory: "manual/record" } }] },
-            { label: "Policy and CEL", collapsed: true, items: [{ autogenerate: { directory: "manual/policy" } }] },
-            { label: "Providers", collapsed: true, items: [{ autogenerate: { directory: "manual/providers" } }] },
-            { label: "Manufacturing", collapsed: true, items: [{ autogenerate: { directory: "manual/manufacturing" } }] },
-            { label: "Clients", collapsed: true, items: [{ autogenerate: { directory: "manual/clients" } }] },
-            { label: "Troubleshooting", collapsed: true, items: [{ autogenerate: { directory: "manual/troubleshooting" } }] },
+            { label: "The design process", collapsed: true, items: [{ autogenerate: { directory: "concepts/process" } }] },
+            { label: "The record", collapsed: true, items: [{ autogenerate: { directory: "concepts/record" } }] },
+            { label: "Policy", collapsed: true, items: [{ autogenerate: { directory: "concepts/policy" } }] },
+            { label: "Providers", collapsed: true, items: [{ autogenerate: { directory: "concepts/providers" } }] },
+            { label: "Manufacturing", collapsed: true, items: [{ autogenerate: { directory: "concepts/manufacturing" } }] },
+            { label: "Clients", collapsed: true, items: [{ autogenerate: { directory: "concepts/clients" } }] },
           ],
         },
-        { label: "Architecture", items: [{ autogenerate: { directory: "architecture" } }] },
-        {
-          label: "Contracts",
-          items: [
-            { label: "Overview", link: "/reference/contracts/" },
-            { label: "JSON Schemas", link: "/reference/contracts/schemas/" },
-            { label: "Versioning", link: "/reference/contracts/versioning/" },
-            { label: "Record migration", link: "/reference/contracts/record-migration/" },
-            { label: "Provider protocol", link: "/reference/contracts/provider-protocol/" },
-            { label: "Record documents", collapsed: true, items: [{ autogenerate: { directory: "reference/contracts/record" } }] },
-            {
-              label: "Provider, jobs and findings",
-              collapsed: true,
-              items: [
-                { autogenerate: { directory: "reference/contracts/provider" } },
-                { autogenerate: { directory: "reference/contracts/jobs" } },
-                { autogenerate: { directory: "reference/contracts/common" } },
-              ],
-            },
-            { label: "Domain model", collapsed: true, items: [{ autogenerate: { directory: "reference/contracts/domain-model" } }] },
-          ],
-        },
-        { label: "Decision records", collapsed: true, items: [{ autogenerate: { directory: "adr" } }] },
         {
           label: "Reference",
           items: [
             { label: "Overview", link: "/reference/" },
             { label: "MCP tools", link: "/reference/mcp-tools/" },
             { label: "CLI", link: "/reference/cli/" },
-            { label: "Flow", link: "/reference/flow/" },
-            { label: "Codes and configuration", link: "/reference/codes/" },
-            { label: "Python API", items: [{ autogenerate: { directory: "reference/python-api" } }] },
-            { label: "TypeScript API", link: "/reference/typescript-api/" },
+            { label: "Flow", link: "/reference/contracts/flow/" },
+            {
+              label: "Contracts",
+              collapsed: true,
+              items: [
+                { label: "Overview", link: "/reference/contracts/" },
+                { label: "JSON Schemas", link: "/reference/contracts/schemas/" },
+                { label: "Versioning", link: "/reference/contracts/versioning/" },
+                { label: "Record migration", link: "/reference/contracts/record-migration/" },
+                { label: "Provider protocol", link: "/reference/contracts/provider-protocol/" },
+                { label: "Record documents", collapsed: true, items: [{ autogenerate: { directory: "reference/contracts/record" } }] },
+                {
+                  label: "Provider, jobs and findings",
+                  collapsed: true,
+                  items: [
+                    { autogenerate: { directory: "reference/contracts/provider" } },
+                    { autogenerate: { directory: "reference/contracts/jobs" } },
+                    { autogenerate: { directory: "reference/contracts/common" } },
+                  ],
+                },
+              ],
+            },
+            { label: "Python API", collapsed: true, items: [{ autogenerate: { directory: "reference/python-api" } }] },
           ],
         },
-        {
-          label: "Roadmap",
-          items: [
-            { label: "Planned pages", link: "/planned/" },
-            { label: "Changelog", link: "/changelog/" },
-          ],
-        },
+        { label: "Contributing", items: ["contributing"] },
       ],
     }),
   ],

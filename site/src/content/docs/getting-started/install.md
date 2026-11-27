@@ -3,7 +3,6 @@ title: Install
 description: Install benchhand, register it with your agent host, and set up FreeCAD.
 sidebar:
   order: 1
-phase: 7
 ---
 
 ## Requirements

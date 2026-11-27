@@ -3,7 +3,6 @@ title: A first part through to STEP
 description: Take one part from requirements to a STEP file.
 sidebar:
   order: 3
-phase: 4
 ---
 
 ## Write the requirements

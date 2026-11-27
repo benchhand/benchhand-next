@@ -1,21 +1,20 @@
 ---
 title: benchhand
-description: benchhand keeps every decision, check and approval of an agent-driven hardware design in a record, and is planned to guide an AI coding agent through the design flow over MCP.
+description: benchhand guides an AI coding agent through a mechanical design over MCP, and keeps every decision, check and approval in a design record.
 template: splash
 hero:
-  tagline: Keep every decision, check and approval of an agent-driven hardware design in a record you can audit. The planned MCP server guides your AI coding agent from requirements to a STEP AP242 part.
+  tagline: benchhand guides your AI coding agent through a mechanical design, from requirements to a released part, and keeps every decision, check and approval in a record you can audit.
   actions:
-    - text: Read the plan
-      link: repo:docs/design-plan.md
-      icon: open-book
-      variant: primary
-    - text: Contracts
-      link: /reference/contracts/
-      icon: list-format
-      variant: secondary
-    - text: Browse the docs
-      link: /docs/
+    - text: Get started
+      link: /getting-started/install/
       icon: right-arrow
+      variant: primary
+    - text: Reference
+      link: /reference/
+      icon: document
+      variant: secondary
+    - text: Contribute
+      link: /contributing/
       variant: minimal
 ---
 
@@ -25,82 +24,10 @@ SPDX-FileCopyrightText: 2026 Sjors Robroek
 SPDX-License-Identifier: MPL-2.0
 */}
 
-import NavCard from "../../components/NavCard.astro";
-import PlannedAside from "../../components/PlannedAside.astro";
-import { siteLink } from "../../site-link";
-import layers from "./architecture/overview/layers.svg";
+## The documentation
 
-Your coding agent does the design work, and benchhand holds the process around it.
-The design record keeps a project's requirements, parts, decisions and approvals as files in your repository, and the contracts define every shape in it.
-The planned MCP server tells the agent which stage the design is at and what to do next, asks you to approve each stage, and runs the checks through providers.
-These pages describe the whole system. Parts that are planned carry a Planned label.
-
-## The parts of benchhand
-
-<div class="bh-grid">
-  <NavCard title="Design record" href="/manual/record/layout/" icon="document">
-    A project's requirements, parts, decisions and approvals live as files under `hw/`. The record library reads, validates and writes them, and reports every problem in a record.
-  </NavCard>
-  <NavCard title="Contracts" href="/reference/contracts/" icon="list-format">
-    Every record, job, finding and provider-protocol shape is defined once in TypeSpec. The JSON Schemas, Python models and TypeScript types are generated from it.
-  </NavCard>
-  <NavCard title="Evidence" href="/manual/record/evidence/" icon="approve-check-circle">
-    For each built version, the record library works out the status of every check the design owes, and a digest of what was accepted.
-  </NavCard>
-  <NavCard title="Gates" href="/manual/process/gates/" icon="padlock" status="Planned" statusVariant="note">
-    The flow engine asks for your approval at each stage of the design. A project can relax a gate in `hw/policy.yaml`, and the record keeps each relaxation.
-  </NavCard>
-  <NavCard title="Providers" href="/manual/providers/overview/" icon="puzzle" status="Planned" statusVariant="note">
-    CAD kernels (build123d and CadQuery), FreeCAD for drawings and FEA, solvers and renderers plug in behind one provider&nbsp;protocol.
-  </NavCard>
-</div>
-
-## How it fits together
-
-<figure class="bh-figure">
-  <a href={siteLink("/architecture/overview/")}>
-    <img src={layers.src} width={layers.width} height={layers.height} alt="The benchhand software in layers, from the agent hosts down to storage, with the contracts beside every layer. Open the architecture overview." loading="lazy" decoding="async" />
-  </a>
-  <figcaption>The software in layers, from the agent hosts down to storage. Green boxes are built, dashed boxes are planned, and grey is outside benchhand. The contracts sit beside every layer, because each layer reads its shapes from them. The [architecture overview](/architecture/overview/) cites each box.</figcaption>
-</figure>
-
-## The workflow
-
-<div class="bh-split">
-<section class="bh-available" aria-labelledby="the-record-and-its-contracts">
-
-### The record and its contracts
-
-- **One source of shapes.** The record, job, finding and provider-protocol shapes are defined once in `contracts/`. The JSON Schemas, Python models and TypeScript types are generated from them. [Read the contracts](/reference/contracts/).
-- **A record you can audit.** `benchhand-core` reads, validates and writes a project's `hw/` record against those contracts. It reports every problem it finds in a record, not only the first.
-- **Two commands.** `benchhand version` prints the version. `benchhand record migrate HW` converts a record from `record_version` 2 to version 3. It is a dry run until you add `--apply`, and an apply backs up the files it changes first.
-
-The MCP server, the flow engine and the providers are planned, and the next panel describes them.
-
-</section>
-<section class="bh-planned" aria-labelledby="the-guided-design-flow">
-
-### The guided design flow
-
-<PlannedAside phases={[2, 3, 4]} />
-
-- **One interface.** You run the workflow through MCP. The `benchhand` command is a thin launcher and admin tool.
-- **Guidance from the server.** The agent calls `flow.guide`, and the server answers with the current stage, its tools and the next action.
-- **Gates guide, they don't guard.** Each gate asks for your approval by default. A project can set a gate to `chat` or `auto` in `hw/policy.yaml`, and the record keeps every relaxation.
-- **Scoped approvals.** An approval names the items it covers. A later change to one of them reopens only that item.
-- **Providers for everything.** Kernels, FreeCAD, solvers, renderers, process checks and storage plug in behind one provider protocol.
-
-Most manual and tutorial pages describe this flow. [The list of planned pages](/planned/) shows which ones are outlines.
-
-</section>
-</div>
-
-## Who it is for
-
-- Engineers and makers who design parts with an AI coding agent and need a record they can audit.
-- Teams who write providers or policies for their own processes.
-- Contributors to benchhand: start with [the architecture](/architecture/) and [the decision records](/adr/).
-
-## Where to go next
-
-[The documentation index](/docs/) has a card for each section: getting started, the guides and manual, the architecture, the contracts, the decision records, the reference and the roadmap.
+- [Get started](/getting-started/install/): install benchhand, start a first project and take a first part to a STEP file.
+- [Guides](/guides/tutorials/bracket/): worked tutorials, and the tasks of migrating a prototype record, writing and testing rules, adding providers and troubleshooting.
+- [Concepts](/concepts/process/overview/): the design process and its gates, the record, policy, providers, manufacturing and the clients.
+- [Reference](/reference/): the MCP tools, the CLI, the flow, the contracts and their JSON Schemas, and the Python API.
+- [Contributing](/contributing/): set up the repository, run the checks, and find the design plan and the decision records.
