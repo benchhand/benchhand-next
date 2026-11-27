@@ -83,9 +83,11 @@ It lists the pages by phase on `/planned/`.
 
 `scripts/python-api.mjs` runs griffe (pinned in the script, through `uvx`), which reads `benchhand_contracts` without importing it, and renders the dump to MDX. It has these limits:
 
-- It renders one package, `benchhand-contracts`, and only the names in its `__all__`.
+- It renders one package, `benchhand-contracts`, and only its public names. "Public" is defined once, by `publicNames` in the script: the names in a module's `__all__` where it has one, otherwise the functions, classes and attributes it defines without a leading underscore. `python-api.test.mjs` tests it.
+- The renderer expects the repository's docstring style, reStructuredText-flavoured text. It doesn't parse Args, Returns or Raises sections.
+- `benchhand-provider`, the provider runtime, has a hand-written placeholder page, `reference/python-api/benchhand-provider.md`, with `phase: 4`. The renderer takes it over when the package has a public API on main.
 - It renders functions and classes only. A class lists its public attributes and methods, and `__init__`.
-- It shows docstrings as text. It turns reST ``` ``code`` ``` and `:role:` references into code spans, and it doesn't parse Args, Returns or Raises sections.
+- It shows docstrings as text. It turns reST ``` ``code`` ``` and `:role:` references into code spans.
 - A griffe expression type that it doesn't know fails the render.
 - It leaves out the generated models under `benchhand_contracts.models`, because the contract reference documents them.
 

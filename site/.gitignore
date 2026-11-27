@@ -2,7 +2,8 @@
 /src/content/docs/architecture/
 /src/content/docs/adr/
 /src/content/docs/reference/contracts/
-/src/content/docs/reference/python-api/
+/src/content/docs/reference/python-api/index.md
+/src/content/docs/reference/python-api/benchhand-contracts.mdx
 /public/contracts/
 # Written by scripts/planned-pages.mjs.
 /src/content/docs/planned.md
