@@ -18,23 +18,23 @@ for (const phase of phases) {
 const single = phases.length === 1;
 ---
 
-<Aside type="note" title={single ? `Planned: written in Phase ${phases[0]}` : `Planned: written in Phases ${phases.join(", ")}`}>
+<Aside type="note" title="Planned">
   {
     single ? (
       <>
-        This page is an outline. It is written with <a href={plan.stepsUrl}>Phase {phases[0]} of the design plan</a>:{" "}
-        {titles[String(phases[0])]}.
+        This page describes planned behaviour: the {titles[String(phases[0])]} step of the{" "}
+        <a href={plan.stepsUrl}>design plan</a>.
       </>
     ) : (
       <>
-        What follows is planned. The <a href={plan.stepsUrl}>design plan</a> writes it in these phases:{" "}
+        What follows is planned: the{" "}
         {phases.map((phase, i) => (
           <>
             {i > 0 && (i === phases.length - 1 ? " and " : ", ")}
-            Phase {phase} ({titles[String(phase)]})
+            {titles[String(phase)]}
           </>
-        ))}
-        .
+        ))}{" "}
+        steps of the <a href={plan.stepsUrl}>design plan</a>.
       </>
     )
   }

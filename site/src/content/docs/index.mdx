@@ -27,25 +27,25 @@ import layers from "./architecture/overview/layers.svg";
 Your coding agent does the design work, and benchhand holds the process around it.
 The design record keeps a project's requirements, parts, decisions and approvals as files in your repository, and the contracts define every shape in it.
 The planned MCP server tells the agent which stage the design is at and what to do next, asks you to approve each stage, and runs the checks through providers.
-These pages describe the whole system. Each part is marked as available or planned, and planned parts are never described as working.
+These pages describe the whole system. Parts that are planned carry a Planned label.
 
 ## The parts of benchhand
 
 <div class="bh-grid">
-  <NavCard title="Design record" href="/manual/record/layout/" icon="document" status="Available" statusVariant="success">
+  <NavCard title="Design record" href="/manual/record/layout/" icon="document">
     A project's requirements, parts, decisions and approvals live as files under `hw/`. The record library reads, validates and writes them, and reports every problem in a record.
   </NavCard>
-  <NavCard title="Contracts" href="/reference/contracts/" icon="list-format" status="Available" statusVariant="success">
+  <NavCard title="Contracts" href="/reference/contracts/" icon="list-format">
     Every record, job, finding and provider-protocol shape is defined once in TypeSpec. The JSON Schemas, Python models and TypeScript types are generated from it.
   </NavCard>
-  <NavCard title="Evidence" href="/manual/record/evidence/" icon="approve-check-circle" status="Library available, MCP tools planned" statusVariant="caution">
-    For one built version, the record library works out the status of every check it owes and a digest of what was accepted. The agent is to reach it through MCP tools.
+  <NavCard title="Evidence" href="/manual/record/evidence/" icon="approve-check-circle">
+    For each built version, the record library works out the status of every check the design owes, and a digest of what was accepted.
   </NavCard>
-  <NavCard title="Gates" href="/manual/process/gates/" icon="padlock" status="Planned" statusVariant="default">
-    The flow engine is to ask for your approval at each stage of the design. A project can relax a gate in `hw/policy.yaml`, and the record keeps each relaxation.
+  <NavCard title="Gates" href="/manual/process/gates/" icon="padlock" status="Planned" statusVariant="note">
+    The flow engine asks for your approval at each stage of the design. A project can relax a gate in `hw/policy.yaml`, and the record keeps each relaxation.
   </NavCard>
-  <NavCard title="Providers" href="/manual/providers/overview/" icon="puzzle" status="Planned" statusVariant="default">
-    CAD kernels (build123d and CadQuery), FreeCAD for drawings and FEA, solvers and renderers are to plug in behind one provider&nbsp;protocol.
+  <NavCard title="Providers" href="/manual/providers/overview/" icon="puzzle" status="Planned" statusVariant="note">
+    CAD kernels (build123d and CadQuery), FreeCAD for drawings and FEA, solvers and renderers plug in behind one provider&nbsp;protocol.
   </NavCard>
 </div>
 
@@ -84,7 +84,7 @@ The MCP server, the flow engine and the providers are planned, and the next pane
 - **Scoped approvals.** An approval names the items it covers. A later change to one of them reopens only that item.
 - **Providers for everything.** Kernels, FreeCAD, solvers, renderers, process checks and storage plug in behind one provider protocol.
 
-Most manual and tutorial pages describe this flow. [The list of outlines](/planned/) shows which pages are outlines, and the phase that writes each.
+Most manual and tutorial pages describe this flow. [The list of planned pages](/planned/) shows which ones are outlines.
 
 </section>
 </div>
