@@ -71,7 +71,7 @@ The decision contract doesn't refer to `ApprovalScope` yet. Phase 2 adds the ref
 
 `tests/fixtures/flow/prototype-412b5d9/` writes the prototype's flow at the reference commit in these shapes:
 
-- `flow.yaml`: every stage and its guides, the four single human gates, the three-step gates at L1 to L4, and the VOID cascade scope. Every human gate needs the user's explicit approval. The full sweep runs at each of L1 to L4. Each of those human gates therefore also needs the sweep to leave no unproved between-sample intervals, or a decision on the same version that accepts them.
+- `flow.yaml`: every stage and its guides, the four single human gates, the three-step gates at L1 to L4, and the VOID cascade scope. Every human gate needs the user's explicit approval. The full sweep runs at each of L1 to L4. Each of those human gates therefore also needs the sweep to leave no unproved between-sample intervals, or a decision on the same version that accepts them. The approval cites its provisional decision and, when intervals are left, the decision that accepts them.
 - one `*.celpolicy` file per rule list, with the checks-by-iteration table among them
 
 The fixture holds the prototype's rules only. benchhand's `policy.mode == "auto"`, ADR-0019's `reapproval_scope` and the veto on an item that is `changed_since_approval` came after the prototype, so the schema's example shows them instead.

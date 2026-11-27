@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 import yaml
 from benchhand_contracts import violations
-from rule_lists import NO_MATCH, first_match
+from rule_lists import NO_MATCH, first_match, holds
 
 CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
 FLOW_ID = f"{CONTRACTS}flow/flow.schema.json"
@@ -190,11 +190,46 @@ def test_every_prototype_human_gate_needs_explicit_approval() -> None:
         assert not any("policy.mode" in requirement for requirement in gate["requires"]["human"])
 
 
-def test_every_prototype_staged_human_gate_checks_the_unproved_sweep_intervals() -> None:
-    # The full sweep runs at L1 to L4 (flow.md "Full gate"), so any of those gates can leave intervals.
-    for gate in _prototype_flow()["gates"]:
-        if gate["kind"] == "provisional+full+human":
-            assert any("unproved_intervals" in requirement for requirement in gate["requires"]["human"])
+STAGED_GATES = ("layout_freeze", "parts", "detail", "analysis")
+
+
+def _staged_human_activation(*, unproved: bool, cites: list[str], approved: bool = True) -> dict[str, Any]:
+    """A staged gate's human step on v3: DR-012 is its provisional decision, DR-013 accepts v3's intervals."""
+    return {
+        "full_check": {
+            "status": "pass",
+            "sweep": {"unproved_intervals": [{"pair": "lid/base"}] if unproved else []},
+        },
+        "prev_human_gate": {"approved": True},
+        "version": {"label": "v3"},
+        "provisional": {"id": "DR-012"},
+        "decisions": [
+            {"id": "DR-012", "accepts_unproved_intervals": False, "version": "v3"},
+            {"id": "DR-013", "accepts_unproved_intervals": True, "version": "v3"},
+        ],
+        "answer": {"approved": approved, "cites": cites},
+    }
+
+
+@pytest.mark.parametrize("gate_id", STAGED_GATES)
+@pytest.mark.parametrize(
+    ("unproved", "cites", "approved", "passes"),
+    [
+        pytest.param(False, ["DR-012"], True, True, id="no-intervals-cites-the-provisional"),
+        pytest.param(True, ["DR-012", "DR-013"], True, True, id="cites-the-interval-acceptance"),
+        pytest.param(True, ["DR-012"], True, False, id="uncited-interval-acceptance"),
+        pytest.param(False, ["DR-013"], True, False, id="uncited-provisional"),
+        pytest.param(False, ["DR-012"], False, False, id="not-approved"),
+    ],
+)
+def test_a_prototype_staged_human_gate_passes_only_on_an_approval_that_cites_its_decisions(
+    gate_id: str, unproved: bool, cites: list[str], approved: bool, passes: bool
+) -> None:
+    # flow.md "Gate control" 3: the approval cites the provisional decision and, when the sweep left unproved
+    # between-sample intervals, the DR that accepts them. The full sweep runs at L1 to L4, so each gate can.
+    gate = next(gate for gate in _prototype_flow()["gates"] if gate["id"] == gate_id)
+    data = _staged_human_activation(unproved=unproved, cites=cites, approved=approved)
+    assert all(holds(requirement, data) for requirement in gate["requires"]["human"]) is passes
 
 
 def test_a_single_human_gate_has_no_provisional_step() -> None:

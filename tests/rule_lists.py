@@ -21,6 +21,17 @@ from cel_expr_python import cel
 NO_MATCH: dict[str, Any] = {"checks_by_iteration": [], "dispatch": "unknown", "fidelity": "none"}
 
 
+def _env(data: dict[str, Any]) -> cel.Env:
+    return cel.NewEnv(variables=dict.fromkeys(data, cel.Type.DYN))
+
+
+def holds(expression: str, data: dict[str, Any]) -> bool:
+    """Whether a condition holds. A value other than a CEL bool, an evaluation error included, fails the test."""
+    value = _env(data).compile(expression).eval(data=data)
+    assert value.type() == cel.Type.BOOL, f"{expression!r} gives {value.type()} {value.value()!r}, not a bool"
+    return bool(value.value())
+
+
 def first_match(rule_list: dict[str, Any], data: dict[str, Any]) -> Any:
     env = cel.NewEnv(variables=dict.fromkeys(data, cel.Type.DYN))
     for choice in rule_list["rule"]["match"]:

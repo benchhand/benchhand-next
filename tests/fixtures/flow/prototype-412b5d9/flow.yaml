@@ -94,7 +94,9 @@ gates:
         - answer.approved
 
   # "LAYOUT freeze, PARTS, DETAIL and ANALYSIS": a provisional gate, the
-  # full check, then the human gate.
+  # full check, then the human gate. The approval, answer, cites the
+  # provisional decision and, when the sweep left unproved between-sample
+  # intervals, the decision that accepts them ("Gate control", 3).
   - id: layout_freeze
     stage: layout
     kind: provisional+full+human
@@ -106,11 +108,12 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
+        - answer.approved
+        - provisional.id in answer.cites
         - >-
           full_check.sweep.unproved_intervals.size() == 0
-          || decisions.exists(d, d.accepts_unproved_intervals
-          && d.version == version.label)
-        - answer.approved
+          || decisions.exists(d, d.id in answer.cites
+          && d.accepts_unproved_intervals && d.version == version.label)
   - id: parts
     stage: parts
     kind: provisional+full+human
@@ -126,11 +129,12 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
+        - answer.approved
+        - provisional.id in answer.cites
         - >-
           full_check.sweep.unproved_intervals.size() == 0
-          || decisions.exists(d, d.accepts_unproved_intervals
-          && d.version == version.label)
-        - answer.approved
+          || decisions.exists(d, d.id in answer.cites
+          && d.accepts_unproved_intervals && d.version == version.label)
   - id: detail
     stage: detail
     kind: provisional+full+human
@@ -143,11 +147,12 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
+        - answer.approved
+        - provisional.id in answer.cites
         - >-
           full_check.sweep.unproved_intervals.size() == 0
-          || decisions.exists(d, d.accepts_unproved_intervals
-          && d.version == version.label)
-        - answer.approved
+          || decisions.exists(d, d.id in answer.cites
+          && d.accepts_unproved_intervals && d.version == version.label)
   - id: analysis
     stage: analysis
     kind: provisional+full+human
@@ -165,11 +170,12 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
+        - answer.approved
+        - provisional.id in answer.cites
         - >-
           full_check.sweep.unproved_intervals.size() == 0
-          || decisions.exists(d, d.accepts_unproved_intervals
-          && d.version == version.label)
-        - answer.approved
+          || decisions.exists(d, d.id in answer.cites
+          && d.accepts_unproved_intervals && d.version == version.label)
 
 edges:
   - {from: ground, to: intent, guard: record.use_case.present}
