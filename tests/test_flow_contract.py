@@ -85,9 +85,26 @@ def test_each_prototype_rule_list_validates(kind: str) -> None:
 
 @pytest.mark.parametrize("kind", RULE_KINDS)
 def test_each_prototype_rule_list_ends_with_an_unconditional_choice(kind: str) -> None:
-    # The cel-go tool refuses a list whose last choice has a condition; the schema can't say "last".
+    # The schema says exactly one choice is unconditional; the cel-go tool refuses one that isn't last.
     *_, last = _prototype_rules(kind)["rule"]["match"]
     assert "condition" not in last
+
+
+@pytest.mark.parametrize(
+    "match",
+    [
+        pytest.param([{"condition": 'stage == "parts"', "output": '"F2"'}], id="no-unconditional-choice"),
+        pytest.param([{"output": '"F2"'}, {"output": '"F0"'}], id="two-unconditional-choices"),
+    ],
+)
+def test_a_rule_list_without_exactly_one_unconditional_choice_is_refused(match: list[dict[str, str]]) -> None:
+    found = violations(RULES_ID, {"name": "fidelity", "rule": {"match": match}})
+    assert [violation.pointer for violation in found] == ["/rule/match"]
+
+
+def test_the_schema_leaves_the_position_of_the_unconditional_choice_to_the_compiler() -> None:
+    first = [{"output": '"F0"'}, {"condition": 'stage == "parts"', "output": '"F2"'}]
+    assert violations(RULES_ID, {"name": "fidelity", "rule": {"match": first}}) == []
 
 
 def _constant(output: str) -> Any:

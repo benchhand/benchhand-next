@@ -25,7 +25,7 @@ Each rule list is a file of its own, `flow/<name>.celpolicy`, written in the [ce
 - Each choice of `match` has an `output` and, except the last, a `condition`. Both are CEL expressions. The profile has no `explanation`, no `imports` and no `description`.
 - The first choice whose `condition` holds gives its `output`. The last choice has no condition, so every list gives a value.
 
-The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle. It also refuses a list whose last choice has a condition, a feature outside the profile, and a result type other than its kind's. The schema can't check which choice comes last.
+The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle. It also refuses a list whose last choice has a condition, a feature outside the profile, and a result type other than its kind's. The schema checks that exactly one choice has no condition (`contains`, `minContains: 1` and `maxContains: 1` on the choices without `condition`). It can't check that this choice is the last; the compiler does.
 
 The file doesn't say which list it is. `flow.yaml` names one file of each kind under `rules`, as `{file, rules_version}` relative to `flow.yaml`. A [policy contribution](policy.md#provider-contributions) names its files in the same shape. `rules_version` is the version of the rule-list format. The kind sets the type of every output:
 
