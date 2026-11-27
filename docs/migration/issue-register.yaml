@@ -443,19 +443,25 @@ design_rules:
     benchhand_next: Not built yet; the analysis port (Phase 4) and
       the material contract carry it (RULE-30, RULE-31).
   - id: RULE-39
-    rule: Interference the record declares never blocks. A declared
-      interference press or locating fit, a heat-set insert on exactly
-      that occurrence pair, or an explicit allow of the pair is
-      reported as allowed, with its declared fit, its interface id
-      and the measured mm³. Of the measured overlaps, only an undeclared
-      one above 0.001 mm³ blocks; an unknown measurement still fails
-      (RULE-05).
+    rule: Interference the record declares is allowed within the
+      declared fit's own limits (IR-115). A declared interference
+      press or locating fit, a heat-set insert on exactly that occurrence
+      pair, or an explicit allow of the pair is reported as allowed,
+      with its declared fit, its interface id and the measured mm³.
+      A declared fit's overlap above its limits blocks, with a finding
+      that names the fit, its interface id, the measured mm³ and
+      the limit; an explicit allow and a heat-set insert name no
+      fit limits. A declared fit with zero overlap counts as realised
+      (RULE-16). Any other overlap above the collision provider's
+      stated tolerance blocks (RULE-28), with no fixed threshold,
+      and one at or below it is a non-blocking sub-tolerance finding;
+      an unknown measurement still fails (RULE-05).
     sources:
       - agentcad product test 2026-11-27, REPORT §quality
     benchhand_next: Not built yet; the interference check (Phase
-      4) ports it with the mixed test (IR-212). How its fixed threshold
-      and the fit limits combine with RULE-16, RULE-28 and IR-115
-      is open for the owner (design note Q3).
+      4) ports it with the mixed test (IR-212). The owner decided
+      the threshold and the fit limits on 2026-11-27 (design note
+      Q3).
     pointer: docs/design/edit-loop-performance.md §Interference rule
 
 issues:
@@ -5359,11 +5365,14 @@ issues:
         drawing features, the posing definition) are cached by the
         sha256 of their input files and the producing code digest,
         so an unchanged part costs one lookup (design note, gain 1).
+        A STEP input is keyed by the sha256 of its data section only,
+        ignoring the header (design note Q6).
       phase: 4
     acceptance: A check test on a synthetic assembly where, after
       one part changes, only that part's facts are computed and the
       others come from the cache, and an identical re-check reads
-      no STEP file.
+      no STEP file. A STEP file that differs only in its header is
+      a cache hit.
   - id: IR-206
     title: Every check hashes the whole code closure again, although
       the code can't change while the process runs.
@@ -5402,10 +5411,13 @@ issues:
       action: The kernel providers stay resident and fork a worker
         per job before any boolean runs; every result reports whether
         it ran warm, and why not (design note, gain 2; an ADR first).
+        On Windows the resident kernel takes a cold path and reports
+        warm false (design note Q1).
       phase: 4
     acceptance: A conformance case that runs a boolean in a forked
-      worker within the hook deadline, and a forced cold run whose
-      result reports warm false with a reason.
+      worker within the hook deadline, a forced cold run whose
+      result reports warm false with a reason, and a platform without
+      fork whose result reports warm false with that reason.
   - id: IR-208
     title: The edit loop takes three calls, a build, a check and a
       diff, and the diff reloads every STEP file.
@@ -5489,12 +5501,16 @@ issues:
       action: A build runs as a job that a dropped call doesn't end,
         and jobs.start takes an idempotency key bound to the inputs;
         the same key and inputs replay the job, and different inputs
-        are refused as a conflict (design note, gain 5). Whether a
-        job may outlive the session is open for the owner.
+        are refused as a conflict (design note, gain 5). Jobs end with
+        the session, and a client that disconnects while the server
+        is still up can still fetch the job's result (design note
+        Q2).
       phase: 3
     acceptance: Job-service tests where a replayed key starts no second
-      job, a key with changed inputs is refused with a reason, and
-      a dropped call's job is still reported by jobs.status.
+      job, a key with changed inputs is refused with a reason, a
+      dropped call's job is still reported by jobs.status, and a
+      client that disconnects while the server runs can fetch the
+      job's result.
   - id: IR-212
     title: No test checks a declared and an undeclared overlap in
       the same assembly.
@@ -5509,13 +5525,20 @@ issues:
     disposition: port-fix
     benchhand_next:
       action: The interference check ports RULE-39 with one test that
-        holds both overlaps (design note, interference rule).
+        holds both overlaps, and two more cases, a declared fit whose
+        overlap exceeds its limits and a declared fit with zero overlap
+        (design note, interference rule).
       phase: 4
     acceptance: An interference test on one synthetic assembly with
-      a declared press-fit overlap and an undeclared overlap, where
+      a declared press-fit overlap within its limits and an undeclared
+      overlap above the collision provider's stated tolerance, where
       the verdict is fail, exactly one finding blocks and names the
       undeclared pair and its mm³, and the declared pair's row is
-      allowed with its fit, interface id and mm³.
+      allowed with its fit, interface id and mm³. A case where a
+      declared fit's overlap exceeds its limits fails with exactly
+      one blocking finding that names the fit, its interface id,
+      the mm³ and the limit. A declared fit with zero overlap raises
+      no finding.
 
 bead_dispositions:
   - bead_id: benchhand-0gx

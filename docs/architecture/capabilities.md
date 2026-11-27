@@ -23,7 +23,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
 | **all** | **80** | 6 | 5 | 60 | 9 | 0 | 65 | 15 |
 
-MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 30. Doc corrections: 1.
+MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -468,7 +468,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `model.build` | [model-build](#model-build) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | planned | plan: `docs/design-plan.md:363` | `cad_model.py run` |
 | `model.check` | [model-inspect](#model-inspect) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `cad_model.py` | `cad_model.py check` |
 | `model.diff` | [model-diff](#model-diff) | read | not yet defined | not yet defined | sync-or-job | none | P4 | proposed | study: `lane8-agentcad.md section 6, item 4` | `cad_model.py diff` |
-| `model.edit_loop` | [edit-loop](#edit-loop) | write | not yet defined | not yet defined | job-handle | unspecified | P4 | proposed | design: `docs/design/edit-loop-performance.md:144` | – |
+| `model.edit_loop` | [edit-loop](#edit-loop) | write | not yet defined | not yet defined | job-handle | unspecified | P4 | proposed | design: `docs/design/edit-loop-performance.md:147` | – |
 | `model.export` | [model-export](#model-export) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | planned | plan: `docs/design-plan.md:364` | – |
 | `model.inspect` | [model-inspect](#model-inspect) | read | not yet defined | not yet defined | sync-or-job | none | P4 | proposed | study: `lane8-agentcad.md section 6, item 3` | – |
 | `model.interference` | [model-inspect](#model-inspect) | read | not yet defined | not yet defined | sync-or-job | none | P4 | planned | plan: `docs/design-plan.md:373` | – |
@@ -863,8 +863,8 @@ None.
 - [live-project-viewer](#live-project-viewer) (P5): study: `lane8-agentcad.md section 6, items 9 and 10`
 - [product-docs](#product-docs) (P4): study: `lane8b-product-docs.md section 6, items 1 to 9`
 - [fact-cache](#fact-cache) (P4): design: `docs/design/edit-loop-performance.md:35`
-- [resident-kernels](#resident-kernels) (P4): design: `docs/design/edit-loop-performance.md:105`
-- [edit-loop](#edit-loop) (P4): design: `docs/design/edit-loop-performance.md:132`
+- [resident-kernels](#resident-kernels) (P4): design: `docs/design/edit-loop-performance.md:106`
+- [edit-loop](#edit-loop) (P4): design: `docs/design/edit-loop-performance.md:135`
 
 #### Proposed tools (64)
 
@@ -1173,24 +1173,6 @@ The CAD-libraries study (lane 8, adoption item 1) proposes a bounded envelope wi
 - Blocking: yes. Owner: project-owner. Decision needed: Whether to accept the bounded envelope with truncated, estimate and a retrieve handle.
 - Cited by: [bounded-results](#bounded-results)
 
-### resident-kernel-fork
-
-The edit-loop note proposes resident kernel providers that fork a worker per job before any boolean runs. fork is POSIX-only, and the plan ships a Claude Desktop bundle for Windows. Is a cold path that reports warm false acceptable there? (existing)
-
-- Pointers: `docs/design/edit-loop-performance.md:264`, `docs/contract/provider-protocol.md:118`, `docs/design-plan.md:459`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether resident kernels fork a worker per job, recorded in a new ADR with an amendment to provider protocol sections 2 and 7, and what Windows does without fork.
-- Cited by: [resident-kernels](#resident-kernels)
-
-### job-outlives-session
-
-May a build job outlive the server session, as agentcad's daemon finished a run after its client was killed? Job handles already keep a job running past a dropped call. (existing)
-
-- Pointers: `docs/design/edit-loop-performance.md:265`
-- `docs/design/edit-loop-performance.md:265`: The note recommends that jobs end with the session, and that a retry reuses the parts the store kept.
-- `contracts/jobs/job.tsp:103`: The job's supervisor ends its process group when the command ends or its owner, the job service, does.
-- Blocking: no; the spec that cites it decides it or works around it.
-- Cited by: [job-service](#job-service)
-
 ### setup-over-mcp
 
 Can the agent run setup? The plan makes setup a CLI command that includes the managed FreeCAD install, and env.doctor only reports; no tool installs anything. (catalogue)
@@ -1386,9 +1368,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [contract-validation](#contract-validation)
 - ADRs: ADR-0004, ADR-0018
 - Evidence: `packages/benchhand-core/src/benchhand_core/jobs/service.py:119`, `packages/benchhand-core/src/benchhand_core/jobs/supervisor.py`
-- Note: The scoped run claims and the stray-run report of the prototype's process_lifecycle.py are left to Phase 4, with the tools that run those jobs.
+- Note: The scoped run claims and the stray-run report of the prototype's process_lifecycle.py are left to Phase 4, with the tools that run those jobs. Jobs end with the session, and a client that disconnects while the server is still up can still fetch a job's result; the owner decided this on 2026-11-27 (Q2, docs/design/edit-loop-performance.md:278).
 - Prototype: `skills/cad-flow/scripts/process_lifecycle.py`
-- Open questions: [cancel-tool](#cancel-tool), [provider-job](#provider-job), [job-outlives-session](#job-outlives-session)
+- Open questions: [cancel-tool](#cancel-tool), [provider-job](#provider-job)
 
 ### flow-engine
 
@@ -2437,6 +2419,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [middleware-chain](#middleware-chain), [provider-host](#provider-host), [store-provider](#store-provider)
 - ADRs: ADR-0013, ADR-0017
+- Note: The owner decided on 2026-11-27 that the fact cache belongs to Phase 4, with the kernel providers (Q4, docs/design/edit-loop-performance.md:284), and that a part's STEP input is keyed by the hash of the STEP data section only, ignoring the header (Q6, docs/design/edit-loop-performance.md:286). The middleware chain's own phase stays under no-phase.
 - Source: design: `docs/design/edit-loop-performance.md:35`
 - Contracts not yet published: a cache/fact contract with the fact key and entry (design note, gain 1); codeDigest in the provider protocol's InitializeResult
 - Open questions: [no-phase](#no-phase)
@@ -2453,9 +2436,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [provider-runtime](#provider-runtime), [provider-host](#provider-host)
 - ADRs: ADR-0013
-- Source: design: `docs/design/edit-loop-performance.md:105`
+- Note: The owner decided on 2026-11-27 that on Windows the resident kernel takes a cold path and reports warm false, recorded in the new resident-kernel ADR, and that spawn-based worker pools stay a spike (Q1, docs/design/edit-loop-performance.md:277). The envelope carries warm at its top level on every tool result (Q5, docs/design/edit-loop-performance.md:285).
+- Source: design: `docs/design/edit-loop-performance.md:106`
 - Contracts not yet published: warm, with its reason, in the provider protocol's HookResultBase and in the envelope (design note, gain 2)
-- Open questions: [resident-kernel-fork](#resident-kernel-fork)
 
 ### edit-loop
 
@@ -2469,5 +2452,5 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [model-build](#model-build), [check-orchestration](#check-orchestration), [model-diff](#model-diff), [fact-cache](#fact-cache), [resident-kernels](#resident-kernels), [job-service](#job-service)
 - ADRs: ADR-0018
-- Source: design: `docs/design/edit-loop-performance.md:132`
+- Source: design: `docs/design/edit-loop-performance.md:135`
 - Contracts not yet published: the model.edit_loop input and output, reusing the version-diff result (design note, gain 3)

@@ -317,38 +317,6 @@ open_questions:
       that retrieves a saved result is named.
     pointers:
       - contracts/envelope/envelope.tsp:16
-  - id: resident-kernel-fork
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether resident kernels fork a worker per job,
-      recorded in a new ADR with an amendment to provider protocol
-      sections 2 and 7, and what Windows does without fork.'
-    origin: existing
-    question: The edit-loop note proposes resident kernel providers
-      that fork a worker per job before any boolean runs. fork is
-      POSIX-only, and the plan ships a Claude Desktop bundle for Windows.
-      Is a cold path that reports warm false acceptable there?
-    pointers:
-      - docs/design/edit-loop-performance.md:264
-      - docs/contract/provider-protocol.md:118
-      - docs/design-plan.md:459
-  - id: job-outlives-session
-    blocking: false
-    owner: project-owner
-    decision_needed: 'Whether a build job may outlive the server session.'
-    origin: existing
-    question: May a build job outlive the server session, as agentcad's
-      daemon finished a run after its client was killed? Job handles
-      already keep a job running past a dropped call.
-    pointers:
-      - docs/design/edit-loop-performance.md:265
-    positions:
-      - source: docs/design/edit-loop-performance.md:265
-        says: The note recommends that jobs end with the session, and
-          that a retry reuses the parts the store kept.
-      - source: contracts/jobs/job.tsp:103
-        says: The job's supervisor ends its process group when the
-          command ends or its owner, the job service, does.
   - id: setup-over-mcp
     blocking: true
     owner: project-owner
@@ -717,7 +685,10 @@ capabilities:
       - packages/benchhand-core/src/benchhand_core/jobs/supervisor.py
     note: The scoped run claims and the stray-run report of the prototype's
       process_lifecycle.py are left to Phase 4, with the tools that
-      run those jobs.
+      run those jobs. Jobs end with the session, and a client that
+      disconnects while the server is still up can still fetch a job's
+      result; the owner decided this on 2026-11-27 (Q2,
+      docs/design/edit-loop-performance.md:278).
     owner:
       - packages/benchhand-core
     contracts:
@@ -729,7 +700,6 @@ capabilities:
     open_questions:
       - cancel-tool
       - provider-job
-      - job-outlives-session
     adrs:
       - 4
       - 18
@@ -2840,6 +2810,12 @@ capabilities:
     source:
       kind: design
       ref: docs/design/edit-loop-performance.md:35
+    note: The owner decided on 2026-11-27 that the fact cache belongs
+      to Phase 4, with the kernel providers (Q4,
+      docs/design/edit-loop-performance.md:284), and that a part's
+      STEP input is keyed by the hash of the STEP data section only,
+      ignoring the header (Q6, docs/design/edit-loop-performance.md:286).
+      The middleware chain's own phase stays under no-phase.
     owner:
       - packages/benchhand-core
     contracts_planned:
@@ -2871,7 +2847,13 @@ capabilities:
     scope: deferred
     source:
       kind: design
-      ref: docs/design/edit-loop-performance.md:105
+      ref: docs/design/edit-loop-performance.md:106
+    note: The owner decided on 2026-11-27 that on Windows the resident
+      kernel takes a cold path and reports warm false, recorded in
+      the new resident-kernel ADR, and that spawn-based worker pools
+      stay a spike (Q1, docs/design/edit-loop-performance.md:277).
+      The envelope carries warm at its top level on every tool result
+      (Q5, docs/design/edit-loop-performance.md:285).
     owner:
       - providers/kernel-cadquery
       - providers/kernel-build123d
@@ -2884,8 +2866,6 @@ capabilities:
     depends_on:
       - provider-runtime
       - provider-host
-    open_questions:
-      - resident-kernel-fork
     adrs:
       - 13
     no_tool_reason: Providers are reached through the host, not through
@@ -2903,7 +2883,7 @@ capabilities:
     scope: deferred
     source:
       kind: design
-      ref: docs/design/edit-loop-performance.md:132
+      ref: docs/design/edit-loop-performance.md:135
     owner:
       - packages/benchhand-core
       - providers/kernel-cadquery
@@ -3439,7 +3419,7 @@ tools:
       (jobs/job.schema.json#/$defs/JobHandle). The bounded-results proposal
       adds an idempotency key; the edit-loop note binds it to the inputs,
       so the same key and inputs replay the job and different inputs
-      are refused as a conflict (docs/design/edit-loop-performance.md:181).
+      are refused as a conflict (docs/design/edit-loop-performance.md:184).
   - name: jobs.status
     capability: job-service
     access: read
@@ -3661,11 +3641,11 @@ tools:
     status: proposed
     source:
       kind: design
-      ref: docs/design/edit-loop-performance.md:144
+      ref: docs/design/edit-loop-performance.md:147
     note: Whether the loop is a tool of its own or a mode of model.build
       is the contract's choice.
     implied_by:
-      - docs/design/edit-loop-performance.md:132
+      - docs/design/edit-loop-performance.md:135
   - name: checks.run
     capability: check-orchestration
     access: write
