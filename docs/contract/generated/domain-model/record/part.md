@@ -43,6 +43,7 @@ In diagram 1.
 | `model_frame` | `enum assembly_zero\|part_local` | no | Frame of model.py's geometry: assembly_zero (default) is assembly coordinates at the zero joint pose, one identity-placed occurrence only; part_local is the definition's own origin and axes, placed by each occurrence |
 | `form_class` | `enum solid\|frame\|plate\|skeleton\|shell` | no | The part's form type for the form check; absent means solid, and only a solid part is judged block_like |
 | `transparency` | `enum opaque\|translucent\|transparent` | no | How much light the part passes; absent means opaque. Only a transparent part is see-through to the visibility check. An optical requirement is a hard selection constraint met by a purchased transparent part or identified transparent stock on a suitable route, never by an opaque process |
+| `render` | `enum shown\|ghost\|hidden` | no | How a render or a motion render draws the part by default; absent means shown. ghost draws it translucent with visible edges and never as an occluder, hidden leaves it out of the picture. A reference body that blocks the view is ghost or hidden. A render's own show, ghost and hide choices override it. A visibility target cannot be hidden |
 | `procurement` | `procurement` | no |  |
 | `drawing` | `part_drawing` | no |  |
 | `manufacture` | `object` | no | How a custom-made part is manufactured relative to its installed definition. Absent: relationship same, compared to 1e-9 relative volume, default mesh. |

@@ -13,7 +13,7 @@ namespace Records.Part;
 /** One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent. */
 @summary("benchhand part record (hw/parts/<PN>/part.yaml)")
 @id("https://benchhand.github.io/benchhand/contracts/record/part.schema.json")
-@extension("x-version", "1.0.0")
+@extension("x-version", "1.1.0")
 model Part {
   PN: Common.pn;
   rev: Common.revision;
@@ -58,6 +58,7 @@ model Part {
   };
 
   transparency?: PartTransparency;
+  render?: PartRender;
   procurement?: Drawing.procurement;
   drawing?: Drawing.part_drawing;
 
@@ -153,6 +154,14 @@ enum PartTransparency {
   opaque,
   translucent,
   transparent,
+}
+
+/** How a render or a motion render draws the part by default; absent means shown. ghost draws it translucent with visible edges and never as an occluder, hidden leaves it out of the picture. A reference body that blocks the view is ghost or hidden. A render's own show, ghost and hide choices override it. A visibility target cannot be hidden */
+@extension("x-inline", true)
+enum PartRender {
+  shown,
+  ghost,
+  hidden,
 }
 
 /** Record version 2 manufacturing intent: what the part does, the qualified material profile, the service it sees, its critical surfaces and its complete ordered route. make_buy and procurement.mode stay the sourcing authority; manufacture stays the manufacturing-state authority. A sole solid is the implicit main component; a part with several solids lists components */

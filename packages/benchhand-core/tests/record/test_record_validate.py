@@ -226,6 +226,21 @@ def test_supersedes_must_name_another_existing_decision(lamp_arm: Path) -> None:
     }
 
 
+# --- parts ----------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("render", ["shown", "ghost", "hidden"])
+def test_a_part_names_how_a_render_draws_it(lamp_arm: Path, render: str) -> None:
+    edit(lamp_arm, "parts/LMP-0003/part.yaml", lambda part: part.update(render=render))
+    assert validate(lamp_arm) == []
+
+
+def test_a_render_default_other_than_shown_ghost_or_hidden_is_refused(lamp_arm: Path) -> None:
+    edit(lamp_arm, "parts/LMP-0003/part.yaml", lambda part: part.update(render="transparent"))
+    part_findings = {item for item in found(validate(lamp_arm)) if item[1] == "hw/parts/LMP-0003/part.yaml"}
+    assert part_findings == {("record.schema", "hw/parts/LMP-0003/part.yaml", "/render")}
+
+
 # --- BOM ------------------------------------------------------------------------------------------------
 
 

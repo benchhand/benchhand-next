@@ -63,6 +63,16 @@ def test_a_reference_record_migrates_and_validates_with_no_findings(source: Path
     assert not (root / "hw" / LOCK_NAME).exists()
 
 
+def test_a_prototype_part_without_a_render_default_needs_no_migrate_rule(tmp_path: Path) -> None:
+    # Prototype PR #332 added the optional part.yaml render after reference_commit 412b5d9; a part record
+    # written before it keeps its bytes and reads as shown.
+    root = _copy(LAMP_ARM_HW, tmp_path)
+    assert not any(change.path.startswith("hw/parts/") for change in migrate(root).changes)
+    migrate(root, apply=True)
+    assert validate(root) == []
+    assert {part.render for part in load_record(root).parts.values()} == {None}
+
+
 def test_the_dry_run_writes_nothing_and_states_each_change_as_a_diff(tmp_path: Path) -> None:
     root = _copy(LAMP_ARM_HW, tmp_path)
     before = _tree(tmp_path)

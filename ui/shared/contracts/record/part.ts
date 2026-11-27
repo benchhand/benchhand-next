@@ -414,6 +414,10 @@ export interface BenchhandPartRecordHwPartsPNPartYaml {
    * How much light the part passes; absent means opaque. Only a transparent part is see-through to the visibility check. An optical requirement is a hard selection constraint met by a purchased transparent part or identified transparent stock on a suitable route, never by an opaque process
    */
   transparency?: "opaque" | "translucent" | "transparent";
+  /**
+   * How a render or a motion render draws the part by default; absent means shown. ghost draws it translucent with visible edges and never as an occluder, hidden leaves it out of the picture. A reference body that blocks the view is ghost or hidden. A render's own show, ghost and hide choices override it. A visibility target cannot be hidden
+   */
+  render?: "shown" | "ghost" | "hidden";
   procurement?: Procurement;
   drawing?: PartDrawing;
   /**

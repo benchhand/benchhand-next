@@ -90,6 +90,8 @@ Before the first release nothing is published, so a narrowing keeps its version.
 
 `record/policy.schema.json` 1.1.0 added the optional `rigor`, `standard` or `regulated`, where an absent value means `standard`. The change is additive, so it raised the minor version.
 
+`record/part.schema.json` 1.1.0 added the optional `render`, `shown`, `ghost` or `hidden`, where an absent value means `shown` (prototype PR #332). The change is additive, so it raised the minor version.
+
 `record/common.schema.json` 1.1.0 widened the `obligation_id` pattern: a part anchor can now carry an `@occurrence` after its PN and a `:region` after its `#feature`, so two checks of one part at different occurrences or regions get different ids. Every id the pattern accepted before, it still accepts. The breaking-change check reports any changed `pattern` as `pattern-changed`. With no release tag reachable it skips, so the widening is argued here and raises the minor version.
 
 - A breaking change needs a higher major `x-version` than the schema had at the release tag, for example `1.4.0` to `2.0.0`. The check passes a schema whose major version went up, whatever else changed.
