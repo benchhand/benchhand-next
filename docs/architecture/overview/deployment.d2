@@ -34,7 +34,7 @@ machine: "The designer's machine" {
 
   native: "Native install (ADR-0002)" {
     class: layer
-    uvx: "uv / uvx\nfetches and caches benchhand@<ver>" {class: external}
+    uvx: "uv / uvx" {class: external}
     mcp: "benchhand mcp, packages/benchhand\nstdio: one process per session; --http: one shared server\nPhase 3" {
       class: layer_planned
       endpoint: "MCP endpoint\nstdio, or loopback streamable HTTP\nwith a bearer token (--http)\nPhase 3" {class: planned}
@@ -77,9 +77,11 @@ ci: "CI: GitHub Actions" {
   celgo -> bundle: "fails on a stale entry\nPhase 2" {class: planned_call}
 }
 
-ghcr: "GHCR\nthe pinned benchhand image\nPhase 7" {class: external}
+pypi: "PyPI" {class: external}
+ghcr: "GHCR" {class: external}
 
 machine.host -> machine.native.uvx: "spawns uvx benchhand@<ver> mcp\nthe MCP config, written by install: Phase 6" {class: planned_call}
+machine.native.uvx -> pypi: "fetches and caches benchhand@<ver>\nPhase 7" {class: planned_call}
 machine.native.uvx -> machine.native.mcp: "starts\nPhase 3" {class: planned_call}
 machine.host <-> machine.native.mcp.endpoint: "MCP over stdio, or loopback HTTP with --http\nPhase 3" {class: planned_call}
 machine.host <-> machine.native.probe: "MCP over stdio" {class: on_main}
@@ -95,7 +97,7 @@ machine.native.rules_compile -> machine.project: "writes a user's bundle beside 
 machine.host -> machine.container.launcher: "spawns uvx benchhand@<ver> mcp --container\ninstall --container: Phase 6" {class: planned_call}
 machine.container.launcher -> machine.container.runtime: "run -i, pumps stdio, supervises" {class: planned_call}
 machine.container.runtime -> machine.container.image: "runs\nPhase 7" {class: planned_call}
-machine.container.runtime -> ghcr: "pulls the pinned image\nPhase 7" {class: planned_call}
+machine.container.runtime -> ghcr: "pulls the pinned benchhand image\nPhase 7" {class: planned_call}
 machine.container.image -> machine.project: "mounts the whole project root\nat the same path\nPhase 7" {class: planned_call}
 
 ci.bundle -> machine.native.mcp.flow: "ships with benchhand; refused at load\nwhen missing or stale\nPhase 2" {class: planned_call}

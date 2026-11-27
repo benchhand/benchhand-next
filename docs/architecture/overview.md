@@ -57,8 +57,9 @@ The host talks MCP to `benchhand mcp` over stdio, or over loopback HTTP with `--
 
 | Box or arrow | Style | Evidence |
 |---|---|---|
-| MCP host process, web browser, uv, container runtime, GHCR | Outside benchhand | [context.md](context.md) |
+| MCP host process, web browser, uv, PyPI, container runtime, GHCR | Outside benchhand | [context.md](context.md) |
 | Host to `uvx benchhand@<ver> mcp` | Phase 3, the config Phase 6 | ADR-0002 "Decision"; `install` is in Phase 6 |
+| uvx fetches `benchhand@<ver>` from PyPI | Phase 7 | Phase 7 publishes `benchhand` on PyPI |
 | `benchhand mcp`, MCP endpoint | Phase 3 | Plan section 3; not on `main` |
 | Preview listener | Phase 5 | Plan section 3: a separate loopback listener with a Host-header check and a path token |
 | Flow engine, which verifies the rules bundle | Phase 2; in the server from Phase 3 | [ADR-0020](../adr/0020-cel-rule-pipeline.md) "Compilation and the rules bundle": at load the host refuses a missing or stale entry. Phase 2 builds the verification, Phase 3 the server |
