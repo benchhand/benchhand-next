@@ -8,7 +8,7 @@ from typing import Any, NamedTuple
 import pytest
 import yaml
 from benchhand_contracts import violations
-from rule_lists import NO_MATCH, first_match, merged
+from rule_lists import NO_MATCH, OutOfDomain, first_match, merged
 
 CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
 POLICY_ID = f"{CONTRACTS}record/policy.schema.json"
@@ -84,6 +84,8 @@ def _contributed(kind: str, condition: str, output: str) -> dict[str, Any]:
 
 
 WELDED = "record.welded_parts.size() > 0"
+# The dispatch handler ids that exist in these tests: one of the prototype's, and the welding provider's.
+HANDLERS = frozenset({"route.operation_plan", "process.welding.bead"})
 STAGE_ORDER = {"layout": 4, "detail": 6}
 
 
@@ -134,7 +136,9 @@ def test_the_flow_runs_its_own_list_of_each_kind(kind: str) -> None:
     case = FALL_THROUGH[kind]
     flow_list = _flow_list(kind)
     assert (
-        merged(kind, {}, flow_list, case.missing) == first_match(flow_list, case.missing) == case.flow_value
+        merged(kind, {}, flow_list, case.missing, handlers=HANDLERS)
+        == first_match(flow_list, case.missing)
+        == case.flow_value
     )
 
 
@@ -143,7 +147,10 @@ def test_a_contributed_list_that_does_not_match_gives_its_no_match_value_and_fal
     case = FALL_THROUGH[kind]
     contributed = _contributed(kind, case.condition, case.output)
     assert first_match(contributed, case.missing) == NO_MATCH[kind] != case.flow_value
-    assert merged(kind, {"welding": contributed}, _flow_list(kind), case.missing) == case.flow_value
+    assert (
+        merged(kind, {"welding": contributed}, _flow_list(kind), case.missing, handlers=HANDLERS)
+        == case.flow_value
+    )
 
 
 @pytest.mark.parametrize("kind", sorted(FALL_THROUGH))
@@ -151,7 +158,7 @@ def test_a_contributed_list_that_matches_gives_the_value(kind: str) -> None:
     case = FALL_THROUGH[kind]
     contributed = {"welding": _contributed(kind, case.condition, case.output)}
     assert first_match(_flow_list(kind), case.matching) != case.value
-    assert merged(kind, contributed, _flow_list(kind), case.matching) == case.value
+    assert merged(kind, contributed, _flow_list(kind), case.matching, handlers=HANDLERS) == case.value
 
 
 @pytest.mark.parametrize("kind", sorted(FALL_THROUGH))
@@ -159,17 +166,48 @@ def test_contributions_run_in_ascending_provider_name_before_the_flow(kind: str)
     case = FALL_THROUGH[kind]
     later = _contributed(kind, case.condition, '["other"]' if kind == "checks_by_iteration" else '"F2"')
     contributed = {"zinc": later, "alpha": _contributed(kind, case.condition, case.output)}
-    assert merged(kind, contributed, _flow_list(kind), case.matching) == case.value
+    assert merged(kind, contributed, _flow_list(kind), case.matching, handlers=HANDLERS) == case.value
 
 
 def test_the_flows_unknown_dispatch_is_final_and_means_unknown_coverage() -> None:
     data = {"obligation": {"family": "process.welding.bead"}}
-    assert merged("dispatch", {}, _flow_list("dispatch"), data) == "unknown"
+    assert merged("dispatch", {}, _flow_list("dispatch"), data, handlers=HANDLERS) == "unknown"
 
 
 def test_the_flows_empty_checks_list_is_final_and_runs_no_check() -> None:
     data = {"iteration": "release", "gates": {"release": {"approved": False}}}
     assert merged("checks_by_iteration", {}, _flow_list("checks_by_iteration"), data) == []
+
+
+@pytest.mark.parametrize(
+    ("kind", "output", "value"),
+    [
+        pytest.param("fidelity", '"F4"', "F4", id="fidelity-F4"),
+        pytest.param("fidelity", 'stage + "-fidelity"', "layout-fidelity", id="fidelity-computed"),
+        pytest.param(
+            "dispatch", '"process.welding.seam"', "process.welding.seam", id="dispatch-no-such-handler"
+        ),
+        pytest.param(
+            "dispatch", 'obligation.family + ".v2"', "process.welding.bead.v2", id="dispatch-computed"
+        ),
+    ],
+)
+def test_a_result_outside_its_kinds_domain_is_unknown_never_a_pass(
+    kind: str, output: str, value: str
+) -> None:
+    # rules.tsp: the slot type is only string, so the evaluator checks the value and records UNKNOWN with a finding.
+    case = FALL_THROUGH[kind]
+    contributed = {"welding": _contributed(kind, case.condition, output)}
+    assert merged(kind, contributed, _flow_list(kind), case.matching, handlers=HANDLERS) == OutOfDomain(
+        kind, value
+    )
+
+
+def test_a_none_fidelity_from_the_flows_own_list_is_unknown() -> None:
+    # The flow loader can refuse only a literal "none"; a computed one is out of the domain when it is evaluated.
+    flow_list = {"name": "fidelity", "rule": {"match": [{"output": 'stage == "layout" ? "none" : "F0"'}]}}
+    case = FALL_THROUGH["fidelity"]
+    assert merged("fidelity", {}, flow_list, case.missing) == OutOfDomain("fidelity", "none")
 
 
 def test_a_contributed_none_fidelity_falls_through_to_the_flows_stage_fidelity() -> None:

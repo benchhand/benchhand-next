@@ -8,11 +8,13 @@ is declared dyn, so a test that uses it proves the values a list gives, not that
 Phase 2 replaces the dyn variables with the environment generated from the contracts.
 
 `merged` runs the proposed merge of a kind's contributed lists with the flow's own (docs/contract/policy.md),
-which is open for the owner.
+which is open for the owner. A merged fidelity outside F0 to F3, or a dispatch handler id that doesn't exist,
+is out of the kind's domain: it gives OutOfDomain, which Phase 2's evaluator records as UNKNOWN with a finding.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from cel_expr_python import cel
@@ -20,6 +22,23 @@ from cel_expr_python import cel
 # The value a list of a fall-through kind gives when none of its own choices apply, so the next list is
 # evaluated. rigor has none: every rigor list is evaluated.
 NO_MATCH: dict[str, Any] = {"checks_by_iteration": [], "dispatch": "unknown", "fidelity": "none"}
+FIDELITIES = frozenset({"F0", "F1", "F2", "F3"})
+
+
+@dataclass(frozen=True)
+class OutOfDomain:
+    """A result outside its kind's domain: UNKNOWN, with a finding that names the value, never a pass."""
+
+    kind: str
+    value: Any
+
+
+def _in_domain(kind: str, value: Any, handlers: frozenset[str]) -> bool:
+    if kind == "fidelity":
+        return value in FIDELITIES
+    if kind == "dispatch":
+        return value == NO_MATCH["dispatch"] or value in handlers
+    return True
 
 
 def _env(data: dict[str, Any]) -> cel.Env:
@@ -44,12 +63,25 @@ def first_match(rule_list: dict[str, Any], data: dict[str, Any]) -> Any:
 
 
 def merged(
-    kind: str, contributed: dict[str, dict[str, Any]], flow_list: dict[str, Any], data: dict[str, Any]
+    kind: str,
+    contributed: dict[str, dict[str, Any]],
+    flow_list: dict[str, Any],
+    data: dict[str, Any],
+    *,
+    handlers: frozenset[str] = frozenset(),
 ) -> Any:
     """The kind's result: the contributed lists, by ascending provider name, then the flow's, whose result is final.
 
-    rigor gives the union of every list's messages, each once, in the order first given.
+    rigor gives the union of every list's messages, each once, in the order first given. handlers are the dispatch
+    handler ids that exist. A result outside its kind's domain is OutOfDomain.
     """
+    value = _merged(kind, contributed, flow_list, data)
+    return value if _in_domain(kind, value, handlers) else OutOfDomain(kind, value)
+
+
+def _merged(
+    kind: str, contributed: dict[str, dict[str, Any]], flow_list: dict[str, Any], data: dict[str, Any]
+) -> Any:
     ordered = [contributed[provider] for provider in sorted(contributed)]
     if kind == "rigor":
         messages = [

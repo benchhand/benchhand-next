@@ -36,7 +36,7 @@ The file doesn't say which list it is. `flow.yaml` names one file of each kind u
 | `fidelity` | `string` | the form-check fidelity, `"F0"` to `"F3"`, or `"none"` | `"F0"`, the fidelity of the other stages |
 | `rigor` | `list(string)` | the messages of the requirements the record doesn't meet under the project's rigor policy | `[]`, no unmet requirement |
 
-A check that runs only under its own condition, such as "only when stale" or "once a joint exists", is concatenated into the output as a CEL ternary, `cond ? ["id"] : []`. A dispatch handler id is the obligation family that it judges, such as `process.fdm.orientation`. The dispatch list sees only the obligations that the process-check producer owns. The producer selects them, and the list has no rule for ownership.
+A check that runs only under its own condition, such as "only when stale" or "once a joint exists", is concatenated into the output as a CEL ternary, `cond ? ["id"] : []`. The slot type of `fidelity` and `dispatch` is `string`, so the compiler accepts any string an output gives, a computed one included, such as `"F4"` or a handler id that no handler has. The Phase 2 evaluator checks the kind's result against its domain, `"F0"` to `"F3"` for `fidelity` and the handler ids that exist, or `"unknown"`, for `dispatch`. It records a result out of the domain as UNKNOWN with a finding that names the value, never as a pass. A dispatch handler id is the obligation family that it judges, such as `process.fdm.orientation`. The dispatch list sees only the obligations that the process-check producer owns. The producer selects them, and the list has no rule for ownership.
 
 ### Reserved values
 
