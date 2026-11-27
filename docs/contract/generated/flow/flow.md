@@ -108,7 +108,8 @@ Example:
           "full_check.status == \"pass\""
         ],
         "human": [
-          "full_check.status == \"pass\" && prev_human_gate.approved && (policy.mode == \"auto\" || answer.present)"
+          "full_check.status == \"pass\" && prev_human_gate.approved && (policy.mode == \"auto\" || answer.present)",
+          "approvals.all(i, i.status != \"changed_since_approval\" || answer.confirms(i))"
         ]
       }
     }
@@ -120,7 +121,8 @@ Example:
       "gate": "layout_freeze"
     }
   ],
-  "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version"
+  "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
+  "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)"
 }
 ```
 

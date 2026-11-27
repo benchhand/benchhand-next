@@ -5,7 +5,11 @@
 # check order". It tests that the schema can express that flow. It is not
 # the Phase 2 flow/flow.yaml. The CEL activation names are made up for this
 # test: Phase 2 types them from the contracts, and the schema doesn't check
-# expressions.
+# expressions. It holds the prototype's rules only: every human gate needs
+# the user's explicit approval ("only explicit user approval resolves it"),
+# so benchhand's policy.mode == "auto" and ADR-0019's reapproval_scope and
+# changed_since_approval veto are not here; the flow schema's example shows
+# those.
 flow_version: 1
 
 stages:
@@ -61,14 +65,14 @@ gates:
     requires:
       human:
         - record.selection.decision.present
-        - policy.mode == "auto" || answer.present
+        - answer.approved
   - id: variant
     stage: concept
     kind: single-human
     requires:
       human:
         - record.concept.handoff.checked
-        - policy.mode == "auto" || answer.present
+        - answer.approved
   - id: design_freeze
     stage: design_freeze
     kind: single-human
@@ -79,8 +83,7 @@ gates:
           gates.filter(g, g.kind == "provisional+full+human")
           .all(g, g.approved)
         - record.made_parts.all(p, p.manufacturing_outputs.complete)
-        - approvals.all(i, i.status != "changed_since_approval")
-        - policy.mode == "auto" || answer.present
+        - answer.approved
   - id: release
     stage: release
     kind: single-human
@@ -88,7 +91,7 @@ gates:
       human:
         - prev_human_gate.approved
         - record.frozen.present
-        - policy.mode == "auto" || answer.present
+        - answer.approved
 
   # "LAYOUT freeze, PARTS, DETAIL and ANALYSIS": a provisional gate, the
   # full check, then the human gate.
@@ -103,7 +106,11 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
-        - policy.mode == "auto" || answer.present
+        - >-
+          full_check.sweep.unproved_intervals.size() == 0
+          || decisions.exists(d, d.accepts_unproved_intervals
+          && d.version == version.label)
+        - answer.approved
   - id: parts
     stage: parts
     kind: provisional+full+human
@@ -119,7 +126,11 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
-        - policy.mode == "auto" || answer.present
+        - >-
+          full_check.sweep.unproved_intervals.size() == 0
+          || decisions.exists(d, d.accepts_unproved_intervals
+          && d.version == version.label)
+        - answer.approved
   - id: detail
     stage: detail
     kind: provisional+full+human
@@ -132,7 +143,11 @@ gates:
       human:
         - full_check.status == "pass"
         - prev_human_gate.approved
-        - policy.mode == "auto" || answer.present
+        - >-
+          full_check.sweep.unproved_intervals.size() == 0
+          || decisions.exists(d, d.accepts_unproved_intervals
+          && d.version == version.label)
+        - answer.approved
   - id: analysis
     stage: analysis
     kind: provisional+full+human
@@ -151,9 +166,10 @@ gates:
         - full_check.status == "pass"
         - prev_human_gate.approved
         - >-
-          full_check.unproved_intervals.size() == 0
-          || answer.accepts_unproved_intervals
-        - policy.mode == "auto" || answer.present
+          full_check.sweep.unproved_intervals.size() == 0
+          || decisions.exists(d, d.accepts_unproved_intervals
+          && d.version == version.label)
+        - answer.approved
 
 edges:
   - {from: ground, to: intent, guard: record.use_case.present}
@@ -182,8 +198,3 @@ edges:
 void_scope: >-
   stage.index > voided.stage.index
   && stage.built_on == voided.version
-
-# ADR-0019, not in the prototype: the approved items a change touches.
-reapproval_scope: >-
-  change.items.exists(c, c.kind == item.kind && c.id == item.id)
-  || change.affects(item)

@@ -112,6 +112,20 @@ def test_the_prototype_flow_has_every_stage_and_its_gates() -> None:
     }
 
 
+def test_every_prototype_human_gate_needs_explicit_approval() -> None:
+    # flow.md "Gate control": "only explicit user approval resolves it"; policy.mode auto is benchhand's.
+    for gate in _prototype_flow()["gates"]:
+        assert "answer.approved" in gate["requires"]["human"]
+        assert not any("policy.mode" in requirement for requirement in gate["requires"]["human"])
+
+
+def test_every_prototype_staged_human_gate_checks_the_unproved_sweep_intervals() -> None:
+    # The full sweep runs at L1 to L4 (flow.md "Full gate"), so any of those gates can leave intervals.
+    for gate in _prototype_flow()["gates"]:
+        if gate["kind"] == "provisional+full+human":
+            assert any("unproved_intervals" in requirement for requirement in gate["requires"]["human"])
+
+
 def test_a_single_human_gate_has_no_provisional_step() -> None:
     flow = _prototype_flow()
     flow["gates"][0]["requires"]["provisional"] = ["true"]
