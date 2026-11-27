@@ -6,7 +6,7 @@ Status: revision 4. It applies the 7 review comments on revision 3 and the tempo
 
 | # | Topic | Decision |
 |---|---|---|
-| D1 | Interface | MCP is the only way to run the workflow. The product is called **benchhand**, and so are its CLI and its new repo. The CLI is a thin launcher and admin tool: `benchhand mcp`, `benchhand serve`, `install`, `doctor`, `setup`, `policy` and `debug call`. Providers can add subcommands (section 7). The per-skill `uv run --script` commands are not carried over. |
+| D1 | Interface | MCP is the only way to run the workflow. The product is called **benchhand**, and so are its CLI and its new repo. The CLI is a thin launcher and admin tool: `benchhand mcp`, `benchhand serve`, `install`, `doctor`, `setup`, `policy`, `rules compile` and `debug call`. Providers can add subcommands (section 7). The per-skill `uv run --script` commands are not carried over. |
 | D2 | Install | No separate install step. Each harness's MCP config runs `uvx benchhand@<ver> mcp`, and uv fetches and caches the package on first start. `uv tool install benchhand` is optional, for pinned or offline use. An optional OCI image ships FreeCAD, both kernels, Chromium and the cache. It is started through the same entry point: `uvx benchhand@<ver> mcp --container` is a small launcher that runs the configured container runtime (Docker, Podman, nerdctl or Colima) with `run -i`, forwards stdio, and cleans up the container. The harness only ever starts a normal command (section 8). |
 | D3 | Gates | Gates steer the standard process; they are not a security control. The server doesn't defend against a malicious agent. It makes the guided path the easy one, and catches honest mistakes such as skipped steps, approval without asking, or a stale version. Each project sets a mode per gate in `hw/policy.yaml`: `ask` (the default) \| `chat` \| `auto` (for dev and tests). `benchhand policy` and the `policy.*` resources change it, and every relaxation is recorded in a DR. |
 | D4 | Server and runner lifetime | The harness starts the MCP server from its config. That process **is** the runner: it hosts the preview, viewer, concept and prototype pages on loopback HTTP, and it manages the provider workers and jobs. It lives as long as the harness session, so the spike isn't needed. A slow first start is acceptable next to how long CAD jobs take. `benchhand serve` runs the same preview host without an agent, for browsing a project. |
@@ -20,7 +20,7 @@ Status: revision 4. It applies the 7 review comments on revision 3 and the tempo
 | D12 | Language | Chosen as a greenfield design, without weighing reuse: a **Python** host and core, kernel and FreeCAD providers in their own Python environments, and **TypeScript** for the browser UIs. Rust is not used. Existing code is a behavioural reference, not something carried over wholesale: each module is rewritten where that gives cleaner separation, better abstraction or other gains, and kept only where it is already clean (section 4). |
 | D13 | Provider protocol | Providers are out-of-process JSON-RPC 2.0 plugins on the slopvac 3.0 plugin protocol, plus progress and artifact messages. Each provider runs in its own environment, which also keeps the kernels' OCP versions apart (section 6). |
 | D17 | Contracts | Every owned contract has one machine-readable source in TypeSpec under `contracts/`, emitted to JSON Schema 2020-12 (ADR-0017): the provider protocol, MCP tool inputs and outputs, the result envelope, the record schemas, `flow.yaml` and policy files. Python models, TypeScript types, MCP tool schemas and reference docs are generated from the published schemas. A CI check fails on drift, and runtime validation enforces the contracts at every boundary (section 6a). |
-| D14 | Flow and rules | One rules language: **CEL**. The stage and gate graph is structure, so it is data (`flow.yaml`): nodes, gates and edges. Every condition in it is CEL: transition guards, gate requirements, VOID cascade scope, check selection and process dispatch. Decision tables become ordered CEL rule lists. GoRules ZEN is dropped. React Flow renders the flow state (section 5). |
+| D14 | Flow and rules | One rules language: **CEL**. The stage and gate graph is structure, so it is data (`flow.yaml`): nodes, gates and edges. Every condition in it is CEL: transition guards, gate requirements, VOID cascade scope, check selection and process dispatch. Decision tables become ordered CEL rule lists, written as cel-policy files and compiled before load (ADR-0020). GoRules ZEN is dropped. React Flow renders the flow state (section 5). |
 | D15 | Repo | Work happens in a temporary new repo, `benchhand/benchhand-next`, set up as a two-level uv workspace plus a pnpm UI workspace. The current repo, `github.com/benchhand/benchhand` (checked out locally as `cad-agent`), stays the reference until `benchhand-next` matches it on the golden end-to-end run. Then the two are swapped (see "Repo swap"). |
 | D16 | Capability probe | A dev-only tool (`tools/probe/`), run by hand in each host. It isn't shipped to end users and isn't run in CI. |
 
@@ -87,10 +87,11 @@ benchhand/
   ui/                            pnpm workspace (TypeScript, React); built to static assets in packages/benchhand
     viewer/  concept/  gate-card/  flow-view/  shared/
   contracts/                     TypeSpec sources, emitted to the published JSON Schema 2020-12: provider protocol, MCP tools, envelope, record, flow, policy (D17)
-  flow/                          flow.yaml, guides/<stage>.md, CEL rule lists (*.rules.yaml), policies
+  flow/                          flow.yaml, guides/<stage>.md, CEL rule lists (*.celpolicy) and their rules bundle, policies
   harness/                       install templates: MCP registration, bootstrap skill, agent profiles
   container/                     OCI image (FreeCAD AppImage extracted, kernels, Chromium)
   tools/probe/                   dev-only capability probe (D16), not packaged
+  tools/celcheck/                the pinned cel-go rule compiler (Go), shipped as the benchhand-celcheck platform wheel (ADR-0020)
   docs/  adr/  contract/  client-support.md
   examples/lamp-arm/             golden end-to-end fixture
 ```
@@ -128,7 +129,7 @@ This compares the options greenfield, ignoring what exists today. One fixed poin
 | Domain maths in the host (fits, stack-ups, BOM roll-up, evidence digests) | numpy and the scientific stack. | Weaker. | Good, but slower to write. |
 | MCP SDK | v2: 2026-07-28 and older; FastMCP has Apps helpers. No tasks extension yet. | The reference SDK; `ext-apps` and tasks are likely first. | `rmcp` trails. |
 | Browser UI | — | Native. | — |
-| CEL | `cel-expr-python` (Google, young) or Rust-backed bindings | `cel-js` | `cel-rust` |
+| CEL | `cel-expr-python` (Google, young) checks at load and evaluates; a pinned cel-go tool compiles rule lists, in CI and in `benchhand rules compile` only (ADR-0020) | `@bufbuild/cel` evaluates checked rules; its checker isn't public | `cel-core` |
 | Contract codegen (D17) | `datamodel-code-generator` → pydantic v2 | `json-schema-to-typescript` | `typify` |
 | Performance needs | The host is I/O and orchestration bound; heavy work is in providers. | Same. | Its strength isn't needed here. |
 | Contributors | CAD and engineering people mostly write Python. | Web. | Systems. |
@@ -150,14 +151,25 @@ The process is data, so it can be read, validated, rendered and extended without
   - the gates. Each gate has a `kind` (`single-human` or `provisional+full+human`) and CEL `requires` expressions. For example, PROVISIONAL requires `version.fast_checks.all(c, c.status == "pass")`. APPROVED requires `full_check.status == "pass" && prev_human_gate.approved && (policy.mode == "auto" || answer.present)`.
   - the edges, with CEL guards, and a CEL `void_scope` that selects the later stages a VOID reopens.
 - **Design changes after an approval** (ADR-0019). Each human-gate approval records the items it approved, with their fingerprints. A later change to one of those items marks only that item `changed_since_approval`. The stage stays where it is, and the next human gate confirms the item with a diff. A CEL rule in `flow.yaml` selects the affected items. New items go through the current stage's checks. VOID at the stage's own gate, and the engineering change after freeze, are unchanged.
-- **Rule lists** replace the tables. Each is an ordered, first-match list of `{when: <CEL>, then: <value>}`, validated against its schema:
-  - **checks by iteration:** `when: stage in ["parts","detail"] && iteration == "commit"` gives `then: ["form_check", "check_changed_only"]`;
-  - **process-check dispatch:** process × operation × material → handlers, where no match means UNKNOWN coverage;
+- **Rule lists** replace the tables. Each is a cel-policy file (`flow/*.celpolicy`) in the restricted profile of ADR-0020: one `match` block of `{condition, output}` choices, evaluated first-match, with no `variables`, `aggregate` or nested rule, and an unconditional final choice. Rule lists are compiled before load, not checked at load (see **CEL pipeline**):
+  - **checks by iteration:** the condition `stage in ["parts","detail"] && iteration == "commit"` gives the output `["form_check", "check_changed_only"]`;
+  - **process-check dispatch:** process × operation × material → handlers. The final choice outputs `"unknown"`, a value the rule-list schema reserves, and the host records it as UNKNOWN coverage, never PASS;
   - **fidelity per stage**;
   - **rigor policy:** extra requirements under `regulated`.
-- **Interpreter.** A small state machine in `benchhand-core`, about 300 lines plus tests. It loads `flow.yaml`, compiles every CEL expression once at start, so a typo fails at load and not mid-flow, and runs transitions. CEL activation variables are typed from the contracts (D17), so the CEL type-checker catches wrong field names. The interpreter is the normal writer of `flow.stage` and `hw/decisions/`.
-- **Policy providers** (D6) contribute extra rule lists or gate requirements in CEL, merged in a defined order. No code is needed for most policies.
-- **CEL runtime:** `cel-expr-python`, Google's C++-backed binding, which is young (0.1.x). A Rust-backed binding is the fallback behind one small adapter interface. The conformance suite runs the same expressions on both.
+
+  Every list except dispatch ends with an explicit default of the same type as its other outputs.
+- **Interpreter.** A small state machine in `benchhand-core`, about 300 lines plus tests. It loads `flow.yaml` and checks every standalone CEL expression in it once at start: gate `requires`, edge guards and `when`, `void_scope` and the approval-scope selector. A typo fails at load and not mid-flow, with every issue reported by its path in the file, line and column. It loads the compiled rule lists from the rules bundle, then runs transitions. CEL activation variables are typed from the contracts (D17) through a generated descriptor set. A scope is typed only when it is structural, so the checker catches wrong field names, wrong operand types and reads of omitted fields. Every record is validated against its JSON Schema before activation. The interpreter is the normal writer of `flow.stage` and `hw/decisions/`.
+- **Policy providers** (D6) contribute extra rule lists or gate requirements in CEL, merged in a defined order. No code is needed for most policies. A provider's rule lists, like a project's, are compiled with `benchhand rules compile`.
+- **CEL pipeline** (ADR-0020):
+  - **Engines.** The host checks standalone expressions and evaluates every rule with `cel-expr-python`, Google's C++-backed binding (0.1.x), behind one adapter (`load`, `check`, `program`, `eval`, `identity`). A pinned `cel-go` tool (`tools/celcheck/`) is the reference checker: it compiles rule lists in CI and under `benchhand rules compile`, and it is the conformance oracle. No other CEL engine runs in benchhand. The browser shows results the server computed.
+  - **Environment.** For each rule scope, `contracts_gen` generates a FileDescriptorSet and an environment profile manifest from the published schemas. The manifest holds the descriptor set's SHA-256, the declarations, the extension versions, the checker options and the checkers of record. The profile digest is the SHA-256 of the manifest's JCS form. Both engines build their environment from the manifest and refuse an extension version or option they don't implement.
+  - **Compiled rule lists.** The cel-go tool compiles each rule list into one CheckedExpr in the rules bundle. The bundle is bound by the profile digest, the checker of record and each payload's SHA-256, and each entry also records its source's SHA-256. benchhand's own lists are compiled in CI. A project's and a policy provider's are compiled with `benchhand rules compile`, which runs the same tool from the `benchhand-celcheck` platform wheel. The host verifies the digests and refuses a missing or stale entry, naming the command to run.
+  - **Conformance.** In CI, each engine passes the supported-profile cases of its role. The cel-go tool passes the typed accept, reject, profile and presence cases, the cel-policy refusal fixtures and the tampered-bundle cases. cel-expr-python passes the same typed cases, refuses the tampered bundles and evaluates every CheckedExpr the tool shipped. CI fails when the two disagree on a shipped standalone expression. cel-spec's simple tests run on both against a committed failure baseline; the scores are diagnostic.
+- **Kubernetes controls** (`research/cel-k8s/REPORT.md`, numbered as in its adopt table):
+  - Adopted: structural scopes (1), flat unions in the contract (2), all issues with paths at load (4), an output type per slot (5), never passing a broken rule (6), environment profiles (9), pinned behaviour (11), the extension inventory (12), library discipline (13), absent versus null with a `has()` lint (24), table-driven rule tests (25) and the environment as data (26).
+  - Adopted as an estimate only: cel-go's static cost estimate in CI (8).
+  - Deferred: collection bounds, the nesting lint and a runtime limit (7), cost budgets (8), provider profile negotiation (9), and `introduced < removed` tests until a second profile exists (12). Also deferred: `message_expr` (14), finding `code` and `path` (15), transition rules (16), ratcheting (17), typed policy-provider params (19), `variables` (20) and a `rules test` command (25).
+  - Not adopted: a `dyn` escape hatch (3), diff-against-stored environments (10), `optionalOldSelf` (18), informational type checks (21), `matchConditions` and `auditAnnotations` (22), and property-name escaping (23), which the generator replaces by refusing reserved words.
 - **React Flow** (`@xyflow/react`) draws `flow.yaml` and the project's live state in the preview host's flow view and in the gate card: the current stage, open gates, provisional and void history, and the evidence for each gate.
 - **Not used:** GoRules ZEN (duplicates CEL), `json-rules-engine` (JS only), React Query Builder (only for a future policy-authoring UI; it can export CEL, so adding it later needs no format change).
 
@@ -208,12 +220,13 @@ Every boundary has one machine-readable contract, and no hand-written copy of it
   - the result envelope (`status`, `findings`, `artifacts`, `next_actions`);
   - the record documents (product, part, assembly, interfaces, requirements, BOM and verification rows, decisions, evidence, manifests);
   - `flow.yaml`, the rule lists, `hw/policy.yaml`, `benchhand.toml` and `benchhand-provider.toml`;
+  - the CEL environment profile manifest and the rules bundle (ADR-0020);
   - the preview-host HTTP API and the App `postMessage` payloads.
 - **Generated, never edited** (one `just contracts` / `benchhand-dev gen` task):
   - pydantic v2 models and validators in `packages/benchhand-contracts` (`datamodel-code-generator`);
   - TypeScript types and runtime validators in `ui/shared/contracts` (`json-schema-to-typescript` + Ajv standalone);
   - MCP tool `inputSchema` and `outputSchema`, registered from the same files;
-  - CEL type declarations for the flow interpreter's activation variables;
+  - the FileDescriptorSet and the environment profile manifest of each CEL rule scope, and its cel-go env YAML (ADR-0020);
   - reference docs (`docs/contract/*.md`) and the accepted-values resources the agent reads (closes `ci7.2`).
 - **Enforced:**
   - **CI drift check:** regenerate and fail on any diff, as `harness/generate.py --check` does today. A breaking schema change needs a major version bump, checked by a schema diff tool against the last release.
@@ -235,6 +248,7 @@ Every boundary has one machine-readable contract, and no hand-written copy of it
 - `install --harness X [--user|--project DIR] [--container]` writes the MCP registration, the bootstrap skill, the agent profiles and the harness-specific settings (section 10).
 - `doctor [--warm] [--json]` replaces preflight. `setup [--yes]` replaces setup and includes the FreeCAD managed install.
 - `policy get|set` changes the gate modes and records the DR.
+- `rules compile [--project DIR]` compiles a project's or a policy provider's rule lists into their rules bundle with the pinned cel-go tool (ADR-0020).
 - `debug call <tool> [json]` calls a tool through the same code path, for development.
 
 Extensibility: a provider manifest may declare `[cli]` subcommands, which are mounted as `benchhand <provider> <cmd>` and run through the provider protocol. An example is `benchhand freecad probe`. Python entry point `benchhand.cli` is the in-process alternative for core packages.
@@ -479,7 +493,7 @@ This table says where each piece of current behaviour ends up. It is not a list 
 | `skills/cad-record/scripts/*`, `skills/cad-record/schemas/*` | `contracts/record/` (schemas redesigned), `packages/benchhand-core/record/` |
 | `skills/cad-flow/scripts/process_lifecycle.py`, `scratch.py` | `benchhand-core/jobs/`, `benchhand-core/work/` |
 | `skills/cad-flow/scripts/preflight.py`, `setup.py` | `packages/benchhand/cli/doctor.py`, `setup.py` |
-| `skills/cad-flow/SKILL.md`, `references/flow.md`, the other `SKILL.md` prose | `flow/flow.yaml`, `flow/guides/<stage>.md`, `flow/*.rules.yaml` |
+| `skills/cad-flow/SKILL.md`, `references/flow.md`, the other `SKILL.md` prose | `flow/flow.yaml`, `flow/guides/<stage>.md`, `flow/*.celpolicy` |
 | `skills/cad-model/scripts/cadmodel/{runner,scriptenv}.py`, `run_*.py` | `benchhand-provider/`, `providers/kernel-*/` |
 | `skills/cad-model/scripts/cadmodel/{safe,holes,fillets,components,fonts,…}.py` | `packages/benchhand-sdk/` |
 | `skills/cad-model/scripts/cadmodel/{check,mesh,occ,diff,…}.py` | `providers/collision-fcl/`, `providers/kernel-*/inspect` |
@@ -596,7 +610,7 @@ Every phase ends at a review gate. When a phase's work is done:
   - A change to an approved item reopens only that item's approval, and the next gate shows its diff (ADR-0019).
   - A PROVISIONAL without passing fast checks is refused.
   - A policy change produces a DR.
-  - `flow.yaml`, the policies and the rule lists validate against their schemas, and every CEL expression compiles and type-checks at load.
+  - `flow.yaml`, the policies and the rule lists validate against their schemas. Every standalone CEL expression compiles and type-checks at load, and a rule list whose bundle entry is missing or stale is refused at load.
   - `flow.guide` covers every stage and role.
 - **Provider conformance.**
   - The slopvac-style host and plugin conformance suites pass for every built-in provider.
