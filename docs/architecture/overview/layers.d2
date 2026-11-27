@@ -1,0 +1,122 @@
+# The software architecture in layers: docs/architecture/overview.md.
+# Solid: on main, checked against the code. Dashed: planned, on a branch, or open, labelled with the phase
+# docs/design-plan.md "Steps (phased)" gives it. Render: d2 --layout elk --pad 40 layers.d2 layers.svg (d2 0.9.0).
+
+vars: {
+  d2-legend: {
+    main: "On main" {class: main}
+    branch: "On a branch, Phase N" {class: branch}
+    planned: "Planned, Phase N" {class: planned}
+    open: "Open: no phase, or a probe result missing" {class: open}
+    external: "Outside benchhand" {class: external}
+  }
+}
+
+classes: {
+  main: {style: {fill: "#e8f5e9"; stroke: "#2e7d32"; stroke-width: 2; font-color: "#1b1b1b"}}
+  branch: {style: {fill: "#fff3e0"; stroke: "#e65100"; stroke-width: 2; stroke-dash: 4; font-color: "#1b1b1b"}}
+  planned: {style: {fill: "#ffffff"; stroke: "#616161"; stroke-width: 1; stroke-dash: 4; font-color: "#1b1b1b"}}
+  open: {style: {fill: "#ffebee"; stroke: "#c62828"; stroke-width: 2; stroke-dash: 2; font-color: "#1b1b1b"}}
+  external: {style: {fill: "#eceff1"; stroke: "#37474f"; stroke-width: 1; font-color: "#1b1b1b"}}
+  layer: {style: {fill: "#fafafa"; stroke: "#9e9e9e"; font-color: "#1b1b1b"; font-size: 20}}
+  layer_planned: {style: {fill: "#fafafa"; stroke: "#9e9e9e"; stroke-dash: 4; font-color: "#1b1b1b"; font-size: 20}}
+  on_main: {style: {stroke: "#2e7d32"; stroke-width: 2}}
+  planned_call: {style: {stroke: "#616161"; stroke-dash: 4}}
+}
+
+# Two columns: the layers, and the contracts band beside them.
+grid-columns: 2
+grid-gap: 80
+
+stack: "" {
+  style: {fill: transparent; stroke: transparent}
+
+  clients: "Clients" {
+    class: layer
+    hosts: "MCP hosts (docs/client-support.md)" {
+      class: layer
+      claude_code: "Claude Code CLI" {class: external}
+      claude_desktop: "Claude Desktop\n.mcpb, stdio only" {class: external}
+      codex_cli: "Codex CLI" {class: external}
+      codex_app: "Codex / ChatGPT desktop\nopen: Phase 0 probe not run" {class: open}
+      opencode: "OpenCode" {class: external}
+      kiro: "Kiro CLI\nopen: the model lacks\nthe probe tools" {class: open}
+      pi: "Pi" {class: external}
+    }
+    cli: "benchhand CLI, packages/benchhand\non main: version, record migrate\nmcp, doctor, setup, policy, debug call: Phase 3" {class: main}
+    browser: "Browser UI, ui/\nviewer, concept, gallery, gate card, flow view\nPhase 5" {class: planned}
+  }
+
+  server: "benchhand server: benchhand mcp, packages/benchhand\nPhase 3" {
+    class: layer_planned
+    surface: "MCP surface\ntools, resources, prompts\nPhase 3; Apps and tasks Phase 5" {class: planned}
+    interaction: "Interaction layer\nchat fallbacks Phase 3\nApp shells, images Phase 5" {class: planned}
+    flow: "Flow engine\nflow.yaml, CEL guards\nand rule lists\nPhase 2" {class: planned}
+    tools: "Tools\nflow.*, project.*, record.*, jobs.*: Phase 3\noutput, drawing, release: Phase 4" {class: planned}
+    preview: "Preview host\nloopback HTTP listener\nPhase 5" {class: planned}
+  }
+
+  core: "Core services: packages/benchhand-core" {
+    class: layer
+    record: "Record: benchhand_core.record" {
+      class: main
+      store: "store\ntyped reads and writes" {class: main}
+      validate: "validate\nrules/" {class: main}
+      migrate: "migrate\nmigrate/" {class: main}
+      evidence: "evidence\nevidence/" {class: main}
+    }
+    versions: "Versions\nsnapshot, seal, verify\nPhase 2" {class: planned}
+    jobs: "Jobs: benchhand_core.jobs\nservice, supervisor,\nrun records" {class: main}
+    policy: "Policy service\ngate modes and rigor for the flow engine\nPhase 2" {class: planned}
+  }
+
+  runtime: "Provider runtime and protocol" {
+    class: layer
+    protocol: "Provider protocol\nJSON-RPC 2.0 over stdio, Content-Length framing\ncontracts/provider/, docs/contract/provider-protocol.md" {class: main}
+    kit: "benchhand-provider runtime and conformance kit\npackages/benchhand-provider, a stub on main\nPhase 4, on a branch" {class: branch}
+  }
+
+  providers: "Providers: providers/, one process and uv env each\nPhase 4" {
+    class: layer_planned
+    kernels: "Kernels\nkernel-cadquery\nkernel-build123d\nPhase 4" {class: planned}
+    freecad: "FreeCAD\nfreecad: managed install\nand probe\nPhase 4, on a branch" {class: branch}
+    solvers: "Solvers\nsolver-calculix\ncollision-fcl\nPhase 4" {class: planned}
+    render: "Render\nrender-chromium\nPhase 4" {class: planned}
+    checks: "Checks\nchecks-process,\nCEL dispatch\nPhase 4" {class: planned}
+    store: "Store\nstore-fs\nPhase 4" {class: planned}
+  }
+
+  storage: "Storage" {
+    class: layer
+    hw: "Project hw/\nthe design record" {class: main}
+    dot: "Project .benchhand/\nruns/: job run records" {class: main}
+    cache: "User cache\nmanaged FreeCAD in <data>/freecad/<version>\nPhase 4, on a branch" {class: branch}
+  }
+
+  clients.hosts -> server.surface: "MCP over stdio, or loopback HTTP with --http\nPhase 3" {class: planned_call}
+  clients.cli -> server.surface: "mcp, debug call\nPhase 3" {class: planned_call}
+  clients.cli -> core.record.migrate: "record migrate" {class: on_main}
+  clients.browser -> server.preview: "loopback URL\nPhase 5" {class: planned_call}
+  server -> core: "Phase 2 and 3" {class: planned_call}
+  core -> runtime.protocol: "provider host\nopen: no phase in Steps" {class: planned_call}
+  runtime.kit -> providers: "Phase 4" {class: planned_call}
+  core.record -> storage.hw: "reads and writes" {class: on_main}
+  core.jobs -> storage.dot: "run records" {class: on_main}
+  providers.freecad -> storage.cache: "Phase 4" {class: planned_call}
+}
+
+contracts: "Contracts: the side band every layer depends on (ADR-0017)" {
+  class: layer
+  tsp: "TypeSpec, contracts/*.tsp\nrecord: 18 documents, 2 libraries\njobs, provider protocol and manifest, common finding" {class: main}
+  branch_contracts: "Envelope, flow, flow rules\nand policy contribution\nPhase 1 list, on a branch" {class: branch}
+  schema: "Published JSON Schema 2020-12\nbenchhand_contracts/schemas" {class: main}
+  pydantic: "Pydantic v2 models and validate\nbenchhand_contracts\nimported by benchhand-core,\nand by the CLI through it" {class: main}
+  ts: "TypeScript types and Ajv validators\nui/shared/contracts\nfor the browser UI, Phase 5" {class: main}
+  cel: "CEL environment\ntypes for the flow engine's rules\nPhase 2" {class: planned}
+
+  branch_contracts -> tsp: "Phase 1" {class: planned_call}
+  tsp -> schema: "tsp compile, normalise" {class: on_main}
+  schema -> pydantic: "datamodel-code-generator" {class: on_main}
+  schema -> ts: "json-schema-to-typescript, Ajv" {class: on_main}
+  schema -> cel: "Phase 2" {class: planned_call}
+}

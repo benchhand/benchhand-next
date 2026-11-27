@@ -12,16 +12,27 @@ from reference_map.cli import OUTPUT_FILE
 ARCHITECTURE_DIR = REPO_ROOT / "docs" / "architecture"
 GENERATED = {Path(OUTPUT_FILE).name}
 """function-map.md has its own render test, beside its generator's."""
+D2_PAGES = {"overview.md"}
+"""Pages whose diagrams are D2; test_architecture_d2.py renders them."""
 HAND_WRITTEN = sorted(page for page in ARCHITECTURE_DIR.glob("*.md") if page.name not in GENERATED)
+MERMAID_PAGES = [page for page in HAND_WRITTEN if page.name not in D2_PAGES]
 
 
 def test_the_hand_written_pages_are_found() -> None:
     names = {page.name for page in HAND_WRITTEN}
-    assert {"README.md", "context.md", "containers.md", "data-flow.md", "flow.md", "layers.md"} <= names
+    assert {
+        "README.md",
+        "context.md",
+        "containers.md",
+        "data-flow.md",
+        "flow.md",
+        "layers.md",
+        "overview.md",
+    } <= names
 
 
 @needs_mermaid
-@pytest.mark.parametrize("page", HAND_WRITTEN, ids=lambda page: page.name)
+@pytest.mark.parametrize("page", MERMAID_PAGES, ids=lambda page: page.name)
 def test_every_block_of_a_hand_written_page_renders(page: Path, tmp_path: Path) -> None:
     text = page.read_text(encoding="utf-8")
     assert mermaid_blocks(text) > 0

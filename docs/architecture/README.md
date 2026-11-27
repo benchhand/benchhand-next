@@ -2,11 +2,13 @@
 
 These pages draw benchhand's architecture from the design plan, the ADRs and the code on `main`.
 Each page cites where every element comes from, and marks what is planned, in review or still open.
+Start with the [overview](overview.md).
 
 ## Pages
 
 | Page | What it shows | Kind |
 |---|---|---|
+| [overview.md](overview.md) | The entry page: the software in layers, with the contracts beside them, and the deployment and runtime: processes, transports, the native install and the container option | hand-written, D2 |
 | [context.md](context.md) | C4 system context: the user, the agent hosts, benchhand, FreeCAD, the optional container, the project files and the external services | hand-written |
 | [containers.md](containers.md) | C4 containers and components: the MCP server, the CLI, the core services, the providers, the preview host and UI, and the contracts pipeline, each with its phase | hand-written |
 | [data-flow.md](data-flow.md) | Sequences: one MCP tool call, a long job, evidence and freeze, release, and migrate | hand-written |
@@ -19,7 +21,7 @@ The generated pages come from their own generator. Don't edit them by hand.
 
 ## Legend
 
-Every hand-written page uses these styles. The status is relative to `main` at `71c1a54`.
+Every hand-written page uses these styles. The status is relative to `main` at `71c1a54`; the overview's is relative to `518c2ae`. The overview draws the same styles in D2, with its own legend in each diagram.
 
 ```mermaid
 flowchart LR
