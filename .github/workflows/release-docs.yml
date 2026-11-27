@@ -79,7 +79,7 @@ jobs:
         run: just contracts-drift
       - run: pnpm install --frozen-lockfile
         working-directory: site
-      # The sync regenerates the Python API pages, the planned-pages list and the copies of
+      # The sync regenerates the Python API and CLI pages and the copies of
       # docs/ and the schemas; the build then fails on a broken link.
       - name: Regenerate the generated docs and build the site
         run: pnpm build
