@@ -360,7 +360,10 @@ model operation {
 }
 
 /** Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity */
-@extension("anyOf", #[#{ required: #["identity"] }, #{ required: #["designation"] }])
+@extension(
+  "anyOf",
+  #[#{ required: #["identity"] }, #{ required: #["designation"] }]
+)
 model purchase {
   /** manufacturer and part number (kind manufacturer_pn), or a free-text identification */
   identity?: Common.text_fact;
