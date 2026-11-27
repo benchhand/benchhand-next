@@ -4,7 +4,7 @@ What the repo runs to keep code, config and workflows clean, where each check ru
 
 ## How it fits together
 
-- `mise.toml` pins every tool by exact version, and `mise.lock` holds the checksum of each release asset. `mise install` installs them. CI installs the same set with `jdx/mise-action` and `MISE_LOCKED=1`, so an install fails if a checksum is missing.
+- `mise.toml` pins every tool by exact version, and `mise.lock` holds the checksum of each release asset. `mise install` installs them. A tool is on `PATH` only after `mise activate` (or run it as `mise x -- <command>`). The recipes that call one check for it first and fail with that hint instead of "command not found". CI installs the same set with `jdx/mise-action` and `MISE_LOCKED=1`, so an install fails if a checksum is missing.
 - The Python tools (pyright, vulture, pytest-cov, pytest-xdist) are exact pins in the `dev` group of `pyproject.toml`, locked in `uv.lock`.
 - Every check is a `just` recipe. The git hooks in `.pre-commit-config.yaml` and the CI jobs call the same recipes, so they can't drift apart. `just hooks-install` installs the hooks. `just hooks` runs all of them on every file except three, which is what the CI `hooks` job does. CI skips `reuse` (its own step, `fsfe/reuse-action` in the `check` job), `gitleaks` (it scans the staged diff, and a CI checkout stages nothing; the `secrets` workflow scans the history instead) and `tests` (the `check` job runs the whole suite with coverage).
 - `just check` runs everything that works offline, including the tests.

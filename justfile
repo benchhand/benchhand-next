@@ -6,6 +6,12 @@
 
 default: check
 
+# The tools pinned in mise.toml are not on PATH until mise is activated. Without this guard the recipe fails
+# with a bare "command not found" (exit 127).
+[private]
+_need tool:
+    @command -v {{tool}} >/dev/null || { echo "{{tool}} not found: run \`mise install\`, then \`mise activate\` (or prefix with \`mise x --\`)" >&2; exit 1; }
+
 # Lint, type-check and test everything, and check the generated contract code. The git hooks
 # (.pre-commit-config.yaml) call the same recipes. `audit`, `secrets-history` and `lint-workflows-online`
 # need the network and run in CI.
@@ -16,26 +22,26 @@ lint:
     uv run ruff format --check .
 
 # Licence and copyright data on every file (SPDX headers, REUSE.toml, LICENSES/).
-reuse:
+reuse: (_need "reuse")
     reuse lint
 
 # Spelling in source, docs and config (_typos.toml lists what is left out and why).
-spell:
+spell: (_need "typos")
     typos --force-exclude
 
 # TOML formatting (.taplo.toml).
-lint-toml:
+lint-toml: (_need "taplo")
     taplo fmt --check
 
 # Workflow syntax, security and action pins, offline: the hook's check. A pin is checked for being a full
 # SHA; `lint-workflows-online` also checks that it matches its version comment and runs zizmor's online audits.
-lint-workflows:
+lint-workflows: (_need "actionlint") (_need "zizmor") (_need "pinact")
     actionlint
     zizmor --offline --min-severity medium .github
     pinact run --fix=false --no-api
 
 # CI only: needs GITHUB_TOKEN (the rate limit without one is too low for the pin check).
-lint-workflows-online:
+lint-workflows-online: (_need "zizmor") (_need "pinact")
     zizmor --min-severity medium .github
     pinact run --check --verify-comment
 
@@ -44,17 +50,17 @@ dead-code:
     uv run vulture
 
 # Secrets in the staged changes: the pre-commit hook's check. Offline.
-secrets:
+secrets: (_need "gitleaks")
     gitleaks git --pre-commit --staged --redact --no-banner
 
 # Secrets anywhere in the history: CI, and on demand. Offline.
-secrets-history:
+secrets-history: (_need "gitleaks")
     gitleaks git --redact --no-banner
 
 # Known vulnerabilities in the locked dependencies. Queries osv.dev, so it fails on a new advisory against a
 # dependency that did not change: CI runs it on a schedule as well as on lockfile changes. It audits the three
 # product and workspace lockfiles only, not the tools pinned in mise.toml or the reuse install.
-audit:
+audit: (_need "osv-scanner")
     osv-scanner scan source --lockfile uv.lock --lockfile ui/pnpm-lock.yaml --lockfile contracts/pnpm-lock.yaml
 
 # Type-check the Python (pyright, [tool.pyright]) and the TypeScript in ui/, the generated contract types included.
