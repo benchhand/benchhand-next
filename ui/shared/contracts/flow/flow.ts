@@ -24,7 +24,7 @@ export type CelExpressions = [string, ...string[]];
 export type CelExpressions1 = [string, ...string[]];
 export type GateDecisionStatus = "approved" | "void";
 /**
- * Text with at least one character that isn't whitespace. Whitespace is ECMAScript's whitespace class (Unicode's White_Space but U+0085 NEXT LINE, so every Zs character, and U+FEFF), U+0085 itself, and U+001C to U+001F, which Python's str.isspace also counts
+ * Text with at least one character that isn't whitespace. Whitespace is every Unicode White_Space character (every Zs character among them, and U+0085 NEXT LINE), U+FEFF, which ECMAScript's whitespace class adds, and U+001C to U+001F, which Python's str.isspace adds. The class lists them as code points, since the regex engines read \s differently
  */
 export type NonblankText = string;
 export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | "part";

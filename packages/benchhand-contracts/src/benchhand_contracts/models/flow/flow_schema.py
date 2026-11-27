@@ -194,11 +194,23 @@ class GateDecisionRequest(ContractModel):
     The built version the decision is on
     """
     channel: decision_schema.Channel
-    by: Annotated[str | None, Field(min_length=1, pattern="[^\\s\\u001c-\\u001f\\u0085]")] = None
+    by: Annotated[
+        str | None,
+        Field(
+            min_length=1,
+            pattern="[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]",
+        ),
+    ] = None
     """
     Who decided
     """
-    quote: Annotated[str | None, Field(min_length=1, pattern="[^\\s\\u001c-\\u001f\\u0085]")] = None
+    quote: Annotated[
+        str | None,
+        Field(
+            min_length=1,
+            pattern="[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]",
+        ),
+    ] = None
     """
     The user's words, quoted
     """

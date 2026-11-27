@@ -366,11 +366,11 @@ Example:
 
 ### `NonblankText`
 
-Text with at least one character that isn't whitespace. Whitespace is ECMAScript's whitespace class (Unicode's White_Space but U+0085 NEXT LINE, so every Zs character, and U+FEFF), U+0085 itself, and U+001C to U+001F, which Python's str.isspace also counts
+Text with at least one character that isn't whitespace. Whitespace is every Unicode White_Space character (every Zs character among them, and U+0085 NEXT LINE), U+FEFF, which ECMAScript's whitespace class adds, and U+001C to U+001F, which Python's str.isspace adds. The class lists them as code points, since the regex engines read \s differently
 
 Type: string
 
-Constraints: `minLength: 1`, `pattern: "[^\\s\\u001c-\\u001f\\u0085]"`
+Constraints: `minLength: 1`, `pattern: "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]"`
 
 ### `ApprovalScope`
 
