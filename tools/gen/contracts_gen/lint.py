@@ -30,6 +30,9 @@ ALLOWED: dict[str, dict[str, tuple[str, str]]] = {
     "flow/rules.schema.json": {
         # contains selects the unconditional choices of RuleMatch, which declares condition.
         "/$defs/Rule/properties/match/contains/not/required/0": ("condition", CONDITION),
+        # anyOf says every choice has an explanation or none does; RuleMatch declares explanation.
+        "/$defs/Rule/properties/match/anyOf/0/items/required/0": ("explanation", CONDITION),
+        "/$defs/Rule/properties/match/anyOf/1/items/not/required/0": ("explanation", CONDITION),
     },
     "record/drawing.schema.json": {
         "/$defs/part_drawing/properties/edges/allOf/1/required/0": ("external", BESIDE_REF),
