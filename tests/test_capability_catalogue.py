@@ -171,6 +171,11 @@ def test_a_name_that_does_not_resolve_is_reported(change: Any, message: str) -> 
             "has no $defs/Nothing",
         ),
         (lambda d: d["tools"][1].update(output="jobs/gone.schema.json"), "is not a published contract"),
+        (
+            lambda d: d.update(contract_base="https://example.org/contracts/"),
+            f"jobs/job.schema.json resolves to https://example.org/contracts/jobs/job.schema.json, "
+            f"and the schema's $id is {BASE}jobs/job.schema.json",
+        ),
         (lambda d: d["capabilities"][0].update(adrs=[999]), "there is no ADR-0999"),
         (lambda d: d["capabilities"][0].update(container="containers.md:nothing"), "draws no node nothing"),
         (
