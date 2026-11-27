@@ -70,7 +70,7 @@ The host talks MCP to `benchhand mcp` over stdio, or over loopback HTTP with `--
 | Job service to `.benchhand/runs/` | On `main` | `jobs/store.py` |
 | User cache | Phase 4, on a branch | As in the first diagram |
 | `--container` launcher | Open | Plan section 8 describes it; no phase of the Steps delivers it ([context.md](context.md#legend)) |
-| OCI image, same-path mount, GHCR pull | Phase 7 | Plan section 8 and Phase 7 |
+| OCI image, the pull from GHCR, the project-root mount | Phase 7 | Plan section 8: `-v <project>:<project>`, the project directory the launcher resolved. Phase 7 publishes the image |
 | Pinned cel-go checker, rules bundle, host verification | Phase 2, ADR-0020 being written | The rule lists arrive in Phase 2. ADR-0020 is not on `main`, so the bundle's shape is unspecified |
 
 ## Rendering

@@ -52,13 +52,13 @@ machine: "The designer's machine" {
     class: layer
     launcher: "benchhand mcp --container launcher\nresolves the project, pulls, supervises\nopen: no phase in Steps" {class: open}
     runtime: "Container runtime\ndocker, podman, nerdctl, Colima" {class: external}
-    image: "benchhand OCI image\nbenchhand mcp with FreeCAD, both kernels, Chromium\nthe project mounted at the same path\nPhase 7" {class: planned}
+    image: "benchhand OCI image\nbenchhand mcp with FreeCAD, both kernels, Chromium\nPhase 7" {class: planned}
   }
 
-  files: "Files" {
+  project: "Project root: the working directory, MCP roots or --project" {
     class: layer
-    hw: "Project hw/\nthe design record" {class: main}
-    dot: "Project .benchhand/runs/\njob run records" {class: main}
+    hw: "hw/\nthe design record" {class: main}
+    dot: ".benchhand/runs/\njob run records" {class: main}
     cache: "User cache, <data>/freecad/<version>\nmanaged FreeCAD\nPhase 4, on a branch" {class: branch}
   }
 }
@@ -79,15 +79,15 @@ machine.host <-> machine.native.probe: "MCP over stdio" {class: on_main}
 machine.browser -> machine.native.mcp.preview: "loopback HTTP\nPhase 5" {class: planned_call}
 machine.native.mcp.provider_host <-> machine.native.providers: "provider protocol: JSON-RPC 2.0 over stdio\nPhase 4" {class: planned_call}
 machine.native.providers -> machine.native.freecadcmd: "Phase 4" {class: planned_call}
-machine.native.mcp -> machine.files.hw: "reads and writes the record\nPhase 3" {class: planned_call}
-machine.native.cli -> machine.files.hw: "migrates the record" {class: on_main}
-machine.native.mcp.jobs -> machine.files.dot: "writes run records" {class: on_main}
-machine.native.freecadcmd -> machine.files.cache: "runs the managed FreeCAD\nPhase 4" {class: planned_call}
+machine.native.mcp -> machine.project.hw: "reads and writes the record\nPhase 3" {class: planned_call}
+machine.native.cli -> machine.project.hw: "migrates the record" {class: on_main}
+machine.native.mcp.jobs -> machine.project.dot: "writes run records" {class: on_main}
+machine.native.freecadcmd -> machine.project.cache: "runs the managed FreeCAD\nPhase 4" {class: planned_call}
 
 machine.host -> machine.container.launcher: "spawns uvx benchhand@<ver> mcp --container\ninstall --container: Phase 6" {class: planned_call}
 machine.container.launcher -> machine.container.runtime: "run -i, pumps stdio, supervises" {class: planned_call}
 machine.container.runtime -> machine.container.image: "runs\nPhase 7" {class: planned_call}
 machine.container.runtime -> ghcr: "pulls the pinned image\nPhase 7" {class: planned_call}
-machine.container.image -> machine.files.hw: "same-path mount\nPhase 7" {class: planned_call}
+machine.container.image -> machine.project: "mounts the whole project root\nat the same path\nPhase 7" {class: planned_call}
 
 ci.bundle -> machine.native.mcp: "shipped with benchhand; the host verifies it\nand refuses a missing or stale entry\nPhase 2, ADR-0020 being written" {class: planned_call}
