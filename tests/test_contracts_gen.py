@@ -174,6 +174,26 @@ def test_load_contracts_takes_a_cel_expression_that_refers_to_the_cel_type(schem
     ]
 
 
+@pytest.mark.parametrize("keyword", ["examples", "default", "const", "enum", "x-payload"])
+def test_load_contracts_does_not_lint_instance_data_that_looks_like_a_cel_schema(
+    schemas_dir: Path, keyword: str
+) -> None:
+    payload = {"description": "CEL output", "type": "string"}
+    data = [payload] if keyword in ("examples", "enum") else payload
+    schema = {**NEW_SCHEMA, "properties": {"payload": {"type": "object", keyword: data}}}
+    (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    assert f"{SYNTHETIC_DIR}/widget.schema.json" in [
+        contract.rel_path for contract in load_contracts(schemas_dir)
+    ]
+
+
+def test_load_contracts_lints_a_property_named_like_a_data_keyword(schemas_dir: Path) -> None:
+    schema = {**NEW_SCHEMA, "properties": {"default": {"type": "string", "description": "A CEL guard"}}}
+    (schemas_dir / SYNTHETIC_DIR / "widget.schema.json").write_text(json.dumps(schema))
+    with pytest.raises(ContractSourceError, match="#/properties/default: a CEL expression is a plain string"):
+        load_contracts(schemas_dir)
+
+
 @needs_node
 def test_a_typespec_contract_is_published_under_its_id_with_file_relative_refs(
     contracts_dir: Path, tmp_path: Path
