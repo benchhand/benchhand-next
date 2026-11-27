@@ -1,0 +1,67 @@
+---
+// Starlight's Hero, with each action's `link` passed through siteLink, so the front matter can name
+// a site route ("/reference/contracts/") or a repository file ("repo:docs/design-plan.md") and the
+// built link is right under any DOCS_URL. Only the splash home page has a hero.
+import { LinkButton } from "@astrojs/starlight/components";
+
+import { siteLink } from "../site-link";
+
+// Starlight's PAGE_TITLE_ID, which its skip link and "Overview" table-of-contents entry target.
+// The package doesn't export its constants.
+const PAGE_TITLE_ID = "_top";
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+const eyebrow = "Agent-driven CAD over MCP";
+---
+
+<div class="bh-hero">
+  <p class="bh-eyebrow">{eyebrow}</p>
+  <h1 id={PAGE_TITLE_ID} data-page-title set:html={title} />
+  {tagline && <p class="bh-tagline" set:html={tagline} />}
+  {
+    actions.length > 0 && (
+      <div class="bh-actions">
+        {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link, text, variant }) => (
+          <LinkButton href={siteLink(link)} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+            {text}
+          </LinkButton>
+        ))}
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .bh-hero {
+    padding-block: clamp(2rem, 1rem + 6vmin, 5rem) clamp(1rem, 0.5rem + 3vmin, 2.5rem);
+    max-width: 46rem;
+  }
+  .bh-eyebrow {
+    font-family: var(--__sl-font-mono);
+    font-size: var(--sl-text-sm);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--sl-color-text-accent);
+  }
+  h1 {
+    margin-top: 0.75rem;
+    font-size: clamp(var(--sl-text-4xl), calc(1rem + 5vw), var(--sl-text-6xl));
+    line-height: var(--sl-line-height-headings);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--sl-color-white);
+  }
+  .bh-tagline {
+    margin-top: 1rem;
+    font-size: clamp(var(--sl-text-lg), calc(0.75rem + 1.2vw), var(--sl-text-2xl));
+    line-height: 1.45;
+    color: var(--sl-color-gray-2);
+  }
+  .bh-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin-top: 2rem;
+  }
+</style>

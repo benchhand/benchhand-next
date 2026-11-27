@@ -1,0 +1,149 @@
+/* benchhand's theme over Starlight's tokens (node_modules/@astrojs/starlight/dist/style/props.css).
+ * It sets the accent and the grey ramp of both themes, and adds the few global rules the site needs:
+ * the wordmark, focus rings, framed D2 diagrams and the landing-page layout.
+ * Text and links reach at least 4.5:1 on every background they sit on: the lowest pair is the
+ * dark accent on the nav background, 8.7:1, and the light accent on the nav background, 5.2:1.
+ * Fonts are the system UI and mono stacks Starlight already uses; the site loads no font files. */
+
+/* Dark theme (Starlight's default block). Slate greys, hue ~213. */
+:root {
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #e9edf2;
+  --sl-color-gray-2: #c4ccd6;
+  --sl-color-gray-3: #8592a3;
+  --sl-color-gray-4: #4b5868;
+  --sl-color-gray-5: #2a3441;
+  --sl-color-gray-6: #18202a;
+  --sl-color-black: #0f141a;
+
+  --sl-color-accent-low: #0c3347;
+  --sl-color-accent: #1a8fc2;
+  --sl-color-accent-high: #6cc8ec;
+
+  --bh-diagram-paper: #ffffff;
+}
+
+:root[data-theme="light"] {
+  --sl-color-white: #11161c;
+  --sl-color-gray-1: #1b232c;
+  --sl-color-gray-2: #2d3743;
+  --sl-color-gray-3: #4a5563;
+  --sl-color-gray-4: #7d8896;
+  --sl-color-gray-5: #c3cad3;
+  --sl-color-gray-6: #e8ecf0;
+  --sl-color-gray-7: #f4f6f8;
+  --sl-color-black: #ffffff;
+
+  --sl-color-accent-low: #d6edf7;
+  --sl-color-accent: #0b6e99;
+  --sl-color-accent-high: #08506f;
+}
+
+/* The wordmark beside the logo glyph. */
+.site-title {
+  gap: 0.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--sl-color-white);
+}
+.site-title img {
+  height: 1.75rem;
+  width: auto;
+}
+
+/* One visible focus ring everywhere, in the accent. */
+:focus-visible {
+  outline: 2px solid var(--sl-color-text-accent);
+  outline-offset: 2px;
+}
+
+/* Headings: slightly tighter than Starlight's default. */
+.sl-markdown-content :is(h1, h2, h3) {
+  letter-spacing: -0.01em;
+}
+
+/* D2 diagrams are rendered SVGs with a white page baked in. They sit on a framed panel in both
+ * themes, so in dark the white page reads as a drawing sheet rather than a hole in the page. */
+.sl-markdown-content img[src*=".svg"],
+.bh-figure img {
+  display: block;
+  padding: 0.5rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.5rem;
+  background: var(--bh-diagram-paper, #fff);
+}
+:root[data-theme="light"] .sl-markdown-content img[src*=".svg"],
+:root[data-theme="light"] .bh-figure img {
+  background: #fff;
+}
+
+/* Mermaid diagrams follow the active theme (astro-mermaid autoTheme); give them the same frame. */
+.sl-markdown-content pre.mermaid {
+  padding: 1rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.5rem;
+  background: var(--sl-color-bg-nav);
+}
+
+/* Tables built by the index generators: keep short columns on one line. */
+.sl-markdown-content table td:first-child code,
+.sl-markdown-content table td code:only-child {
+  white-space: nowrap;
+}
+
+/* Landing and section-index layout. */
+.bh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: 1rem;
+}
+.sl-markdown-content .bh-grid {
+  margin-top: 1.25rem;
+}
+
+.bh-figure {
+  margin-top: 1.25rem;
+}
+.bh-figure img {
+  width: 100%;
+  height: auto;
+}
+.bh-figure figcaption {
+  margin-top: 0.75rem;
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+}
+
+.bh-split {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+}
+@media (min-width: 64rem) {
+  .bh-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sl-markdown-content .bh-split > section {
+  margin-top: 0;
+  padding: 1.25rem 1.5rem 1.5rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.5rem;
+}
+.sl-markdown-content .bh-split > section > :first-child {
+  margin-top: 0;
+}
+.sl-markdown-content .bh-split > section.bh-today {
+  border-top: 3px solid var(--sl-color-text-accent);
+}
+.sl-markdown-content .bh-split > section.bh-planned {
+  border-top: 3px dashed var(--sl-color-gray-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}

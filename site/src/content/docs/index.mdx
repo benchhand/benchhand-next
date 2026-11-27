@@ -1,21 +1,63 @@
 ---
 title: benchhand
-description: An agent-driven, record-first CAD workflow over MCP.
+description: An MCP server and CLI that guide an AI coding agent through a hardware design flow, and keep every decision, check and approval in a design record.
 template: splash
 hero:
-  tagline: An MCP server that guides an agent from requirements to a released part, and keeps every step in a project record.
+  tagline: An MCP server and CLI that guide your AI coding agent through a hardware design flow, from requirements to a STEP AP242 part, and keep every decision in a design record.
+  actions:
+    - text: Read the plan
+      link: repo:docs/design-plan.md
+      icon: open-book
+      variant: primary
+    - text: Contracts
+      link: /reference/contracts/
+      icon: list-format
+      variant: secondary
+    - text: Browse the docs
+      link: /docs/
+      icon: right-arrow
+      variant: minimal
 ---
 
+import NavCard from "../../components/NavCard.astro";
 import PlannedAside from "../../components/PlannedAside.astro";
+import { siteLink } from "../../site-link";
+import layers from "./architecture/overview/layers.svg";
 
-## What benchhand is
+benchhand is being rebuilt in `benchhand/benchhand-next`, so this site documents the whole design and marks what runs today.
+The cards and the two lists below keep that split.
 
-benchhand is an MCP server for mechanical design with an AI agent.
-Your agent host starts it, and it runs the design process: requirements, concept, design, verification and release.
-It keeps each decision, check and approval in the project's record under `hw/`.
+## The parts of benchhand
 
-benchhand is being rebuilt in `benchhand/benchhand-next`.
-This site documents the whole design, so it separates what runs today from what the design plan still has to build.
+<div class="bh-grid">
+  <NavCard title="Design record" href="/manual/record/layout/" icon="document" status="Works today" statusVariant="success">
+    A project's requirements, parts, decisions and approvals live as files under `hw/`. The record library reads, validates and writes them, and reports every problem in a record.
+  </NavCard>
+  <NavCard title="Contracts" href="/reference/contracts/" icon="list-format" status="Works today" statusVariant="success">
+    Every record, job, finding and provider-protocol shape is defined once in TypeSpec. JSON Schemas, Python models and TypeScript types are generated from it.
+  </NavCard>
+  <NavCard title="Evidence" href="/manual/record/evidence/" icon="approve-check-circle" status="Library today, tools planned" statusVariant="caution">
+    The record library assesses one built version: the status of every check it owes, and a digest of what was accepted. The agent reaches it through MCP from Phase 3.
+  </NavCard>
+  <NavCard title="Gates" href="/manual/process/gates/" icon="padlock" status="Planned: Phase 2" statusVariant="default">
+    The flow engine is to ask for your approval at each stage of the design process. A project can relax a gate in `hw/policy.yaml`, and the record keeps each relaxation.
+  </NavCard>
+  <NavCard title="Providers" href="/manual/providers/overview/" icon="puzzle" status="Planned: Phase 4" statusVariant="default">
+    CAD kernels (build123d and CadQuery), FreeCAD for drawings and FEA, solvers and renderers are to plug in behind one provider protocol.
+  </NavCard>
+</div>
+
+## How it fits together
+
+<figure class="bh-figure">
+  <a href={siteLink("/architecture/overview/")}>
+    <img src={layers.src} width={layers.width} height={layers.height} alt="The benchhand software in layers, from the agent hosts down to storage, with the contracts beside every layer. Open the architecture overview." loading="lazy" decoding="async" />
+  </a>
+  <figcaption>The software in layers. Green boxes are on `main`, dashed boxes are a later phase, and grey is outside benchhand. The [architecture overview](/architecture/overview/) cites each box.</figcaption>
+</figure>
+
+<div class="bh-split">
+<section class="bh-today" aria-labelledby="what-works-today">
 
 ## What works today
 
@@ -24,6 +66,9 @@ This site documents the whole design, so it separates what runs today from what 
 - **Two commands.** `benchhand version` prints the version. `benchhand record migrate HW` converts a prototype record (`record_version` 2) to version 3. It is a dry run until you add `--apply`, and an apply backs up the files it changes first.
 
 Nothing else runs yet: there is no MCP server, no flow engine and no provider to start.
+
+</section>
+<section class="bh-planned" aria-labelledby="the-planned-workflow">
 
 ## The planned workflow
 
@@ -36,14 +81,15 @@ Nothing else runs yet: there is no MCP server, no flow engine and no provider to
 
 Most manual and tutorial pages describe this workflow. [The list of outlines](/planned/) shows which pages are outlines, and the phase that writes each.
 
+</section>
+</div>
+
 ## Who it is for
 
-- Makers and engineers who design parts with an agent and need a record they can audit.
+- Engineers and makers who design parts with an AI coding agent and need a record they can audit.
 - Teams who write providers or policies for their own processes.
+- Contributors to benchhand: start with [the architecture](/architecture/) and [the decision records](/adr/).
 
 ## Where to go next
 
-- [Getting started](/getting-started/install/): install, a first project and a first part.
-- [The manual](/manual/process/overview/): the process, the record, policy, providers, manufacturing and clients.
-- [Reference](/reference/): the contracts and the published JSON Schemas.
-- [Architecture](/architecture/): the diagrams and the decision records.
+[The documentation index](/docs/) has a card for each section: getting started, the guides and manual, the architecture, the contracts, the decision records, the reference and the roadmap.

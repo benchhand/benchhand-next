@@ -1,0 +1,35 @@
+---
+title: Documentation
+description: Every section of the benchhand documentation, with what each one covers.
+sidebar:
+  label: Documentation index
+  order: 0
+---
+
+import NavCard from "../../components/NavCard.astro";
+
+Pick a section. Pages that describe the planned workflow carry a "Planned" note with the phase that builds them, and [the roadmap](/planned/) lists them all.
+
+<div class="bh-grid">
+  <NavCard level={2} title="Start" href="/getting-started/install/" icon="rocket">
+    Install benchhand, set up a first project and take a first part through to STEP.
+  </NavCard>
+  <NavCard level={2} title="Guides and manual" href="/manual/process/overview/" icon="open-book">
+    The tutorials, and the manual: the process and its gates, the record, policy and CEL, providers, manufacturing and clients.
+  </NavCard>
+  <NavCard level={2} title="Architecture" href="/architecture/" icon="laptop">
+    The system context, the containers, the layers, the data flow and the flow, drawn in D2 and Mermaid.
+  </NavCard>
+  <NavCard level={2} title="Contracts" href="/reference/contracts/" icon="list-format">
+    Every contract by area, with its version, its domain-model page and its JSON Schema.
+  </NavCard>
+  <NavCard level={2} title="Decision records" href="/adr/" icon="comment-alt">
+    The architecture decision records, with the number, title and status of each.
+  </NavCard>
+  <NavCard level={2} title="Reference" href="/reference/" icon="document">
+    The MCP tools, the CLI, the flow, the codes and configuration, and the Python and TypeScript APIs.
+  </NavCard>
+  <NavCard level={2} title="Roadmap" href="/planned/" icon="clock">
+    The outline pages grouped by the design-plan phase that writes them, and the changelog.
+  </NavCard>
+</div>

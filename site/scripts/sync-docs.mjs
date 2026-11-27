@@ -17,6 +17,7 @@ import { gfm } from "micromark-extension-gfm";
 import { visit } from "unist-util-visit";
 
 import { base, repoRoot, repoUrl, schemaIdPrefix, site } from "../site-url.mjs";
+import { adrIndexPage, contractsIndexPage } from "./section-indexes.mjs";
 
 const siteRoot = fileURLToPath(new URL("..", import.meta.url));
 const docsOut = path.join(siteRoot, "src/content/docs");
@@ -26,7 +27,7 @@ const schemasSource = "packages/benchhand-contracts/src/benchhand_contracts/sche
 // Each source's README.md becomes the destination's index page. A `generated` source is written by
 // `just contracts`, so its pages have no edit link.
 const MARKDOWN_SOURCES = [
-  { from: "docs/architecture", to: "architecture", recursive: false },
+  { from: "docs/architecture", to: "architecture", recursive: true },
   { from: "docs/adr", to: "adr", recursive: false },
   { from: "docs/contract", to: "reference/contracts", recursive: false },
   { from: "docs/contract/generated", to: "reference/contracts", recursive: true, generated: true },
@@ -232,6 +233,9 @@ function main() {
     cpSync(path.join(repoRoot, source), path.join(docsOut, dest));
   }
   const schemaCount = syncSchemas();
+  // The two section indexes are tables built from their sources, in place of the synced READMEs.
+  write("adr/index.md", adrIndexPage());
+  write("reference/contracts/index.md", contractsIndexPage(schemasSource));
 
   mkdirSync(path.join(siteRoot, ".cache"), { recursive: true });
   const tsv = ["source\trule\tfrom\tto", ...rewrites.map((row) => row.join("\t"))].join("\n");
