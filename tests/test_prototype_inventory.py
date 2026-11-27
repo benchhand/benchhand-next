@@ -475,6 +475,9 @@ def test_a_missing_inventory_and_the_stale_pin_are_reported(tmp_path: Path, monk
     repo = _repo(tmp_path)
     with pytest.raises(InventoryError, match="prototype-inventory.json is missing"):
         run(repo, None, write=False)
+    (repo / "docs/architecture/prototype-inventory.json").write_text("{", encoding="utf-8")
+    with pytest.raises(InventoryError, match="is not valid JSON"):
+        run(repo, None, write=False)
     (repo / "release.toml").write_text('reference_commit = "def"\n', encoding="utf-8")
     with pytest.raises(InventoryError, match="is not release.toml's def"):
         run(repo, None, write=False)

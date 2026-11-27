@@ -103,7 +103,10 @@ def _check_committed(repo_root: Path, reference: ReferenceMap) -> Inventory:
     text = _read(repo_root / JSON_FILE)
     if text is None:
         raise InventoryError([f"{JSON_FILE} is missing; {REGENERATE}"])
-    data = cast(Inventory, json.loads(text))
+    try:
+        data = cast(Inventory, json.loads(text))
+    except json.JSONDecodeError as error:
+        raise InventoryError([f"{JSON_FILE} is not valid JSON: {error}; {REGENERATE}"]) from error
     if data.get("schema_version") != SCHEMA_VERSION:
         raise InventoryError([f"{JSON_FILE}: schema_version is not {SCHEMA_VERSION}; {REGENERATE}"])
     problems = check_joined(data, reference)
