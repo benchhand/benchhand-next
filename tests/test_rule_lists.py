@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """rule_lists: the test stand-in for the rules bundle evaluates a list the way the compiled expression would."""
 
 from __future__ import annotations

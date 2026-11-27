@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """record/policy.schema.json's rigor, and policy/contribution.schema.json's rules and gate requirements."""
 
 from __future__ import annotations

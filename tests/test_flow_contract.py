@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """flow/flow and flow/rules: they express the prototype's flow, and the gate-decision request follows ADR-0018."""
 
 from __future__ import annotations

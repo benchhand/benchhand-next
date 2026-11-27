@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A test stand-in for the CI-compiled rules bundle: evaluates restricted cel-policy rule lists and their merge.
 
 Phase 2 evaluates the one checked expression that the pinned cel-go tool writes for each rule list before load

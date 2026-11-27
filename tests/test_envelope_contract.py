@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The rules of envelope/envelope.schema.json that tie the parts of a tool result to its status."""
 
 from __future__ import annotations

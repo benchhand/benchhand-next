@@ -16,6 +16,7 @@ path = [
   "docs/**/*.yaml",
   "packages/*/tests/**/*.yaml",
   "research/**/*.yaml",
+  "tests/fixtures/**/*.yaml",
   "ui/*.yaml",
   "**/*.toml",
   "**/*.csv",
