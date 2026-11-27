@@ -23,6 +23,10 @@ ALLOWED: dict[str, dict[str, tuple[str, str]]] = {
         "/$defs/not_assessed_rule/then/required/0": ("reason", CONDITION),
         "/$defs/not_assessed_rule/else/not/required/0": ("reason", CONDITION),
     },
+    "flow/rules.schema.json": {
+        # contains selects the unconditional choices of RuleMatch, which declares condition.
+        "/$defs/Rule/properties/match/contains/not/required/0": ("condition", CONDITION),
+    },
     "record/drawing.schema.json": {
         "/$defs/part_drawing/properties/edges/allOf/1/required/0": ("external", BESIDE_REF),
         "/$defs/part_drawing/properties/edges/allOf/1/required/1": ("internal", BESIDE_REF),
