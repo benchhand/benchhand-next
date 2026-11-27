@@ -308,6 +308,19 @@ class _Registry:
         found.update(schema.get("properties", {}))
         return found
 
+    def effective_required(self, stem: str, schema: Any, seen: frozenset[_Ref] = frozenset()) -> set[str]:
+        """The property names a schema requires, with those of its ``$ref`` and ``allOf`` members."""
+        if not isinstance(schema, dict):
+            return set()
+        found: set[str] = set()
+        if "$ref" in schema:
+            target = self.final(stem, schema["$ref"])
+            if target not in seen:
+                found |= self.effective_required(target[0], self.schema_of(target), seen | {target})
+        for member in schema.get("allOf", []):
+            found |= self.effective_required(stem, member, seen)
+        return found | set(schema.get("required", []))
+
     def discriminator(self, stem: str, branches: list[Any]) -> tuple[str, list[str]] | None:
         """The property every branch fixes with a ``const``, and its value in each branch."""
         props = [self.effective_properties(stem, branch) for branch in branches]
@@ -414,14 +427,17 @@ class _Builder:
     def _define_object(self, cursor: _Cursor, schema: dict[str, Any], node: ClassNode) -> None:
         properties: dict[str, Any] = dict(schema.get("properties", {}))
         required = set(schema.get("required", []))
+        inherited: set[str] = set()
         for part in schema.get("allOf", []):
             if "$ref" in part:
                 parent = self._class_of(cursor.stem, part["$ref"])
                 if parent:
                     self.relations.append(Relation(parent, cursor.id, "inheritance"))
+                inherited |= self.registry.effective_required(cursor.stem, part)
                 continue
             properties.update(part.get("properties", {}))
             required |= set(part.get("required", []))
+        required |= inherited  # a property this class redeclares stays as required as its parent has it
         for name, prop in properties.items():
             self._member(cursor, node, name, prop, name in required)
         values = _map_values(schema)

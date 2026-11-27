@@ -140,7 +140,7 @@ In diagram 2.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `service_class` | no |  |
+| `value` | `service_class` | yes |  |
 
 ### `use_case.environment`
 
@@ -364,7 +364,7 @@ In diagram 4.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `consequence_severity = negligible\|minor\|major\|critical` | no |  |
+| `value` | `consequence_severity = negligible\|minor\|major\|critical` | yes |  |
 
 ## Enums
 

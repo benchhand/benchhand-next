@@ -63,7 +63,7 @@ direction: right
   class: owned
   label: "quantity_fact.known"
   shape: sql_table
-  "value": "quantity"
+  "value": "quantity" { constraint: "req" }
 }
 "record_common__fact_not_applicable": {
   class: owned
@@ -77,19 +77,19 @@ direction: right
   class: owned
   label: "text_fact.known"
   shape: sql_table
-  "value": "text"
+  "value": "text" { constraint: "req" }
 }
 "record_common__texts_fact__known": {
   class: owned
   label: "texts_fact.known"
   shape: sql_table
-  "value": "texts"
+  "value": "texts" { constraint: "req" }
 }
 "record_common__boolean_fact__known": {
   class: owned
   label: "boolean_fact.known"
   shape: sql_table
-  "value": "boolean"
+  "value": "boolean" { constraint: "req" }
 }
 "record_common__quantity": {
   class: owned
@@ -190,7 +190,7 @@ direction: right
 "stub__record_manufacturing_guideline__scope__nozzle_diameter" -> "record_common__quantity": { class: inheritance }
 "stub__record_manufacturing_guideline__relative__floor" -> "record_common__quantity": { class: inheritance }
 "stub__record_manufacturing_guideline__limit__quantities" -> "record_common__quantity": { class: inheritance }
-"record_common__quantity_fact__known"."value" -> "record_common__quantity": "value [0..1]" { class: composition }
+"record_common__quantity_fact__known"."value" -> "record_common__quantity": "value [1]" { class: composition }
 "record_common__obligation"."subject" -> "stub__record_common__subject": "subject [1]" { class: composition }
 "record_common__obligation_outcome"."source" -> "stub__record_common__source": "source [0..1]" { class: composition }
 "record_common__waiver"."subject" -> "stub__record_common__subject": "subject [1]" { class: composition }

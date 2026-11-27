@@ -74,7 +74,7 @@ direction: right
     class: owned
     label: "money_fact.known"
     shape: sql_table
-    "value": "money"
+    "value": "money" { constraint: "req" }
   }
 }
 "record_common__text_fact": {
@@ -205,6 +205,6 @@ direction: right
 "stub__record_product__use_case__consequences__severity__known" -> "aggregate__record_common__fact"."record_common__fact_known": { class: inheritance }
 "aggregate__record_common__fact"."record_common__fact_known"."sources" -> "stub__record_common__source": "sources [1..*]" { class: composition }
 "aggregate__record_common__fact"."record_common__fact_known"."uncertainty" -> "aggregate__record_common__fact"."record_common__uncertainty": "uncertainty [0..1]" { class: composition }
-"aggregate__record_common__money_fact__known"."record_common__money_fact__known"."value" -> "aggregate__record_common__money_fact__known"."record_common__money": "value [0..1]" { class: composition }
+"aggregate__record_common__money_fact__known"."record_common__money_fact__known"."value" -> "aggregate__record_common__money_fact__known"."record_common__money": "value [1]" { class: composition }
 "aggregate__record_common__load"."record_common__load" -> "aggregate__record_common__load"."record_common__quantity_fact": "magnitude [1]\nduration, frequency, cycles [0..1]" { class: composition }
 "aggregate__record_common__load"."record_common__load"."application" -> "stub__record_common__subject": "application [0..1]" { class: composition }

@@ -269,3 +269,38 @@ def test_a_tuple_of_classes_holds_one_per_position() -> None:
     model = build_model([_contract("record/pair", schema)])
     assert _members(model, "record_pair") == ["pair: [row, row]"]
     assert {rel.cardinality for rel in model.relations if rel.label == "pair"} == {"1"}
+
+
+def test_a_branch_that_redeclares_an_inherited_property_keeps_it_required() -> None:
+    base = {
+        "type": "object",
+        "required": ["value", "status"],
+        "properties": {"status": {"type": "string"}, "value": True, "note": {"type": "string"}},
+    }
+    narrowed = {"allOf": [{"$ref": "#/$defs/base"}, {"properties": {"value": {"$ref": "#/$defs/row"}}}]}
+    row = {"type": "object", "properties": {"n": {"type": "integer"}}}
+    schema = {"$defs": {"base": base, "narrowed": narrowed, "row": row}}
+    model = build_model([_contract("record/narrow", schema)])
+    assert _members(model, "record_narrow__narrowed") == [
+        "value: row"
+    ]  # not status or note: they stay inherited
+    (held,) = [
+        rel for rel in model.relations if rel.source == "record_narrow__narrowed" and rel.label == "value"
+    ]
+    assert held.cardinality == "1"
+
+
+def test_a_property_the_parent_does_not_require_stays_optional_when_redeclared() -> None:
+    base = {"type": "object", "properties": {"value": True}}
+    narrowed = {"allOf": [{"$ref": "#/$defs/base"}, {"properties": {"value": {"type": "number"}}}]}
+    model = build_model([_contract("record/narrow", {"$defs": {"base": base, "narrowed": narrowed}})])
+    assert _members(model, "record_narrow__narrowed") == ["value?: number"]
+
+
+def test_a_redeclared_property_is_required_through_two_levels_of_parents(published: DomainModel) -> None:
+    value = [
+        held
+        for held in published.classes["record_common__quantity_fact__known"].fields
+        if held.name == "value"
+    ]
+    assert [held.required for held in value] == [True]

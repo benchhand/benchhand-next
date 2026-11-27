@@ -257,7 +257,7 @@ In diagram 2.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `money` | no |  |
+| `value` | `money` | yes |  |
 
 ### `text_fact` «abstract»
 
@@ -379,7 +379,7 @@ In diagram 3.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `quantity` | no |  |
+| `value` | `quantity` | yes |  |
 
 ### `fact_not_applicable`
 
@@ -397,7 +397,7 @@ In diagram 3.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `text` | no |  |
+| `value` | `text` | yes |  |
 
 ### `texts_fact.known`
 
@@ -405,7 +405,7 @@ In diagram 3.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `texts` | no |  |
+| `value` | `texts` | yes |  |
 
 ### `boolean_fact.known`
 
@@ -413,7 +413,7 @@ In diagram 3.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `value` | `boolean` | no |  |
+| `value` | `boolean` | yes |  |
 
 ### `quantity`
 

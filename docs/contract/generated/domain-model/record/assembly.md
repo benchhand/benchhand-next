@@ -225,8 +225,8 @@ In diagram 2.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `property` | `const edge_distance` | no |  |
-| `operator` | `enum >=\|between` | no |  |
+| `property` | `const edge_distance` | yes |  |
+| `operator` | `enum >=\|between` | yes |  |
 | `units` | `enum mm\|um\|m` | yes |  |
 
 ### `assembly_operation.path`
