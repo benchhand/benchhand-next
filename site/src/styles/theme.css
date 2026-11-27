@@ -4,61 +4,95 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-/* benchhand's theme over Starlight's tokens (node_modules/@astrojs/starlight/dist/style/props.css).
- * It sets the accent and the grey ramp of both themes, and adds the few global rules the site needs:
- * the wordmark, focus rings and framed diagrams.
- * Text and links reach at least 4.5:1 on every background they sit on: the lowest pair is the
- * dark accent on the nav background, 8.7:1, and the light accent on the nav background, 5.2:1.
- * Fonts are the system UI and mono stacks Starlight already uses; the site loads no font files. */
+/* benchhand's theme over Starlight's tokens (node_modules/@astrojs/starlight/dist/style/props.css):
+ * Direction A, "Drafting Table". Warm drafting paper and blueprint navy, ink-blue lines and red-pencil marks.
+ * Each role maps onto Starlight's grey ramp and semantic colours, so its own components follow the theme.
+ * Contrast, WCAG 2.x, measured in the built site (light / dark):
+ *   text on background 14.92 / 14.83, muted 7.14 / 8.39, accent 7.56 / 9.52 and 6.84 / 8.53 on surface,
+ *   red pencil 6.08 / 8.55, control border 3.11 / 4.02, code text on code background 13.26 / 15.84,
+ *   button label on accent 7.56 / 9.52. The hairline is under 3:1 and draws decorative rules only.
+ * Body and headings use the system sans; labels, group names, the wordmark, tables' first columns and
+ * code use IBM Plex Mono, self-hosted from @fontsource/ibm-plex-mono (astro.config.mjs customCss). */
 
-/* Dark theme (Starlight's default block). Slate greys, hue ~213. */
+/* Dark theme (Starlight's default block): blueprint navy. */
 :root {
-  --sl-color-white: #ffffff;
-  --sl-color-gray-1: #e9edf2;
-  --sl-color-gray-2: #c4ccd6;
-  --sl-color-gray-3: #8592a3;
-  --sl-color-gray-4: #4b5868;
-  --sl-color-gray-5: #2a3441;
-  --sl-color-gray-6: #18202a;
-  --sl-color-black: #0f141a;
+  --sl-color-white: #e6edf5;
+  --sl-color-gray-1: #e6edf5;
+  --sl-color-gray-2: #e6edf5;
+  --sl-color-gray-3: #a6b5c8;
+  --sl-color-gray-4: #647b98;
+  --sl-color-gray-5: #223a57;
+  --sl-color-gray-6: #12243a;
+  --sl-color-black: #0c1a2c;
 
-  --sl-color-accent-low: #0c3347;
-  --sl-color-accent: #1a8fc2;
-  --sl-color-accent-high: #6cc8ec;
+  --sl-color-accent-low: #12243a;
+  --sl-color-accent: #8fc3ff;
+  --sl-color-accent-high: #8fc3ff;
+  --sl-color-text-invert: #0c1a2c;
 
-  --bh-diagram-paper: #ffffff;
+  --bh-color-pencil: #ff9b80;
+  --bh-color-border: #647b98;
+  --bh-color-hairline: #223a57;
+  --bh-code-bg: #08131f;
+  --bh-code-text: #e6edf5;
+  --bh-grid-minor: rgb(143 195 255 / 0.06);
+  --bh-grid-major: rgb(143 195 255 / 0.12);
 }
 
-/* Starlight's "note" asides and the default badge use the blue hue; align it with the accent. */
-:root {
-  --sl-hue-blue: 199;
-}
-
+/* Light theme: drafting paper. */
 :root[data-theme="light"] {
-  --sl-color-white: #11161c;
-  --sl-color-gray-1: #1b232c;
-  --sl-color-gray-2: #2d3743;
-  --sl-color-gray-3: #4a5563;
-  --sl-color-gray-4: #7d8896;
-  --sl-color-gray-5: #c3cad3;
-  --sl-color-gray-6: #e8ecf0;
-  --sl-color-gray-7: #f4f6f8;
-  --sl-color-black: #ffffff;
+  --sl-color-white: #17202c;
+  --sl-color-gray-1: #17202c;
+  --sl-color-gray-2: #17202c;
+  --sl-color-gray-3: #4a5262;
+  --sl-color-gray-4: #878b93;
+  --sl-color-gray-5: #d3cfc2;
+  --sl-color-gray-6: #ece9df;
+  --sl-color-gray-7: #ece9df;
+  --sl-color-black: #f6f4ee;
 
-  --sl-color-accent-low: #d6edf7;
-  --sl-color-accent: #0b6e99;
-  --sl-color-accent-high: #08506f;
+  --sl-color-accent-low: #ece9df;
+  --sl-color-accent: #1b4b9b;
+  --sl-color-accent-high: #1b4b9b;
+  --sl-color-text-invert: #f6f4ee;
+
+  --bh-color-pencil: #a8321d;
+  --bh-color-border: #878b93;
+  --bh-color-hairline: #d3cfc2;
+  --bh-code-bg: #eae7dc;
+  --bh-code-text: #17202c;
+  --bh-grid-minor: rgb(27 75 155 / 0.06);
+  --bh-grid-major: rgb(27 75 155 / 0.12);
 }
 
-/* The wordmark beside the logo glyph. */
+/* The roles both themes share: one ground for the page, the header and the sidebar; surface for inline
+ * code; the hairline for Starlight's own rules. */
+:root {
+  --sl-color-bg: var(--sl-color-black);
+  --sl-color-bg-nav: var(--sl-color-black);
+  --sl-color-bg-sidebar: var(--sl-color-black);
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+  --sl-color-bg-accent: var(--sl-color-accent);
+  --sl-color-text: var(--sl-color-gray-2);
+  --sl-color-text-accent: var(--sl-color-accent);
+  --sl-color-hairline-light: var(--bh-color-hairline);
+  --sl-color-hairline: var(--bh-color-hairline);
+  --sl-color-hairline-shade: var(--bh-color-hairline);
+
+  --sl-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --sl-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* The wordmark beside the logo glyph, in mono. */
 .site-title {
-  gap: 0.5rem;
-  font-weight: 700;
+  gap: 0.55rem;
+  font: 600 1.05rem/1 var(--__sl-font-mono);
   letter-spacing: -0.01em;
   color: var(--sl-color-white);
 }
 .site-title img {
-  height: 1.75rem;
+  height: 1.6rem;
   width: auto;
 }
 
@@ -79,8 +113,7 @@
   display: block;
   padding: 0.5rem;
   border: 1px solid var(--sl-color-hairline-light);
-  border-radius: 0.5rem;
-  background: var(--bh-diagram-paper);
+  background: #ffffff;
 }
 
 /* Mermaid diagrams follow the active theme (astro-mermaid autoTheme); give them the same frame. They keep
@@ -90,8 +123,7 @@
 .sl-markdown-content pre.mermaid {
   padding: 1rem;
   border: 1px solid var(--sl-color-hairline-light);
-  border-radius: 0.5rem;
-  background: var(--sl-color-bg-nav);
+  background: var(--sl-color-bg);
   overflow-x: auto;
   justify-content: flex-start;
 }

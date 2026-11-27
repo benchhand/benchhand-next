@@ -9,6 +9,7 @@ import mermaid from "astro-mermaid";
 import starlightLinksValidator from "starlight-links-validator";
 
 import { base, repoUrl, site } from "./site-url.mjs";
+import { codeThemeDark, codeThemeLight } from "./src/code-themes.mjs";
 import remarkBaseLinks from "./src/remark-base-links.mjs";
 
 export default defineConfig({
@@ -32,7 +33,45 @@ export default defineConfig({
       logo: { light: "./src/assets/logo-light.svg", dark: "./src/assets/logo-dark.svg", alt: "" },
       // public/favicon.svg, Starlight's default path; it switches colour with prefers-color-scheme.
       favicon: "/favicon.svg",
-      customCss: ["./src/styles/theme.css"],
+      customCss: [
+        // IBM Plex Mono, latin, in the three weights the theme uses; self-hosted, never from a font CDN.
+        "@fontsource/ibm-plex-mono/latin-400.css",
+        "@fontsource/ibm-plex-mono/latin-500.css",
+        "@fontsource/ibm-plex-mono/latin-600.css",
+        "./src/styles/theme.css",
+      ],
+      // Code blocks are a bordered sheet on the code background, with a mono header strip (theme.css).
+      expressiveCode: {
+        themes: [codeThemeDark, codeThemeLight],
+        styleOverrides: {
+          borderRadius: "2px",
+          borderColor: "var(--bh-color-border)",
+          codeFontFamily: "var(--__sl-font-mono)",
+          codeBackground: "var(--bh-code-bg)",
+          codeForeground: "var(--bh-code-text)",
+          uiFontFamily: "var(--__sl-font-mono)",
+          frames: {
+            shadowColor: "transparent",
+            frameBoxShadowCssValue: "none",
+            editorBackground: "var(--bh-code-bg)",
+            terminalBackground: "var(--bh-code-bg)",
+            editorTabBarBackground: "var(--sl-color-bg)",
+            editorActiveTabBackground: "var(--sl-color-bg)",
+            editorActiveTabForeground: "var(--sl-color-gray-3)",
+            editorActiveTabIndicatorTopColor: "transparent",
+            editorActiveTabIndicatorBottomColor: "transparent",
+            editorActiveTabBorderColor: "transparent",
+            editorTabBarBorderBottomColor: "var(--bh-color-hairline)",
+            editorTabBorderRadius: "0",
+            terminalTitlebarBackground: "var(--sl-color-bg)",
+            terminalTitlebarForeground: "var(--sl-color-gray-3)",
+            terminalTitlebarBorderBottomColor: "var(--bh-color-hairline)",
+            terminalTitlebarDotsOpacity: "0",
+            inlineButtonBorder: "var(--bh-color-border)",
+            inlineButtonForeground: "var(--sl-color-gray-3)",
+          },
+        },
+      },
       // A scrolling diagram must be reachable by keyboard: make each Mermaid panel a focusable region.
       head: [
         {
