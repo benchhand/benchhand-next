@@ -1,6 +1,6 @@
 # Architecture overview
 
-Start here. This page draws benchhand's software in layers. The other pages go further into each part:
+Start here. This page draws benchhand in two diagrams: the software in layers, and the processes that run it. The other pages go further into each part:
 
 - [context.md](context.md): the system context, with the user, the agent hosts and the systems benchhand works with.
 - [containers.md](containers.md): the containers, the components of `benchhand-core`, and the contracts pipeline.
@@ -50,6 +50,29 @@ Six layers stack from the clients down to storage. The contracts sit beside them
 | Envelope, flow, flow rules and policy contribution contracts | Phase 1 list, on a branch | On `pi-subagents/task-1-3d530ac-2da9-s0-t0`, provisional. `main` has no `contracts/envelope/`, `contracts/flow/` or `contracts/policy/` |
 | CEL environment | Phase 2 | Not on `main` ([containers.md](containers.md#contracts-and-codegen)) |
 
+## Deployment and runtime
+
+![Deployment and runtime](overview/deployment.svg)
+
+The host talks MCP to `benchhand mcp` over stdio, or over loopback HTTP with `--http`. The server talks to each provider process over stdio with the provider protocol. The browser reaches the preview listener on loopback. The container option replaces the native process with a launcher that runs the same server in the OCI image (ADR-0002).
+
+| Box or arrow | Style | Evidence |
+|---|---|---|
+| MCP host process, web browser, uv, container runtime, GHCR | Outside benchhand | [context.md](context.md) |
+| Host to `uvx benchhand@<ver> mcp` | Phase 3, the config Phase 6 | ADR-0002 "Decision"; `install` is in Phase 6 |
+| `benchhand mcp`, MCP endpoint | Phase 3 | Plan section 3; not on `main` |
+| Preview listener | Phase 5 | Plan section 3: a separate loopback listener with a Host-header check and a path token |
+| Job service | On `main` | `jobs/supervisor.py` and `jobs/process.py` start each job in its own session and process group |
+| Provider host to provider processes | Phase 4, the provider host open | [provider-protocol.md](../contract/provider-protocol.md#1-transport); no phase names the provider host |
+| `freecadcmd` | Phase 4 | Plan section 8: the freecad provider runs it |
+| `benchhand record migrate` to `hw/` | On `main` | `cli.py` calls `benchhand_core.record.migrate` |
+| Capability probe over stdio | On `main` | `tools/probe/probe.py`, a stdio MCP server (ADR-0016), with runs in `tools/probe/runs/` |
+| Job service to `.benchhand/runs/` | On `main` | `jobs/store.py` |
+| User cache | Phase 4, on a branch | As in the first diagram |
+| `--container` launcher | Open | Plan section 8 describes it; no phase of the Steps delivers it ([context.md](context.md#legend)) |
+| OCI image, same-path mount, GHCR pull | Phase 7 | Plan section 8 and Phase 7 |
+| Pinned cel-go checker, rules bundle, host verification | Phase 2, ADR-0020 being written | The rule lists arrive in Phase 2. ADR-0020 is not on `main`, so the bundle's shape is unspecified |
+
 ## Rendering
 
 The SVGs are rendered with d2 0.9.0 and the ELK layout:
@@ -57,6 +80,7 @@ The SVGs are rendered with d2 0.9.0 and the ELK layout:
 ```sh
 cd docs/architecture/overview
 d2 --layout elk --pad 40 layers.d2 layers.svg
+d2 --layout elk --pad 40 deployment.d2 deployment.svg
 ```
 
 ## Sources

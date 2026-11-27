@@ -1,0 +1,93 @@
+# Deployment and runtime: docs/architecture/overview.md.
+# Solid: on main, checked against the code. Dashed: planned, on a branch, or open, labelled with the phase
+# docs/design-plan.md "Steps (phased)" gives it. Render: d2 --layout elk --pad 40 deployment.d2 deployment.svg (d2 0.9.0).
+
+vars: {
+  d2-legend: {
+    main: "On main" {class: main}
+    branch: "On a branch, Phase N" {class: branch}
+    planned: "Planned, Phase N" {class: planned}
+    open: "Open: no phase in Steps" {class: open}
+    external: "Outside benchhand" {class: external}
+  }
+}
+
+classes: {
+  main: {style: {fill: "#e8f5e9"; stroke: "#2e7d32"; stroke-width: 2; font-color: "#1b1b1b"}}
+  branch: {style: {fill: "#fff3e0"; stroke: "#e65100"; stroke-width: 2; stroke-dash: 4; font-color: "#1b1b1b"}}
+  planned: {style: {fill: "#ffffff"; stroke: "#616161"; stroke-width: 1; stroke-dash: 4; font-color: "#1b1b1b"}}
+  open: {style: {fill: "#ffebee"; stroke: "#c62828"; stroke-width: 2; stroke-dash: 2; font-color: "#1b1b1b"}}
+  external: {style: {fill: "#eceff1"; stroke: "#37474f"; stroke-width: 1; font-color: "#1b1b1b"}}
+  layer: {style: {fill: "#fafafa"; stroke: "#9e9e9e"; font-color: "#1b1b1b"; font-size: 20}}
+  layer_planned: {style: {fill: "#fafafa"; stroke: "#9e9e9e"; stroke-dash: 4; font-color: "#1b1b1b"; font-size: 20}}
+  on_main: {style: {stroke: "#2e7d32"; stroke-width: 2}}
+  planned_call: {style: {stroke: "#616161"; stroke-dash: 4}}
+}
+
+direction: down
+
+machine: "The designer's machine" {
+  class: layer
+
+  host: "MCP host process\nClaude Code, Claude Desktop, Codex, OpenCode, Kiro, Pi\ndocs/client-support.md" {class: external}
+  browser: "Web browser" {class: external}
+
+  native: "Native install (ADR-0002)" {
+    class: layer
+    uvx: "uv / uvx\nfetches and caches benchhand@<ver>" {class: external}
+    mcp: "benchhand mcp, packages/benchhand\nstdio: one process per session; --http: one shared server\nPhase 3" {
+      class: layer_planned
+      endpoint: "MCP endpoint\nstdio, or loopback streamable HTTP\nwith a bearer token (--http)\nPhase 3" {class: planned}
+      preview: "Preview listener\n127.0.0.1, ephemeral port,\nHost-header check, path token\nPhase 5" {class: planned}
+      provider_host: "Provider host\nopen: no phase in Steps" {class: open}
+      jobs: "Job service, benchhand_core.jobs\nsupervisor in its own session,\nanchored process group" {class: main}
+    }
+    cli: "benchhand record migrate\npackages/benchhand/src/benchhand/cli.py" {class: main}
+    probe: "Capability probe, dev only\ntools/probe/probe.py (ADR-0016)" {class: main}
+    providers: "Provider processes, providers/\none per provider, each in its own uv env\nPhase 4" {class: planned}
+    freecadcmd: "freecadcmd\nrun by the freecad provider\nPhase 4" {class: planned}
+  }
+
+  container: "Container option (ADR-0002)" {
+    class: layer
+    launcher: "benchhand mcp --container launcher\nresolves the project, pulls, supervises\nopen: no phase in Steps" {class: open}
+    runtime: "Container runtime\ndocker, podman, nerdctl, Colima" {class: external}
+    image: "benchhand OCI image\nbenchhand mcp with FreeCAD, both kernels, Chromium\nthe project mounted at the same path\nPhase 7" {class: planned}
+  }
+
+  files: "Files" {
+    class: layer
+    hw: "Project hw/\nthe design record" {class: main}
+    dot: "Project .benchhand/runs/\njob run records" {class: main}
+    cache: "User cache, <data>/freecad/<version>\nmanaged FreeCAD\nPhase 4, on a branch" {class: branch}
+  }
+}
+
+ci: "CI: GitHub Actions" {
+  class: layer
+  celgo: "Pinned cel-go checker\ncompiles the CEL rule lists\nPhase 2, ADR-0020 being written" {class: planned}
+  bundle: "Rules bundle\ncompiled rule lists and the profile digest\nPhase 2, ADR-0020 being written" {class: planned}
+  celgo -> bundle: "Phase 2" {class: planned_call}
+}
+
+ghcr: "GHCR\nthe pinned benchhand image\nPhase 7" {class: external}
+
+machine.host -> machine.native.uvx: "spawns uvx benchhand@<ver> mcp\nthe MCP config, written by install: Phase 6" {class: planned_call}
+machine.native.uvx -> machine.native.mcp: "starts\nPhase 3" {class: planned_call}
+machine.host <-> machine.native.mcp.endpoint: "MCP over stdio, or loopback HTTP with --http\nPhase 3" {class: planned_call}
+machine.host <-> machine.native.probe: "MCP over stdio" {class: on_main}
+machine.browser -> machine.native.mcp.preview: "loopback HTTP\nPhase 5" {class: planned_call}
+machine.native.mcp.provider_host <-> machine.native.providers: "provider protocol: JSON-RPC 2.0 over stdio\nPhase 4" {class: planned_call}
+machine.native.providers -> machine.native.freecadcmd: "Phase 4" {class: planned_call}
+machine.native.mcp -> machine.files.hw: "reads and writes the record\nPhase 3" {class: planned_call}
+machine.native.cli -> machine.files.hw: "migrates the record" {class: on_main}
+machine.native.mcp.jobs -> machine.files.dot: "writes run records" {class: on_main}
+machine.native.freecadcmd -> machine.files.cache: "runs the managed FreeCAD\nPhase 4" {class: planned_call}
+
+machine.host -> machine.container.launcher: "spawns uvx benchhand@<ver> mcp --container\ninstall --container: Phase 6" {class: planned_call}
+machine.container.launcher -> machine.container.runtime: "run -i, pumps stdio, supervises" {class: planned_call}
+machine.container.runtime -> machine.container.image: "runs\nPhase 7" {class: planned_call}
+machine.container.runtime -> ghcr: "pulls the pinned image\nPhase 7" {class: planned_call}
+machine.container.image -> machine.files.hw: "same-path mount\nPhase 7" {class: planned_call}
+
+ci.bundle -> machine.native.mcp: "shipped with benchhand; the host verifies it\nand refuses a missing or stale entry\nPhase 2, ADR-0020 being written" {class: planned_call}
