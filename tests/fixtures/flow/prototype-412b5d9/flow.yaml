@@ -1,5 +1,5 @@
 # The prototype's flow at 412b5d9, written in the flow/flow.schema.json
-# shape, with its rule lists in the *.rules.yaml files beside it. Sources:
+# shape, with its rule lists in the *.celpolicy files beside it. Sources:
 # skills/cad-flow/references/flow.md, "Stages, gates, and
 # durable outputs", "Gate control", "Checks by iteration" and "Fail-fast
 # check order". It tests that the schema can express that flow. It is not
@@ -201,8 +201,8 @@ void_scope: >-
 
 rules:
   checks_by_iteration:
-    file: checks-by-iteration.rules.yaml
+    file: checks-by-iteration.celpolicy
     rules_version: 1
-  dispatch: {file: dispatch.rules.yaml, rules_version: 1}
-  fidelity: {file: fidelity.rules.yaml, rules_version: 1}
-  rigor: {file: rigor.rules.yaml, rules_version: 1}
+  dispatch: {file: dispatch.celpolicy, rules_version: 1}
+  fidelity: {file: fidelity.celpolicy, rules_version: 1}
+  rigor: {file: rigor.celpolicy, rules_version: 1}

@@ -104,19 +104,19 @@
           "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
           "rules": {
             "checks_by_iteration": {
-              "file": "checks-by-iteration.rules.yaml",
+              "file": "checks-by-iteration.celpolicy",
               "rules_version": 1
             },
             "dispatch": {
-              "file": "dispatch.rules.yaml",
+              "file": "dispatch.celpolicy",
               "rules_version": 1
             },
             "fidelity": {
-              "file": "fidelity.rules.yaml",
+              "file": "fidelity.celpolicy",
               "rules_version": 1
             },
             "rigor": {
-              "file": "rigor.rules.yaml",
+              "file": "rigor.celpolicy",
               "rules_version": 1
             }
           }
@@ -226,19 +226,19 @@
             "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
             "rules": {
               "checks_by_iteration": {
-                "file": "checks-by-iteration.rules.yaml",
+                "file": "checks-by-iteration.celpolicy",
                 "rules_version": 1
               },
               "dispatch": {
-                "file": "dispatch.rules.yaml",
+                "file": "dispatch.celpolicy",
                 "rules_version": 1
               },
               "fidelity": {
-                "file": "fidelity.rules.yaml",
+                "file": "fidelity.celpolicy",
                 "rules_version": 1
               },
               "rigor": {
-                "file": "rigor.rules.yaml",
+                "file": "rigor.celpolicy",
                 "rules_version": 1
               }
             }
@@ -348,19 +348,19 @@
             "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
             "rules": {
               "checks_by_iteration": {
-                "file": "checks-by-iteration.rules.yaml",
+                "file": "checks-by-iteration.celpolicy",
                 "rules_version": 1
               },
               "dispatch": {
-                "file": "dispatch.rules.yaml",
+                "file": "dispatch.celpolicy",
                 "rules_version": 1
               },
               "fidelity": {
-                "file": "fidelity.rules.yaml",
+                "file": "fidelity.celpolicy",
                 "rules_version": 1
               },
               "rigor": {
-                "file": "rigor.rules.yaml",
+                "file": "rigor.celpolicy",
                 "rules_version": 1
               }
             },
@@ -471,19 +471,19 @@
             "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
             "rules": {
               "checks_by_iteration": {
-                "file": "checks-by-iteration.rules.yaml",
+                "file": "checks-by-iteration.celpolicy",
                 "rules_version": 1
               },
               "dispatch": {
-                "file": "dispatch.rules.yaml",
+                "file": "dispatch.celpolicy",
                 "rules_version": 1
               },
               "fidelity": {
-                "file": "fidelity.rules.yaml",
+                "file": "fidelity.celpolicy",
                 "rules_version": 1
               },
               "rigor": {
-                "file": "rigor.rules.yaml",
+                "file": "rigor.celpolicy",
                 "rules_version": 1
               }
             }

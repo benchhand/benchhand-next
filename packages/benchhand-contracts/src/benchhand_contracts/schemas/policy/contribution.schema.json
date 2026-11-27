@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/policy/contribution.schema.json",
   "title": "benchhand policy provider contribution, provisional",
-  "description": "Provisional: what one policy provider adds to the flow (ADR-0014): rule-list files, by kind, in the shape of flow/rules.schema.json, and CEL requirements for the gates of flow.yaml. Each file is relative to the provider's root. The lists of one kind are evaluated in a fixed order: the contributions in ascending provider name, then flow.yaml's own list. For checks_by_iteration, dispatch and fidelity the first list whose output isn't the kind's no-match value gives the value; the no-match values are [], \"unknown\" and \"none\", and a contributed list ends with its kind's. For rigor every list must give true. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads. The owner has yet to confirm this order",
+  "description": "Provisional: what one policy provider adds to the flow (ADR-0014): rule-list files, by kind, in the shape of flow/rules.schema.json, and CEL requirements for the gates of flow.yaml. Each file is relative to the provider's root. The lists of one kind are evaluated in a fixed order: the contributions in ascending provider name, then flow.yaml's own list, whose result is final. For checks_by_iteration, dispatch and fidelity, a list that gives its kind's no-match value ([], \"unknown\" or \"none\") falls through to the next, and the first other value is the result. A contributed list ends in its kind's no-match value. rigor doesn't fall through: every list is evaluated, and the result is the union of their messages in evaluation order. Rigor holds only when the union is empty, so a contribution can add requirements but never waive the flow's. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads. The merge order and composition are open for the owner (ADR-0020, Open items)",
   "x-status": "provisional",
   "x-version": "0.1.0",
   "type": "object",
@@ -28,7 +28,7 @@
     {
       "rules": {
         "rigor": {
-          "file": "rules/rigor.rules.yaml",
+          "file": "rules/rigor.celpolicy",
           "rules_version": 1
         }
       },
@@ -43,7 +43,7 @@
     {
       "rules": {
         "dispatch": {
-          "file": "rules/welding-dispatch.rules.yaml",
+          "file": "rules/welding-dispatch.celpolicy",
           "rules_version": 1
         }
       }

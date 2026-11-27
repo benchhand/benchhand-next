@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 import yaml
 from benchhand_contracts import violations
-from rule_lists import first_match
+from rule_lists import NO_MATCH, first_match
 
 CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
 FLOW_ID = f"{CONTRACTS}flow/flow.schema.json"
@@ -20,9 +20,6 @@ RULES_ID = f"{CONTRACTS}flow/rules.schema.json"
 REQUEST_ID = f"{FLOW_ID}#/$defs/GateDecisionRequest"
 PROTOTYPE = Path(__file__).parent / "fixtures/flow/prototype-412b5d9"
 RULE_KINDS = ("checks_by_iteration", "dispatch", "fidelity", "rigor")
-# The no-match value of each kind (docs/contract/policy.md): a contributed list ends with it, so the next list
-# is evaluated. rigor has none: every list must give true.
-NO_MATCH = {"checks_by_iteration": "[]", "dispatch": '"unknown"', "fidelity": '"none"'}
 # The obligation families the prototype's process-check producer owns (dispatch.py OWNED_PREFIXES and
 # OWNED_FAMILIES), minus physically_validated ones. The dispatch list sees only these.
 OWNED_DISPATCH_PREFIXES = ("process.", "purchase.", "route.")
@@ -35,7 +32,6 @@ CEL_FIELDS = [
     ("flow", "/$defs/FlowEdge/properties/guard"),
     ("rules", "/$defs/RuleMatch/properties/condition"),
     ("rules", "/$defs/RuleMatch/properties/output"),
-    ("rules", "/$defs/RuleMatch/properties/explanation"),
 ]
 CEL_LISTS = [
     ("flow", "/$defs/FlowSingleHumanGate/properties/requires/properties/human"),
@@ -87,22 +83,34 @@ def test_each_prototype_rule_list_validates(kind: str) -> None:
 
 
 @pytest.mark.parametrize("kind", RULE_KINDS)
-def test_each_prototype_rule_list_ends_with_an_unconditional_item(kind: str) -> None:
-    # The CI policy compiler refuses a list whose last item has a condition; the schema can't say "last".
+def test_each_prototype_rule_list_ends_with_an_unconditional_choice(kind: str) -> None:
+    # The cel-go tool refuses a list whose last choice has a condition; the schema can't say "last".
     *_, last = _prototype_rules(kind)["rule"]["match"]
-    assert last.get("condition", "true") == "true"
+    assert "condition" not in last
+
+
+def _constant(output: str) -> Any:
+    """The value of an output that reads no variable."""
+    return first_match({"rule": {"match": [{"output": output}]}}, {})
 
 
 @pytest.mark.parametrize("kind", ["dispatch", "checks_by_iteration"])
-def test_a_flow_list_gives_its_no_match_value_only_from_its_last_item(kind: str) -> None:
-    *items, last = _prototype_rules(kind)["rule"]["match"]
-    assert last["output"] == NO_MATCH[kind]
-    assert NO_MATCH[kind] not in [item["output"] for item in items if kind == "checks_by_iteration"]
+def test_the_flow_list_may_end_in_its_kinds_no_match_value(kind: str) -> None:
+    # The flow's result is final: a dispatch that ends in "unknown" is UNKNOWN coverage, a [] runs no check.
+    *_, last = _prototype_rules(kind)["rule"]["match"]
+    assert _constant(last["output"]) == NO_MATCH[kind]
 
 
-def test_the_flow_fidelity_list_never_gives_the_contribution_only_none() -> None:
-    outputs = [item["output"] for item in _prototype_rules("fidelity")["rule"]["match"]]
+def test_the_flow_fidelity_list_ends_in_f0_and_never_gives_the_contribution_only_none() -> None:
+    # The flow loader refuses "none" in flow.yaml's fidelity list.
+    outputs = [_constant(choice["output"]) for choice in _prototype_rules("fidelity")["rule"]["match"]]
+    assert outputs[-1] == "F0"
     assert NO_MATCH["fidelity"] not in outputs
+
+
+def test_the_flow_rigor_list_ends_in_no_unmet_requirement() -> None:
+    *_, last = _prototype_rules("rigor")["rule"]["match"]
+    assert _constant(last["output"]) == []
 
 
 @pytest.mark.parametrize("key", ["kind", "rules_version", "rules"])
@@ -111,11 +119,30 @@ def test_a_rule_list_file_no_longer_carries_its_kind_or_the_old_shape(key: str) 
     assert violations(RULES_ID, {**_prototype_rules("fidelity"), key: 1})
 
 
-@pytest.mark.parametrize("feature", ["aggregate", "variables"])
-def test_a_rule_list_outside_the_restricted_profile_is_refused(feature: str) -> None:
+@pytest.mark.parametrize(
+    ("where", "feature"),
+    [
+        ("list", "imports"),
+        ("list", "description"),
+        ("rule", "aggregate"),
+        ("rule", "variables"),
+        ("rule", "id"),
+        ("rule", "description"),
+        ("choice", "explanation"),
+    ],
+)
+def test_a_rule_list_outside_the_restricted_profile_is_refused(where: str, feature: str) -> None:
+    # ADR-0020's profile: a name and one rule with one match block of conditions and outputs, nothing else.
     fidelity = _prototype_rules("fidelity")
-    fidelity["rule"][feature] = []
+    holder = {"list": fidelity, "rule": fidelity["rule"], "choice": fidelity["rule"]["match"][0]}[where]
+    holder[feature] = '"text"'
     assert violations(RULES_ID, fidelity)
+
+
+def test_a_rule_list_file_is_a_celpolicy_file() -> None:
+    flow = _prototype_flow()
+    flow["rules"]["fidelity"]["file"] = "fidelity.rules.yaml"
+    assert violations(FLOW_ID, flow)
 
 
 def test_a_nested_rule_is_refused() -> None:
@@ -453,4 +480,6 @@ def test_the_prototype_rigor_list_refuses_a_profile_that_turns_a_check_off_under
         "policy": {"rigor": rigor},
         "record": {"flow": {"profile": [{"turns_check_off": turns_check_off}]}},
     }
-    assert first_match(_prototype_rules("rigor"), data) is holds
+    unmet = first_match(_prototype_rules("rigor"), data)
+    assert (unmet == []) is holds
+    assert all(isinstance(message, str) and message for message in unmet)

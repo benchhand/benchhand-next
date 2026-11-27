@@ -1,0 +1,14 @@
+# The prototype at 412b5d9: flow_profile_gate.py, as a restricted cel-policy
+# rule list (flow/rules.schema.json). flow.yaml names it as the rigor list,
+# so every output is a list of the messages of the requirements the record
+# doesn't meet, and [] means none: regulated rigor refuses a flow profile
+# setting that turns a check off.
+name: prototype.rigor
+rule:
+  match:
+    - condition: >-
+        policy.rigor == "regulated"
+        && record.flow.profile.exists(s, s.turns_check_off)
+      output: >-
+        ["regulated rigor refuses a flow profile that turns a check off"]
+    - output: "[]"

@@ -6,12 +6,12 @@
  *
  * @minItems 1
  *
- * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+ * Items: A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
 export type CelExpressions = [string, ...string[]];
 
 /**
- * Provisional: what one policy provider adds to the flow (ADR-0014): rule-list files, by kind, in the shape of flow/rules.schema.json, and CEL requirements for the gates of flow.yaml. Each file is relative to the provider's root. The lists of one kind are evaluated in a fixed order: the contributions in ascending provider name, then flow.yaml's own list. For checks_by_iteration, dispatch and fidelity the first list whose output isn't the kind's no-match value gives the value; the no-match values are [], "unknown" and "none", and a contributed list ends with its kind's. For rigor every list must give true. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads. The owner has yet to confirm this order
+ * Provisional: what one policy provider adds to the flow (ADR-0014): rule-list files, by kind, in the shape of flow/rules.schema.json, and CEL requirements for the gates of flow.yaml. Each file is relative to the provider's root. The lists of one kind are evaluated in a fixed order: the contributions in ascending provider name, then flow.yaml's own list, whose result is final. For checks_by_iteration, dispatch and fidelity, a list that gives its kind's no-match value ([], "unknown" or "none") falls through to the next, and the first other value is the result. A contributed list ends in its kind's no-match value. rigor doesn't fall through: every list is evaluated, and the result is the union of their messages in evaluation order. Rigor holds only when the union is empty, so a contribution can add requirements but never waive the flow's. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads. The merge order and composition are open for the owner (ADR-0020, Open items)
  */
 export interface BenchhandPolicyProviderContributionProvisional {
   rules?: PolicyRuleLists;

@@ -7,7 +7,7 @@
         {
           "rules": {
             "rigor": {
-              "file": "rules/rigor.rules.yaml",
+              "file": "rules/rigor.celpolicy",
               "rules_version": 1
             }
           },
@@ -22,7 +22,7 @@
         {
           "rules": {
             "dispatch": {
-              "file": "rules/welding-dispatch.rules.yaml",
+              "file": "rules/welding-dispatch.celpolicy",
               "rules_version": 1
             }
           }
@@ -36,7 +36,7 @@
           "instance": {
             "rules": {
               "rigor": {
-                "file": "rules/rigor.rules.yaml",
+                "file": "rules/rigor.celpolicy",
                 "rules_version": 1
               }
             },
@@ -80,7 +80,7 @@
           "instance": {
             "rules": {
               "dispatch": {
-                "file": "rules/welding-dispatch.rules.yaml",
+                "file": "rules/welding-dispatch.celpolicy",
                 "rules_version": 1
               }
             },

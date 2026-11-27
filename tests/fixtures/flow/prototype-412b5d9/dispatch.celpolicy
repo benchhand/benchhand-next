@@ -123,4 +123,3 @@ rule:
         "process.inspection.capability"]
       output: obligation.family
     - output: '"unknown"'
-      explanation: '"no handler for " + obligation.family'

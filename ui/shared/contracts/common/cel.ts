@@ -2,7 +2,7 @@
 // Source: contracts/common/cel.tsp
 
 /**
- * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+ * A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
 export type CelExpression = string;
 /**

@@ -207,7 +207,7 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
 - **Composing policy providers' rule lists: open, for the owner.** Each list compiles to its own CheckedExpr and ends with an unconditional choice, so an evaluation order alone doesn't stop an earlier list's default from masking every later list. The Phase 1 contracts branch proposes a composition in `contracts/policy/contribution.tsp`, pending the owner's confirmation:
   - per kind, the host evaluates the contributed lists in ascending order of provider name, then the flow's own list;
   - for `checks_by_iteration`, `dispatch` and `fidelity`, the first list whose output isn't the kind's reserved no-match value gives the value. The no-match values are `[]`, `"unknown"` and `"none"`;
-  - for `rigor`, every list must give true;
+  - for `rigor`, every list is evaluated and gives the messages of its unmet requirements, ending in `[]`. The result is the union of the messages in evaluation order, and rigor holds only when it is empty, so a contribution can add requirements but never waive the flow's;
   - a contributed list ends with its kind's no-match value.
 
   The last rule avoids masking: a contribution whose conditions don't hold returns the no-match value, and evaluation passes to the next list. Until the owner decides, the composition is undecided.

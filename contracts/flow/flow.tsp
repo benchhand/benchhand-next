@@ -12,7 +12,7 @@ using Flow.Rules;
 @baseUri("https://benchhand.github.io/benchhand/contracts/flow/flow/")
 namespace Flow.Flow;
 
-/** Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check */
+/** Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, a standalone CEL expression that doesn't compile or type-check, and a fidelity rule list with a choice that gives "none", the no-match value only a contributed list gives */
 @summary("benchhand flow definition (flow.yaml), provisional")
 @id("https://benchhand.github.io/benchhand/contracts/flow/flow.schema.json")
 @extension("x-version", "0.1.0")
@@ -257,12 +257,12 @@ model ApprovedItemState {
     reapproval_scope: "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
     rules: #{
       checks_by_iteration: #{
-        file: "checks-by-iteration.rules.yaml",
+        file: "checks-by-iteration.celpolicy",
         rules_version: 1,
       },
-      dispatch: #{ file: "dispatch.rules.yaml", rules_version: 1 },
-      fidelity: #{ file: "fidelity.rules.yaml", rules_version: 1 },
-      rigor: #{ file: "rigor.rules.yaml", rules_version: 1 },
+      dispatch: #{ file: "dispatch.celpolicy", rules_version: 1 },
+      fidelity: #{ file: "fidelity.celpolicy", rules_version: 1 },
+      rigor: #{ file: "rigor.celpolicy", rules_version: 1 },
     },
   }
 );

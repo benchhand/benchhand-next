@@ -5,7 +5,6 @@ import type { ValidateFunction } from "ajv";
 
 export declare const validate: ValidateFunction;
 export declare const validateRuleName: ValidateFunction;
-export declare const validateRuleImport: ValidateFunction;
 export declare const validateRule: ValidateFunction;
 export declare const validateRuleMatch: ValidateFunction;
 export declare const validateRuleListReference: ValidateFunction;

@@ -8,21 +8,14 @@ using Common.Cel;
 @baseUri("https://benchhand.github.io/benchhand/contracts/flow/rules/")
 namespace Flow.Rules;
 
-/** Provisional: one rule-list file, <name>.rules.yaml (ADR-0014), written in the cel-policy format (github.com/cel-expr/cel-policy), restricted to one flat first-match match block with no aggregate, no variables and no nested rule. The first item whose condition holds gives its output; an item without a condition always holds, and the last item must be unconditional, so every list gives a value. A CI step compiles each list with the pinned cel-go policy compiler into one checked expression, and it refuses the last-item rule and the excluded features; the schema checks the rest of the shape. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: a list of check ids, in run order, and [] runs none. dispatch: a handler id, or "unknown" for UNKNOWN coverage, never a pass. fidelity: the form-check fidelity, "F0" to "F3". rigor: a bool, true when the extra requirement under the project's rigor policy holds */
-@summary("benchhand rule list (<name>.rules.yaml, restricted cel-policy), provisional")
+/** Provisional: one rule-list file, flow/<name>.celpolicy, in the restricted cel-policy profile of ADR-0020 (github.com/cel-expr/cel-policy): a name and one rule with one first-match match block. The profile has no variables, no aggregate, no nested rule and no other cel-policy field, explanation and imports included. The first choice whose condition holds gives its output. Every choice but the last has a condition, and the last has none, so every list gives a value. The pinned cel-go tool compiles each list before load into one checked expression of the rules bundle. It refuses a conditional last choice, an excluded feature and a result type other than its kind's; the schema checks the rest of the shape. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: list(string), the check ids in run order, with a conditional check concatenated as a CEL ternary; [] is its no-match value. dispatch: string, a handler id, or its no-match value "unknown", which the host records as UNKNOWN coverage, never a pass. fidelity: string, the form-check fidelity "F0" to "F3", or its no-match value "none", which only a contributed list gives. rigor: list(string), the messages of the requirements the record doesn't meet under the project's rigor policy, ending in []. policy/contribution.schema.json says how the lists of one kind combine */
+@summary("benchhand rule list (flow/<name>.celpolicy, restricted cel-policy), provisional")
 @id("https://benchhand.github.io/benchhand/contracts/flow/rules.schema.json")
 @extension("x-version", "0.1.0")
 @extension("x-status", "provisional")
 model RuleList {
   /** The policy's name */
   name: RuleName;
-
-  @minLength(1)
-  description?: string;
-
-  /** Type aliases for the expressions, as cel-policy imports them */
-  @minItems(1)
-  imports?: RuleImport[];
 
   rule: Rule;
 }
@@ -31,30 +24,16 @@ model RuleList {
 @pattern("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$")
 scalar RuleName extends string;
 
-model RuleImport {
-  /** A qualified type name, such as benchhand.flow.Obligation */
-  @pattern("^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$")
-  name: string;
-}
-
-/** The one rule of the list: an ordered, first-match list of items */
+/** The one rule of the list: an ordered, first-match list of choices */
 model Rule {
-  id?: RuleName;
-
-  @minLength(1)
-  description?: string;
-
   @minItems(1)
   match: RuleMatch[];
 }
 
-/** One item: when condition holds, the list gives output. Without condition, the item always holds */
+/** One choice: when condition holds, the list gives output. A choice without condition always holds */
 model RuleMatch {
   condition?: CelExpression;
   output: CelExpression;
-
-  /** Why this item gave its output: a CEL expression that gives a string */
-  explanation?: CelExpression;
 }
 
 /** A reference to one rule-list file */
@@ -66,7 +45,7 @@ model RuleListReference {
   rules_version: 1;
 }
 
-@pattern("^([a-z0-9][a-z0-9_-]*/)*[a-z0-9][a-z0-9_-]*\\.rules\\.yaml$")
+@pattern("^([a-z0-9][a-z0-9_-]*/)*[a-z0-9][a-z0-9_-]*\\.celpolicy$")
 scalar RuleListFile extends string;
 
 /** The rule lists, one file of each kind. The key is the list's kind, which sets the type of its outputs */
@@ -96,18 +75,13 @@ model FlowRuleLists {
   RuleList,
   #{
     name: "dispatch",
-    description: "The process-check handler for an obligation",
     rule: #{
-      id: "dispatch",
       match: #[
         #{
           condition: "obligation.family == \"route.consistency\"",
           output: "\"route.consistency\"",
         },
-        #{
-          output: "\"unknown\"",
-          explanation: "\"no handler for \" + obligation.family",
-        }
+        #{ output: "\"unknown\"" }
       ],
     },
   }
@@ -119,7 +93,7 @@ model FlowRuleLists {
     rule: #{
       match: #[
         #{ condition: "stage == \"parts\"", output: "\"F2\"" },
-        #{ condition: "true", output: "\"F0\"" }
+        #{ output: "\"F0\"" }
       ],
     },
   }
@@ -131,10 +105,10 @@ model FlowRuleLists {
     rule: #{
       match: #[
         #{
-          condition: "policy.rigor == \"regulated\"",
-          output: "!record.flow.profile.exists(s, s.turns_check_off)",
+          condition: "policy.rigor == \"regulated\" && record.flow.profile.exists(s, s.turns_check_off)",
+          output: "[\"regulated rigor refuses a flow profile that turns a check off\"]",
         },
-        #{ output: "true" }
+        #{ output: "[]" }
       ],
     },
   }

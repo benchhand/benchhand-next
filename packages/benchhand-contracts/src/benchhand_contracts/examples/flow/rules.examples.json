@@ -20,17 +20,14 @@
         },
         {
           "name": "dispatch",
-          "description": "The process-check handler for an obligation",
           "rule": {
-            "id": "dispatch",
             "match": [
               {
                 "condition": "obligation.family == \"route.consistency\"",
                 "output": "\"route.consistency\""
               },
               {
-                "output": "\"unknown\"",
-                "explanation": "\"no handler for \" + obligation.family"
+                "output": "\"unknown\""
               }
             ]
           }
@@ -44,7 +41,6 @@
                 "output": "\"F2\""
               },
               {
-                "condition": "true",
                 "output": "\"F0\""
               }
             ]
@@ -55,11 +51,11 @@
           "rule": {
             "match": [
               {
-                "condition": "policy.rigor == \"regulated\"",
-                "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                "condition": "policy.rigor == \"regulated\" && record.flow.profile.exists(s, s.turns_check_off)",
+                "output": "[\"regulated rigor refuses a flow profile that turns a check off\"]"
               },
               {
-                "output": "true"
+                "output": "[]"
               }
             ]
           }
@@ -128,17 +124,14 @@
           "mutation": "remove-property",
           "pointer": "/name",
           "instance": {
-            "description": "The process-check handler for an obligation",
             "rule": {
-              "id": "dispatch",
               "match": [
                 {
                   "condition": "obligation.family == \"route.consistency\"",
                   "output": "\"route.consistency\""
                 },
                 {
-                  "output": "\"unknown\"",
-                  "explanation": "\"no handler for \" + obligation.family"
+                  "output": "\"unknown\""
                 }
               ]
             }
@@ -150,17 +143,14 @@
           "pointer": "/x-conformance-unknown",
           "instance": {
             "name": "dispatch",
-            "description": "The process-check handler for an obligation",
             "rule": {
-              "id": "dispatch",
               "match": [
                 {
                   "condition": "obligation.family == \"route.consistency\"",
                   "output": "\"route.consistency\""
                 },
                 {
-                  "output": "\"unknown\"",
-                  "explanation": "\"no handler for \" + obligation.family"
+                  "output": "\"unknown\""
                 }
               ]
             },
@@ -173,17 +163,14 @@
           "pointer": "/name",
           "instance": {
             "name": 12345,
-            "description": "The process-check handler for an obligation",
             "rule": {
-              "id": "dispatch",
               "match": [
                 {
                   "condition": "obligation.family == \"route.consistency\"",
                   "output": "\"route.consistency\""
                 },
                 {
-                  "output": "\"unknown\"",
-                  "explanation": "\"no handler for \" + obligation.family"
+                  "output": "\"unknown\""
                 }
               ]
             }
@@ -201,7 +188,6 @@
                   "output": "\"F2\""
                 },
                 {
-                  "condition": "true",
                   "output": "\"F0\""
                 }
               ]
@@ -221,7 +207,6 @@
                   "output": "\"F2\""
                 },
                 {
-                  "condition": "true",
                   "output": "\"F0\""
                 }
               ]
@@ -242,7 +227,6 @@
                   "output": "\"F2\""
                 },
                 {
-                  "condition": "true",
                   "output": "\"F0\""
                 }
               ]
@@ -257,11 +241,11 @@
             "rule": {
               "match": [
                 {
-                  "condition": "policy.rigor == \"regulated\"",
-                  "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                  "condition": "policy.rigor == \"regulated\" && record.flow.profile.exists(s, s.turns_check_off)",
+                  "output": "[\"regulated rigor refuses a flow profile that turns a check off\"]"
                 },
                 {
-                  "output": "true"
+                  "output": "[]"
                 }
               ]
             }
@@ -276,11 +260,11 @@
             "rule": {
               "match": [
                 {
-                  "condition": "policy.rigor == \"regulated\"",
-                  "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                  "condition": "policy.rigor == \"regulated\" && record.flow.profile.exists(s, s.turns_check_off)",
+                  "output": "[\"regulated rigor refuses a flow profile that turns a check off\"]"
                 },
                 {
-                  "output": "true"
+                  "output": "[]"
                 }
               ]
             },
@@ -296,11 +280,11 @@
             "rule": {
               "match": [
                 {
-                  "condition": "policy.rigor == \"regulated\"",
-                  "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                  "condition": "policy.rigor == \"regulated\" && record.flow.profile.exists(s, s.turns_check_off)",
+                  "output": "[\"regulated rigor refuses a flow profile that turns a check off\"]"
                 },
                 {
-                  "output": "true"
+                  "output": "[]"
                 }
               ]
             }

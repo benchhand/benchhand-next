@@ -11,7 +11,7 @@ export type FlowGate = FlowSingleHumanGate | FlowStagedGate;
  *
  * @minItems 1
  *
- * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+ * Items: A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
 export type CelExpressions = [string, ...string[]];
 /**
@@ -19,7 +19,7 @@ export type CelExpressions = [string, ...string[]];
  *
  * @minItems 1
  *
- * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+ * Items: A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
  */
 export type CelExpressions1 = [string, ...string[]];
 export type GateDecisionStatus = "approved" | "void";
@@ -27,7 +27,7 @@ export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | 
 export type ApprovedItemStatus = "approved" | "changed_since_approval";
 
 /**
- * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
+ * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, a standalone CEL expression that doesn't compile or type-check, and a fidelity rule list with a choice that gives "none", the no-match value only a contributed list gives
  */
 export interface BenchhandFlowDefinitionFlowYamlProvisional {
   flow_version: 1;
@@ -42,11 +42,11 @@ export interface BenchhandFlowDefinitionFlowYamlProvisional {
   edges: [FlowEdge, ...FlowEdge[]];
   rules: FlowRuleLists;
   /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   * A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
   void_scope: string;
   /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   * A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
   reapproval_scope?: string;
 }
@@ -183,7 +183,7 @@ export interface FlowEdge {
    */
   gate?: string;
   /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   * A CEL expression. A standalone one, in flow.yaml or a policy contribution, is checked at load by cel-expr-python against the activation types generated from the contracts; one in a rule list is compiled before load by the pinned cel-go tool (ADR-0020). The schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
   guard?: string;
 }
