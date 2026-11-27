@@ -79,7 +79,7 @@ stack: "" {
   providers: "Providers: providers/, one process and uv env each\nPhase 4" {
     class: layer_planned
     kernels: "Kernels\nkernel-cadquery\nkernel-build123d\nPhase 4" {class: planned}
-    freecad: "FreeCAD\nfreecad: managed install\nand probe\nPhase 4, on a branch" {class: branch}
+    freecad: "FreeCAD\nfreecad: lookup, managed install\nand compatibility probe\nPhase 4" {class: planned}
     solvers: "Solvers\nsolver-calculix\ncollision-fcl\nPhase 4" {class: planned}
     render: "Render\nrender-chromium\nPhase 4" {class: planned}
     checks: "Checks\nchecks-process,\nCEL dispatch\nPhase 4" {class: planned}
@@ -102,7 +102,7 @@ stack: "" {
   runtime.kit -> providers: "Phase 4" {class: planned_call}
   core.record -> storage.hw: "reads and writes" {class: on_main}
   core.jobs -> storage.dot: "run records" {class: on_main}
-  providers.freecad -> storage.cache: "Phase 4" {class: planned_call}
+  providers.freecad -> storage.cache: "installs FreeCAD there\nPhase 4" {class: planned_call}
 }
 
 contracts: "Contracts: the side band every layer depends on (ADR-0017)" {

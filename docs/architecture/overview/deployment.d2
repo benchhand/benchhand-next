@@ -46,8 +46,12 @@ machine: "The designer's machine" {
     cli: "benchhand record migrate\npackages/benchhand/src/benchhand/cli.py" {class: main}
     rules_compile: "benchhand rules compile\nruns the benchhand-celcheck binary\non a user's rule lists (ADR-0020)\nPhase 3" {class: planned}
     probe: "Capability probe, dev only\ntools/probe/probe.py (ADR-0016)" {class: main}
-    providers: "Provider processes, providers/\none per provider, each in its own uv env\nPhase 4" {class: planned}
-    freecadcmd: "freecadcmd\nrun by the freecad provider\nPhase 4" {class: planned}
+    providers: "Provider processes, providers/\none per provider, each in its own uv env\nPhase 4" {
+      class: layer_planned
+      others: "kernels, solvers, render,\nchecks, store\nPhase 4" {class: planned}
+      freecad: "freecad provider\nlocates or installs FreeCAD,\ngates its version\nPhase 4" {class: planned}
+    }
+    freecadcmd: "freecadcmd\na supported FreeCAD,\nfound on the host or managed\nPhase 4" {class: planned}
   }
 
   container: "Container option (ADR-0002)" {
@@ -61,8 +65,9 @@ machine: "The designer's machine" {
     class: layer
     hw: "hw/\nthe design record" {class: main}
     dot: ".benchhand/runs/\njob run records" {class: main}
-    cache: "User cache, <data>/freecad/<version>\nmanaged FreeCAD\nPhase 4, on a branch" {class: branch}
   }
+
+  cache: "User cache, <data>/freecad/<version>\nmanaged FreeCAD\nPhase 4" {class: planned}
 }
 
 ci: "CI: GitHub Actions" {
@@ -80,12 +85,12 @@ machine.host <-> machine.native.mcp.endpoint: "MCP over stdio, or loopback HTTP 
 machine.host <-> machine.native.probe: "MCP over stdio" {class: on_main}
 machine.browser -> machine.native.mcp.preview: "loopback HTTP\nPhase 5" {class: planned_call}
 machine.native.mcp.provider_host <-> machine.native.providers: "provider protocol: JSON-RPC 2.0 over stdio\nPhase 4" {class: planned_call}
-machine.native.providers -> machine.native.freecadcmd: "Phase 4" {class: planned_call}
+machine.native.providers.freecad -> machine.cache: "installs FreeCAD here\nPhase 4" {class: planned_call}
+machine.native.providers.freecad -> machine.native.freecadcmd: "locates and runs it\nPhase 4" {class: planned_call}
 machine.native.mcp -> machine.project.hw: "reads and writes the record\nPhase 3" {class: planned_call}
 machine.native.cli -> machine.project.hw: "migrates the record" {class: on_main}
 machine.native.mcp.jobs -> machine.project.dot: "writes run records" {class: on_main}
 machine.native.rules_compile -> machine.project: "writes a user's bundle beside its rule lists\nthe path is open (ADR-0020)\nPhase 3" {class: planned_call}
-machine.native.freecadcmd -> machine.project.cache: "runs the managed FreeCAD\nPhase 4" {class: planned_call}
 
 machine.host -> machine.container.launcher: "spawns uvx benchhand@<ver> mcp --container\ninstall --container: Phase 6" {class: planned_call}
 machine.container.launcher -> machine.container.runtime: "run -i, pumps stdio, supervises" {class: planned_call}

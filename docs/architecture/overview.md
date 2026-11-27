@@ -41,11 +41,10 @@ Six layers stack from the clients down to storage. The contracts sit beside them
 | Provider protocol | On `main` | `contracts/provider/protocol.tsp`, `contracts/provider/manifest.tsp` and [provider-protocol.md](../contract/provider-protocol.md) |
 | Provider runtime and conformance kit | Phase 4, on a branch | `packages/benchhand-provider/src/benchhand_provider/__init__.py` is a one-line stub on `main`. The runtime and kit are on `pi-subagents/task-4-a307ae9-5a16-s0-t0` |
 | Provider host, the arrow from core | Open | No phase in the Steps ([containers.md](containers.md#legend)) |
-| Kernels, solvers, render, checks, store | Phase 4 | No `providers/` directory on `main` |
-| FreeCAD: managed install and probe | Phase 4, on a branch | On `pi-subagents/task-5-e1402fe-4bd3-s0-t0`, in `benchhand_core/freecad/` and `contracts/env/` |
+| Kernels, FreeCAD, solvers, render, checks, store | Phase 4 | No `providers/` directory on `main`. Phase 4 lists the freecad provider with its managed install and compatibility probe |
 | Project `hw/` | On `main` | The record service reads and writes it |
 | Project `.benchhand/` | On `main` | `jobs/store.py` `RecordStore` writes `.benchhand/runs/<jobId>.json` |
-| User cache with managed FreeCAD | Phase 4, on a branch | `<data>/freecad/<version>` on `pi-subagents/task-5-e1402fe-4bd3-s0-t0` (design plan D5) |
+| User cache with managed FreeCAD | Phase 4 | Plan section 8 and D5: the freecad provider installs a supported FreeCAD there |
 | TypeSpec, JSON Schema, Pydantic, TypeScript | On `main` | `contracts/*.tsp`, `benchhand_contracts/schemas/`, `benchhand_contracts/models/`, `ui/shared/contracts/`. `benchhand-core` imports the models and `validate` |
 | Envelope, flow, flow rules and policy contribution contracts | Phase 1 list, on a branch | On `pi-subagents/task-1-3d530ac-2da9-s0-t0`, provisional. `main` has no `contracts/envelope/`, `contracts/flow/` or `contracts/policy/` |
 | CEL environment: descriptor set and profile manifest | Phase 2 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): `contracts_gen` generates them from the published schemas. Not on `main` |
@@ -65,12 +64,11 @@ The host talks MCP to `benchhand mcp` over stdio, or over loopback HTTP with `--
 | Flow engine, which verifies the rules bundle | Phase 2; in the server from Phase 3 | [ADR-0020](../adr/0020-cel-rule-pipeline.md) "Compilation and the rules bundle": at load the host refuses a missing or stale entry. Phase 2 builds the verification, Phase 3 the server |
 | Job service | On `main` | `jobs/supervisor.py` and `jobs/process.py` start each job in its own session and process group |
 | Provider host to provider processes | Phase 4, the provider host open | [provider-protocol.md](../contract/provider-protocol.md#1-transport); no phase names the provider host |
-| `freecadcmd` | Phase 4 | Plan section 8: the freecad provider runs it |
+| freecad provider to the user cache, and to `freecadcmd` | Phase 4 | Plan section 8: the provider looks FreeCAD up (`FREECADCMD`, PATH, the macOS bundle, an AppImage, the managed directory), or installs a supported one, gates its version, and runs `freecadcmd` |
 | `benchhand record migrate` to `hw/` | On `main` | `cli.py` calls `benchhand_core.record.migrate` |
 | `benchhand rules compile` | Phase 3 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): it runs the `benchhand-celcheck` binary on a user's rule lists. Where the bundle lives in a project is open there |
 | Capability probe over stdio | On `main` | `tools/probe/probe.py`, a stdio MCP server (ADR-0016), with runs in `tools/probe/runs/` |
 | Job service to `.benchhand/runs/` | On `main` | `jobs/store.py` |
-| User cache | Phase 4, on a branch | As in the first diagram |
 | `--container` launcher | Open | Plan section 8 describes it; no phase of the Steps delivers it ([context.md](context.md#legend)) |
 | OCI image, the pull from GHCR, the project-root mount | Phase 7 | Plan section 8: `-v <project>:<project>`, the project directory the launcher resolved. Phase 7 publishes the image |
 | Pinned cel-go tool in CI and the rules bundle | Phase 2 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): `tools/celcheck/` compiles `flow/*.celpolicy`, and CI fails on a stale entry. No `tools/celcheck/` on `main` |
