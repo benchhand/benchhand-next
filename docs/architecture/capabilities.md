@@ -23,7 +23,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
 | **all** | **80** | 6 | 5 | 60 | 9 | 0 | 65 | 15 |
 
-MCP tools: 106 (37 planned, 2 unresolved, 65 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 26. Doc corrections: 1.
+MCP tools: 106 (37 planned, 2 unresolved, 65 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 29. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -1208,6 +1208,32 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Blocking: yes. Owner: project-owner. Decision needed: Whether the agent can run setup over MCP, or setup stays a CLI command that env.doctor points to.
 - Cited by: [setup](#setup), `benchhand setup`
 
+### unscoped-confirmation
+
+A migrated decision has no approval scope and needs confirmation at the next human gate. How is that confirmation recorded? ADR-0019 leaves the mechanics to Phase 2 design, and the owner has approved none. (existing)
+
+- Pointers: `docs/adr/0019-scoped-reapproval.md:37`, `docs/contract/record-migration.md:137`
+- Blocking: yes. Owner: project-owner. Decision needed: How the next human gate records its confirmation of a migrated decision that has no approval scope, before the blocks that write or read that confirmation.
+- Cited by: [scoped-reapproval](#scoped-reapproval)
+
+### unscoped-freeze
+
+Can a stage freeze or release before the next human gate confirms a migrated decision without an approval scope? ADR-0019 names this as a Phase 2 design question that the owner hasn't decided. (existing)
+
+- Pointers: `docs/adr/0019-scoped-reapproval.md:37`
+- Blocking: yes. Owner: project-owner. Decision needed: Whether a stage can freeze or release while a migrated decision still waits for its confirmation.
+- Cited by: [scoped-reapproval](#scoped-reapproval)
+
+### key-gate-auto
+
+The policy contract lets any gate run in auto mode, for development and tests. IR-061 has the middle gates close without the user under the key-gates profile, while the design-freeze gate refuses that approval. Can a key gate be set to auto? (catalogue)
+
+- Pointers: `docs/contract/policy.md:13`, `docs/migration/issue-register.yaml:2041`
+- `docs/contract/policy.md:13`: auto approves without a human, for development and tests.
+- `docs/migration/issue-register.yaml:2041`: under key approvals, the detail gate advances on a profile approval and the design-freeze gate refuses one.
+- Blocking: yes. Owner: project-owner. Decision needed: Whether hw/policy.yaml may set a key gate to auto, or the flow refuses auto there, as IR-061's acceptance test expects.
+- Cited by: [gate-policy](#gate-policy)
+
 ## Doc corrections
 
 Settled questions whose old wording is still in a page. The fix belongs in that page.
@@ -1419,7 +1445,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0003, ADR-0006, ADR-0020
 - Note: The owner decided the composition on 2026-11-27. Contributed lists run in ascending provider name, then the flow's list, which is final; a list that gives its kind's no-match value falls through; rigor is the union of every list's messages, and no list waives one (docs/phases/phase-0-1.md:125, docs/adr/0020-cel-rule-pipeline.md:228-234).
 - Source: plan: `docs/design-plan.md:552`
-- Open questions: [policy-resources](#policy-resources)
+- Open questions: [policy-resources](#policy-resources), [key-gate-auto](#key-gate-auto)
 
 ### decision-records
 
@@ -1452,6 +1478,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0019
 - Note: A migrated decision has no approval scope and needs confirmation at the next human gate; it does not cover the whole stage. The owner decided this on 2026-11-27, and the confirmation's mechanics are a Phase 2 design question (docs/phases/phase-0-1.md:133, docs/adr/0019-scoped-reapproval.md:33-36).
 - Source: plan: `docs/design-plan.md:563`
+- Open questions: [unscoped-confirmation](#unscoped-confirmation), [unscoped-freeze](#unscoped-freeze)
 
 ### result-envelope
 

@@ -383,6 +383,50 @@ open_questions:
     pointers:
       - docs/design-plan.md:249
       - docs/design-plan.md:258
+  - id: unscoped-confirmation
+    blocking: true
+    owner: project-owner
+    decision_needed: How the next human gate records its confirmation of a
+      migrated decision that has no approval scope, before the blocks that
+      write or read that confirmation.
+    origin: existing
+    question: A migrated decision has no approval scope and needs
+      confirmation at the next human gate. How is that confirmation
+      recorded? ADR-0019 leaves the mechanics to Phase 2 design, and the
+      owner has approved none.
+    pointers:
+      - docs/adr/0019-scoped-reapproval.md:37
+      - docs/contract/record-migration.md:137
+  - id: unscoped-freeze
+    blocking: true
+    owner: project-owner
+    decision_needed: Whether a stage can freeze or release while a migrated
+      decision still waits for its confirmation.
+    origin: existing
+    question: Can a stage freeze or release before the next human gate
+      confirms a migrated decision without an approval scope? ADR-0019 names
+      this as a Phase 2 design question that the owner hasn't decided.
+    pointers:
+      - docs/adr/0019-scoped-reapproval.md:37
+  - id: key-gate-auto
+    blocking: true
+    owner: project-owner
+    decision_needed: Whether hw/policy.yaml may set a key gate to auto, or
+      the flow refuses auto there, as IR-061's acceptance test expects.
+    origin: catalogue
+    question: The policy contract lets any gate run in auto mode, for
+      development and tests. IR-061 has the middle gates close without the
+      user under the key-gates profile, while the design-freeze gate
+      refuses that approval. Can a key gate be set to auto?
+    pointers:
+      - docs/contract/policy.md:13
+      - docs/migration/issue-register.yaml:2041
+    positions:
+      - source: docs/contract/policy.md:13
+        says: auto approves without a human, for development and tests.
+      - source: docs/migration/issue-register.yaml:2041
+        says: under key approvals, the detail gate advances on a profile
+          approval and the design-freeze gate refuses one.
 
 capabilities:
 
@@ -821,6 +865,7 @@ capabilities:
       - rule-lists
     open_questions:
       - policy-resources
+      - key-gate-auto
     adrs:
       - 3
       - 6
@@ -889,6 +934,9 @@ capabilities:
     depends_on:
       - decision-records
       - evidence-assessment
+    open_questions:
+      - unscoped-confirmation
+      - unscoped-freeze
     adrs:
       - 19
     note: A migrated decision has no approval scope and needs confirmation
