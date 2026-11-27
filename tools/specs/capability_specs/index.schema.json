@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://benchhand.github.io/benchhand-next/tools/specs/index.schema.json",
+  "title": "The front matter of docs/specs/README.md: the specs, in order, and the capabilities not yet specced",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specs", "not_yet_specced"],
+  "properties": {
+    "specs": {
+      "description": "Every spec id, each a file docs/specs/<id>.md. The order breaks ties in the suggested block order.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/Id" }
+    },
+    "not_yet_specced": {
+      "description": "The Phase 2 capabilities that no spec covers yet.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/Id" }
+    }
+  },
+  "$defs": {
+    "Id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" }
+  }
+}
