@@ -83,6 +83,8 @@ d2 --layout elk --pad 40 layers.d2 layers.svg
 d2 --layout elk --pad 40 deployment.d2 deployment.svg
 ```
 
+`tests/test_architecture_d2.py` renders every `.d2` under `docs/architecture/` and fails when the result differs from the committed SVG. Without d2 on `PATH` it skips locally; CI installs d2 0.9.0 with mise.
+
 ## Sources
 
 - `docs/design-plan.md`: [1. Layered architecture](../design-plan.md#1-layered-architecture), [3. Transport](../design-plan.md#3-transport-stdio-vs-localhost-http-d10), [5. Flow engine and rules](../design-plan.md#5-flow-engine-and-rules-d14), [6a. Contracts](../design-plan.md#6a-contracts-generated-and-enforced-d17), [8. Prerequisites, FreeCAD and the container](../design-plan.md#8-prerequisites-freecad-and-the-container) and [Steps (phased)](../design-plan.md#steps-phased).
