@@ -87,6 +87,17 @@ ignore_names = [
   "missing_ok",   # a test's stand-in for Path.unlink keeps its signature
   "form_class",   # a pydantic field a test assigns
   "inferred",     # a field of docs/architecture/reference-map.yaml entries, which tools/map reads by name
+  # Keys of the TypedDicts that tools/inventory writes to prototype-inventory.json; the renderer and the drift
+  # check read them by name.
+  "map_entry",
+  "by_area",
+  "schema_version",
+  "generated",
+  "help",
+  "choices",
+  "metavar",
+  "nargs",
+  "dest",
 ]
 
 [tool.coverage.run]

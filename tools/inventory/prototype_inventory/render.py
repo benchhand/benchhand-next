@@ -41,7 +41,12 @@ def render_markdown(data: Inventory) -> str:
     ]
     for area in data["summary"]["by_area"]:
         files = [file for file in data["files"] if file["area"] == area]
-        lines += [f"## {AREA_TITLES.get(area, area)}", "", *_command_table(area, files), *_function_table(area, files)]
+        lines += [
+            f"## {AREA_TITLES.get(area, area)}",
+            "",
+            *_command_table(area, files),
+            *_function_table(area, files),
+        ]
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
@@ -96,7 +101,9 @@ def _command_cell(command: CommandRecord, has_subcommands: bool) -> str:
 
 def _has_subcommands(command: CommandRecord, commands: list[CommandRecord]) -> bool:
     prefix = command["command"] + " " if command["command"] else ""
-    return any(other["command"] != command["command"] and other["command"].startswith(prefix) for other in commands)
+    return any(
+        other["command"] != command["command"] and other["command"].startswith(prefix) for other in commands
+    )
 
 
 def _command_rows(file: FileRecord, script: str) -> list[str]:
@@ -111,7 +118,9 @@ def _command_rows(file: FileRecord, script: str) -> list[str]:
             continue
         options = "<br>".join(_option(option) for option in command["options"]) or "–"
         summary = _plain(command["summary"]) + (" (hidden)" if command["hidden"] else "")
-        rows.append(f"| {_code(script)} | {_command_cell(command, has_subcommands)} | {summary} | {options} |")
+        rows.append(
+            f"| {_code(script)} | {_command_cell(command, has_subcommands)} | {summary} | {options} |"
+        )
     return rows
 
 

@@ -432,7 +432,9 @@ def test_a_written_inventory_passes_the_check_with_and_without_a_copy(tmp_path: 
 def test_a_changed_prototype_is_drift_when_the_copy_is_given(tmp_path: Path) -> None:
     repo, prototype = _write_all(tmp_path)
     script = prototype / "skills/cad-x/scripts/build.py"
-    script.write_text(script.read_text(encoding="utf-8") + "\n\ndef added() -> None:\n    pass\n", encoding="utf-8")
+    script.write_text(
+        script.read_text(encoding="utf-8") + "\n\ndef added() -> None:\n    pass\n", encoding="utf-8"
+    )
     with pytest.raises(InventoryError) as raised:
         run(repo, prototype, write=False)
     assert raised.value.problems == [
@@ -450,7 +452,9 @@ def test_an_edited_markdown_or_json_is_drift_without_a_copy(tmp_path: Path, monk
     with pytest.raises(InventoryError, match="is not what .*json renders to"):
         run(repo, None, write=False)
     markdown.write_text(original, encoding="utf-8")
-    (repo / JSON_FILE).write_text((repo / JSON_FILE).read_text(encoding="utf-8").replace(" ", "  ", 1), encoding="utf-8")
+    (repo / JSON_FILE).write_text(
+        (repo / JSON_FILE).read_text(encoding="utf-8").replace(" ", "  ", 1), encoding="utf-8"
+    )
     with pytest.raises(InventoryError, match="not in the form the generator writes"):
         run(repo, None, write=False)
 
@@ -460,7 +464,9 @@ def test_a_changed_map_entry_is_drift_without_a_copy(tmp_path: Path, monkeypatch
     repo, _ = _write_all(tmp_path)
     changed = MAP.replace("phase: 4\n    status: ported", "phase: 5\n    status: ported")
     (repo / "docs/architecture/reference-map.yaml").write_text(changed, encoding="utf-8")
-    with pytest.raises(InventoryError, match="build.py: its reference-map entry skills/cad-x/scripts/build.py changed"):
+    with pytest.raises(
+        InventoryError, match="build.py: its reference-map entry skills/cad-x/scripts/build.py changed"
+    ):
         run(repo, None, write=False)
 
 

@@ -116,7 +116,9 @@ def _literal_strings(node: ast.expr) -> list[str] | None:
     """The strings of a literal tuple or list, or None when it is anything else."""
     if not isinstance(node, (ast.Tuple, ast.List)):
         return None
-    values = [item.value for item in node.elts if isinstance(item, ast.Constant) and isinstance(item.value, str)]
+    values = [
+        item.value for item in node.elts if isinstance(item, ast.Constant) and isinstance(item.value, str)
+    ]
     return values if len(values) == len(node.elts) else None
 
 
@@ -129,16 +131,22 @@ class _ArgparseScanner:
         self.doc = first_line(ast.get_docstring(tree))
         self.commands: list[_Command] = []
         self._functions = {
-            node.name: node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            node.name: node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
         }
         self._tables = {
             node.targets[0].id: node.value
             for node in tree.body
-            if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
         } | {
             node.target.id: node.value
             for node in tree.body
-            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.value is not None
+            if isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.value is not None
         }
         self._running: set[str] = set()
 
@@ -164,8 +172,14 @@ class _ArgparseScanner:
         else:
             self._nested(node, env, names)
 
-    def _assign(self, target: ast.expr, value: ast.expr, env: dict[str, _Binding], names: dict[str, str]) -> None:
-        if isinstance(target, ast.Tuple) and isinstance(value, ast.Tuple) and len(target.elts) == len(value.elts):
+    def _assign(
+        self, target: ast.expr, value: ast.expr, env: dict[str, _Binding], names: dict[str, str]
+    ) -> None:
+        if (
+            isinstance(target, ast.Tuple)
+            and isinstance(value, ast.Tuple)
+            and len(target.elts) == len(value.elts)
+        ):
             for part, item in zip(target.elts, value.elts, strict=True):
                 self._assign(part, item, env, names)
             return
@@ -209,7 +223,11 @@ class _ArgparseScanner:
     def _choice(self, node: ast.Subscript, env: dict[str, _Binding]) -> _Binding | None:
         """``subparsers.choices["name"]``: the parser that ``add_parser("name")`` made."""
         action, key = node.value, node.slice
-        if not (isinstance(action, ast.Attribute) and action.attr == "choices" and isinstance(action.value, ast.Name)):
+        if not (
+            isinstance(action, ast.Attribute)
+            and action.attr == "choices"
+            and isinstance(action.value, ast.Name)
+        ):
             return None
         owner = env.get(action.value.id)
         if owner is None or not (isinstance(key, ast.Constant) and isinstance(key.value, str)):
@@ -265,7 +283,11 @@ class _ArgparseScanner:
 
     def _subparser(self, call: ast.Call, parent: _Command, names: dict[str, str]) -> _Binding:
         keywords = _keywords(call)
-        word = _subcommand_word(call.args[0], names) if call.args else ast.unparse(keywords.get("name", call.func))
+        word = (
+            _subcommand_word(call.args[0], names)
+            if call.args
+            else ast.unparse(keywords.get("name", call.func))
+        )
         summary_node = keywords.get("help") or keywords.get("description")
         command = _Command(
             f"{parent.path} {word}".strip(),
@@ -281,8 +303,14 @@ class _ArgparseScanner:
 def _bound(target: ast.expr, item: ast.expr) -> dict[str, str]:
     """The loop variables that one item of a literal table gives a string."""
     if isinstance(target, ast.Name):
-        return {target.id: item.value} if isinstance(item, ast.Constant) and isinstance(item.value, str) else {}
-    if isinstance(target, ast.Tuple) and isinstance(item, (ast.Tuple, ast.List)) and len(item.elts) == len(target.elts):
+        return (
+            {target.id: item.value} if isinstance(item, ast.Constant) and isinstance(item.value, str) else {}
+        )
+    if (
+        isinstance(target, ast.Tuple)
+        and isinstance(item, (ast.Tuple, ast.List))
+        and len(item.elts) == len(target.elts)
+    ):
         bound: dict[str, str] = {}
         for part, value in zip(target.elts, item.elts, strict=True):
             bound |= _bound(part, value)
@@ -360,7 +388,8 @@ def _click_commands(tree: ast.Module, doc: str) -> list[_Command]:
             continue
         decorators = [_decorator_call(item, aliases) for item in node.decorator_list]
         command = next(
-            (made for call in decorators if (made := _click_command(node, call, groups, doc)) is not None), None
+            (made for call in decorators if (made := _click_command(node, call, groups, doc)) is not None),
+            None,
         )
         if command is not None:
             command.options = [_click_option(call, doc) for call in decorators if _is_click_option(call)]

@@ -61,10 +61,16 @@ def run(repo_root: Path, reference_dir: Path | None, write: bool) -> str:
     reference = load_map(repo_root / MAP_FILE)
     pinned = tomllib.loads((repo_root / "release.toml").read_text(encoding="utf-8"))["reference_commit"]
     if reference.reference_commit != pinned:
-        raise InventoryError([f"reference_commit {reference.reference_commit} is not release.toml's {pinned}"])
+        raise InventoryError(
+            [f"reference_commit {reference.reference_commit} is not release.toml's {pinned}"]
+        )
     if reference_dir is None:
         if write or coverage_required():
-            raise InventoryError([f"{'--write' if write else 'CI=true'}: set {REFERENCE_ENV} to a copy of the prototype at {pinned}"])
+            raise InventoryError(
+                [
+                    f"{'--write' if write else 'CI=true'}: set {REFERENCE_ENV} to a copy of the prototype at {pinned}"
+                ]
+            )
         data = _check_committed(repo_root, reference)
         return f"inventory: {_counts(data)}; prototype not re-read (no reference copy; set {REFERENCE_ENV})"
     verified = check_copy_commit(reference_dir, pinned)

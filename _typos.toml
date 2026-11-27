@@ -9,6 +9,9 @@ extend-exclude = [
   "ui/shared/contracts/",
   "docs/contract/generated/",
   "docs/**/*.svg",
+  # Written by tools/inventory from the prototype's docstrings, kept verbatim; a fix belongs in the prototype.
+  "docs/architecture/prototype-inventory.md",
+  "docs/architecture/prototype-inventory.json",
   # Lockfiles and recorded agent transcripts.
   "uv.lock",
   "mise.lock",
