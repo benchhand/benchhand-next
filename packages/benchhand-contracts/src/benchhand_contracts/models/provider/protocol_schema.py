@@ -330,6 +330,14 @@ class CadAppFemResult(RootModel[HookResultBase]):
     root: HookResultBase
 
 
+class CadAppUnfoldParams(RootModel[HookParamsBase]):
+    root: HookParamsBase
+
+
+class CadAppUnfoldResult(RootModel[HookResultBase]):
+    root: HookResultBase
+
+
 class SolverSolveParams(RootModel[HookParamsBase]):
     root: HookParamsBase
 
@@ -456,6 +464,7 @@ class Method(Enum):
     cad_app_drawing = "cad-app/drawing"
     cad_app_assembly = "cad-app/assembly"
     cad_app_fem = "cad-app/fem"
+    cad_app_unfold = "cad-app/unfold"
     solver_solve = "solver/solve"
     collision_check = "collision/check"
     collision_sweep = "collision/sweep"

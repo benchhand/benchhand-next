@@ -25,7 +25,7 @@ namespace Provider.Protocol;
 @summary("benchhand provider protocol")
 @id("https://benchhand.github.io/benchhand/contracts/provider/protocol.schema.json")
 @oneOf
-@extension("x-version", "1.0.0")
+@extension("x-version", "1.1.0")
 @extension("x-protocol-version", 1)
 union Protocol {
   Request,
@@ -293,6 +293,14 @@ union CadAppFemResult {
   HookResultBase,
 }
 
+union CadAppUnfoldParams {
+  HookParamsBase,
+}
+
+union CadAppUnfoldResult {
+  HookResultBase,
+}
+
 union SolverSolveParams {
   HookParamsBase,
 }
@@ -419,6 +427,7 @@ union Method {
   "cad-app/drawing",
   "cad-app/assembly",
   "cad-app/fem",
+  "cad-app/unfold",
   "solver/solve",
   "collision/check",
   "collision/sweep",

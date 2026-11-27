@@ -38,6 +38,8 @@ export declare const validateCadAppAssemblyParams: ValidateFunction;
 export declare const validateCadAppAssemblyResult: ValidateFunction;
 export declare const validateCadAppFemParams: ValidateFunction;
 export declare const validateCadAppFemResult: ValidateFunction;
+export declare const validateCadAppUnfoldParams: ValidateFunction;
+export declare const validateCadAppUnfoldResult: ValidateFunction;
 export declare const validateSolverSolveParams: ValidateFunction;
 export declare const validateSolverSolveResult: ValidateFunction;
 export declare const validateCollisionCheckParams: ValidateFunction;

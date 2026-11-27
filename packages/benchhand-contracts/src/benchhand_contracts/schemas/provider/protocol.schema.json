@@ -4,7 +4,7 @@
   "title": "benchhand provider protocol",
   "description": "Message shapes of the benchhand provider protocol. Prose rules: docs/contract/provider-protocol.md.",
   "x-protocol-version": 1,
-  "x-version": "1.0.0",
+  "x-version": "1.1.0",
   "oneOf": [
     {
       "$ref": "#/$defs/Request"
@@ -789,6 +789,12 @@
     "CadAppFemResult": {
       "$ref": "#/$defs/HookResultBase"
     },
+    "CadAppUnfoldParams": {
+      "$ref": "#/$defs/HookParamsBase"
+    },
+    "CadAppUnfoldResult": {
+      "$ref": "#/$defs/HookResultBase"
+    },
     "SolverSolveParams": {
       "$ref": "#/$defs/HookParamsBase"
     },
@@ -888,6 +894,7 @@
         "cad-app/drawing",
         "cad-app/assembly",
         "cad-app/fem",
+        "cad-app/unfold",
         "solver/solve",
         "collision/check",
         "collision/sweep",

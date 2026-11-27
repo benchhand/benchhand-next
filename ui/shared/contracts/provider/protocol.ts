@@ -20,6 +20,7 @@ export type Method =
   | "cad-app/drawing"
   | "cad-app/assembly"
   | "cad-app/fem"
+  | "cad-app/unfold"
   | "solver/solve"
   | "collision/check"
   | "collision/sweep"
@@ -218,6 +219,8 @@ export type CadAppAssemblyParams = HookParamsBase;
 export type CadAppAssemblyResult = HookResultBase;
 export type CadAppFemParams = HookParamsBase;
 export type CadAppFemResult = HookResultBase;
+export type CadAppUnfoldParams = HookParamsBase;
+export type CadAppUnfoldResult = HookResultBase;
 export type SolverSolveParams = HookParamsBase;
 export type SolverSolveResult = HookResultBase;
 export type CollisionCheckParams = HookParamsBase;

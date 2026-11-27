@@ -74,7 +74,7 @@ Each hook is one request method named `<kind>/<hook>`. Its params and result are
 | Kind | Methods | Purpose |
 |---|---|---|
 | `kernel` | `kernel/build`, `kernel/export`, `kernel/inspect` | Run `model.py` part scripts to STEP, export formats, query geometry. |
-| `cad-app` | `cad-app/drawing`, `cad-app/assembly`, `cad-app/fem` | Run FreeCAD jobs (TechDraw, assembly solve, FEM preparation). |
+| `cad-app` | `cad-app/drawing`, `cad-app/assembly`, `cad-app/fem`, `cad-app/unfold` | Run FreeCAD jobs (TechDraw, assembly solve, FEM preparation, sheet-metal unfold). |
 | `solver` | `solver/solve` | Solve an analysis case, for example CalculiX static FEA. |
 | `collision` | `collision/check`, `collision/sweep` | Interference, clearance and motion sweeps. |
 | `renderer` | `renderer/render`, `renderer/snapshot` | PBR renders and quick snapshots. |
@@ -134,7 +134,7 @@ summary = "Check the build123d environment."
 ```
 
 - `environment.kind = "uv"`: the host builds a uv environment from `requires-python` and `dependencies`, keyed by the resolved dependency set, so identical sets share one environment.
-- `environment.kind = "freecad"`: the provider runs under FreeCAD's own Python (`freecadcmd`) from a supported version ([ADR-0005](../adr/0005-freecad-supported-versions.md)).
+- `environment.kind = "freecad"`: the provider runs under FreeCAD's own Python (`freecadcmd`) from a supported version ([ADR-0005](../adr/0005-freecad-supported-versions.md)). Pinned addons (`addons: [{url, commit}]`) and a hashed lock of pure-Python dependencies join this environment in Phase 2. The schema doesn't have them yet ([CAD-libraries decision D-45](../design/cad-libraries-2026-11-27.md)).
 - The host starts each provider as its own process, so CadQuery (OCP 7.9) and build123d (OCP 8.0) run in separate interpreters.
 
 ## 8. Requests in flight, cancellation and timeouts
