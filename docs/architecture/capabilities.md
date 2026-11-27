@@ -1380,7 +1380,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 
 ### assembly-steps-and-coupons
 
-**Assembly steps and joint evidence.** A `place` step installs a part without making a joint and names the joint that retains it (retained_by). Joint evidence that needs a physical test comes from test coupons proposed from the verification rows, whose results record method, instrument, values, uncertainty and test conditions; a result passes only the conditions it was tested under.
+**Assembly steps and joint evidence.** The 13 assembly operation kinds of ADR-0021: the pin's 10, plus `place`, `bench` and `hold`. `place` installs a part or a bench unit without making a joint, and #334's `install` becomes `place`. Its `retained_by` is a list of later joining steps in the same build, or an open fact with a reason; the record validator requires it only when the placed part is delivered (`role: product`). `bench` opens a sub-build and names its base, and `hold` is a dwell with duration, fixture and orientation. Existing equipment may be the `part` of `place` and `disassemble` only. Joint evidence that needs a physical test comes from test coupons proposed from the verification rows, whose results record method, instrument, values, uncertainty and test conditions; a result passes only the conditions it was tested under.
 
 - Layer and container: core, `containers.md:record`
 - Phase and status: P2, planned
@@ -1389,7 +1389,9 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - MCP tools: `record.propose_coupons`
 - CLI: –
 - Depends on: [record-store](#record-store), [evidence-assessment](#evidence-assessment)
-- ADRs: ADR-0017
+- ADRs: ADR-0017, ADR-0021
+- Note: ADR-0021 supersedes plan section 12b, which requires `retained_by` naming one step on every `place` and never lets existing equipment be a step's `part` (docs/design-plan.md:439-441).
+- Source: adr: `docs/adr/0021-assembly-operation-kinds.md:18`
 - Prototype: `skills/cad-record/scripts/assembly_operations.py`
 
 ### annotation-set
