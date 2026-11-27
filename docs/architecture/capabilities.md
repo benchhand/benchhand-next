@@ -1597,7 +1597,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 
 ### managed-ignores
 
-**Managed .benchhand/.gitignore and .gitattributes.** Write and keep the two managed files under .benchhand/: ignore everything by default, track the sealed text (json, yaml, csv, md), treat the sealed binaries as the project's storage choice says (ignored, git LFS or plain git), and mark the sealed folders linguist-generated -diff. No rule matches design/, and the user's top-level .gitignore stays as the user wrote it.
+**Managed .benchhand/.gitignore and .gitattributes.** Write and keep the two managed files under .benchhand/: ignore everything by default, track the sealed text (json, yaml, csv, md), treat the sealed binaries as the project's storage choice says (ignored, git LFS or plain git), and mark the sealed folders linguist-generated -diff. Nothing in design/ is ignored, and the user's top-level .gitignore stays as the user wrote it.
 
 - Layer and container: core, `containers.md:versions`
 - Phase and status: P2, planned, baseline

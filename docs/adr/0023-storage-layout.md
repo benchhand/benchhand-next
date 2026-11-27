@@ -34,7 +34,7 @@ The measurements were on one Apple M4 Pro with APFS. STEP byte equality across p
    - the sealed text (`*.json`, `*.yaml`, `*.csv` and `*.md` under `sealed/`) is un-ignored, so it is tracked in git;
    - the sealed binaries follow the project's storage choice (decision 4);
    - the sealed folders are marked `linguist-generated -diff`, so they collapse in review;
-   - no rule matches anything in `design/`;
+   - nothing in `design/` is ignored;
    - benchhand writes only these two files: the user's top-level `.gitignore` stays as the user wrote it.
 4. **Sealed text is tracked in git by default.** The sealed binaries have three storage choices:
    - ignored, the default: the text manifest in git carries the seal, and the bytes stay in the object store;

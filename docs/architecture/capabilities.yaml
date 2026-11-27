@@ -1061,7 +1061,7 @@ capabilities:
       ignore everything by default, track the sealed text (json, yaml,
       csv, md), treat the sealed binaries as the project''s storage
       choice says (ignored, git LFS or plain git), and mark the sealed
-      folders linguist-generated -diff. No rule matches design/, and the
+      folders linguist-generated -diff. Nothing in design/ is ignored, and the
       user''s top-level .gitignore stays as the user wrote it.'
     layer: core
     container: containers.md:versions

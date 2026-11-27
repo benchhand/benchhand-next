@@ -716,7 +716,7 @@ The owner decided the project storage layout on 2026-11-27, which also decides D
     └── migrate-backups/
 ```
 
-- **Git.** The managed `.benchhand/.gitignore` ignores everything, then un-ignores the sealed text (`*.json`, `*.yaml`, `*.csv`, `*.md`). The sealed binaries are ignored, in git LFS or in plain git, as the project's storage choice says. The sealed folders are `linguist-generated -diff`. No rule matches `design/`, and the user's top-level `.gitignore` stays as the user wrote it.
+- **Git.** The managed `.benchhand/.gitignore` ignores everything, then un-ignores the sealed text (`*.json`, `*.yaml`, `*.csv`, `*.md`). The sealed binaries are ignored, in git LFS or in plain git, as the project's storage choice says. The sealed folders are `linguist-generated -diff`. Nothing in `design/` is ignored, and the user's top-level `.gitignore` stays as the user wrote it.
 - **The state database** holds the tables `facts`, `jobs`, `search`, `renders`, `objects_index`, `preview`, `work_units` and `leases`. Each table is derivable or disposable, so deleting the file costs time, never correctness. Logs, the object store's bytes and everything sealed or reviewed stay files.
 - **Jobs** live in memory and end with the session. The `jobs` table journals them under a UNIQUE idempotency key, so a restart answers `interrupted` with the re-run call. Long jobs checkpoint into `facts`, and a start removes stale `.partial-<PID>` staging folders.
 - **Versions** are sealed on the main line only, and a label collision at a merge is refused. The prototype's sealed history is read where it lies under `hw/`, with the `record-migration` flag on.
