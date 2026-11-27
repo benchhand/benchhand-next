@@ -4,7 +4,8 @@
 // SPDX-License-Identifier: MPL-2.0
 // The "Planned" aside, built from docs/design-plan.md's phase list (scripts/planned-pages.mjs
 // writes plan-phases.json before the build). MarkdownContent shows it for a page's `phase`; a page
-// that is only partly planned places it before the planned section, with the phases that write it.
+// that is only partly planned places it before the planned section, with the phases that write it
+// and no link: the page itself points to /planned/.
 import { Aside } from "@astrojs/starlight/components";
 
 import plan from "../generated/plan-phases.json";
@@ -37,7 +38,7 @@ const single = phases.length === 1;
             {titles[String(phase)]}
           </>
         ))}{" "}
-        steps of the <a href={plan.stepsUrl}>design plan</a>.
+        steps.
       </>
     )
   }
