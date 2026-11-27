@@ -1,9 +1,9 @@
 ---
 title: benchhand
-description: An MCP server and CLI that guide an AI coding agent through a hardware design flow, and keep every decision, check and approval in a design record.
+description: benchhand keeps every decision, check and approval of an agent-driven hardware design in a record, and is planned to guide an AI coding agent through the design flow over MCP.
 template: splash
 hero:
-  tagline: An MCP server and CLI that guide your AI coding agent through a hardware design flow, from requirements to a STEP AP242 part, and keep every decision in a design record.
+  tagline: Keep every decision, check and approval of an agent-driven hardware design in a record you can audit. The planned MCP server guides your AI coding agent from requirements to a STEP AP242 part.
   actions:
     - text: Read the plan
       link: repo:docs/design-plan.md
@@ -25,8 +25,8 @@ import { siteLink } from "../../site-link";
 import layers from "./architecture/overview/layers.svg";
 
 Your coding agent does the design work, and benchhand holds the process around it.
-The agent reaches benchhand through MCP, and benchhand tells it which stage the design is at and what to do next.
-benchhand asks you to approve each stage, runs the checks through providers, and writes every decision, check and approval to a record in your repository.
+The design record keeps a project's requirements, parts, decisions and approvals as files in your repository, and the contracts define every shape in it.
+The planned MCP server tells the agent which stage the design is at and what to do next, asks you to approve each stage, and runs the checks through providers.
 These pages describe the whole system. Each part is marked as available or planned, and planned parts are never described as working.
 
 ## The parts of benchhand

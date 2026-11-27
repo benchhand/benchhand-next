@@ -86,10 +86,13 @@
   background: var(--sl-color-bg-nav);
 }
 
-/* Tables built by the index generators: keep short columns on one line. */
-.sl-markdown-content table td:first-child code,
-.sl-markdown-content table td code:only-child {
-  white-space: nowrap;
+/* Tables built by the index generators: keep short columns on one line where there is room; on narrow
+ * screens identifiers wrap, so the table needs less sideways scrolling. */
+@media (min-width: 50rem) {
+  .sl-markdown-content table td:first-child code,
+  .sl-markdown-content table td code:only-child {
+    white-space: nowrap;
+  }
 }
 
 /* Landing and section-index layout. */
