@@ -80,9 +80,12 @@ export function adrIndexPage() {
 // The areas of the contracts, in reading order. A schema directory missing here fails the sync.
 const AREAS = [
   { dir: "record", title: "Record documents", intro: "The files of a project's `hw/` record, and the definitions they share." },
+  { dir: "envelope", title: "Tool result envelope", intro: "The result that every benchhand MCP tool call returns." },
+  { dir: "flow", title: "Flow", intro: "The flow definition, `flow.yaml`, and the rule-list files it references. Every condition in them is a CEL expression." },
+  { dir: "policy", title: "Policy", intro: "What a policy provider contributes to the flow: rule lists and gate requirements." },
   { dir: "provider", title: "Provider", intro: "The provider manifest and the JSON-RPC protocol between benchhand and a provider." },
   { dir: "jobs", title: "Jobs", intro: "A unit of work that benchhand runs on a provider." },
-  { dir: "common", title: "Common", intro: "Shapes that every area uses." },
+  { dir: "common", title: "Common", intro: "Shapes that every area uses, including the CEL expression types." },
 ];
 
 /**
