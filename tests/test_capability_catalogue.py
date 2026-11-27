@@ -269,6 +269,11 @@ def test_a_pointer_contract_or_path_that_does_not_resolve_is_reported(change: An
             False,
         ),
         ("model.section", "`section` is cut before `model.measure` runs.", False),
+        (
+            "model.section",
+            "`model.measure` returns a value; the `section` field is optional.",
+            False,
+        ),
         ("jobs.status", "`jobs.statuses` lists them.", False),
     ],
 )
@@ -344,8 +349,13 @@ def _inventory_file(path: str, commands: list[dict[str, Any]], entry: bool = Tru
     return {"path": path, "entry_points": ["main()"] if entry else [], "commands": commands}
 
 
-def _parser(words: str, *flags: str, choices: str = "") -> dict[str, Any]:
-    options = [{"flags": [flag], "kind": "option", "help": ""} for flag in flags]
+def _parser(words: str, *flags: str, choices: str = "", required: tuple[str, ...] = ()) -> dict[str, Any]:
+    options = [
+        {"flags": [flag], "kind": "option", "help": "", "required": True, "action": "'store_true'"}
+        if flag in required
+        else {"flags": [flag], "kind": "option", "help": ""}
+        for flag in flags
+    ]
     if choices:
         options.append({"flags": ["mode"], "kind": "positional", "help": "check it", "choices": choices})
     return {
@@ -390,6 +400,22 @@ def test_a_flag_only_mode_needs_its_flags_and_does_not_stand_for_the_command_lin
     assert _coverage([("stamp.py --verify --committed", STAMP), ("stamp.py --diff", STAMP)], files) == [
         f"{STAMP}: the pin can run `stamp.py`, and prototype_commands has no entry for it",
         "prototype command stamp.py --diff: `stamp.py` declares no --diff at the pin",
+    ]
+
+
+def test_a_mandatory_switch_makes_the_flag_mode_the_command_line_and_a_flagless_entry_is_wrong() -> None:
+    """emit.py ENVELOPE.json --sarif cannot run without --sarif, so only the flag mode names a command line."""
+    emit = "skills/cad-record/scripts/emit.py"
+    files = [_inventory_file(emit, [_parser("", "--sarif", "--hw", required=("--sarif",))])]
+    assert _coverage([("emit.py --sarif", emit)], files) == []
+    assert _coverage([("emit.py --sarif --hw", emit)], files) == []
+    assert _coverage([("emit.py", emit)], files) == [
+        f"{emit}: the pin can run `emit.py --sarif`, and prototype_commands has no entry for it",
+        "prototype command emit.py: `emit.py` needs --sarif at the pin",
+    ]
+    assert _coverage([("emit.py --hw", emit)], files) == [
+        f"{emit}: the pin can run `emit.py --sarif`, and prototype_commands has no entry for it",
+        "prototype command emit.py --hw: `emit.py` needs --sarif at the pin",
     ]
 
 
@@ -461,6 +487,24 @@ def test_the_gap_list_splits_missing_interfaces_intentional_replacements_and_pro
     assert intentional.startswith("Intentional CLI or internal replacements (1)")
     assert "- `process_lifecycle.py strays` ([jobs](#jobs)): `record migrate`." in intentional
     assert "#### Dropped tools (1)\n\n- `model.check` ([build](#build), plan): Gone at the pin." in proposals
+
+
+def test_an_unresolved_tool_is_a_pending_decision_and_not_a_missing_contract() -> None:
+    data = _catalogue()
+    data["tools"][0].update(status="unresolved", phase=None, open_questions=["q"])
+    gaps = render_page(Catalogue(data)).split("## Gaps")[1].split("## Open questions")[0]
+    missing, _, _, pending = (part.split("\n### ")[0] for part in gaps.split("\n### ")[1:5])
+    assert "model.build" not in missing, "its contract waits on the open question"
+    assert pending.startswith("Pending decisions (1)")
+    assert "#### Unresolved tools (1)\n\n- `model.build` ([build](#build)): [q](#q)" in pending
+
+
+def test_a_proposed_tool_in_an_mcp_baseline_is_labelled_a_candidate() -> None:
+    data = _catalogue()
+    data["tools"][1]["status"] = "proposed"
+    data["capabilities"][0]["mcp"] = _surface(baseline=["jobs.status", "model.build"])
+    text = render_page(Catalogue(data))
+    assert "| `jobs.status` (candidate), `model.build` | P3 |" in text
 
 
 def test_the_committed_catalogue_is_valid_and_its_page_is_current() -> None:

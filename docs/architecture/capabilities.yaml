@@ -205,6 +205,18 @@ open_questions:
       the result envelope and next_actions.
     pointers:
       - docs/architecture/layers.md:154
+  - id: sarif-export
+    blocking: false
+    origin: catalogue
+    question: The prototype's emit.py ENVELOPE.json --sarif exported
+      a stored envelope's findings as SARIF 2.1.0. The reference map
+      homes only the library module sarif.py (Phase 3), and no source
+      names a tool or CLI command that replaces the export or says
+      it is intentionally omitted.
+    pointers:
+      - docs/architecture/prototype-inventory.json:21397
+      - docs/architecture/prototype-inventory.json:21549
+      - docs/architecture/reference-map.yaml:858
   - id: annotation-set-phase
     blocking: true
     owner: maintainer
@@ -908,6 +920,7 @@ capabilities:
       - flow-engine
     open_questions:
       - envelope-phase
+      - sarif-export
     adrs:
       - 11
       - 17
@@ -4743,12 +4756,14 @@ prototype_commands:
   - command: build_guide.py
     path: skills/cad-record/scripts/build_guide.py
     capability: documentation-set
-  - command: emit.py
+  - command: emit.py --sarif
     path: skills/cad-record/scripts/emit.py
     capability: result-envelope
-    note: Printed a producer's result; every tool's envelope replaces
-      it.
-    replaced_without_tool: internal
+    note: The pin's only command line, and it needs --sarif. It exported
+      a stored envelope's findings as SARIF 2.1.0 (--hw is optional).
+      Every tool's envelope replaces the producer-side printing, but
+      no source says what replaces this export; see the open question
+      sarif-export.
   - command: evidence.py check
     path: skills/cad-record/scripts/evidence.py
     capability: evidence-assessment

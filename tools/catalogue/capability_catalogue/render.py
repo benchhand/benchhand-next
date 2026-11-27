@@ -224,8 +224,9 @@ def _mcp_surface(catalogue: Catalogue) -> list[str]:
         "## MCP resources, prompts and Apps",
         "",
         "ADR-0018 makes a tool the baseline for readable content: each resource, prompt and App is an "
-        "enhancement over a tool that returns the same content. *Baseline* names those tools, and **missing** "
-        "says what no tool returns yet. An App form is an MCP App, not MCP form elicitation, which ADR-0018 drops.",
+        "enhancement over a tool that returns the same content. *Baseline* names those tools; a **(candidate)** "
+        "tool is a proposal no source names yet, and **missing** says what no tool returns yet. An App form is an "
+        "MCP App, not MCP form elicitation, which ADR-0018 drops.",
         "",
         "| Capability | Resources | Prompts | Apps | Baseline | Phase | Sources |",
         "|---|---|---|---|---|---|---|",
@@ -236,15 +237,18 @@ def _mcp_surface(catalogue: Catalogue) -> list[str]:
             lines.append(
                 f"| {_link(item['id'])} | {_codes(surface.get('resources', []))} "
                 f"| {_codes(surface.get('prompts', []))} | {_codes(surface.get('apps', []))} "
-                f"| {_cell(_baseline(surface))} | {phase_label(surface['phase'])} "
+                f"| {_cell(_baseline(catalogue, surface))} | {phase_label(surface['phase'])} "
                 f"| {_cell('; '.join(_source(source) for source in surface['sources']))} |"
             )
     return lines
 
 
-def _baseline(surface: dict[str, Any]) -> str:
+def _baseline(catalogue: Catalogue, surface: dict[str, Any]) -> str:
+    proposed = {tool["name"] for tool in catalogue.tools if tool["status"] == "proposed"}
     missing = f"**missing:** {surface['baseline_missing']}" if "baseline_missing" in surface else ""
-    tools = ", ".join(_code(name) for name in surface["baseline"])
+    tools = ", ".join(
+        _code(name) + (" (candidate)" if name in proposed else "") for name in surface["baseline"]
+    )
     return "; ".join(part for part in (tools, missing) if part)
 
 
@@ -297,7 +301,9 @@ def _gaps(catalogue: Catalogue) -> list[str]:
         "",
         "*Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional "
         "replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals "
-        "awaiting approval* are names no source plans yet, and the tools this catalogue dropped.",
+        "awaiting approval* are names no source plans yet, and the tools this catalogue dropped. *Pending "
+        "decisions* are tools that exist only if an open question is answered yes, so they have no contract to "
+        "write yet.",
         "",
     ]
     for group, lists in _gap_groups(catalogue):
@@ -315,6 +321,7 @@ def _gap_groups(catalogue: Catalogue) -> Iterator[tuple[str, list[GapList]]]:
     yield "Missing interfaces", list(_missing_interfaces(catalogue))
     yield "Intentional CLI or internal replacements", list(_intentional(catalogue))
     yield "Proposals awaiting approval", list(_proposals(catalogue))
+    yield "Pending decisions", list(_pending(catalogue))
 
 
 def _missing_interfaces(catalogue: Catalogue) -> Iterator[GapList]:
@@ -340,7 +347,8 @@ def _missing_interfaces(catalogue: Catalogue) -> Iterator[GapList]:
         [
             f"- {_code(tool['name'])}: {_undefined(tool)}"
             for tool in sorted(catalogue.tools, key=lambda tool: tool["name"])
-            if NOT_DEFINED in (tool["input"], tool["output"]) and tool["status"] != "dropped"
+            if NOT_DEFINED in (tool["input"], tool["output"])
+            and tool["status"] not in ("dropped", "unresolved")
         ],
     )
     yield (
@@ -407,6 +415,18 @@ def _proposals(catalogue: Catalogue) -> Iterator[GapList]:
         _proposed(catalogue.cli, "proposed", lambda command: _code("benchhand " + command["name"])),
     )
     yield "Dropped tools", _proposed(catalogue.tools, "dropped", lambda tool: _code(tool["name"]))
+
+
+def _pending(catalogue: Catalogue) -> Iterator[GapList]:
+    yield (
+        "Unresolved tools",
+        [
+            f"- {_code(tool['name'])} ({_link(tool['capability'])}): "
+            + ", ".join(f"[{name}](#{name})" for name in tool["open_questions"])
+            for tool in sorted(catalogue.tools, key=lambda tool: tool["name"])
+            if tool["status"] == "unresolved"
+        ],
+    )
 
 
 def _proposed(items: list[dict[str, Any]], status: str, name: Callable[[dict[str, Any]], str]) -> list[str]:

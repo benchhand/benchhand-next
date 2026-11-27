@@ -23,7 +23,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 | 0 | 6 |
 | **all** | **77** | 6 | 5 | 60 | 6 | 0 | 65 | 12 |
 
-MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 27. Doc corrections: 1.
+MCP tools: 105 (37 planned, 2 unresolved, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -518,18 +518,18 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 
 ## MCP resources, prompts and Apps
 
-ADR-0018 makes a tool the baseline for readable content: each resource, prompt and App is an enhancement over a tool that returns the same content. *Baseline* names those tools, and **missing** says what no tool returns yet. An App form is an MCP App, not MCP form elicitation, which ADR-0018 drops.
+ADR-0018 makes a tool the baseline for readable content: each resource, prompt and App is an enhancement over a tool that returns the same content. *Baseline* names those tools; a **(candidate)** tool is a proposal no source names yet, and **missing** says what no tool returns yet. An App form is an MCP App, not MCP form elicitation, which ADR-0018 drops.
 
 | Capability | Resources | Prompts | Apps | Baseline | Phase | Sources |
 |---|---|---|---|---|---|---|
-| [record-store](#record-store) | `record` | – | – | `record.read` | P3 | plan: `docs/design-plan.md:574` |
-| [gate-policy](#gate-policy) | `policy.*` | – | – | `policy.get` | P3 | plan: `docs/design-plan.md:11` |
+| [record-store](#record-store) | `record` | – | – | `record.read` (candidate) | P3 | plan: `docs/design-plan.md:574` |
+| [gate-policy](#gate-policy) | `policy.*` | – | – | `policy.get` (candidate) | P3 | plan: `docs/design-plan.md:11` |
 | [guide-service](#guide-service) | `guide://stage/<stage>` | `/benchhand:stage` | – | `flow.guide` | P3 | plan: `docs/design-plan.md:320` |
-| [record-ops](#record-ops) | `record`, `schemas`, `accepted values` | – | – | `record.read`; **missing:** no tool returns the published schemas or the accepted values. | P3 | plan: `docs/design-plan.md:574` |
+| [record-ops](#record-ops) | `record`, `schemas`, `accepted values` | – | – | `record.read` (candidate); **missing:** no tool returns the published schemas or the accepted values. | P3 | plan: `docs/design-plan.md:574` |
 | [part-sdk](#part-sdk) | `sdk://describe` | – | – | **missing:** no tool returns the SDK signatures that sdk://describe lists. | P4 | plan: `docs/design-plan.md:366` |
 | [viewer](#viewer) | – | – | `ui://benchhand/viewer` | `viewer.show`, `preview.serve` | P5 | plan: `docs/design-plan.md:342` |
-| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer`, `structured-question form` | `flow.gate_packet`, `flow.record_decision`, `viewer.show`, `project.questions`, `project.record_profile` | P5 | plan: `docs/design-plan.md:597`; plan: `docs/design-plan.md:344` |
-| [docs-index](#docs-index) | `docs://` | – | – | `docs.get` | P3 | study: `lane8-agentcad.md section 6, item 5` |
+| [rich-interactions](#rich-interactions) | – | – | `gate card`, `ui://benchhand/viewer`, `structured-question form` | `flow.gate_packet` (candidate), `flow.record_decision`, `viewer.show`, `project.questions` (candidate), `project.record_profile` (candidate) | P5 | plan: `docs/design-plan.md:597`; plan: `docs/design-plan.md:344` |
+| [docs-index](#docs-index) | `docs://` | – | – | `docs.get` (candidate) | P3 | study: `lane8-agentcad.md section 6, item 5` |
 
 ## CLI commands
 
@@ -621,7 +621,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 | `stamp.py --verify` | `skills/cad-recheck/scripts/stamp.py` | [design-recheck](#design-recheck) | `recheck.verify` |  |
 | `stamp.py --verify --committed` | `skills/cad-recheck/scripts/stamp.py` | [design-recheck](#design-recheck) | `recheck.verify` |  |
 | `build_guide.py` | `skills/cad-record/scripts/build_guide.py` | [documentation-set](#documentation-set) | `docset.build` |  |
-| `emit.py` | `skills/cad-record/scripts/emit.py` | [result-envelope](#result-envelope) | – | Printed a producer's result; every tool's envelope replaces it. |
+| `emit.py --sarif` | `skills/cad-record/scripts/emit.py` | [result-envelope](#result-envelope) | – | The pin's only command line, and it needs --sarif. It exported a stored envelope's findings as SARIF 2.1.0 (--hw is optional). Every tool's envelope replaces the producer-side printing, but no source says what replaces this export; see the open question sarif-export. |
 | `evidence.py check` | `skills/cad-record/scripts/evidence.py` | [evidence-assessment](#evidence-assessment) | `evidence.assess` |  |
 | `evidence.py digest` | `skills/cad-record/scripts/evidence.py` | [evidence-assessment](#evidence-assessment) | `evidence.digest` |  |
 | `evidence.py run` | `skills/cad-record/scripts/evidence.py` | [check-orchestration](#check-orchestration) | `checks.run` |  |
@@ -650,9 +650,9 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 
 ## Gaps
 
-*Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped.
+*Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped. *Pending decisions* are tools that exist only if an open question is answered yes, so they have no contract to write yet.
 
-### Missing interfaces (114)
+### Missing interfaces (113)
 
 #### Capabilities with no MCP tool (6)
 
@@ -668,7 +668,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [record-ops](#record-ops): no tool returns the published schemas or the accepted values.
 - [part-sdk](#part-sdk): no tool returns the SDK signatures that sdk://describe lists.
 
-#### Tools with no contract (103)
+#### Tools with no contract (101)
 
 - `bom.rollup`: input
 - `checks.form`: input and output
@@ -700,7 +700,6 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - `flow.guide`: input and output
 - `flow.impact`: input and output
 - `flow.record_decision`: output
-- `flow.record_provisional`: input and output
 - `jobs.cancel`: input and output
 - `jobs.result`: input and output
 - `jobs.start`: input and output
@@ -747,7 +746,6 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - `record.add_requirement`: input and output
 - `record.check_machine_profile`: input and output
 - `record.cite_source`: input and output
-- `record.migrate`: input and output
 - `record.propose_coupons`: input and output
 - `record.read`: input and output
 - `record.set_machine_profile`: input and output
@@ -778,13 +776,14 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 
 None.
 
-#### Prototype commands no tool replaces (3)
+#### Prototype commands no tool replaces (4)
 
 - `cad_model.py latest` ([model-build](#model-build))
 - `cad_model.py store` ([model-build](#model-build))
+- `emit.py --sarif` ([result-envelope](#result-envelope))
 - `layout.py` ([version-snapshots](#version-snapshots))
 
-### Intentional CLI or internal replacements (38)
+### Intentional CLI or internal replacements (37)
 
 #### Capabilities with no MCP tool by design (27)
 
@@ -822,7 +821,7 @@ None.
 - `generate.py` ([harness-install](#harness-install)): benchhand install writes the agent profiles it rendered.
 - `install.py` ([harness-install](#harness-install)): benchhand install replaces it.
 
-#### Prototype commands replaced inside benchhand (8)
+#### Prototype commands replaced inside benchhand (7)
 
 - `build_reference.py` ([model-build](#model-build)): Builds the cad-design reference parts in one kernel; a development fixture, so no tool.
 - `review_render.py` ([render-output](#render-output)): Review renders of the reference lamp arm per kernel; a development fixture, so no tool.
@@ -830,7 +829,6 @@ None.
 - `run.py` ([provider-environments](#provider-environments)): The launcher of every other command; D1 drops the per-skill uv run --script commands.
 - `run_build123d.py` ([model-build](#model-build)): The build123d kernel runner that cad_model.py starts; the kernel build hook replaces it.
 - `run_cadquery.py` ([model-build](#model-build)): The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it.
-- `emit.py` ([result-envelope](#result-envelope)): Printed a producer's result; every tool's envelope replaces it.
 - `viewer.py host` ([preview-host](#preview-host)): The hidden subcommand the viewer host runs as; the preview host replaces it.
 
 ### Proposals awaiting approval (85)
@@ -931,6 +929,13 @@ None.
 
 - `motion.check` ([motion-analysis](#motion-analysis), catalogue): Proposed for `motion.py check`, which doesn't exist at the pin; `motion.py plan` checks coverage, and motion.plan replaces it.
 - `recheck.diff` ([design-recheck](#design-recheck), catalogue): Proposed for `stamp.py diff`, which doesn't exist at the pin; stamp.py has flag-only modes, and `--verify --committed` goes to recheck.verify.
+
+### Pending decisions (2)
+
+#### Unresolved tools (2)
+
+- `flow.record_provisional` ([decision-records](#decision-records)): [provisional-recording](#provisional-recording)
+- `record.migrate` ([record-migrate](#record-migrate)): [record-migrate-tool](#record-migrate-tool)
 
 ### Dependencies on a later phase (11)
 
@@ -1060,6 +1065,14 @@ The full list of release refusal checks; the plan names the acceptance digest an
 Phase 1 writes the envelope contract and Phase 2 lists the result envelope and next_actions. (existing)
 
 - Pointers: `docs/architecture/layers.md:154`
+- Blocking: no; the spec that cites it decides it or works around it.
+- Cited by: [result-envelope](#result-envelope)
+
+### sarif-export
+
+The prototype's emit.py ENVELOPE.json --sarif exported a stored envelope's findings as SARIF 2.1.0. The reference map homes only the library module sarif.py (Phase 3), and no source names a tool or CLI command that replaces the export or says it is intentionally omitted. (catalogue)
+
+- Pointers: `docs/architecture/prototype-inventory.json:21397`, `docs/architecture/prototype-inventory.json:21549`, `docs/architecture/reference-map.yaml:858`
 - Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [result-envelope](#result-envelope)
 
@@ -1439,7 +1452,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Evidence: `contracts/envelope/envelope.tsp`, `docs/contract/envelope.md`
 - Note: The contract is on main at 0.1.0, provisional. Phase 2 builds next_actions in the flow engine, and Phase 3 the tools that return the envelope.
 - Prototype: `skills/cad-record/scripts/emit.py`
-- Open questions: [envelope-phase](#envelope-phase)
+- Open questions: [envelope-phase](#envelope-phase), [sarif-export](#sarif-export)
 
 ### guide-service
 

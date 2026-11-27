@@ -289,14 +289,25 @@ def cli_named(name: str, line: str) -> bool:
     return re.search(rf"(?<![\w.-]){words}(?![\w-])", text) is not None
 
 
+_CODE_SPAN = r"`([\w.]+)(?:\([^`]*\))?`"
+_TOOL_LIST = re.compile(rf"{_CODE_SPAN}(?:(?:,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+){_CODE_SPAN})*")
+"""Code spans joined by commas, `and` or `or`: a list of tool names."""
+
+
 def tool_named(name: str, line: str) -> bool:
-    """``line`` names the tool in full, or in the one shorthand the plan uses: after a tool of the same
-    namespace, the rest of the name alone in a code span, as in "`model.measure`, `section`"."""
+    """``line`` names the tool in full, or in the one shorthand the plan uses: in a list of code spans, the rest
+    of the name alone after a tool of the same namespace, as in "`model.measure`, `section` and `mass_props`"."""
     if _word_named(name, line):
         return True
     namespace, _, rest = name.rpartition(".")
-    sibling = re.search(rf"`{re.escape(namespace)}\.\w", line)
-    return sibling is not None and re.search(rf"`{re.escape(rest)}[`(]", line[sibling.end() :]) is not None
+    for found in _TOOL_LIST.finditer(line):
+        spans = re.findall(_CODE_SPAN, found.group())
+        if any(
+            span == rest and any(s.startswith(f"{namespace}.") for s in spans[:i])
+            for i, span in enumerate(spans)
+        ):
+            return True
+    return False
 
 
 def _named_on_line(repo_root: Path, pointer: str, name: str, named: Callable[[str, str], bool]) -> str | None:
