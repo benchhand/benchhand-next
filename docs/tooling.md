@@ -18,7 +18,7 @@ What the repo runs to keep code, config and workflows clean, where each check ru
 | CI `security` workflow | osv-scanner on the three lockfiles | On lockfile and `mise.toml` changes, and weekly. The audit covers `uv.lock`, `ui/pnpm-lock.yaml` and `contracts/pnpm-lock.yaml` only. The tools pinned in `mise.toml` and the `reuse` install are not audited: nothing here reads their advisories. |
 | CI `secrets` workflow | gitleaks over the whole history (`just secrets-history`) | On every pull request, forks included, and every push to `main`. No path filter. The CLI needs no licence key or secret. |
 | CI `trivy` workflow | `trivy config` (misconfiguration), SARIF to code scanning | On pull requests, pushes to `main` and weekly. It finds nothing until the repo holds a Dockerfile or a manifest. |
-| CI `cla` workflow | CLA Assistant: a pull request needs a signed CLA (`CLA.md`) | On pull requests and `recheck` comments. |
+| CI `cla` workflow | CLA Assistant: a pull request needs a signed CLA (`CLA.md`) | On pull request events (opened, reopened, new commits) and on `recheck` or signing comments on a pull request. |
 | `just check`, pre-commit and the CI `check` job | `reuse lint`: every file has an SPDX licence and copyright, or a `REUSE.toml` entry | Seconds. The hook is the REUSE project's own, at a pinned rev. |
 
 The pre-push hook runs `packages/` only. `tests/` (contract generation, diagram rendering, function map) takes minutes and stays in CI. The `packages/` tests alone take about 5 minutes without `-n auto`.
@@ -90,10 +90,16 @@ Trivy's SARIF upload puts the findings in the Security tab. osv-scanner can emit
 
 ## CLA
 
-- `.github/workflows/cla.yml` runs CLA Assistant (`contributor-assistant/github-action` v2.6.1) on pull requests and on `recheck` and signing comments, as platevault does. `CLA.md` is platevault's text with the licence named as MPL-2.0. `CONTRIBUTING.md` links it.
+- `.github/workflows/cla.yml` runs CLA Assistant (`contributor-assistant/github-action` v2.6.1) on pull request events (opened, reopened, synchronize) and on `recheck` and signing comments, as platevault does. A comment starts the job only if it is on a pull request and is one of those two texts; the check runs before the job mints the token. The job has no `statuses` permission (the action reruns its own Actions check and posts no commit status), and the workflow doesn't react to `closed` while `lock-pullrequest-aftermerge` is `false`. `CLA.md` is platevault's text with the licence named as MPL-2.0. `CONTRIBUTING.md` links it.
 - Signatures are written to `signatures/cla.json` on `main` of `benchhand/cla-signers` (`remote-organization-name: benchhand`, `remote-repository-name: cla-signers`). A GitHub App token (`actions/create-github-app-token` v3.4.0, limited to that repository with `contents: write`) does the write, because the workflow's `GITHUB_TOKEN` can't write to another repository.
 - The allowlist is platevault's: `srobroek,bot*,dependabot*,renovate*,*[bot]*,sjorsr-release-bot*`.
 - **The action is archived** (last push 2026-03-23). The SHA pin means what runs doesn't change, but it gets no fixes. zizmor flags it (`archived-uses`) and flags the `pull_request_target` and `issue_comment` triggers (`dangerous-triggers`). Both are ignored for `cla.yml` only, with the reason, in `.github/zizmor.yml`. The workflow checks out no code.
+- **The action has known gaps (v2.6.1):**
+  - It fetches only the first 100 commits of a pull request and never follows the pagination cursor, so a contributor who appears only after commit 100 isn't checked.
+  - It ignores co-authors.
+  - It doesn't check the PR opener independently of the commits.
+
+  The maintained `iainmcgin/cla-github-action` fork fixes these and takes the same inputs. Its `v3.2.0` tag peels to `0d27e5a16278d4adb6b0c4b92f08ad27b0a21dc8`. Its README says it is for internal use and names no official successor, so the choice is the owner's. `cla.yml` keeps the alternative as a comment above the pin, so the swap is one `uses:` line. The review asks for a test that an unsigned contributor on page two fails the check. That needs a pull request with more than 100 commits and a live run, so it isn't done here; do it when the action is chosen.
 - The workflow has not run: it needs the secrets under "Left for the owner".
 
 ## What the new tools found
@@ -117,15 +123,16 @@ Trivy's SARIF upload puts the findings in the Security tab. osv-scanner can emit
 - Semgrep or Opengrep. The container image scan (`trivy image`) waits for the Phase 7 image.
 - Mutation testing. The steering puts it in a scheduled job. It would be slow on this suite.
 - SLSA provenance, an SBOM and OIDC publishing, once a release exists.
-- The CLA workflow needs these set on the `benchhand` organisation or on this repository. I invented none of them:
+- The CLA workflow needs these, on this repository. I invented none of them:
   - a GitHub App installed on `benchhand/cla-signers` with **Contents: read and write**. Create a new one, or install platevault's on the `benchhand` organisation;
-  - the repository variable `CLA_APP_CLIENT_ID`, the App's **Client ID** from its settings page (the workflow uses `client-id`, since `app-id` is deprecated in `create-github-app-token` v3; platevault's `CLA_APP_ID` holds the App ID instead);
+  - the repository secret `CLA_APP_CLIENT_ID`, the App's **Client ID** from its settings page (the workflow uses `client-id`, since `app-id` is deprecated in `create-github-app-token` v3; platevault's `CLA_APP_ID` holds the App ID instead);
   - the repository secret `CLA_APP_PRIVATE_KEY`, a private key generated for that App (the whole `.pem`);
+  - both secrets come from 1Password through `fnox push`, which writes repository secrets only, never variables. That is why the Client ID is a secret and not a variable. `fnox.toml` holds the setup: a 1Password provider, a `gh` target for `benchhand/benchhand-next`, and the two secrets. Its vault (`TODO-VAULT`) and the item and field of each secret (`TODO-ITEM/TODO-FIELD`) are placeholders. Fill them in, run `fnox push --dry-run`, then `fnox push`. `gh` must be logged in as someone who can manage the repository's secrets. fnox is pinned in `mise.toml` (1.50.0) and CI doesn't install it. Nobody has run `fnox` or `op` against this config;
   - if you prefer a PAT, a secret `PERSONAL_ACCESS_TOKEN` with `contents: write` on `benchhand/cla-signers`, and the token step goes;
   - `main` of `cla-signers` must accept pushes from the App (no required reviews or status checks for it).
 - Code scanning must be enabled on the repository for the Trivy SARIF upload. The API reports it as configured.
 - The dependency licence allowlist (`osv-scanner --licenses` or `pip-licenses`), now that the repo's own licence is set.
-- Whether to replace the archived CLA Assistant action.
+- Whether to replace the archived CLA Assistant action, and with what: v2.6.1 with its gaps above, or the iainmcgin fork (one line in `cla.yml`).
 - A commit-msg hook and a PR-range commit check.
 - A markdown link check (lychee) and markdownlint.
 - `jscpd` as a duplication report.
