@@ -47,7 +47,7 @@ max-complexity = 10
 
 [tool.pytest.ini_options]
 testpaths = ["packages", "tests"]
-pythonpath = ["tools/gen", "tools/equiv", "tools/map"]
+pythonpath = ["tools/gen", "tools/equiv", "tools/map", "tools/inventory"]
 addopts = "-q -m 'not wheel'"
 markers = ["wheel: builds and installs a wheel in a fresh venv; run on its own with `pytest -m wheel`"]
 
@@ -60,8 +60,9 @@ exclude = [
   "tools/probe",
   "packages/benchhand-contracts/src/benchhand_contracts/models",
 ]
-# tools/gen and tools/equiv are imported by their tests through pytest's pythonpath, not installed.
-extraPaths = ["tools/gen", "tools/equiv", "tools/map"]
+# tools/gen, tools/equiv, tools/map and tools/inventory are imported by their tests through pytest's
+# pythonpath, not installed.
+extraPaths = ["tools/gen", "tools/equiv", "tools/map", "tools/inventory"]
 
 [tool.vulture]
 paths = ["packages", "tools"]

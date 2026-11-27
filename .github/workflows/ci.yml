@@ -88,6 +88,8 @@ jobs:
           { echo "### Line coverage"; echo; uv run coverage report --format=markdown --skip-covered; } >> "$GITHUB_STEP_SUMMARY"
       - name: Function map against the pinned prototype, coverage required
         run: just reference-map
+      - name: Prototype inventory against the pinned prototype, copy required
+        run: just inventory
       - name: Built wheels run outside the checkout
         run: uv run pytest -m wheel
       - name: TypeScript types, the generated contract types included
@@ -102,7 +104,7 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: |
           git fetch -q --depth=1 origin "$BASE_REF"
-          files=$(git diff --name-only --diff-filter=AM FETCH_HEAD -- '*.md' ':!reference/**' ':!docs/design-plan.md')
+          files=$(git diff --name-only --diff-filter=AM FETCH_HEAD -- '*.md' ':!reference/**' ':!docs/design-plan.md' ':!docs/architecture/prototype-inventory.md')
           if [ -n "$files" ]; then
             # shellcheck disable=SC2086 # one argument per file; the names hold no spaces
             uvx slopvac $files

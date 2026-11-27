@@ -15,7 +15,7 @@ _need tool:
 # Lint, type-check and test everything, and check the generated contract code. The git hooks
 # (.pre-commit-config.yaml) call the same recipes. `audit`, `secrets-history` and `lint-workflows-online`
 # need the network and run in CI.
-check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map
+check: lint reuse spell lint-toml lint-workflows dead-code typecheck test test-wheel contracts-check reference-map inventory
 
 lint:
     uv run ruff check .
@@ -210,6 +210,14 @@ reference-changes:
 # With CI=true the copy is required; CI fetches it.
 reference-map *args:
     PYTHONPATH=tools/map uv run python -m reference_map {{args}}
+
+# The function-level inventory of the prototype: every public function, class and command line, joined to its
+# reference-map entry. Writes docs/architecture/prototype-inventory.md and .json with `--write`; without it,
+# checks that the committed files match. Writing needs BENCHHAND_REFERENCE_DIR (a read-only copy of the
+# prototype at release.toml's reference_commit); without a copy the check covers the committed JSON against
+# reference-map.yaml and the Markdown against the JSON. With CI=true the copy is required.
+inventory *args:
+    PYTHONPATH=tools/inventory:tools/map uv run python -m prototype_inventory {{args}}
 
 # Install the git hooks (.pre-commit-config.yaml) for pre-commit and pre-push. Run `mise install` first: the
 # hooks call the tools pinned in mise.toml. Git keeps hooks per clone, so every worktree of it shares them.
