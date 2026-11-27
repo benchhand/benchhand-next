@@ -5,20 +5,12 @@
       "schema_id": "https://benchhand.github.io/benchhand/contracts/policy/contribution.schema.json",
       "valid": [
         {
-          "rules": [
-            {
-              "rules_version": 1,
-              "kind": "rigor",
-              "rules": [
-                {
-                  "when": "policy.rigor == \"regulated\"",
-                  "then": [
-                    "record.requirements.all(r, r.standard.present)"
-                  ]
-                }
-              ]
+          "rules": {
+            "rigor": {
+              "file": "rules/rigor.rules.yaml",
+              "rules_version": 1
             }
-          ],
+          },
           "gates": {
             "design_freeze": {
               "human": [
@@ -28,20 +20,12 @@
           }
         },
         {
-          "rules": [
-            {
-              "rules_version": 1,
-              "kind": "dispatch",
-              "rules": [
-                {
-                  "when": "obligation.family.startsWith(\"process.welding.\")",
-                  "then": [
-                    "process.welding"
-                  ]
-                }
-              ]
+          "rules": {
+            "dispatch": {
+              "file": "rules/welding-dispatch.rules.yaml",
+              "rules_version": 1
             }
-          ]
+          }
         }
       ],
       "invalid": [
@@ -50,20 +34,12 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules": [
-              {
-                "rules_version": 1,
-                "kind": "rigor",
-                "rules": [
-                  {
-                    "when": "policy.rigor == \"regulated\"",
-                    "then": [
-                      "record.requirements.all(r, r.standard.present)"
-                    ]
-                  }
-                ]
+            "rules": {
+              "rigor": {
+                "file": "rules/rigor.rules.yaml",
+                "rules_version": 1
               }
-            ],
+            },
             "gates": {
               "design_freeze": {
                 "human": [
@@ -79,9 +55,9 @@
           "mutation": "wrong-type",
           "pointer": "/rules",
           "instance": {
-            "rules": {
-              "not": "an-array"
-            },
+            "rules": [
+              "not-an-object"
+            ],
             "gates": {
               "design_freeze": {
                 "human": [
@@ -102,20 +78,12 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules": [
-              {
-                "rules_version": 1,
-                "kind": "dispatch",
-                "rules": [
-                  {
-                    "when": "obligation.family.startsWith(\"process.welding.\")",
-                    "then": [
-                      "process.welding"
-                    ]
-                  }
-                ]
+            "rules": {
+              "dispatch": {
+                "file": "rules/welding-dispatch.rules.yaml",
+                "rules_version": 1
               }
-            ],
+            },
             "x-conformance-unknown": true
           }
         },
@@ -124,9 +92,9 @@
           "mutation": "wrong-type",
           "pointer": "/rules",
           "instance": {
-            "rules": {
-              "not": "an-array"
-            }
+            "rules": [
+              "not-an-object"
+            ]
           }
         }
       ]

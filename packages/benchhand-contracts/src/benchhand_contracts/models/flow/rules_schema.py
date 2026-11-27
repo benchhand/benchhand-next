@@ -4,125 +4,115 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal
-from pydantic import ConfigDict, Field, StringConstraints
+from pydantic import ConfigDict, Field
 from benchhand_contracts.base import ContractModel
-from ..common import cel_schema
-from enum import Enum
 
 
-class ConditionalCheck(ContractModel):
+class RuleImport(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    check: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$")]
+    name: Annotated[str, Field(pattern="^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$")]
     """
-    A check id, such as static.changed_only
+    A qualified type name, such as benchhand.flow.Obligation
     """
-    when: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
+
+
+class RuleMatch(ContractModel):
+    """
+    One item: when condition holds, the list gives output. Without condition, the item always holds
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    condition: Annotated[
+        str | None, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
+    ] = None
     """
     A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
     """
-
-
-class DispatchRule(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    when: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
+    output: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
     """
     A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
     """
-    then: Annotated[
-        list[Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$")]],
-        Field(min_length=1),
-    ]
+    explanation: Annotated[
+        str | None, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
+    ] = None
+    """
+    Why this item gave its output: a CEL expression that gives a string
+    """
 
 
-class Then(Enum):
-    f0 = "F0"
-    f1 = "F1"
-    f2 = "F2"
-    f3 = "F3"
+class Rule(ContractModel):
+    """
+    The one rule of the list: an ordered, first-match list of items
+    """
 
-
-class FidelityRule(ContractModel):
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    when: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
+    id: Annotated[str | None, Field(pattern="^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$")] = None
     """
-    A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+    A name such as checks_by_iteration or prototype.dispatch
     """
-    then: Then
+    description: Annotated[str | None, Field(min_length=1)] = None
+    match: Annotated[list[RuleMatch], Field(min_length=1)]
 
 
-class RigorRule(ContractModel):
+class RuleListReference(ContractModel):
+    """
+    A reference to one rule-list file
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    when: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
+    file: Annotated[str, Field(pattern="^([a-z0-9][a-z0-9_-]*/)*[a-z0-9][a-z0-9_-]*\\.rules\\.yaml$")]
     """
-    A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+    The file, relative to the file that refers to it
     """
-    then: Annotated[list[cel_schema.CelExpression], Field(min_length=1)]
-    """
-    One or more CEL expressions, each of which must hold
-    """
-
-
-class DispatchRules(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
     rules_version: Literal[1]
-    kind: Literal["dispatch"]
-    rules: list[DispatchRule]
-
-
-class FidelityRules(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    rules_version: Literal[1]
-    kind: Literal["fidelity"]
-    rules: list[FidelityRule]
-
-
-class RigorRules(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    rules_version: Literal[1]
-    kind: Literal["rigor"]
-    rules: list[RigorRule]
-
-
-class ChecksByIterationRule(ContractModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    when: Annotated[str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)]
     """
-    A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+    The version of the rule-list format the file is written in
     """
-    then: list[
-        ConditionalCheck | Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$")]
-    ]
 
 
-class ChecksByIterationRules(ContractModel):
+class FlowRuleLists(ContractModel):
+    """
+    The rule lists, one file of each kind. The key is the list's kind, which sets the type of its outputs
+    """
+
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    rules_version: Literal[1]
-    kind: Literal["checks_by_iteration"]
-    rules: list[ChecksByIterationRule]
+    checks_by_iteration: RuleListReference
+    dispatch: RuleListReference
+    fidelity: RuleListReference
+    rigor: RuleListReference
+
+
+class BenchhandRuleListNameRulesYamlRestrictedCelPolicyProvisional(ContractModel):
+    """
+    Provisional: one rule-list file, <name>.rules.yaml (ADR-0014), written in the cel-policy format (github.com/cel-expr/cel-policy), restricted to one flat first-match match block with no aggregate, no variables and no nested rule. The first item whose condition holds gives its output; an item without a condition always holds, and the last item must be unconditional, so every list gives a value. A CI step compiles each list with the pinned cel-go policy compiler into one checked expression, and it refuses the last-item rule and the excluded features; the schema checks the rest of the shape. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: a list of check ids, in run order, and [] runs none. dispatch: a handler id, or "unknown" for UNKNOWN coverage, never a pass. fidelity: the form-check fidelity, "F0" to "F3". rigor: a bool, true when the extra requirement under the project's rigor policy holds
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    name: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$")]
+    """
+    The policy's name
+    """
+    description: Annotated[str | None, Field(min_length=1)] = None
+    imports: Annotated[list[RuleImport] | None, Field(min_length=1)] = None
+    """
+    Type aliases for the expressions, as cel-policy imports them
+    """
+    rule: Rule

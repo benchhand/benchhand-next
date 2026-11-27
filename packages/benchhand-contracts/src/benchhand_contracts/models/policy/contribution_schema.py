@@ -6,8 +6,8 @@ from __future__ import annotations
 from benchhand_contracts.base import ContractModel
 from pydantic import ConfigDict, Field, StringConstraints
 from ..common import cel_schema
-from typing import Annotated
 from ..flow import rules_schema
+from typing import Annotated
 
 
 class PolicyGateRequirements(ContractModel):
@@ -33,28 +33,31 @@ class PolicyGateRequirements(ContractModel):
     """
 
 
-class BenchhandPolicyProviderContributionProvisional(ContractModel):
+class PolicyRuleLists(ContractModel):
     """
-    Provisional: what one policy provider adds to the flow (ADR-0014): rule lists in the shape of flow/<kind>.rules.yaml, and CEL requirements for the gates of flow.yaml. The merge order is fixed. A contributed rule list's rules come before the rules of the flow's list of the same kind, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads
+    The contributed rule-list files, by kind: at least one
     """
 
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    rules: Annotated[
-        list[
-            Annotated[
-                rules_schema.ChecksByIterationRules
-                | rules_schema.DispatchRules
-                | rules_schema.FidelityRules
-                | rules_schema.RigorRules,
-                Field(discriminator="kind"),
-            ]
-        ]
-        | None,
-        Field(min_length=1),
-    ] = None
+    checks_by_iteration: rules_schema.RuleListReference | None = None
+    dispatch: rules_schema.RuleListReference | None = None
+    fidelity: rules_schema.RuleListReference | None = None
+    rigor: rules_schema.RuleListReference | None = None
+
+
+class BenchhandPolicyProviderContributionProvisional(ContractModel):
+    """
+    Provisional: what one policy provider adds to the flow (ADR-0014): rule-list files, by kind, in the shape of flow/rules.schema.json, and CEL requirements for the gates of flow.yaml. Each file is relative to the provider's root. The lists of one kind are evaluated in a fixed order: the contributions in ascending provider name, then flow.yaml's own list. For checks_by_iteration, dispatch and fidelity the first list whose output isn't the kind's no-match value gives the value; the no-match values are [], "unknown" and "none", and a contributed list ends with its kind's. For rigor every list must give true. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads. The owner has yet to confirm this order
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    rules: PolicyRuleLists | None = None
     gates: Annotated[
         dict[Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")], PolicyGateRequirements] | None,
         Field(min_length=1),

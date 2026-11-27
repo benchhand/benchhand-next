@@ -2,86 +2,81 @@
 // Source: contracts/flow/rules.tsp
 
 /**
- * Provisional: one rule-list file, flow/<kind>.rules.yaml (ADR-0014). A rule list replaces a decision table: an ordered, first-match list of {when, then} rules, where the first rule whose when holds gives the value. kind names the list and decides the shape of then. checks_by_iteration gives the checks to run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order; no match runs none. dispatch gives the process-check handlers for an obligation, from its process, operation and material; no match means UNKNOWN coverage, never a pass. fidelity gives the form-check fidelity at a stage. rigor gives requirements that hold as well as a gate's own under a rigor policy such as regulated
+ * A name such as checks_by_iteration or prototype.dispatch
  */
-export type BenchhandRuleListFlowKindRulesYamlProvisional =
-  ChecksByIterationRules | DispatchRules | FidelityRules | RigorRules;
-/**
- * A check that always runs when its rule matches, or one that also needs its own condition, such as being stale
- */
-export type CheckSelection = CheckId | ConditionalCheck;
-/**
- * A check id, such as static.changed_only
- */
-export type CheckId = string;
-/**
- * A process-check handler id, such as process.fdm
- */
-export type HandlerId = string;
-/**
- * One or more CEL expressions, each of which must hold
- *
- * @minItems 1
- *
- * Items: A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
- */
-export type CelExpressions = [string, ...string[]];
+export type RuleName = string;
+export type RuleListFile = string;
 
-export interface ChecksByIterationRules {
-  rules_version: 1;
-  kind: "checks_by_iteration";
-  rules: ChecksByIterationRule[];
-}
-export interface ChecksByIterationRule {
+/**
+ * Provisional: one rule-list file, <name>.rules.yaml (ADR-0014), written in the cel-policy format (github.com/cel-expr/cel-policy), restricted to one flat first-match match block with no aggregate, no variables and no nested rule. The first item whose condition holds gives its output; an item without a condition always holds, and the last item must be unconditional, so every list gives a value. A CI step compiles each list with the pinned cel-go policy compiler into one checked expression, and it refuses the last-item rule and the excluded features; the schema checks the rest of the shape. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: a list of check ids, in run order, and [] runs none. dispatch: a handler id, or "unknown" for UNKNOWN coverage, never a pass. fidelity: the form-check fidelity, "F0" to "F3". rigor: a bool, true when the extra requirement under the project's rigor policy holds
+ */
+export interface BenchhandRuleListNameRulesYamlRestrictedCelPolicyProvisional {
   /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   * The policy's name
    */
-  when: string;
-  then: CheckSelection[];
-}
-export interface ConditionalCheck {
-  check: CheckId;
+  name: string;
+  description?: string;
   /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   * Type aliases for the expressions, as cel-policy imports them
+   *
+   * @minItems 1
    */
-  when: string;
+  imports?: [RuleImport, ...RuleImport[]];
+  rule: Rule;
 }
-export interface DispatchRules {
-  rules_version: 1;
-  kind: "dispatch";
-  rules: DispatchRule[];
-}
-export interface DispatchRule {
+export interface RuleImport {
   /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   * A qualified type name, such as benchhand.flow.Obligation
    */
-  when: string;
+  name: string;
+}
+/**
+ * The one rule of the list: an ordered, first-match list of items
+ */
+export interface Rule {
+  id?: RuleName;
+  description?: string;
   /**
    * @minItems 1
    */
-  then: [HandlerId, ...HandlerId[]];
+  match: [RuleMatch, ...RuleMatch[]];
 }
-export interface FidelityRules {
-  rules_version: 1;
-  kind: "fidelity";
-  rules: FidelityRule[];
-}
-export interface FidelityRule {
+/**
+ * One item: when condition holds, the list gives output. Without condition, the item always holds
+ */
+export interface RuleMatch {
   /**
    * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
-  when: string;
-  then: "F0" | "F1" | "F2" | "F3";
-}
-export interface RigorRules {
-  rules_version: 1;
-  kind: "rigor";
-  rules: RigorRule[];
-}
-export interface RigorRule {
+  condition?: string;
   /**
    * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
-  when: string;
-  then: CelExpressions;
+  output: string;
+  /**
+   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
+   */
+  explanation?: string;
+}
+/**
+ * A reference to one rule-list file
+ */
+export interface RuleListReference {
+  /**
+   * The file, relative to the file that refers to it
+   */
+  file: string;
+  /**
+   * The version of the rule-list format the file is written in
+   */
+  rules_version: 1;
+}
+/**
+ * The rule lists, one file of each kind. The key is the list's kind, which sets the type of its outputs
+ */
+export interface FlowRuleLists {
+  checks_by_iteration: RuleListReference;
+  dispatch: RuleListReference;
+  fidelity: RuleListReference;
+  rigor: RuleListReference;
 }

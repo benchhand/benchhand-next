@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -11,36 +12,36 @@ from typing import Any
 import pytest
 import yaml
 from benchhand_contracts import violations
+from rule_lists import first_match
 
 CONTRACTS = "https://benchhand.github.io/benchhand/contracts/"
 FLOW_ID = f"{CONTRACTS}flow/flow.schema.json"
 RULES_ID = f"{CONTRACTS}flow/rules.schema.json"
 REQUEST_ID = f"{FLOW_ID}#/$defs/GateDecisionRequest"
 PROTOTYPE = Path(__file__).parent / "fixtures/flow/prototype-412b5d9"
-RULE_KINDS = {
-    "checks-by-iteration": "checks_by_iteration",
-    "dispatch": "dispatch",
-    "fidelity": "fidelity",
-    "rigor": "rigor",
-}
+RULE_KINDS = ("checks_by_iteration", "dispatch", "fidelity", "rigor")
+# The no-match value of each kind (docs/contract/policy.md): a contributed list ends with it, so the next list
+# is evaluated. rigor has none: every list must give true.
+NO_MATCH = {"checks_by_iteration": "[]", "dispatch": '"unknown"', "fidelity": '"none"'}
+# The obligation families the prototype's process-check producer owns (dispatch.py OWNED_PREFIXES and
+# OWNED_FAMILIES), minus physically_validated ones. The dispatch list sees only these.
+OWNED_DISPATCH_PREFIXES = ("process.", "purchase.", "route.")
+OWNED_DISPATCH_FAMILIES = frozenset({"optical.route"})
 CEL_REF = "../common/cel.schema.json#/$defs/CelExpression"
 CEL_LIST_REF = "../common/cel.schema.json#/$defs/CelExpressions"
 CEL_FIELDS = [
     ("flow", "/properties/void_scope"),
     ("flow", "/properties/reapproval_scope"),
     ("flow", "/$defs/FlowEdge/properties/guard"),
-    ("rules", "/$defs/ChecksByIterationRule/properties/when"),
-    ("rules", "/$defs/ConditionalCheck/properties/when"),
-    ("rules", "/$defs/DispatchRule/properties/when"),
-    ("rules", "/$defs/FidelityRule/properties/when"),
-    ("rules", "/$defs/RigorRule/properties/when"),
+    ("rules", "/$defs/RuleMatch/properties/condition"),
+    ("rules", "/$defs/RuleMatch/properties/output"),
+    ("rules", "/$defs/RuleMatch/properties/explanation"),
 ]
 CEL_LISTS = [
     ("flow", "/$defs/FlowSingleHumanGate/properties/requires/properties/human"),
     ("flow", "/$defs/FlowStagedGate/properties/requires/properties/provisional"),
     ("flow", "/$defs/FlowStagedGate/properties/requires/properties/full"),
     ("flow", "/$defs/FlowStagedGate/properties/requires/properties/human"),
-    ("rules", "/$defs/RigorRule/properties/then"),
 ]
 
 
@@ -48,8 +49,8 @@ def _prototype_flow() -> dict[str, Any]:
     return yaml.safe_load((PROTOTYPE / "flow.yaml").read_text())
 
 
-def _prototype_rules(name: str) -> dict[str, Any]:
-    return yaml.safe_load((PROTOTYPE / f"{name}.rules.yaml").read_text())
+def _prototype_rules(kind: str) -> dict[str, Any]:
+    return yaml.safe_load((PROTOTYPE / _prototype_flow()["rules"][kind]["file"]).read_text())
 
 
 def _schema(name: str = "flow") -> dict[str, Any]:
@@ -80,23 +81,66 @@ def test_the_prototype_flow_validates() -> None:
     assert violations(FLOW_ID, _prototype_flow()) == []
 
 
-@pytest.mark.parametrize(("name", "kind"), RULE_KINDS.items())
-def test_each_prototype_rule_list_validates_as_its_kind(name: str, kind: str) -> None:
-    rules = _prototype_rules(name)
-    assert rules["kind"] == kind
-    assert violations(RULES_ID, rules) == []
+@pytest.mark.parametrize("kind", RULE_KINDS)
+def test_each_prototype_rule_list_validates(kind: str) -> None:
+    assert violations(RULES_ID, _prototype_rules(kind)) == []
 
 
-def test_a_rule_whose_then_belongs_to_another_kind_is_refused() -> None:
+@pytest.mark.parametrize("kind", RULE_KINDS)
+def test_each_prototype_rule_list_ends_with_an_unconditional_item(kind: str) -> None:
+    # The CI policy compiler refuses a list whose last item has a condition; the schema can't say "last".
+    *_, last = _prototype_rules(kind)["rule"]["match"]
+    assert last.get("condition", "true") == "true"
+
+
+@pytest.mark.parametrize("kind", ["dispatch", "checks_by_iteration"])
+def test_a_flow_list_gives_its_no_match_value_only_from_its_last_item(kind: str) -> None:
+    *items, last = _prototype_rules(kind)["rule"]["match"]
+    assert last["output"] == NO_MATCH[kind]
+    assert NO_MATCH[kind] not in [item["output"] for item in items if kind == "checks_by_iteration"]
+
+
+def test_the_flow_fidelity_list_never_gives_the_contribution_only_none() -> None:
+    outputs = [item["output"] for item in _prototype_rules("fidelity")["rule"]["match"]]
+    assert NO_MATCH["fidelity"] not in outputs
+
+
+@pytest.mark.parametrize("key", ["kind", "rules_version", "rules"])
+def test_a_rule_list_file_no_longer_carries_its_kind_or_the_old_shape(key: str) -> None:
+    # flow.yaml's reference to the file carries kind and rules_version.
+    assert violations(RULES_ID, {**_prototype_rules("fidelity"), key: 1})
+
+
+@pytest.mark.parametrize("feature", ["aggregate", "variables"])
+def test_a_rule_list_outside_the_restricted_profile_is_refused(feature: str) -> None:
     fidelity = _prototype_rules("fidelity")
-    fidelity["rules"][0]["then"] = ["process.fdm"]
+    fidelity["rule"][feature] = []
     assert violations(RULES_ID, fidelity)
 
 
-def test_a_dispatch_rule_names_at_least_one_handler() -> None:
-    dispatch = _prototype_rules("dispatch")
-    dispatch["rules"][0]["then"] = []
-    assert violations(RULES_ID, dispatch)
+def test_a_nested_rule_is_refused() -> None:
+    fidelity = _prototype_rules("fidelity")
+    fidelity["rule"]["match"][0] = {"condition": "true", "rule": {"match": [{"output": '"F1"'}]}}
+    assert violations(RULES_ID, fidelity)
+
+
+def test_a_match_item_needs_an_output() -> None:
+    fidelity = _prototype_rules("fidelity")
+    del fidelity["rule"]["match"][0]["output"]
+    assert violations(RULES_ID, fidelity)
+
+
+def test_the_flow_names_one_rule_list_of_each_kind() -> None:
+    assert _schema()["properties"]["rules"]["$ref"] == "rules.schema.json#/$defs/FlowRuleLists"
+    assert sorted(_schema("rules")["$defs"]["FlowRuleLists"]["required"]) == sorted(RULE_KINDS)
+    flow = _prototype_flow()
+    del flow["rules"]["rigor"]
+    assert violations(FLOW_ID, flow)
+
+
+def test_the_prototype_flow_names_its_rule_files() -> None:
+    for reference in _prototype_flow()["rules"].values():
+        assert (PROTOTYPE / reference["file"]).is_file()
 
 
 def test_the_prototype_flow_has_every_stage_and_its_gates() -> None:
@@ -200,3 +244,213 @@ def test_a_quote_of_only_whitespace_is_no_answer(quote: str) -> None:
     assert [violation.pointer for violation in violations(REQUEST_ID, {**_request(), "quote": quote})] == [
         "/quote"
     ]
+
+
+# The prototype's check sets per iteration (skills/cad-flow/references/flow.md, "Checks by iteration"),
+# as (case, iteration, stage, activation overrides, expected checks in run order).
+STAGES = ("ground", "intent", "specify", "concept", "layout", "parts", "detail")
+STAGES += ("bom", "analysis", "critique", "reconcile", "design_freeze", "release")
+JOINT = {"version": {"has_independent_joint": True, "git_commit": True}}
+CHECKS_BY_ITERATION = [
+    (
+        "inner, layout",
+        "inner",
+        "layout",
+        {},
+        ["validate", "scratch.build", "form_check.unit", "evidence.check_scratch"],
+    ),
+    ("inner, concept, before L1", "inner", "concept", {}, ["validate", "evidence.check_scratch"]),
+    (
+        "inner, detail, a moving pair changed and a visibility binding",
+        "inner",
+        "detail",
+        {
+            "unit": {"moving_pairs_changed": True, "role": "cad-part-designer"},
+            "record": {"requirements": [{"binds_visibility": True}]},
+        },
+        ["validate", "scratch.build", "form_check.unit", "evidence.check_scratch", "fits.stackup"]
+        + ["drawings.completeness_unit", "sweep.smoke_changed", "render.visibility"],
+    ),
+    (
+        "inner, analysis, an analyst",
+        "inner",
+        "analysis",
+        {"unit": {"moving_pairs_changed": False, "role": "cad-analyst"}},
+        ["validate", "scratch.build", "form_check.unit", "evidence.check_scratch", "fea.smoke_coarse"],
+    ),
+    (
+        "commit, parts, a joint, at a git commit",
+        "commit",
+        "parts",
+        JOINT,
+        ["validate", "build", "static.changed_only", "sweep.smoke_changed", "render.views"]
+        + ["motion.default_render", "bom.reconcile", "recheck.stamp"],
+    ),
+    (
+        "commit, detail, stale form, drawings and sourcing",
+        "commit",
+        "detail",
+        {"stale": [{"family": "form", "changed_part": True}, {"family": "drawing"}, {"family": "sourcing"}]},
+        ["validate", "build", "form_check.changed", "static.changed_only", "render.views", "bom.reconcile"]
+        + ["fits.stackup", "drawings.parts", "sourcing.selection"],
+    ),
+    (
+        "provisional, a joint",
+        "provisional",
+        "layout",
+        JOINT,
+        ["validate.result", "render.visibility_result", "motion.default_render_result", "bom.result"]
+        + ["fits.stackup_result", "form_check.result", "static.result", "sweep.smoke_result"]
+        + ["evidence.check_stage", "evidence.check_stage_after_advance"],
+    ),
+    *(
+        (
+            f"full, {stage}",
+            "full",
+            stage,
+            {},
+            ["validate", "static.all_pairs", "form_check.due", "motion.default_render", "bom.reconcile"]
+            + ["fits.stackup", "sweep.full", *extra, "evidence.check", "recheck.stamp"],
+        )
+        for stage, extra in [
+            ("layout", []),
+            ("parts", ["sourcing.selection"]),
+            ("detail", ["drawings.all"]),
+            ("analysis", ["fea.all_cases"]),
+        ]
+    ),
+    (
+        "full, reconcile",
+        "full",
+        "reconcile",
+        {},
+        ["validate", "static.all_pairs", "form_check.due", "motion.default_render", "bom.reconcile"]
+        + ["fits.stackup", "fea.stale_cases", "evidence.check", "recheck.stamp"],
+    ),
+    (
+        "design freeze, a stale sweep",
+        "design_freeze",
+        "design_freeze",
+        {"stale": [{"family": "sweep"}]},
+        ["validate", "bom.reconcile", "fits.stackup", "evidence.check", "recheck.stamp", "sweep.full"],
+    ),
+    (
+        "design freeze, stale drawings and FEA",
+        "design_freeze",
+        "design_freeze",
+        {"stale": [{"family": "drawing"}, {"family": "fea"}]},
+        ["validate", "bom.reconcile", "fits.stackup", "evidence.check", "recheck.stamp", "drawings.all"]
+        + ["fea.stale_cases"],
+    ),
+    ("release, before the approval", "release", "release", {}, []),
+    (
+        "release, approved",
+        "release",
+        "release",
+        {"gates": {"release": {"approved": True}}},
+        ["validate", "bom.reconcile", "build_guide", "release.seal"],
+    ),
+]
+# What an output names besides check ids: stage names, evidence families and agent roles.
+NOT_CHECK_IDS = {*STAGES, "form", "drawing", "sourcing", "sweep", "fea", "cad-analyst"}
+
+
+def _checks_activation(iteration: str, stage: str, overrides: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "iteration": iteration,
+        "stage": stage,
+        "stage_order": {name: index for index, name in enumerate(STAGES)},
+        "unit": {"moving_pairs_changed": False, "role": "cad-part-designer"},
+        "record": {"requirements": []},
+        "stale": [],
+        "version": {"has_independent_joint": False, "git_commit": False},
+        "gates": {"release": {"approved": False}},
+        **overrides,
+    }
+
+
+@pytest.mark.parametrize(
+    ("iteration", "stage", "overrides", "expected"),
+    [case[1:] for case in CHECKS_BY_ITERATION],
+    ids=[case[0] for case in CHECKS_BY_ITERATION],
+)
+def test_the_prototype_checks_by_iteration_list_gives_the_prototypes_checks(
+    iteration: str, stage: str, overrides: dict[str, Any], expected: list[str]
+) -> None:
+    rule_list = _prototype_rules("checks_by_iteration")
+    assert first_match(rule_list, _checks_activation(iteration, stage, overrides)) == expected
+
+
+@pytest.mark.parametrize("iteration", sorted({case[1] for case in CHECKS_BY_ITERATION}))
+def test_the_prototype_checks_by_iteration_list_names_only_the_prototypes_check_ids(iteration: str) -> None:
+    # Without evaluating: every literal in the iteration's output is a check id the cases expect, or a name.
+    items = _prototype_rules("checks_by_iteration")["rule"]["match"]
+    named = {
+        literal
+        for item in items
+        if f'iteration == "{iteration}"' in item.get("condition", "")
+        for literal in re.findall(r'"([^"]*)"', item["output"])
+    }
+    expected = {check for case in CHECKS_BY_ITERATION if case[1] == iteration for check in case[4]}
+    assert named - NOT_CHECK_IDS == expected
+
+
+DISPATCH = [
+    ("process.fdm.orientation", {"kind": "fdm"}, "process.fdm.orientation"),
+    ("process.waterjet.edge", {"kind": "waterjet"}, "process.waterjet.edge"),
+    ("process.moulding.draft", {"kind": "moulding"}, "process.moulding.draft"),
+    ("process.fdm.orientation", {"kind": "cnc"}, "unknown"),
+    ("process.fdm.orientation", None, "unknown"),
+    ("process.fdm.overhang", {"kind": "fdm"}, "unknown"),
+    ("process.fdm.coverage", {"kind": "fdm"}, "unknown"),
+    ("process.welding.coverage", {"kind": "welding"}, "unknown"),
+    ("purchase.rating", None, "purchase.rating"),
+    ("purchase.price", None, "unknown"),
+    ("route.operation_plan", None, "route.operation_plan"),
+    ("optical.route", None, "optical.route"),
+]
+
+
+@pytest.mark.parametrize(("family", "operation", "handler"), DISPATCH)
+def test_the_prototype_dispatch_list_follows_handler_for(
+    family: str, operation: dict[str, str] | None, handler: str
+) -> None:
+    # dispatch.py handler_for: the operation's kind must match a process family, and the check must be in
+    # that kind's table; anything else, and every coverage obligation, is UNKNOWN.
+    obligation = {"family": family, **({"operation": operation} if operation else {})}
+    assert first_match(_prototype_rules("dispatch"), {"obligation": obligation}) == handler
+
+
+def test_every_dispatch_case_is_an_owned_obligation() -> None:
+    for family, _, _ in DISPATCH:
+        assert family in OWNED_DISPATCH_FAMILIES or family.startswith(OWNED_DISPATCH_PREFIXES)
+
+
+def test_the_prototype_dispatch_list_only_routes_owned_families() -> None:
+    families = re.findall(r'"([a-z_]+\.[a-z_.]+)"', yaml.safe_dump(_prototype_rules("dispatch")))
+    assert families
+    for family in families:
+        assert family in OWNED_DISPATCH_FAMILIES or family.startswith(OWNED_DISPATCH_PREFIXES)
+
+
+@pytest.mark.parametrize(
+    ("stage", "fidelity"),
+    [("concept", "F0"), ("layout", "F1"), ("parts", "F2"), ("detail", "F3"), ("analysis", "F3")],
+)
+def test_the_prototype_fidelity_list_gives_the_stage_fidelity(stage: str, fidelity: str) -> None:
+    stage_order = {name: index for index, name in enumerate(STAGES)}
+    assert first_match(_prototype_rules("fidelity"), {"stage": stage, "stage_order": stage_order}) == fidelity
+
+
+@pytest.mark.parametrize(
+    ("rigor", "turns_check_off", "holds"),
+    [("regulated", True, False), ("regulated", False, True), ("standard", True, True)],
+)
+def test_the_prototype_rigor_list_refuses_a_profile_that_turns_a_check_off_under_regulated(
+    rigor: str, turns_check_off: bool, holds: bool
+) -> None:
+    data = {
+        "policy": {"rigor": rigor},
+        "record": {"flow": {"profile": [{"turns_check_off": turns_check_off}]}},
+    }
+    assert first_match(_prototype_rules("rigor"), data) is holds

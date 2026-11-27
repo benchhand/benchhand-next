@@ -1,281 +1,208 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://benchhand.github.io/benchhand/contracts/flow/rules.schema.json",
-  "title": "benchhand rule list (flow/<kind>.rules.yaml), provisional",
-  "description": "Provisional: one rule-list file, flow/<kind>.rules.yaml (ADR-0014). A rule list replaces a decision table: an ordered, first-match list of {when, then} rules, where the first rule whose when holds gives the value. kind names the list and decides the shape of then. checks_by_iteration gives the checks to run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order; no match runs none. dispatch gives the process-check handlers for an obligation, from its process, operation and material; no match means UNKNOWN coverage, never a pass. fidelity gives the form-check fidelity at a stage. rigor gives requirements that hold as well as a gate's own under a rigor policy such as regulated",
+  "title": "benchhand rule list (<name>.rules.yaml, restricted cel-policy), provisional",
+  "description": "Provisional: one rule-list file, <name>.rules.yaml (ADR-0014), written in the cel-policy format (github.com/cel-expr/cel-policy), restricted to one flat first-match match block with no aggregate, no variables and no nested rule. The first item whose condition holds gives its output; an item without a condition always holds, and the last item must be unconditional, so every list gives a value. A CI step compiles each list with the pinned cel-go policy compiler into one checked expression, and it refuses the last-item rule and the excluded features; the schema checks the rest of the shape. The file doesn't say which list it is: the reference to it in flow.yaml, or in a policy contribution, carries its kind and rules_version. The kind sets the type of every output. checks_by_iteration: a list of check ids, in run order, and [] runs none. dispatch: a handler id, or \"unknown\" for UNKNOWN coverage, never a pass. fidelity: the form-check fidelity, \"F0\" to \"F3\". rigor: a bool, true when the extra requirement under the project's rigor policy holds",
   "x-status": "provisional",
   "x-version": "0.1.0",
-  "oneOf": [
-    {
-      "$ref": "#/$defs/ChecksByIterationRules"
-    },
-    {
-      "$ref": "#/$defs/DispatchRules"
-    },
-    {
-      "$ref": "#/$defs/FidelityRules"
-    },
-    {
-      "$ref": "#/$defs/RigorRules"
-    }
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "rule"
   ],
+  "properties": {
+    "name": {
+      "description": "The policy's name",
+      "$ref": "#/$defs/RuleName"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "imports": {
+      "description": "Type aliases for the expressions, as cel-policy imports them",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/RuleImport"
+      }
+    },
+    "rule": {
+      "$ref": "#/$defs/Rule"
+    }
+  },
   "examples": [
     {
-      "rules_version": 1,
-      "kind": "checks_by_iteration",
-      "rules": [
-        {
-          "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-          "then": [
-            "form_check",
-            "check_changed_only",
-            {
-              "check": "sweep.smoke_changed",
-              "when": "version.has_independent_joint"
-            }
-          ]
-        }
-      ]
+      "name": "checks_by_iteration",
+      "rule": {
+        "match": [
+          {
+            "condition": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
+            "output": "[\"form_check\", \"check_changed_only\"] + (version.has_independent_joint ? [\"sweep.smoke_changed\"] : [])"
+          },
+          {
+            "output": "[]"
+          }
+        ]
+      }
     },
     {
-      "rules_version": 1,
-      "kind": "dispatch",
-      "rules": [
-        {
-          "when": "obligation.process == \"fdm\"",
-          "then": [
-            "process.fdm"
-          ]
-        }
-      ]
+      "name": "dispatch",
+      "description": "The process-check handler for an obligation",
+      "rule": {
+        "id": "dispatch",
+        "match": [
+          {
+            "condition": "obligation.family == \"route.consistency\"",
+            "output": "\"route.consistency\""
+          },
+          {
+            "output": "\"unknown\"",
+            "explanation": "\"no handler for \" + obligation.family"
+          }
+        ]
+      }
     },
     {
-      "rules_version": 1,
-      "kind": "fidelity",
-      "rules": [
-        {
-          "when": "stage == \"parts\"",
-          "then": "F2"
-        }
-      ]
+      "name": "fidelity",
+      "rule": {
+        "match": [
+          {
+            "condition": "stage == \"parts\"",
+            "output": "\"F2\""
+          },
+          {
+            "condition": "true",
+            "output": "\"F0\""
+          }
+        ]
+      }
     },
     {
-      "rules_version": 1,
-      "kind": "rigor",
-      "rules": [
-        {
-          "when": "policy.rigor == \"regulated\"",
-          "then": [
-            "!record.flow.profile.exists(s, s.turns_check_off)"
-          ]
-        }
-      ]
+      "name": "rigor",
+      "rule": {
+        "match": [
+          {
+            "condition": "policy.rigor == \"regulated\"",
+            "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+          },
+          {
+            "output": "true"
+          }
+        ]
+      }
     }
   ],
   "$defs": {
-    "ChecksByIterationRules": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "rules_version",
-        "kind",
-        "rules"
-      ],
-      "properties": {
-        "rules_version": {
-          "const": 1
-        },
-        "kind": {
-          "const": "checks_by_iteration"
-        },
-        "rules": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/ChecksByIterationRule"
-          }
-        }
-      }
-    },
-    "DispatchRules": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "rules_version",
-        "kind",
-        "rules"
-      ],
-      "properties": {
-        "rules_version": {
-          "const": 1
-        },
-        "kind": {
-          "const": "dispatch"
-        },
-        "rules": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/DispatchRule"
-          }
-        }
-      }
-    },
-    "FidelityRules": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "rules_version",
-        "kind",
-        "rules"
-      ],
-      "properties": {
-        "rules_version": {
-          "const": 1
-        },
-        "kind": {
-          "const": "fidelity"
-        },
-        "rules": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/FidelityRule"
-          }
-        }
-      }
-    },
-    "RigorRules": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "rules_version",
-        "kind",
-        "rules"
-      ],
-      "properties": {
-        "rules_version": {
-          "const": 1
-        },
-        "kind": {
-          "const": "rigor"
-        },
-        "rules": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/RigorRule"
-          }
-        }
-      }
-    },
-    "CheckId": {
-      "description": "A check id, such as static.changed_only",
+    "RuleName": {
+      "description": "A name such as checks_by_iteration or prototype.dispatch",
       "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$"
     },
-    "HandlerId": {
-      "description": "A process-check handler id, such as process.fdm",
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*$"
-    },
-    "ChecksByIterationRule": {
+    "RuleImport": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "when",
-        "then"
+        "name"
       ],
       "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
-        },
-        "then": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/CheckSelection"
-          }
+        "name": {
+          "description": "A qualified type name, such as benchhand.flow.Obligation",
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$"
         }
       }
     },
-    "CheckSelection": {
-      "description": "A check that always runs when its rule matches, or one that also needs its own condition, such as being stale",
-      "anyOf": [
-        {
-          "$ref": "#/$defs/CheckId"
-        },
-        {
-          "$ref": "#/$defs/ConditionalCheck"
-        }
-      ]
-    },
-    "ConditionalCheck": {
+    "Rule": {
+      "description": "The one rule of the list: an ordered, first-match list of items",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "check",
-        "when"
+        "match"
       ],
       "properties": {
-        "check": {
-          "$ref": "#/$defs/CheckId"
+        "id": {
+          "$ref": "#/$defs/RuleName"
         },
-        "when": {
-          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
-        }
-      }
-    },
-    "DispatchRule": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "when",
-        "then"
-      ],
-      "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
+        "description": {
+          "type": "string",
+          "minLength": 1
         },
-        "then": {
+        "match": {
           "type": "array",
           "minItems": 1,
-          "uniqueItems": true,
           "items": {
-            "$ref": "#/$defs/HandlerId"
+            "$ref": "#/$defs/RuleMatch"
           }
         }
       }
     },
-    "FidelityRule": {
+    "RuleMatch": {
+      "description": "One item: when condition holds, the list gives output. Without condition, the item always holds",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "when",
-        "then"
+        "output"
       ],
       "properties": {
-        "when": {
+        "condition": {
           "$ref": "../common/cel.schema.json#/$defs/CelExpression"
         },
-        "then": {
-          "enum": [
-            "F0",
-            "F1",
-            "F2",
-            "F3"
-          ]
+        "output": {
+          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
+        },
+        "explanation": {
+          "description": "Why this item gave its output: a CEL expression that gives a string",
+          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
         }
       }
     },
-    "RigorRule": {
+    "RuleListReference": {
+      "description": "A reference to one rule-list file",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "when",
-        "then"
+        "file",
+        "rules_version"
       ],
       "properties": {
-        "when": {
-          "$ref": "../common/cel.schema.json#/$defs/CelExpression"
+        "file": {
+          "description": "The file, relative to the file that refers to it",
+          "$ref": "#/$defs/RuleListFile"
         },
-        "then": {
-          "$ref": "../common/cel.schema.json#/$defs/CelExpressions"
+        "rules_version": {
+          "description": "The version of the rule-list format the file is written in",
+          "const": 1
+        }
+      }
+    },
+    "RuleListFile": {
+      "type": "string",
+      "pattern": "^([a-z0-9][a-z0-9_-]*/)*[a-z0-9][a-z0-9_-]*\\.rules\\.yaml$"
+    },
+    "FlowRuleLists": {
+      "description": "The rule lists, one file of each kind. The key is the list's kind, which sets the type of its outputs",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks_by_iteration",
+        "dispatch",
+        "fidelity",
+        "rigor"
+      ],
+      "properties": {
+        "checks_by_iteration": {
+          "$ref": "#/$defs/RuleListReference"
+        },
+        "dispatch": {
+          "$ref": "#/$defs/RuleListReference"
+        },
+        "fidelity": {
+          "$ref": "#/$defs/RuleListReference"
+        },
+        "rigor": {
+          "$ref": "#/$defs/RuleListReference"
         }
       }
     }

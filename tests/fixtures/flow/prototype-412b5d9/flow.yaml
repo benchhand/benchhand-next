@@ -198,3 +198,11 @@ edges:
 void_scope: >-
   stage.index > voided.stage.index
   && stage.built_on == voided.version
+
+rules:
+  checks_by_iteration:
+    file: checks-by-iteration.rules.yaml
+    rules_version: 1
+  dispatch: {file: dispatch.rules.yaml, rules_version: 1}
+  fidelity: {file: fidelity.rules.yaml, rules_version: 1}
+  rigor: {file: rigor.rules.yaml, rules_version: 1}

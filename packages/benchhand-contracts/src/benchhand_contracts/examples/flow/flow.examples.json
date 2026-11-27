@@ -101,7 +101,25 @@
             }
           ],
           "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-          "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)"
+          "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
+          "rules": {
+            "checks_by_iteration": {
+              "file": "checks-by-iteration.rules.yaml",
+              "rules_version": 1
+            },
+            "dispatch": {
+              "file": "dispatch.rules.yaml",
+              "rules_version": 1
+            },
+            "fidelity": {
+              "file": "fidelity.rules.yaml",
+              "rules_version": 1
+            },
+            "rigor": {
+              "file": "rigor.rules.yaml",
+              "rules_version": 1
+            }
+          }
         }
       ],
       "invalid": [
@@ -205,7 +223,25 @@
               }
             ],
             "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-            "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)"
+            "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
+            "rules": {
+              "checks_by_iteration": {
+                "file": "checks-by-iteration.rules.yaml",
+                "rules_version": 1
+              },
+              "dispatch": {
+                "file": "dispatch.rules.yaml",
+                "rules_version": 1
+              },
+              "fidelity": {
+                "file": "fidelity.rules.yaml",
+                "rules_version": 1
+              },
+              "rigor": {
+                "file": "rigor.rules.yaml",
+                "rules_version": 1
+              }
+            }
           }
         },
         {
@@ -310,6 +346,24 @@
             ],
             "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
             "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
+            "rules": {
+              "checks_by_iteration": {
+                "file": "checks-by-iteration.rules.yaml",
+                "rules_version": 1
+              },
+              "dispatch": {
+                "file": "dispatch.rules.yaml",
+                "rules_version": 1
+              },
+              "fidelity": {
+                "file": "fidelity.rules.yaml",
+                "rules_version": 1
+              },
+              "rigor": {
+                "file": "rigor.rules.yaml",
+                "rules_version": 1
+              }
+            },
             "x-conformance-unknown": true
           }
         },
@@ -414,7 +468,25 @@
               }
             ],
             "void_scope": "stage.index > voided.stage.index && stage.built_on == voided.version",
-            "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)"
+            "reapproval_scope": "change.items.exists(c, c.kind == item.kind && c.id == item.id)",
+            "rules": {
+              "checks_by_iteration": {
+                "file": "checks-by-iteration.rules.yaml",
+                "rules_version": 1
+              },
+              "dispatch": {
+                "file": "dispatch.rules.yaml",
+                "rules_version": 1
+              },
+              "fidelity": {
+                "file": "fidelity.rules.yaml",
+                "rules_version": 1
+              },
+              "rigor": {
+                "file": "rigor.rules.yaml",
+                "rules_version": 1
+              }
+            }
           }
         }
       ]

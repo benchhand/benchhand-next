@@ -22,13 +22,16 @@ Without `hw/policy.yaml`, every gate asks and the rigor is `standard`. Migrate r
 
 A policy provider adds CEL to the flow without code:
 
-- rule lists in the shape of the flow's [`*.rules.yaml` files](flow.md#rule-lists)
+- rule-list files, by kind, in the shape of the flow's [`*.rules.yaml` files](flow.md#rule-lists). Each is a `{file, rules_version}` reference relative to the provider's root, and CI compiles it like the flow's own lists.
 - requirements for the `provisional`, `full` and `human` steps of a gate, by gate id.
 
-The merge order is fixed:
+Every compiled list ends with an unconditional item, so the interpreter can't put a contributed list's items in front of the flow's. It evaluates whole lists instead. The merge order:
 
-1. A contributed rule list's rules come before the rules of the flow's list of the same `kind`, so a contributed rule matches first.
-2. The interpreter takes the contributions in ascending order of provider name. Each contribution keeps its own rule order.
-3. A gate's contributed requirements hold as well as the requirements of `flow.yaml`. The interpreter checks the `flow.yaml` requirements first, then each provider's in the same provider order.
+1. The interpreter evaluates the lists of one kind in order: the contributions in ascending order of provider name, then the list in `flow.yaml`.
+2. For `checks_by_iteration`, `dispatch` and `fidelity`, the first list whose output isn't the kind's no-match value gives the value. The no-match values are `[]`, `"unknown"` and `"none"`, and a contributed list ends with its kind's value, so the next list is evaluated. A contributed list therefore replaces the flow's value whenever it matches, and a contributed `checks_by_iteration` list can't select "no checks".
+3. For `rigor`, every list must give `true`.
+4. A gate's contributed requirements hold as well as the requirements of `flow.yaml`. The interpreter checks the `flow.yaml` requirements first, then each provider's in the same provider order.
 
 When the flow loads, the interpreter refuses a requirement for a gate that `flow.yaml` doesn't declare, or for a step that the gate doesn't have.
+
+**Open for the owner:** this merge order and the three no-match values are a proposal. The owner confirms them at the Phase 1 gate, before Phase 2 builds the merge.

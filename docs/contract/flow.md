@@ -18,16 +18,27 @@ The schema checks one file's shape: every stage, at least one gate and at least 
 
 ## Rule lists
 
-Each rule list is a file of its own, `flow/<kind>.rules.yaml`, in the `flow/rules` shape (plan sections 2 and 5). `kind` names the list and sets the shape of `then`. `rules` is an ordered list of `{when, then}` rules, and the first rule whose `when` holds gives the value.
+Each rule list is a file of its own, `<name>.rules.yaml`, written in the [cel-policy](https://github.com/cel-expr/cel-policy) format and checked against the `flow/rules` schema (plan sections 2 and 5). benchhand supports a restricted profile:
 
-| `kind` | `then` | No match |
+- The top-level keys are `name`, `description`, `imports` and `rule`.
+- `rule` has `id`, `description` and `match` only: no `aggregate`, no `variables` and no nested `rule`.
+- Each `match` item has a `condition`, an `output` and an optional `explanation`, and each of them is a CEL expression. An item without a `condition` always holds.
+- The first item whose `condition` holds gives its `output`. The last item must be unconditional, so every list gives a value.
+
+CI compiles each list with the pinned cel-go policy compiler into one checked expression, and the host compares digests at load. The compile step also refuses a list whose last item has a condition and the features outside the profile; the schema can't check which item comes last.
+
+The file doesn't say which list it is. `flow.yaml` names one file of each kind under `rules`, as `{file, rules_version}` relative to `flow.yaml`. `rules_version` is the version of the rule-list format. The kind sets the type of every output:
+
+| Kind | Output | Last item gives |
 |---|---|---|
-| `checks_by_iteration` | the checks to run, in fail-fast order | no checks |
-| `dispatch` | the process-check handlers for an obligation | UNKNOWN coverage, never a pass |
-| `fidelity` | the form-check fidelity, `F0` to `F3` | no fidelity |
-| `rigor` | extra requirements under a rigor policy such as `regulated` | none |
+| `checks_by_iteration` | a list of check ids, in fail-fast run order | `[]`, no checks |
+| `dispatch` | a handler id, or `"unknown"` | `"unknown"`: UNKNOWN coverage, never a pass |
+| `fidelity` | the form-check fidelity, `"F0"` to `"F3"` | the fidelity of the other stages |
+| `rigor` | a bool, true when the extra requirement under the project's rigor policy holds | `true`, no extra requirement |
 
-A check in `checks_by_iteration` is either a check id or `{check, when}`. The second form runs only when its own `when` holds as well. Conditions such as "only when stale" and "once a joint exists" use it.
+A check that runs only under its own condition, such as "only when stale" or "once a joint exists", is concatenated into the output as `cond ? ["id"] : []`. A dispatch handler id is the obligation family that it judges, such as `process.fdm.orientation`. The dispatch list sees only the obligations that the process-check producer owns. The producer selects them, and the list has no rule for ownership.
+
+Three values are reserved as no-match values for [contributed lists](policy.md#provider-contributions): `[]`, `"unknown"` and `"none"`. A flow's own list gives `[]` or `"unknown"` only from its last item, and never gives `"none"`. The loader refuses a flow fidelity list that gives `"none"`.
 
 ## Gate decisions
 

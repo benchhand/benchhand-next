@@ -2,11 +2,6 @@
 // Source: contracts/policy/contribution.tsp
 
 /**
- * Provisional: one rule-list file, flow/<kind>.rules.yaml (ADR-0014). A rule list replaces a decision table: an ordered, first-match list of {when, then} rules, where the first rule whose when holds gives the value. kind names the list and decides the shape of then. checks_by_iteration gives the checks to run at an iteration (inner, commit, provisional, full, design_freeze, release) and stage, in run order; no match runs none. dispatch gives the process-check handlers for an obligation, from its process, operation and material; no match means UNKNOWN coverage, never a pass. fidelity gives the form-check fidelity at a stage. rigor gives requirements that hold as well as a gate's own under a rigor policy such as regulated
- */
-export type BenchhandRuleListFlowKindRulesYamlProvisional =
-  ChecksByIterationRules | DispatchRules | FidelityRules | RigorRules;
-/**
  * One or more CEL expressions, each of which must hold
  *
  * @minItems 1
@@ -16,13 +11,10 @@ export type BenchhandRuleListFlowKindRulesYamlProvisional =
 export type CelExpressions = [string, ...string[]];
 
 /**
- * Provisional: what one policy provider adds to the flow (ADR-0014): rule lists in the shape of flow/<kind>.rules.yaml, and CEL requirements for the gates of flow.yaml. The merge order is fixed. A contributed rule list's rules come before the rules of the flow's list of the same kind, so a contributed rule matches first; the contributions are taken in ascending provider name, each in its own order. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads
+ * Provisional: what one policy provider adds to the flow (ADR-0014): rule-list files, by kind, in the shape of flow/rules.schema.json, and CEL requirements for the gates of flow.yaml. Each file is relative to the provider's root. The lists of one kind are evaluated in a fixed order: the contributions in ascending provider name, then flow.yaml's own list. For checks_by_iteration, dispatch and fidelity the first list whose output isn't the kind's no-match value gives the value; the no-match values are [], "unknown" and "none", and a contributed list ends with its kind's. For rigor every list must give true. A gate's contributed requirements must hold as well as flow.yaml's, and are checked after them in the same provider order. A requirement for a step the gate doesn't have, or for a gate flow.yaml doesn't declare, is refused when the flow loads. The owner has yet to confirm this order
  */
 export interface BenchhandPolicyProviderContributionProvisional {
-  /**
-   * @minItems 1
-   */
-  rules?: [BenchhandRuleListFlowKindRulesYamlProvisional, ...BenchhandRuleListFlowKindRulesYamlProvisional[]];
+  rules?: PolicyRuleLists;
   /**
    * Requirements by the gate id flow.yaml declares
    */
@@ -30,71 +22,27 @@ export interface BenchhandPolicyProviderContributionProvisional {
     [k: string]: PolicyGateRequirements;
   };
 }
-export interface ChecksByIterationRules {
+/**
+ * The contributed rule-list files, by kind: at least one
+ */
+export interface PolicyRuleLists {
+  checks_by_iteration?: RuleListReference;
+  dispatch?: RuleListReference;
+  fidelity?: RuleListReference;
+  rigor?: RuleListReference;
+}
+/**
+ * A reference to one rule-list file
+ */
+export interface RuleListReference {
+  /**
+   * The file, relative to the file that refers to it
+   */
+  file: string;
+  /**
+   * The version of the rule-list format the file is written in
+   */
   rules_version: 1;
-  kind: "checks_by_iteration";
-  rules: ChecksByIterationRule[];
-}
-export interface ChecksByIterationRule {
-  /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
-   */
-  when: string;
-  /**
-   * Items: A check that always runs when its rule matches, or one that also needs its own condition, such as being stale
-   */
-  then: (string | ConditionalCheck)[];
-}
-export interface ConditionalCheck {
-  /**
-   * A check id, such as static.changed_only
-   */
-  check: string;
-  /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
-   */
-  when: string;
-}
-export interface DispatchRules {
-  rules_version: 1;
-  kind: "dispatch";
-  rules: DispatchRule[];
-}
-export interface DispatchRule {
-  /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
-   */
-  when: string;
-  /**
-   * @minItems 1
-   *
-   * Items: A process-check handler id, such as process.fdm
-   */
-  then: [string, ...string[]];
-}
-export interface FidelityRules {
-  rules_version: 1;
-  kind: "fidelity";
-  rules: FidelityRule[];
-}
-export interface FidelityRule {
-  /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
-   */
-  when: string;
-  then: "F0" | "F1" | "F2" | "F3";
-}
-export interface RigorRules {
-  rules_version: 1;
-  kind: "rigor";
-  rules: RigorRule[];
-}
-export interface RigorRule {
-  /**
-   * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
-   */
-  when: string;
-  then: CelExpressions;
 }
 /**
  * Extra requirements for the steps of one gate

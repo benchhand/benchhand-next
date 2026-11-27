@@ -5,77 +5,83 @@
       "schema_id": "https://benchhand.github.io/benchhand/contracts/flow/rules.schema.json",
       "valid": [
         {
-          "rules_version": 1,
-          "kind": "checks_by_iteration",
-          "rules": [
-            {
-              "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-              "then": [
-                "form_check",
-                "check_changed_only",
-                {
-                  "check": "sweep.smoke_changed",
-                  "when": "version.has_independent_joint"
-                }
-              ]
-            }
-          ]
+          "name": "checks_by_iteration",
+          "rule": {
+            "match": [
+              {
+                "condition": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
+                "output": "[\"form_check\", \"check_changed_only\"] + (version.has_independent_joint ? [\"sweep.smoke_changed\"] : [])"
+              },
+              {
+                "output": "[]"
+              }
+            ]
+          }
         },
         {
-          "rules_version": 1,
-          "kind": "dispatch",
-          "rules": [
-            {
-              "when": "obligation.process == \"fdm\"",
-              "then": [
-                "process.fdm"
-              ]
-            }
-          ]
+          "name": "dispatch",
+          "description": "The process-check handler for an obligation",
+          "rule": {
+            "id": "dispatch",
+            "match": [
+              {
+                "condition": "obligation.family == \"route.consistency\"",
+                "output": "\"route.consistency\""
+              },
+              {
+                "output": "\"unknown\"",
+                "explanation": "\"no handler for \" + obligation.family"
+              }
+            ]
+          }
         },
         {
-          "rules_version": 1,
-          "kind": "fidelity",
-          "rules": [
-            {
-              "when": "stage == \"parts\"",
-              "then": "F2"
-            }
-          ]
+          "name": "fidelity",
+          "rule": {
+            "match": [
+              {
+                "condition": "stage == \"parts\"",
+                "output": "\"F2\""
+              },
+              {
+                "condition": "true",
+                "output": "\"F0\""
+              }
+            ]
+          }
         },
         {
-          "rules_version": 1,
-          "kind": "rigor",
-          "rules": [
-            {
-              "when": "policy.rigor == \"regulated\"",
-              "then": [
-                "!record.flow.profile.exists(s, s.turns_check_off)"
-              ]
-            }
-          ]
+          "name": "rigor",
+          "rule": {
+            "match": [
+              {
+                "condition": "policy.rigor == \"regulated\"",
+                "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+              },
+              {
+                "output": "true"
+              }
+            ]
+          }
         }
       ],
       "invalid": [
         {
           "example": 0,
           "mutation": "remove-property",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "kind": "checks_by_iteration",
-            "rules": [
-              {
-                "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                "then": [
-                  "form_check",
-                  "check_changed_only",
-                  {
-                    "check": "sweep.smoke_changed",
-                    "when": "version.has_independent_joint"
-                  }
-                ]
-              }
-            ]
+            "rule": {
+              "match": [
+                {
+                  "condition": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
+                  "output": "[\"form_check\", \"check_changed_only\"] + (version.has_independent_joint ? [\"sweep.smoke_changed\"] : [])"
+                },
+                {
+                  "output": "[]"
+                }
+              ]
+            }
           }
         },
         {
@@ -83,60 +89,59 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules_version": 1,
-            "kind": "checks_by_iteration",
-            "rules": [
-              {
-                "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                "then": [
-                  "form_check",
-                  "check_changed_only",
-                  {
-                    "check": "sweep.smoke_changed",
-                    "when": "version.has_independent_joint"
-                  }
-                ]
-              }
-            ],
+            "name": "checks_by_iteration",
+            "rule": {
+              "match": [
+                {
+                  "condition": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
+                  "output": "[\"form_check\", \"check_changed_only\"] + (version.has_independent_joint ? [\"sweep.smoke_changed\"] : [])"
+                },
+                {
+                  "output": "[]"
+                }
+              ]
+            },
             "x-conformance-unknown": true
           }
         },
         {
           "example": 0,
           "mutation": "wrong-type",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "rules_version": "not-a-number",
-            "kind": "checks_by_iteration",
-            "rules": [
-              {
-                "when": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
-                "then": [
-                  "form_check",
-                  "check_changed_only",
-                  {
-                    "check": "sweep.smoke_changed",
-                    "when": "version.has_independent_joint"
-                  }
-                ]
-              }
-            ]
+            "name": 12345,
+            "rule": {
+              "match": [
+                {
+                  "condition": "stage in [\"parts\", \"detail\"] && iteration == \"commit\"",
+                  "output": "[\"form_check\", \"check_changed_only\"] + (version.has_independent_joint ? [\"sweep.smoke_changed\"] : [])"
+                },
+                {
+                  "output": "[]"
+                }
+              ]
+            }
           }
         },
         {
           "example": 1,
           "mutation": "remove-property",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "kind": "dispatch",
-            "rules": [
-              {
-                "when": "obligation.process == \"fdm\"",
-                "then": [
-                  "process.fdm"
-                ]
-              }
-            ]
+            "description": "The process-check handler for an obligation",
+            "rule": {
+              "id": "dispatch",
+              "match": [
+                {
+                  "condition": "obligation.family == \"route.consistency\"",
+                  "output": "\"route.consistency\""
+                },
+                {
+                  "output": "\"unknown\"",
+                  "explanation": "\"no handler for \" + obligation.family"
+                }
+              ]
+            }
           }
         },
         {
@@ -144,48 +149,63 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules_version": 1,
-            "kind": "dispatch",
-            "rules": [
-              {
-                "when": "obligation.process == \"fdm\"",
-                "then": [
-                  "process.fdm"
-                ]
-              }
-            ],
+            "name": "dispatch",
+            "description": "The process-check handler for an obligation",
+            "rule": {
+              "id": "dispatch",
+              "match": [
+                {
+                  "condition": "obligation.family == \"route.consistency\"",
+                  "output": "\"route.consistency\""
+                },
+                {
+                  "output": "\"unknown\"",
+                  "explanation": "\"no handler for \" + obligation.family"
+                }
+              ]
+            },
             "x-conformance-unknown": true
           }
         },
         {
           "example": 1,
           "mutation": "wrong-type",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "rules_version": "not-a-number",
-            "kind": "dispatch",
-            "rules": [
-              {
-                "when": "obligation.process == \"fdm\"",
-                "then": [
-                  "process.fdm"
-                ]
-              }
-            ]
+            "name": 12345,
+            "description": "The process-check handler for an obligation",
+            "rule": {
+              "id": "dispatch",
+              "match": [
+                {
+                  "condition": "obligation.family == \"route.consistency\"",
+                  "output": "\"route.consistency\""
+                },
+                {
+                  "output": "\"unknown\"",
+                  "explanation": "\"no handler for \" + obligation.family"
+                }
+              ]
+            }
           }
         },
         {
           "example": 2,
           "mutation": "remove-property",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "kind": "fidelity",
-            "rules": [
-              {
-                "when": "stage == \"parts\"",
-                "then": "F2"
-              }
-            ]
+            "rule": {
+              "match": [
+                {
+                  "condition": "stage == \"parts\"",
+                  "output": "\"F2\""
+                },
+                {
+                  "condition": "true",
+                  "output": "\"F0\""
+                }
+              ]
+            }
           }
         },
         {
@@ -193,46 +213,58 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules_version": 1,
-            "kind": "fidelity",
-            "rules": [
-              {
-                "when": "stage == \"parts\"",
-                "then": "F2"
-              }
-            ],
+            "name": "fidelity",
+            "rule": {
+              "match": [
+                {
+                  "condition": "stage == \"parts\"",
+                  "output": "\"F2\""
+                },
+                {
+                  "condition": "true",
+                  "output": "\"F0\""
+                }
+              ]
+            },
             "x-conformance-unknown": true
           }
         },
         {
           "example": 2,
           "mutation": "wrong-type",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "rules_version": "not-a-number",
-            "kind": "fidelity",
-            "rules": [
-              {
-                "when": "stage == \"parts\"",
-                "then": "F2"
-              }
-            ]
+            "name": 12345,
+            "rule": {
+              "match": [
+                {
+                  "condition": "stage == \"parts\"",
+                  "output": "\"F2\""
+                },
+                {
+                  "condition": "true",
+                  "output": "\"F0\""
+                }
+              ]
+            }
           }
         },
         {
           "example": 3,
           "mutation": "remove-property",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "kind": "rigor",
-            "rules": [
-              {
-                "when": "policy.rigor == \"regulated\"",
-                "then": [
-                  "!record.flow.profile.exists(s, s.turns_check_off)"
-                ]
-              }
-            ]
+            "rule": {
+              "match": [
+                {
+                  "condition": "policy.rigor == \"regulated\"",
+                  "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                },
+                {
+                  "output": "true"
+                }
+              ]
+            }
           }
         },
         {
@@ -240,34 +272,38 @@
           "mutation": "add-unknown-property",
           "pointer": "/x-conformance-unknown",
           "instance": {
-            "rules_version": 1,
-            "kind": "rigor",
-            "rules": [
-              {
-                "when": "policy.rigor == \"regulated\"",
-                "then": [
-                  "!record.flow.profile.exists(s, s.turns_check_off)"
-                ]
-              }
-            ],
+            "name": "rigor",
+            "rule": {
+              "match": [
+                {
+                  "condition": "policy.rigor == \"regulated\"",
+                  "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                },
+                {
+                  "output": "true"
+                }
+              ]
+            },
             "x-conformance-unknown": true
           }
         },
         {
           "example": 3,
           "mutation": "wrong-type",
-          "pointer": "/rules_version",
+          "pointer": "/name",
           "instance": {
-            "rules_version": "not-a-number",
-            "kind": "rigor",
-            "rules": [
-              {
-                "when": "policy.rigor == \"regulated\"",
-                "then": [
-                  "!record.flow.profile.exists(s, s.turns_check_off)"
-                ]
-              }
-            ]
+            "name": 12345,
+            "rule": {
+              "match": [
+                {
+                  "condition": "policy.rigor == \"regulated\"",
+                  "output": "!record.flow.profile.exists(s, s.turns_check_off)"
+                },
+                {
+                  "output": "true"
+                }
+              ]
+            }
           }
         }
       ]

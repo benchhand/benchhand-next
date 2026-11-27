@@ -9,6 +9,7 @@ from benchhand_contracts.base import ContractModel
 from ..common import cel_schema
 from ..record import common_schema, decision_schema
 from enum import Enum
+from . import rules_schema
 
 
 class Requires(ContractModel):
@@ -273,7 +274,7 @@ class FlowStages(ContractModel):
 
 class BenchhandFlowDefinitionFlowYamlProvisional(ContractModel):
     """
-    Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
+    Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
     """
 
     model_config = ConfigDict(
@@ -287,6 +288,10 @@ class BenchhandFlowDefinitionFlowYamlProvisional(ContractModel):
         Field(min_length=1),
     ]
     edges: Annotated[list[FlowEdge], Field(min_length=1)]
+    rules: rules_schema.FlowRuleLists
+    """
+    The rule-list files, by kind, each relative to flow.yaml
+    """
     void_scope: Annotated[
         str, Field(examples=['version.fast_checks.all(c, c.status == "pass")'], min_length=1)
     ]

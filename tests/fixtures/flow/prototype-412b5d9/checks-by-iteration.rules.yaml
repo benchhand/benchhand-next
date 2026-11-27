@@ -1,115 +1,89 @@
-# The prototype at 412b5d9, written in the flow/rules.schema.json shape.
-# "Checks by iteration": the first match per iteration and stage. A check
-# with its own when runs only if that holds too. The list order is the
-# fail-fast run order, cheapest first.
-rules_version: 1
-kind: checks_by_iteration
-rules:
-  - when: iteration == "inner" && stage == "layout"
-    then:
-      - validate
-      - scratch.build
-      - form_check.unit
-      - evidence.check_scratch
-      - check: sweep.smoke_changed
-        when: version.moving_pairs_changed
-      - check: render.visibility
-        when: record.requirements.exists(r, r.binds_visibility)
-  - when: >-
-      iteration == "inner"
-      && stage in ["parts", "detail", "reconcile"]
-    then:
-      - validate
-      - scratch.build
-      - form_check.unit
-      - evidence.check_scratch
-      - check: fits.stackup
-        when: stage == "detail"
-      - check: drawings.completeness_unit
-        when: stage == "detail"
-      - check: sweep.smoke_changed
-        when: version.moving_pairs_changed
-      - check: render.visibility
-        when: record.requirements.exists(r, r.binds_visibility)
-  - when: iteration == "inner" && stage == "analysis"
-    then:
-      - validate
-      - fea.smoke_coarse
-  - when: >-
-      iteration == "commit"
-      && stage in ["layout", "parts", "detail", "analysis", "reconcile"]
-    then:
-      - validate
-      - build
-      - static.changed_only
-      - check: bom.reconcile
-        when: stage.index >= stages.layout.index
-      - check: fits.stackup
-        when: stage.index >= stages.detail.index
-      - check: form_check.changed
-        when: stale.exists(s, s.family == "form" && s.changed)
-      - check: sweep.smoke_changed
-        when: version.has_independent_joint
-      - check: drawings.parts
-        when: >-
-          stage.index >= stages.detail.index
-          && stale.exists(s, s.family == "drawing")
-      - check: sourcing.selection
-        when: stale.exists(s, s.family == "sourcing")
-      - render.views
-      - check: motion.default_render
-        when: version.has_independent_joint
-      - recheck.stamp
-  - when: iteration == "provisional"
-    then:
-      - validate.result
-      - render.visibility_result
-      - check: motion.default_render_result
-        when: version.has_independent_joint
-      - bom.result
-      - fits.stackup_result
-      - form_check.result
-      - static.result
-      - sweep.smoke_result
-      - evidence.check_stage
-  - when: iteration == "full"
-    then:
-      - validate
-      - static.all_pairs
-      - form_check.due
-      - motion.default_render
-      - bom.reconcile
-      - fits.stackup
-      - check: sweep.full
-        when: >-
-          stage in ["layout", "analysis"]
-          || !version.full_sweep_carry_forward_proven
-      - check: drawings.all
-        when: stage == "detail"
-      - check: fea.all_cases
-        when: stage == "analysis"
-      - check: fea.stale_cases
-        when: stage == "reconcile" && stale.exists(s, s.family == "fea")
-      - check: sourcing.selection
-        when: stage in ["intent", "parts"]
-      - evidence.check
-      - recheck.stamp
-  - when: iteration == "design_freeze"
-    then:
-      - validate
-      - bom.reconcile
-      - fits.stackup
-      - evidence.check
-      - recheck.stamp
-      - check: sweep.full
-        when: stale.exists(s, s.family == "sweep")
-      - check: drawings.all
-        when: stale.exists(s, s.family == "drawing")
-      - check: fea.stale_cases
-        when: stale.exists(s, s.family == "fea")
-  - when: iteration == "release"
-    then:
-      - validate
-      - bom.reconcile
-      - build_guide
-      - release
+# The prototype at 412b5d9: skills/cad-flow/references/flow.md, "Checks by
+# iteration" and "Fail-fast check order", as a restricted cel-policy rule
+# list (flow/rules.schema.json). flow.yaml names it as the checks_by_iteration
+# list, so every output is a list of check ids in run order, and [] runs none.
+# A check that runs only under its own condition is concatenated in with
+# `cond ? [id] : []`. "Only when stale" reads the stale evidence families that
+# impact.py marks. Check arguments, such as drawing with jobs above 1 at L3,
+# are not expressible and are left out. The activation names are made up for
+# this test, as in flow.yaml.
+name: prototype.checks_by_iteration
+rule:
+  match:
+    # "Inner loop": a unit in its scratch workspace. The scratch build runs
+    # the form check on the unit's PNs and, today, the static check over
+    # every pair. The full sweep, the motion render, the integrated drawings
+    # and a separate all-pairs check never run here.
+    - condition: iteration == "inner"
+      output: >-
+        ["validate"]
+        + (stage_order[stage] >= stage_order["layout"]
+        ? ["scratch.build", "form_check.unit"] : [])
+        + ["evidence.check_scratch"]
+        + (stage == "detail"
+        ? ["fits.stackup", "drawings.completeness_unit"] : [])
+        + (unit.moving_pairs_changed ? ["sweep.smoke_changed"] : [])
+        + (record.requirements.exists(r, r.binds_visibility)
+        ? ["render.visibility"] : [])
+        + (unit.role == "cad-analyst" ? ["fea.smoke_coarse"] : [])
+    # "Commit (batch vN)", in the fail-fast order: build and validate, the
+    # form check, static --changed-only, the smoke sweep, the renders; then
+    # the record checks, and the stamp at a git commit of hw/.
+    - condition: iteration == "commit"
+      output: >-
+        ["validate", "build"]
+        + (stale.exists(s, s.family == "form" && s.changed_part)
+        ? ["form_check.changed"] : [])
+        + ["static.changed_only"]
+        + (version.has_independent_joint ? ["sweep.smoke_changed"] : [])
+        + ["render.views"]
+        + (version.has_independent_joint ? ["motion.default_render"] : [])
+        + (stage_order[stage] >= stage_order["layout"] ? ["bom.reconcile"] : [])
+        + (stage_order[stage] >= stage_order["detail"] ? ["fits.stackup"] : [])
+        + (stage_order[stage] >= stage_order["detail"]
+        && stale.exists(s, s.family == "drawing") ? ["drawings.parts"] : [])
+        + (stale.exists(s, s.family == "sourcing")
+        ? ["sourcing.selection"] : [])
+        + (version.git_commit ? ["recheck.stamp"] : [])
+    # "Provisional gate": it reads the commit results and runs no static or
+    # sweep check again. It checks the evidence for the gate's stage, and
+    # again after the decision advances flow.stage, because product.yaml is
+    # a record input and the check refuses the earlier packet.
+    - condition: iteration == "provisional"
+      output: >-
+        ["validate.result", "render.visibility_result"]
+        + (version.has_independent_joint
+        ? ["motion.default_render_result"] : [])
+        + ["bom.result", "fits.stackup_result", "form_check.result",
+        "static.result"]
+        + (version.has_independent_joint ? ["sweep.smoke_result"] : [])
+        + ["evidence.check_stage", "evidence.check_stage_after_advance"]
+    # "Full gate (approval)": fail-fast step 5 on the same vN. The full sweep
+    # runs at L1 to L4: a skip at L2 or L3 needs a hash-proven carry-forward,
+    # and no tool proves one yet.
+    - condition: iteration == "full"
+      output: >-
+        ["validate", "static.all_pairs", "form_check.due",
+        "motion.default_render", "bom.reconcile", "fits.stackup"]
+        + (stage in ["layout", "parts", "detail", "analysis"]
+        ? ["sweep.full"] : [])
+        + (stage == "detail" ? ["drawings.all"] : [])
+        + (stage == "analysis" ? ["fea.all_cases"] : [])
+        + (stage == "reconcile" ? ["fea.stale_cases"] : [])
+        + (stage in ["intent", "parts"] ? ["sourcing.selection"] : [])
+        + ["evidence.check", "recheck.stamp"]
+    # "Design freeze". build_guide.py may preview; it is not a check.
+    - condition: iteration == "design_freeze"
+      output: >-
+        ["validate", "bom.reconcile", "fits.stackup", "evidence.check",
+        "recheck.stamp"]
+        + (stale.exists(s, s.family == "sweep") ? ["sweep.full"] : [])
+        + (stale.exists(s, s.family == "drawing") ? ["drawings.all"] : [])
+        + (stale.exists(s, s.family == "fea") ? ["fea.stale_cases"] : [])
+    # "Release": the guide and the seal run only after the user approved the
+    # RELEASE gate ("After approval, seal"), so before it nothing runs;
+    # release.py runs the evidence check itself and refuses a release
+    # decision that isn't accepted.
+    - condition: iteration == "release" && gates.release.approved
+      output: '["validate", "bom.reconcile", "build_guide", "release.seal"]'
+    - output: "[]"

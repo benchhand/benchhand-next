@@ -22,20 +22,24 @@ def test_a_rigor_outside_standard_and_regulated_is_refused() -> None:
     assert [violation.pointer for violation in found] == ["/rigor"]
 
 
-def _rules(kind: str, *rules: dict[str, Any]) -> dict[str, Any]:
-    return {"rules_version": 1, "kind": kind, "rules": list(rules)}
+def _reference(file: str) -> dict[str, Any]:
+    return {"file": file, "rules_version": 1}
 
 
 @pytest.mark.parametrize(
     "contribution",
     [
         pytest.param({}, id="empty"),
-        pytest.param({"rules": []}, id="no-rule-list"),
+        pytest.param({"rules": {}}, id="no-rule-list"),
+        pytest.param({"rules": {"routing": _reference("routing.rules.yaml")}}, id="unknown-rule-list"),
+        pytest.param({"rules": {"dispatch": _reference("dispatch.yaml")}}, id="not-a-rules-file"),
         pytest.param(
-            {"rules": [_rules("dispatch", {"when": "true", "then": []})]}, id="dispatch-without-handlers"
+            {"rules": {"dispatch": _reference("../dispatch.rules.yaml")}}, id="outside-the-provider"
         ),
-        pytest.param({"rules": [_rules("fidelity", {"when": "true", "then": "F4"})]}, id="unknown-fidelity"),
-        pytest.param({"rules": [_rules("routing", {"when": "true", "then": ["x"]})]}, id="unknown-rule-list"),
+        pytest.param(
+            {"rules": {"dispatch": {**_reference("dispatch.rules.yaml"), "rules_version": 2}}},
+            id="unknown-version",
+        ),
         pytest.param({"gates": {"parts": {}}}, id="gate-without-step"),
         pytest.param({"gates": {"parts": {"review": ["true"]}}}, id="unknown-step"),
         pytest.param({"gates": {"Parts": {"human": ["true"]}}}, id="bad-gate-id"),
@@ -48,9 +52,7 @@ def test_a_contribution_outside_the_flow_shapes_is_refused(contribution: dict[st
 
 def test_a_contribution_adds_rule_lists_and_gate_requirements() -> None:
     contribution = {
-        "rules": [
-            _rules("checks_by_iteration", {"when": 'iteration == "full"', "then": ["static.all_pairs"]})
-        ],
+        "rules": {"checks_by_iteration": _reference("rules/checks.rules.yaml")},
         "gates": {"release": {"human": ["record.frozen.present"]}},
     }
     assert violations(CONTRIBUTION_ID, contribution) == []

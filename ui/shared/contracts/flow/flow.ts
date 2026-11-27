@@ -25,7 +25,7 @@ export type CelExpressions1 = [string, ...string[]];
 export type ApprovedItemKind = "concept" | "envelope" | "interface" | "joint" | "part";
 
 /**
- * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json). A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
+ * Provisional: the flow definition, flow.yaml (ADR-0014). The stage and gate graph is data, and every condition in it is a CEL expression: the edge guards, the gate requirements and the VOID cascade scope. The rule lists are files of their own (flow/rules.schema.json), and rules names them by kind. A gate of kind single-human advances its edge when the user approves it; a gate of kind provisional+full+human advances its edge at the provisional gate, and its human gate opens after the full check. The schema checks the shape of one file: every stage of the record's stage enum, once, with at least one gate and one edge. The flow loader checks what refers across the file when it loads it: it refuses a duplicate YAML key, two gates with the same id, an edge that names a gate the file doesn't declare, and a CEL expression that doesn't compile or type-check
  */
 export interface BenchhandFlowDefinitionFlowYamlProvisional {
   flow_version: 1;
@@ -38,6 +38,7 @@ export interface BenchhandFlowDefinitionFlowYamlProvisional {
    * @minItems 1
    */
   edges: [FlowEdge, ...FlowEdge[]];
+  rules: FlowRuleLists;
   /**
    * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
@@ -183,6 +184,28 @@ export interface FlowEdge {
    * A CEL expression. The interpreter compiles and type-checks it at load, against activation types generated from the contracts; the schema only checks that it is a non-empty string. x-cel is a readable annotation that nothing depends on
    */
   guard?: string;
+}
+/**
+ * The rule-list files, by kind, each relative to flow.yaml
+ */
+export interface FlowRuleLists {
+  checks_by_iteration: RuleListReference;
+  dispatch: RuleListReference;
+  fidelity: RuleListReference;
+  rigor: RuleListReference;
+}
+/**
+ * A reference to one rule-list file
+ */
+export interface RuleListReference {
+  /**
+   * The file, relative to the file that refers to it
+   */
+  file: string;
+  /**
+   * The version of the rule-list format the file is written in
+   */
+  rules_version: 1;
 }
 export interface GateDecisionRequest {
   /**

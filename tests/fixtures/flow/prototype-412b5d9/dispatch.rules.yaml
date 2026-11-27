@@ -1,39 +1,126 @@
-# The prototype at 412b5d9, written in the flow/rules.schema.json shape.
-# process_checks/dispatch.py handler_for: a route family, a purchase
-# family, or a process family of the part's own process kind. No match is
-# UNKNOWN coverage.
-rules_version: 1
-kind: dispatch
-rules:
-  - when: obligation.level == "physically_validated"
-    then: [physical.ledger]
-  - when: >-
-      obligation.family in
-      ["route.consistency", "route.operation_plan", "optical.route"]
-    then: [route]
-  - when: obligation.family.startsWith("purchase.")
-    then: [process.purchased]
-  - when: >-
-      obligation.family.startsWith("process.fdm.")
-      && part.process == "fdm"
-    then: [process.fdm]
-  - when: >-
-      obligation.family.startsWith("process.resin.")
-      && part.process == "resin"
-    then: [process.resin]
-  - when: >-
-      obligation.family.startsWith("process.cnc.")
-      && part.process == "cnc"
-    then: [process.cnc]
-  - when: >-
-      obligation.family.startsWith("process.laser.")
-      && part.process == "laser"
-    then: [process.laser]
-  - when: >-
-      obligation.family.startsWith("process.casting.")
-      && part.process == "casting"
-    then: [process.casting]
-  - when: >-
-      obligation.family.startsWith("process.drilling.")
-      && part.operations.exists(o, o == "drilling")
-    then: [process.drilling]
+# The prototype at 412b5d9: skills/cad-design/scripts/process_checks/
+# dispatch.py, handler_for and _result, as a restricted cel-policy rule list
+# (flow/rules.schema.json). flow.yaml names it as the dispatch list, so every
+# output is a handler id, or "unknown" for UNKNOWN coverage, never a pass.
+# A handler id is the obligation family it judges, as the prototype's TABLE
+# keys it: process.<kind>.<check>, purchase.<check>, route.<check> and
+# optical.route.
+#
+# The list sees only the obligations the producer owns (dispatch.py
+# expected/owned): OWNED_DISPATCH_PREFIXES and OWNED_DISPATCH_FAMILIES in
+# tests/test_flow_contract.py, except physically_validated ones, which the
+# ledger holds. Ownership is the producer's input, not a rule of this list.
+#
+# A process.<kind>.<check> handler runs only when the operation the
+# obligation belongs to is of that kind (ctx.op.kind), and only for the
+# checks that kind's handler table holds. No table holds a coverage check,
+# so a process.<kind>.coverage obligation reaches the last item and is
+# UNKNOWN, a coverage gap. The activation names are made up for
+# this test, as in flow.yaml.
+name: prototype.dispatch
+rule:
+  match:
+    - condition: >-
+        obligation.family in
+        ["route.consistency", "route.operation_plan", "optical.route"]
+      output: obligation.family
+    - condition: >-
+        obligation.family in ["purchase.identity", "purchase.rating",
+        "purchase.dimensions", "purchase.mounting", "purchase.availability"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "fdm"
+        && obligation.family in ["process.fdm.orientation",
+        "process.fdm.geometry", "process.fdm.support",
+        "process.fdm.thermal_distortion"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "resin"
+        && obligation.family in ["process.resin.orientation",
+        "process.resin.geometry", "process.resin.support",
+        "process.resin.drainage", "process.resin.post_cure"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "cnc"
+        && obligation.family in ["process.cnc.stock", "process.cnc.setup",
+        "process.cnc.access", "process.cnc.features",
+        "process.cnc.precision"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "laser"
+        && obligation.family in ["process.laser.material",
+        "process.laser.kerf", "process.laser.features",
+        "process.laser.thermal", "process.laser.nesting"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "waterjet"
+        && obligation.family in ["process.waterjet.material",
+        "process.waterjet.kerf", "process.waterjet.features",
+        "process.waterjet.edge"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "plasma"
+        && obligation.family in ["process.plasma.material",
+        "process.plasma.kerf", "process.plasma.features",
+        "process.plasma.thermal"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation)
+        && obligation.operation.kind == "sheet_forming"
+        && obligation.family in ["process.sheet_forming.bend",
+        "process.sheet_forming.sequence", "process.sheet_forming.distortion"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "casting"
+        && obligation.family in ["process.casting.draft",
+        "process.casting.walls", "process.casting.tooling",
+        "process.casting.defects"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "moulding"
+        && obligation.family in ["process.moulding.draft",
+        "process.moulding.walls", "process.moulding.tooling",
+        "process.moulding.defects"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "extrusion"
+        && obligation.family in ["process.extrusion.profile",
+        "process.extrusion.secondary"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "drilling"
+        && obligation.family in ["process.drilling.access",
+        "process.drilling.feature"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "reaming"
+        && obligation.family in ["process.reaming.access",
+        "process.reaming.allowance"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "tapping"
+        && obligation.family in ["process.tapping.access",
+        "process.tapping.engagement"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "finishing"
+        && obligation.family in ["process.finishing.allowance",
+        "process.finishing.access"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "coating"
+        && obligation.family in ["process.coating.allowance",
+        "process.coating.access"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "joining"
+        && obligation.family in ["process.joining.access",
+        "process.joining.distortion"]
+      output: obligation.family
+    - condition: >-
+        has(obligation.operation) && obligation.operation.kind == "inspection"
+        && obligation.family in ["process.inspection.access",
+        "process.inspection.capability"]
+      output: obligation.family
+    - output: '"unknown"'
+      explanation: '"no handler for " + obligation.family'

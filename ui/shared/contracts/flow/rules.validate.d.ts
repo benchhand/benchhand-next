@@ -4,15 +4,10 @@
 import type { ValidateFunction } from "ajv";
 
 export declare const validate: ValidateFunction;
-export declare const validateChecksByIterationRules: ValidateFunction;
-export declare const validateDispatchRules: ValidateFunction;
-export declare const validateFidelityRules: ValidateFunction;
-export declare const validateRigorRules: ValidateFunction;
-export declare const validateCheckId: ValidateFunction;
-export declare const validateHandlerId: ValidateFunction;
-export declare const validateChecksByIterationRule: ValidateFunction;
-export declare const validateCheckSelection: ValidateFunction;
-export declare const validateConditionalCheck: ValidateFunction;
-export declare const validateDispatchRule: ValidateFunction;
-export declare const validateFidelityRule: ValidateFunction;
-export declare const validateRigorRule: ValidateFunction;
+export declare const validateRuleName: ValidateFunction;
+export declare const validateRuleImport: ValidateFunction;
+export declare const validateRule: ValidateFunction;
+export declare const validateRuleMatch: ValidateFunction;
+export declare const validateRuleListReference: ValidateFunction;
+export declare const validateRuleListFile: ValidateFunction;
+export declare const validateFlowRuleLists: ValidateFunction;

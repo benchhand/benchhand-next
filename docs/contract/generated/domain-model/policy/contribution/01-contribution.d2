@@ -8,8 +8,17 @@ direction: right
     class: document
     label: "contribution"
     shape: sql_table
-    "rules": "rules[1..*]"
+    "rules": "PolicyRuleLists"
     "gates": "PolicyGateRequirements by key"
+  }
+  "policy_contribution__PolicyRuleLists": {
+    class: owned
+    label: "PolicyRuleLists"
+    shape: sql_table
+    "checks_by_iteration": "RuleListReference"
+    "dispatch": "RuleListReference"
+    "fidelity": "RuleListReference"
+    "rigor": "RuleListReference"
   }
   "policy_contribution__PolicyGateRequirements": {
     class: owned
@@ -20,11 +29,12 @@ direction: right
     "human": "CelExpressions"
   }
 }
-"stub__flow_rules": {
+"stub__flow_rules__RuleListReference": {
   class: stub
-  label: "rules\n(flow/rules)"
-  link: "../../flow/rules/01-rules.svg"
+  label: "RuleListReference\n(flow/rules)"
+  link: "../../flow/rules/02-flowrulelists.svg"
 }
 
-"aggregate__policy_contribution"."policy_contribution"."rules" -> "stub__flow_rules": "rules [0..*]" { class: association }
+"aggregate__policy_contribution"."policy_contribution__PolicyRuleLists" -> "stub__flow_rules__RuleListReference": "checks_by_iteration, dispatch, fidelity, rigor [0..1]" { class: association }
+"aggregate__policy_contribution"."policy_contribution"."rules" -> "aggregate__policy_contribution"."policy_contribution__PolicyRuleLists": "rules [0..1]" { class: composition }
 "aggregate__policy_contribution"."policy_contribution"."gates" -> "aggregate__policy_contribution"."policy_contribution__PolicyGateRequirements": "gates [0..*]" { class: composition }

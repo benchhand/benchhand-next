@@ -5,86 +5,38 @@ direction: right
   class: aggregate
   label: "rules"
   "flow_rules": {
-    class: union
-    label: "rules  «abstract»"
+    class: document
+    label: "rules"
     shape: sql_table
-    "kind": "discriminator" { constraint: "req" }
+    "name": "RuleName" { constraint: "req" }
+    "description": "string"
+    "imports": "RuleImport[1..*]"
+    "rule": "Rule" { constraint: "req" }
   }
-  "flow_rules__ChecksByIterationRules": {
+  "flow_rules__RuleImport": {
     class: owned
-    label: "ChecksByIterationRules"
+    label: "RuleImport"
     shape: sql_table
-    "rules_version": "const 1" { constraint: "req" }
-    "kind": "const checks_by_iteration" { constraint: "req" }
-    "rules": "ChecksByIterationRule[]" { constraint: "req" }
+    "name": "string" { constraint: "req" }
   }
-  "flow_rules__ChecksByIterationRule": {
+  "flow_rules__Rule": {
     class: owned
-    label: "ChecksByIterationRule"
+    label: "Rule"
     shape: sql_table
-    "when": "CelExpression" { constraint: "req" }
-    "then": "CheckSelection[]" { constraint: "req" }
+    "id": "RuleName"
+    "description": "string"
+    "match": "RuleMatch[1..*]" { constraint: "req" }
   }
-  "flow_rules__ConditionalCheck": {
+  "flow_rules__RuleMatch": {
     class: owned
-    label: "ConditionalCheck"
+    label: "RuleMatch"
     shape: sql_table
-    "check": "CheckId" { constraint: "req" }
-    "when": "CelExpression" { constraint: "req" }
-  }
-  "flow_rules__DispatchRules": {
-    class: owned
-    label: "DispatchRules"
-    shape: sql_table
-    "rules_version": "const 1" { constraint: "req" }
-    "kind": "const dispatch" { constraint: "req" }
-    "rules": "DispatchRule[]" { constraint: "req" }
-  }
-  "flow_rules__DispatchRule": {
-    class: owned
-    label: "DispatchRule"
-    shape: sql_table
-    "when": "CelExpression" { constraint: "req" }
-    "then": "HandlerId[1..*]" { constraint: "req" }
-  }
-  "flow_rules__FidelityRules": {
-    class: owned
-    label: "FidelityRules"
-    shape: sql_table
-    "rules_version": "const 1" { constraint: "req" }
-    "kind": "const fidelity" { constraint: "req" }
-    "rules": "FidelityRule[]" { constraint: "req" }
-  }
-  "flow_rules__FidelityRule": {
-    class: owned
-    label: "FidelityRule"
-    shape: sql_table
-    "when": "CelExpression" { constraint: "req" }
-    "then": "enum F0|F1|F2|F3" { constraint: "req" }
-  }
-  "flow_rules__RigorRules": {
-    class: owned
-    label: "RigorRules"
-    shape: sql_table
-    "rules_version": "const 1" { constraint: "req" }
-    "kind": "const rigor" { constraint: "req" }
-    "rules": "RigorRule[]" { constraint: "req" }
-  }
-  "flow_rules__RigorRule": {
-    class: owned
-    label: "RigorRule"
-    shape: sql_table
-    "when": "CelExpression" { constraint: "req" }
-    "then": "CelExpressions" { constraint: "req" }
+    "condition": "CelExpression"
+    "output": "CelExpression" { constraint: "req" }
+    "explanation": "CelExpression"
   }
 }
 
-"aggregate__flow_rules"."flow_rules__ChecksByIterationRules" -> "aggregate__flow_rules"."flow_rules": { class: inheritance }
-"aggregate__flow_rules"."flow_rules__DispatchRules" -> "aggregate__flow_rules"."flow_rules": { class: inheritance }
-"aggregate__flow_rules"."flow_rules__FidelityRules" -> "aggregate__flow_rules"."flow_rules": { class: inheritance }
-"aggregate__flow_rules"."flow_rules__RigorRules" -> "aggregate__flow_rules"."flow_rules": { class: inheritance }
-"aggregate__flow_rules"."flow_rules__ChecksByIterationRule"."then" -> "aggregate__flow_rules"."flow_rules__ConditionalCheck": "then [0..*]" { class: composition }
-"aggregate__flow_rules"."flow_rules__ChecksByIterationRules"."rules" -> "aggregate__flow_rules"."flow_rules__ChecksByIterationRule": "rules [0..*]" { class: composition }
-"aggregate__flow_rules"."flow_rules__DispatchRules"."rules" -> "aggregate__flow_rules"."flow_rules__DispatchRule": "rules [0..*]" { class: composition }
-"aggregate__flow_rules"."flow_rules__FidelityRules"."rules" -> "aggregate__flow_rules"."flow_rules__FidelityRule": "rules [0..*]" { class: composition }
-"aggregate__flow_rules"."flow_rules__RigorRules"."rules" -> "aggregate__flow_rules"."flow_rules__RigorRule": "rules [0..*]" { class: composition }
+"aggregate__flow_rules"."flow_rules"."imports" -> "aggregate__flow_rules"."flow_rules__RuleImport": "imports [0..*]" { class: composition }
+"aggregate__flow_rules"."flow_rules__Rule"."match" -> "aggregate__flow_rules"."flow_rules__RuleMatch": "match [1..*]" { class: composition }
+"aggregate__flow_rules"."flow_rules"."rule" -> "aggregate__flow_rules"."flow_rules__Rule": "rule [1]" { class: composition }
