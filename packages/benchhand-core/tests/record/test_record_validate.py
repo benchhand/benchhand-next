@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import csv
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -264,6 +265,82 @@ def test_a_bom_row_states_what_its_part_record_states(lamp_arm: Path) -> None:
 def test_bom_procurement_columns_follow_the_part_procurement(lamp_arm: Path) -> None:
     edit(lamp_arm, "parts/LMP-0008/part.yaml", lambda part: part["procurement"].update(designation="other"))
     assert found(validate(lamp_arm)) == {("bom.mismatch", "hw/bom.csv", "/2/designation")}
+
+
+RING = {
+    "kind": "standard_designation",
+    "standard": "DIN 471",
+    "size": "5",
+    "length": 0.6,
+    "property_class": "spring steel C60S",
+    "finish": "phosphated and oiled",
+}
+RING_LINE = "DIN 471 5x0.6, spring steel C60S, phosphated and oiled"
+
+
+def ring_purchase(part: dict[str, Any]) -> dict[str, Any]:
+    return part["intent"]["route"][0]["purchase"]
+
+
+def designate(root: Path, designation: dict[str, Any], **procurement: Any) -> None:
+    """Make LMP-0011 a commodity item bought by `designation` alone: no designation text, manufacturer or
+    identity, and `procurement` added to its procurement."""
+
+    def change(part: dict[str, Any]) -> None:
+        for key in ("designation", "manufacturer"):
+            part["procurement"].pop(key)
+        part["procurement"].update(procurement)
+        purchase = ring_purchase(part)
+        purchase.pop("identity")
+        purchase["designation"] = designation
+
+    edit(root, "parts/LMP-0011/part.yaml", change)
+
+
+def edit_bom_row(root: Path, pn: str, **cells: str) -> None:
+    file = root / "hw/bom.csv"
+    rows = list(csv.DictReader(file.read_text(encoding="utf-8").splitlines()))
+    for row in rows:
+        if row["PN"] == pn:
+            row.update(cells)
+    with file.open("w", encoding="utf-8", newline="") as out:
+        writer = csv.DictWriter(out, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def test_a_designation_only_part_states_its_order_line_in_the_bom(lamp_arm: Path) -> None:
+    designate(lamp_arm, RING)
+    edit_bom_row(lamp_arm, "LMP-0011", designation=RING_LINE, manufacturer="")
+    assert validate(lamp_arm) == []
+    edit_bom_row(lamp_arm, "LMP-0011", designation="")
+    assert found(validate(lamp_arm)) == {("bom.mismatch", "hw/bom.csv", "/8/designation")}
+
+
+@pytest.mark.parametrize(
+    ("designation", "procurement"),
+    [
+        pytest.param({**RING, "length": "not_applicable"}, {}, id="ineligible"),
+        pytest.param(RING, {"open": {"manufacturer_part_number": "not chosen"}}, id="unresolved"),
+    ],
+)
+def test_an_ineligible_or_unresolved_designation_leaves_the_bom_designation_empty(
+    lamp_arm: Path, designation: dict[str, Any], procurement: dict[str, Any]
+) -> None:
+    designate(lamp_arm, designation, **procurement)
+    edit_bom_row(lamp_arm, "LMP-0011", designation="", manufacturer="")
+    assert validate(lamp_arm) == []
+
+
+def test_the_designation_text_of_the_part_wins_over_its_order_line(lamp_arm: Path) -> None:
+    edit(lamp_arm, "parts/LMP-0011/part.yaml", lambda part: ring_purchase(part).update(designation=RING))
+    assert validate(lamp_arm) == []
+
+
+def test_a_purchase_without_an_identity_or_a_designation_is_refused(lamp_arm: Path) -> None:
+    edit(lamp_arm, "parts/LMP-0011/part.yaml", lambda part: ring_purchase(part).pop("identity"))
+    part_findings = {item for item in found(validate(lamp_arm)) if item[1] == "hw/parts/LMP-0011/part.yaml"}
+    assert part_findings == {("record.schema", "hw/parts/LMP-0011/part.yaml", "/intent/route/0/purchase")}
 
 
 def test_bom_levels_start_at_0_or_1_and_never_skip_a_depth(lamp_arm: Path) -> None:

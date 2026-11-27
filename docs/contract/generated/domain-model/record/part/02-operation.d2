@@ -4,18 +4,6 @@ direction: right
 "aggregate__record_part__operation": {
   class: aggregate
   label: "operation"
-  "record_part__purchase": {
-    class: owned
-    label: "purchase"
-    shape: sql_table
-    "identity": "text_fact" { constraint: "req" }
-    "specification": "text_fact" { constraint: "req" }
-    "ratings": "text_fact" { constraint: "req" }
-    "optical": "text_fact"
-    "thickness": "quantity_fact"
-    "availability": "text_fact"
-    "supplier_evidence": "sources"
-  }
   "record_part__operation": {
     class: owned
     label: "operation"
@@ -153,11 +141,6 @@ direction: right
   label: "quantity\n(record/common)"
   link: "../common/03-function-entry.svg"
 }
-"stub__record_common__quantity_fact": {
-  class: stub
-  label: "quantity_fact\n(record/common)"
-  link: "../common/02-fact.svg"
-}
 "stub__record_common__source": {
   class: stub
   label: "source\n(record/common)"
@@ -168,15 +151,15 @@ direction: right
   label: "target\n(record/common)"
   link: "../common/03-function-entry.svg"
 }
-"stub__record_common__text_fact": {
+"stub__record_part__purchase": {
   class: stub
-  label: "text_fact\n(record/common)"
-  link: "../common/02-fact.svg"
+  label: "purchase"
+  link: "./03-purchase.svg"
 }
 "stub__record_part__setup": {
   class: stub
   label: "setup"
-  link: "./03-setup.svg"
+  link: "./04-setup.svg"
 }
 
 "aggregate__record_part__operation"."record_part__orientation__rotation__1" -> "aggregate__record_part__operation"."record_part__orientation__rotation": { class: inheritance }
@@ -185,9 +168,6 @@ direction: right
 "stub__record_common__fact_open" -> "aggregate__record_part__operation"."record_part__operation__orientation": { class: inheritance }
 "aggregate__record_part__operation"."record_part__supports" -> "aggregate__record_part__operation"."record_part__operation__supports": { class: inheritance }
 "stub__record_common__fact_open" -> "aggregate__record_part__operation"."record_part__operation__supports": { class: inheritance }
-"aggregate__record_part__operation"."record_part__purchase" -> "stub__record_common__text_fact": "identity, specification, ratings [1]\noptical, availability [0..1]" { class: association }
-"aggregate__record_part__operation"."record_part__purchase"."thickness" -> "stub__record_common__quantity_fact": "thickness [0..1]" { class: association }
-"aggregate__record_part__operation"."record_part__purchase"."supplier_evidence" -> "stub__record_common__source": "supplier_evidence [0..*]" { class: association }
 "aggregate__record_part__operation"."record_part__operation"."capability" -> "stub__record_common__fact_unknown": "capability [0..1]" { class: association }
 "aggregate__record_part__operation"."record_part__operation"."targets" -> "stub__record_common__target": "targets [0..*]" { class: association }
 "aggregate__record_part__operation"."record_part__operation"."setup" -> "stub__record_part__setup": "setup [0..1]" { class: composition }
@@ -203,4 +183,4 @@ direction: right
 "aggregate__record_part__operation"."record_part__inspection"."criterion" -> "stub__record_common__criterion": "criterion [0..1]" { class: association }
 "aggregate__record_part__operation"."record_part__operation"."inspection" -> "aggregate__record_part__operation"."record_part__inspection": "inspection [0..*]" { class: composition }
 "aggregate__record_part__operation"."record_part__operation"."criteria" -> "stub__record_common__criterion": "criteria [0..*]" { class: association }
-"aggregate__record_part__operation"."record_part__operation"."purchase" -> "aggregate__record_part__operation"."record_part__purchase": "purchase [0..1]" { class: composition }
+"aggregate__record_part__operation"."record_part__operation"."purchase" -> "stub__record_part__purchase": "purchase [0..1]" { class: composition }

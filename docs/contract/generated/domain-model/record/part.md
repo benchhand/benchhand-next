@@ -6,7 +6,7 @@ One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, pro
 
 ## Diagrams
 
-26 types in 3 diagrams.
+30 types in 4 diagrams.
 
 ### 1. `part`
 
@@ -16,9 +16,13 @@ One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, pro
 
 ![Diagram 2 of record/part](part/02-operation.svg)
 
-### 3. `setup`
+### 3. `purchase`
 
-![Diagram 3 of record/part](part/03-setup.svg)
+![Diagram 3 of record/part](part/03-purchase.svg)
+
+### 4. `setup`
+
+![Diagram 4 of record/part](part/04-setup.svg)
 
 Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record/drawing`](drawing.md).
 
@@ -153,22 +157,6 @@ In diagram 1.
 | `selection` | `semantic_id` | no |  |
 | `alternatives` | `texts` | no |  |
 | `tradeoffs` | `text` | no |  |
-
-### `purchase`
-
-In diagram 2.
-
-Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `identity` | `text_fact` | yes | manufacturer and part number, or a standard designation |
-| `specification` | `text_fact` | yes | material grade, standard or datasheet the item conforms to |
-| `ratings` | `text_fact` | yes | load, speed, temperature or other ratings |
-| `optical` | `text_fact` | no | optical grade and transmission, for a transparent item |
-| `thickness` | `quantity_fact` | no |  |
-| `availability` | `text_fact` | no |  |
-| `supplier_evidence` | `sources` | no |  |
 
 ### `operation`
 
@@ -311,9 +299,75 @@ In diagram 2.
 | `coupon` | `boolean` | no | true when a representative coupon or test piece is the inspected item |
 | `evidence` | `evidence_id[1..*]` | no |  |
 
-### `setup`
+### `purchase`
 
 In diagram 3.
+
+Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `identity` | `text_fact` | no | manufacturer and part number (kind manufacturer_pn), or a free-text identification |
+| `designation` | `designation` | no |  |
+| `reference_catalogue` | `object[1..*]` | no | Non-binding example listings of a commodity item (vendor, part number, URL). They show where the item can be found and never restrict the supplier |
+| `specification` | `text_fact` | yes | material grade, standard or datasheet the item conforms to |
+| `ratings` | `text_fact` | yes | load, speed, temperature or other ratings |
+| `optical` | `text_fact` | no | optical grade and transmission, for a transparent item |
+| `thickness` | `quantity_fact` | no |  |
+| `availability` | `text_fact` | no | a named supplier, or `commodity` (any supplier) for a standard or family designation |
+| `supplier_evidence` | `sources` | no |  |
+
+### `designation` «abstract»
+
+In diagram 3.
+
+A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `discriminator` | yes |  |
+
+### `designation.standard_designation`
+
+In diagram 3.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `const standard_designation` | yes |  |
+| `standard` | `string` | yes |  |
+| `size` | `string` | yes |  |
+| `length` | `number or const not_applicable` | yes | mm; `not_applicable` for an item without a length (nut, washer) |
+| `property_class` | `string` | yes | strength class or material, e.g. 8.8, A2-70, 300 HV |
+| `finish` | `string` | no |  |
+
+### `designation.family_designation`
+
+In diagram 3.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `kind` | `const family_designation` | yes |  |
+| `family` | `string` | yes |  |
+| `thread` | `string` | yes |  |
+| `length` | `number` | yes |  |
+| `outside_diameter` | `number` | yes |  |
+| `recommended_hole` | `number` | yes |  |
+| `material` | `string` | no |  |
+| `finish` | `string` | no |  |
+
+### `purchase.reference_catalogue`
+
+In diagram 3.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `vendor` | `text` | yes |  |
+| `part_number` | `text` | yes |  |
+| `url` | `string` | no |  |
+
+### `setup`
+
+In diagram 4.
 
 Stock, datums, workholding and access of one operation. Nothing here is guessed from a bounding box
 
@@ -327,7 +381,7 @@ Stock, datums, workholding and access of one operation. Nothing here is guessed 
 
 ### `setup.stock`
 
-In diagram 3.
+In diagram 4.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -341,7 +395,7 @@ In diagram 3.
 
 ### `setup.workholding`
 
-In diagram 3.
+In diagram 4.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -353,7 +407,7 @@ In diagram 3.
 
 ### `setup.access`
 
-In diagram 3.
+In diagram 4.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -362,7 +416,7 @@ In diagram 3.
 
 ### `setup.access.tools`
 
-In diagram 3.
+In diagram 4.
 
 | Field | Type | Required | Description |
 |---|---|---|---|

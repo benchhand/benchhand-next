@@ -22,6 +22,116 @@ export type CandidatePart = {
   proposed?: ProposedPart;
   note?: string;
 };
+/**
+ * Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity
+ */
+export type Purchase = {
+  [k: string]: unknown;
+} & {
+  /**
+   * manufacturer and part number (kind manufacturer_pn), or a free-text identification
+   */
+  identity?:
+    | (FactKnown & {
+        value?: string;
+        [k: string]: unknown;
+      })
+    | FactUnknown
+    | FactNotApplicable;
+  /**
+   * A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
+   */
+  designation?:
+    | {
+        kind: "standard_designation";
+        standard: string;
+        size: string;
+        /**
+         * mm; `not_applicable` for an item without a length (nut, washer)
+         */
+        length: number | "not_applicable";
+        /**
+         * strength class or material, e.g. 8.8, A2-70, 300 HV
+         */
+        property_class: string;
+        finish?: string;
+      }
+    | {
+        kind: "family_designation";
+        family: string;
+        thread: string;
+        length: number;
+        outside_diameter: number;
+        recommended_hole: number;
+        material?: string;
+        finish?: string;
+      };
+  /**
+   * Non-binding example listings of a commodity item (vendor, part number, URL). They show where the item can be found and never restrict the supplier
+   *
+   * @minItems 1
+   */
+  reference_catalogue?: [
+    {
+      vendor: string;
+      part_number: string;
+      url?: string;
+    },
+    ...{
+      vendor: string;
+      part_number: string;
+      url?: string;
+    }[]
+  ];
+  /**
+   * material grade, standard or datasheet the item conforms to
+   */
+  specification:
+    | (FactKnown & {
+        value?: string;
+        [k: string]: unknown;
+      })
+    | FactUnknown
+    | FactNotApplicable;
+  /**
+   * load, speed, temperature or other ratings
+   */
+  ratings:
+    | (FactKnown & {
+        value?: string;
+        [k: string]: unknown;
+      })
+    | FactUnknown
+    | FactNotApplicable;
+  /**
+   * optical grade and transmission, for a transparent item
+   */
+  optical?:
+    | (FactKnown & {
+        value?: string;
+        [k: string]: unknown;
+      })
+    | FactUnknown
+    | FactNotApplicable;
+  thickness?:
+    | (FactKnown & {
+        value?: Quantity;
+        [k: string]: unknown;
+      })
+    | FactUnknown
+    | FactNotApplicable;
+  /**
+   * a named supplier, or `commodity` (any supplier) for a standard or family designation
+   */
+  availability?:
+    | (FactKnown & {
+        value?: string;
+        [k: string]: unknown;
+      })
+    | FactUnknown
+    | FactNotApplicable;
+  supplier_evidence?: Sources;
+};
 export type FactKnown = {
   status: "known";
   value: unknown;
@@ -388,66 +498,6 @@ export interface Step {
   capability: string | (FactUnknown | FactNotApplicable);
   provider?: "local" | "outsourced";
   purchase?: Purchase;
-}
-/**
- * Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description
- */
-export interface Purchase {
-  /**
-   * manufacturer and part number, or a standard designation
-   */
-  identity:
-    | (FactKnown & {
-        value?: string;
-        [k: string]: unknown;
-      })
-    | FactUnknown
-    | FactNotApplicable;
-  /**
-   * material grade, standard or datasheet the item conforms to
-   */
-  specification:
-    | (FactKnown & {
-        value?: string;
-        [k: string]: unknown;
-      })
-    | FactUnknown
-    | FactNotApplicable;
-  /**
-   * load, speed, temperature or other ratings
-   */
-  ratings:
-    | (FactKnown & {
-        value?: string;
-        [k: string]: unknown;
-      })
-    | FactUnknown
-    | FactNotApplicable;
-  /**
-   * optical grade and transmission, for a transparent item
-   */
-  optical?:
-    | (FactKnown & {
-        value?: string;
-        [k: string]: unknown;
-      })
-    | FactUnknown
-    | FactNotApplicable;
-  thickness?:
-    | (FactKnown & {
-        value?: Quantity;
-        [k: string]: unknown;
-      })
-    | FactUnknown
-    | FactNotApplicable;
-  availability?:
-    | (FactKnown & {
-        value?: string;
-        [k: string]: unknown;
-      })
-    | FactUnknown
-    | FactNotApplicable;
-  supplier_evidence?: Sources;
 }
 export interface Uncertainty {
   lower?: number;

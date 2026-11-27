@@ -1,0 +1,82 @@
+...@../../classes
+direction: right
+
+"aggregate__record_part__purchase": {
+  class: aggregate
+  label: "purchase"
+  "record_part__purchase": {
+    class: owned
+    label: "purchase"
+    shape: sql_table
+    "identity": "text_fact"
+    "designation": "designation"
+    "reference_catalogue": "object[1..*]"
+    "specification": "text_fact" { constraint: "req" }
+    "ratings": "text_fact" { constraint: "req" }
+    "optical": "text_fact"
+    "thickness": "quantity_fact"
+    "availability": "text_fact"
+    "supplier_evidence": "sources"
+  }
+  "record_part__designation": {
+    class: union
+    label: "designation  «abstract»"
+    shape: sql_table
+    "kind": "discriminator" { constraint: "req" }
+  }
+  "record_part__designation__standard_designation": {
+    class: owned
+    label: "designation.standard_designation"
+    shape: sql_table
+    "kind": "const standard_designation" { constraint: "req" }
+    "standard": "string" { constraint: "req" }
+    "size": "string" { constraint: "req" }
+    "length": "number or const not_applicable" { constraint: "req" }
+    "property_class": "string" { constraint: "req" }
+    "finish": "string"
+  }
+  "record_part__designation__family_designation": {
+    class: owned
+    label: "designation.family_designation"
+    shape: sql_table
+    "kind": "const family_designation" { constraint: "req" }
+    "family": "string" { constraint: "req" }
+    "thread": "string" { constraint: "req" }
+    "length": "number" { constraint: "req" }
+    "outside_diameter": "number" { constraint: "req" }
+    "recommended_hole": "number" { constraint: "req" }
+    "material": "string"
+    "finish": "string"
+  }
+  "record_part__purchase__reference_catalogue": {
+    class: owned
+    label: "purchase.reference_catalogue"
+    shape: sql_table
+    "vendor": "text" { constraint: "req" }
+    "part_number": "text" { constraint: "req" }
+    "url": "string"
+  }
+}
+"stub__record_common__quantity_fact": {
+  class: stub
+  label: "quantity_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+"stub__record_common__source": {
+  class: stub
+  label: "source\n(record/common)"
+  link: "../common/01-finding.svg"
+}
+"stub__record_common__text_fact": {
+  class: stub
+  label: "text_fact\n(record/common)"
+  link: "../common/02-fact.svg"
+}
+
+"aggregate__record_part__purchase"."record_part__designation__standard_designation" -> "aggregate__record_part__purchase"."record_part__designation": { class: inheritance }
+"aggregate__record_part__purchase"."record_part__designation__family_designation" -> "aggregate__record_part__purchase"."record_part__designation": { class: inheritance }
+"aggregate__record_part__purchase"."record_part__purchase" -> "stub__record_common__text_fact": "identity, optical, availability [0..1]\nspecification, ratings [1]" { class: association }
+"aggregate__record_part__purchase"."record_part__purchase"."designation" -> "aggregate__record_part__purchase"."record_part__designation": "designation [0..1]" { class: composition }
+"aggregate__record_part__purchase"."record_part__purchase"."reference_catalogue" -> "aggregate__record_part__purchase"."record_part__purchase__reference_catalogue": "reference_catalogue [0..*]" { class: composition }
+"aggregate__record_part__purchase"."record_part__purchase"."thickness" -> "stub__record_common__quantity_fact": "thickness [0..1]" { class: association }
+"aggregate__record_part__purchase"."record_part__purchase"."supplier_evidence" -> "stub__record_common__source": "supplier_evidence [0..*]" { class: association }

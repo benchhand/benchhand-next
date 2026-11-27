@@ -13,7 +13,7 @@ namespace Records.Part;
 /** One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent. */
 @summary("benchhand part record (hw/parts/<PN>/part.yaml)")
 @id("https://benchhand.github.io/benchhand/contracts/record/part.schema.json")
-@extension("x-version", "1.1.0")
+@extension("x-version", "1.2.0")
 model Part {
   PN: Common.pn;
   rev: Common.revision;
@@ -359,10 +359,23 @@ model operation {
   purchase?: purchase;
 }
 
-/** Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description */
+/** Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity */
+@extension("anyOf", #[#{ required: #["identity"] }, #{ required: #["designation"] }])
 model purchase {
-  /** manufacturer and part number, or a standard designation */
-  identity: Common.text_fact;
+  /** manufacturer and part number (kind manufacturer_pn), or a free-text identification */
+  identity?: Common.text_fact;
+
+  designation?: designation;
+
+  /** Non-binding example listings of a commodity item (vendor, part number, URL). They show where the item can be found and never restrict the supplier */
+  @minItems(1)
+  reference_catalogue?: {
+    vendor: Common.text;
+    part_number: Common.text;
+
+    @pattern("^https?://")
+    url?: string;
+  }[];
 
   /** material grade, standard or datasheet the item conforms to */
   specification: Common.text_fact;
@@ -374,8 +387,70 @@ model purchase {
   optical?: Common.text_fact;
 
   thickness?: Common.quantity_fact;
+
+  /** a named supplier, or `commodity` (any supplier) for a standard or family designation */
   availability?: Common.text_fact;
+
   supplier_evidence?: Common.sources;
+}
+
+/** A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole) */
+@oneOf
+union designation {
+  PartDesignation0,
+  PartDesignation1,
+}
+
+@extension("x-inline", true)
+model PartDesignation0 {
+  kind: "standard_designation";
+
+  @pattern("^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n\\r\\u2028\\u2029]*$")
+  standard: string;
+
+  @minLength(1)
+  size: string;
+
+  /** mm; `not_applicable` for an item without a length (nut, washer) */
+  @oneOf
+  length: PartDesignation0Length0 | "not_applicable";
+
+  /** strength class or material, e.g. 8.8, A2-70, 300 HV */
+  @minLength(1)
+  property_class: string;
+
+  @minLength(1)
+  finish?: string;
+}
+
+@extension("x-inline", true)
+@minValueExclusive(0)
+scalar PartDesignation0Length0 extends float64;
+
+@extension("x-inline", true)
+model PartDesignation1 {
+  kind: "family_designation";
+
+  @minLength(1)
+  family: string;
+
+  @minLength(1)
+  thread: string;
+
+  @minValueExclusive(0)
+  length: float64;
+
+  @minValueExclusive(0)
+  outside_diameter: float64;
+
+  @minValueExclusive(0)
+  recommended_hole: float64;
+
+  @minLength(1)
+  material?: string;
+
+  @minLength(1)
+  finish?: string;
 }
 
 /** Stock, datums, workholding and access of one operation. Nothing here is guessed from a bounding box */

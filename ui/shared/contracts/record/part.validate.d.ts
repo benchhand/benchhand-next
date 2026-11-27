@@ -9,6 +9,7 @@ export declare const validatecomponent: ValidateFunction;
 export declare const validatecritical_surface: ValidateFunction;
 export declare const validateoperation: ValidateFunction;
 export declare const validatepurchase: ValidateFunction;
+export declare const validatedesignation: ValidateFunction;
 export declare const validatesetup: ValidateFunction;
 export declare const validateorientation: ValidateFunction;
 export declare const validatesupports: ValidateFunction;

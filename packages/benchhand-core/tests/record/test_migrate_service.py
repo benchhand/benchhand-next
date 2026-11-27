@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from benchhand_core.record.migrate import MigrationStatus, migrate, recovery, service, undo
 from benchhand_core.record.migrate.inventory import LOCK_NAME, OWNER_NAME, TEMP_SUFFIX
+from benchhand_core.record.model import as_json
 from benchhand_core.record.store import load_record
 from benchhand_core.record.validate import validate
 
@@ -63,14 +64,22 @@ def test_a_reference_record_migrates_and_validates_with_no_findings(source: Path
     assert not (root / "hw" / LOCK_NAME).exists()
 
 
-def test_a_prototype_part_without_a_render_default_needs_no_migrate_rule(tmp_path: Path) -> None:
-    # Prototype PR #332 added the optional part.yaml render after reference_commit 412b5d9; a part record
-    # written before it keeps its bytes and reads as shown.
+def test_a_prototype_part_without_a_render_default_or_a_designation_needs_no_migrate_rule(
+    tmp_path: Path,
+) -> None:
+    # Prototype PRs #332 (part.yaml render) and #331 (purchase.designation, with identity no longer required)
+    # landed after reference_commit 412b5d9. A part record written before them keeps its bytes, reads as shown,
+    # and its purchases, each named by identity, still validate.
     root = _copy(LAMP_ARM_HW, tmp_path)
     assert not any(change.path.startswith("hw/parts/") for change in migrate(root).changes)
     migrate(root, apply=True)
     assert validate(root) == []
-    assert {part.render for part in load_record(root).parts.values()} == {None}
+    parts = load_record(root).parts.values()
+    assert {part.render for part in parts} == {None}
+    routes = [as_json(part)["intent"]["route"] for part in parts]
+    purchases = [operation["purchase"] for route in routes for operation in route if "purchase" in operation]
+    assert len(purchases) == 4  # LMP-0008 to LMP-0011; the shoulder pins are made to drawing
+    assert all("identity" in purchase and "designation" not in purchase for purchase in purchases)
 
 
 def test_the_dry_run_writes_nothing_and_states_each_change_as_a_diff(tmp_path: Path) -> None:

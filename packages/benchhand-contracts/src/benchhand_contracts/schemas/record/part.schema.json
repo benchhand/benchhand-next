@@ -3,7 +3,7 @@
   "$id": "https://benchhand.github.io/benchhand/contracts/record/part.schema.json",
   "title": "benchhand part record (hw/parts/<PN>/part.yaml)",
   "description": "One part's record, hw/parts/<PN>/part.yaml: identity and revision, material, process and finish, whether it is made or bought, its drawing, how it is manufactured, and its design intent.",
-  "x-version": "1.1.0",
+  "x-version": "1.2.0",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -1080,18 +1080,45 @@
       }
     },
     "purchase": {
-      "description": "Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description",
+      "description": "Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "identity",
         "specification",
         "ratings"
       ],
       "properties": {
         "identity": {
-          "description": "manufacturer and part number, or a standard designation",
+          "description": "manufacturer and part number (kind manufacturer_pn), or a free-text identification",
           "$ref": "common.schema.json#/$defs/text_fact"
+        },
+        "designation": {
+          "$ref": "#/$defs/designation"
+        },
+        "reference_catalogue": {
+          "description": "Non-binding example listings of a commodity item (vendor, part number, URL). They show where the item can be found and never restrict the supplier",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "vendor",
+              "part_number"
+            ],
+            "properties": {
+              "vendor": {
+                "$ref": "common.schema.json#/$defs/text"
+              },
+              "part_number": {
+                "$ref": "common.schema.json#/$defs/text"
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https?://"
+              }
+            }
+          }
         },
         "specification": {
           "description": "material grade, standard or datasheet the item conforms to",
@@ -1109,12 +1136,120 @@
           "$ref": "common.schema.json#/$defs/quantity_fact"
         },
         "availability": {
+          "description": "a named supplier, or `commodity` (any supplier) for a standard or family designation",
           "$ref": "common.schema.json#/$defs/text_fact"
         },
         "supplier_evidence": {
           "$ref": "common.schema.json#/$defs/sources"
         }
-      }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "identity"
+          ]
+        },
+        {
+          "required": [
+            "designation"
+          ]
+        }
+      ]
+    },
+    "designation": {
+      "description": "A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "standard",
+            "size",
+            "length",
+            "property_class"
+          ],
+          "properties": {
+            "kind": {
+              "const": "standard_designation"
+            },
+            "standard": {
+              "type": "string",
+              "pattern": "^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n\\r\\u2028\\u2029]*$"
+            },
+            "size": {
+              "type": "string",
+              "minLength": 1
+            },
+            "length": {
+              "description": "mm; `not_applicable` for an item without a length (nut, washer)",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "const": "not_applicable"
+                }
+              ]
+            },
+            "property_class": {
+              "description": "strength class or material, e.g. 8.8, A2-70, 300 HV",
+              "type": "string",
+              "minLength": 1
+            },
+            "finish": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "family",
+            "thread",
+            "length",
+            "outside_diameter",
+            "recommended_hole"
+          ],
+          "properties": {
+            "kind": {
+              "const": "family_designation"
+            },
+            "family": {
+              "type": "string",
+              "minLength": 1
+            },
+            "thread": {
+              "type": "string",
+              "minLength": 1
+            },
+            "length": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "outside_diameter": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "recommended_hole": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "material": {
+              "type": "string",
+              "minLength": 1
+            },
+            "finish": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
     },
     "setup": {
       "description": "Stock, datums, workholding and access of one operation. Nothing here is guessed from a bounding box",

@@ -125,25 +125,6 @@ class Recommendation(ContractModel):
     proposed_changes: Annotated[list[common_schema.Text] | None, Field(min_length=1)] = None
 
 
-class Step(ContractModel):
-    """
-    One route step of a candidate part. A purchased step may carry the purchase criteria of the bought item, so a purchased alternative to a made part can be assessed before any part record holds them
-    """
-
-    model_config = ConfigDict(
-        extra="forbid",
-        populate_by_name=True,
-    )
-    kind: common_schema.RouteKind
-    capability: (
-        Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
-        | common_schema.FactUnknown
-        | common_schema.FactNotApplicable
-    )
-    provider: Provider | None = None
-    purchase: part_schema.Purchase | None = None
-
-
 class ProposedPart(ContractModel):
     """
     Marks a candidate part as proposed: a new purchased or made part the candidate's architecture introduces. Its PN must not be declared under hw/parts; it is never an existing record, gets no check obligations, and becomes a part only when the approved change creates its part.yaml. A catalogue proposal is bought (its route is the purchase, whose criteria identify the item); a made or made-to-drawing proposal lists the operations that make it
@@ -167,6 +148,28 @@ class ProposedPart(ContractModel):
     what the new part does, so function-driven constraints (optical, structural) apply to it
     """
     transparency: part_schema.Transparency | None = None
+
+
+class Step(ContractModel):
+    """
+    One route step of a candidate part. A purchased step may carry the purchase criteria of the bought item, so a purchased alternative to a made part can be assessed before any part record holds them
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    kind: common_schema.RouteKind
+    capability: (
+        Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
+        | common_schema.FactUnknown
+        | common_schema.FactNotApplicable
+    )
+    provider: Provider | None = None
+    purchase: part_schema.Purchase1 | part_schema.Purchase2 | None = None
+    """
+    Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity
+    """
 
 
 class CandidatePart(ContractModel):

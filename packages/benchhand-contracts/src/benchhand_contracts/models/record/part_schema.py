@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from enum import Enum, StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 from pydantic import ConfigDict, Field, RootModel, StringConstraints
 from benchhand_contracts.base import ContractModel
 from . import common_schema, drawing_schema
@@ -247,52 +247,68 @@ class Provider(Enum):
     outsourced = "outsourced"
 
 
-class Purchase(ContractModel):
+class ReferenceCatalogueItem(ContractModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    vendor: Annotated[str, Field(min_length=1)]
+    part_number: Annotated[str, Field(min_length=1)]
+    url: Annotated[str | None, Field(pattern="^https?://")] = None
+
+
+class Length(RootModel[float]):
+    root: Annotated[float, Field(gt=0.0)]
     """
-    Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description
+    mm; `not_applicable` for an item without a length (nut, washer)
+    """
+
+
+class Designation1(ContractModel):
+    """
+    A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
     """
 
     model_config = ConfigDict(
         extra="forbid",
         populate_by_name=True,
     )
-    identity: Annotated[
-        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
-        Field(discriminator="status"),
+    kind: Literal["standard_designation"]
+    standard: Annotated[
+        str,
+        Field(
+            pattern="^(ISO|DIN|EN|ASME|ANSI|JIS)[\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\t\\n\\v\\f\\r \\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][^\\n\\r\\u2028\\u2029]*$"
+        ),
     ]
+    size: Annotated[str, Field(min_length=1)]
+    length: Length | Literal["not_applicable"]
     """
-    manufacturer and part number, or a standard designation
+    mm; `not_applicable` for an item without a length (nut, washer)
     """
-    specification: Annotated[
-        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
-        Field(discriminator="status"),
-    ]
+    property_class: Annotated[str, Field(min_length=1)]
     """
-    material grade, standard or datasheet the item conforms to
+    strength class or material, e.g. 8.8, A2-70, 300 HV
     """
-    ratings: Annotated[
-        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
-        Field(discriminator="status"),
-    ]
+    finish: Annotated[str | None, Field(min_length=1)] = None
+
+
+class Designation2(ContractModel):
     """
-    load, speed, temperature or other ratings
+    A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
     """
-    optical: Annotated[
-        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
-        Field(discriminator="status"),
-    ] = None
-    """
-    optical grade and transmission, for a transparent item
-    """
-    thickness: Annotated[
-        common_schema.QuantityFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
-        Field(discriminator="status"),
-    ] = None
-    availability: Annotated[
-        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
-        Field(discriminator="status"),
-    ] = None
-    supplier_evidence: Annotated[list[common_schema.Source] | None, Field(min_length=1)] = None
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    kind: Literal["family_designation"]
+    family: Annotated[str, Field(min_length=1)]
+    thread: Annotated[str, Field(min_length=1)]
+    length: Annotated[float, Field(gt=0.0)]
+    outside_diameter: Annotated[float, Field(gt=0.0)]
+    recommended_hole: Annotated[float, Field(gt=0.0)]
+    material: Annotated[str | None, Field(min_length=1)] = None
+    finish: Annotated[str | None, Field(min_length=1)] = None
 
 
 class Stock(ContractModel):
@@ -535,6 +551,124 @@ class CriticalSurfaces(RootModel[list[CriticalSurface]]):
     root: Annotated[list[CriticalSurface], Field(min_length=1)]
 
 
+class Purchase1(ContractModel):
+    """
+    Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    identity: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
+        Field(discriminator="status"),
+    ]
+    """
+    manufacturer and part number (kind manufacturer_pn), or a free-text identification
+    """
+    designation: Annotated[Designation1 | Designation2 | None, Field(discriminator="kind")] = None
+    """
+    A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
+    """
+    reference_catalogue: Annotated[list[ReferenceCatalogueItem] | None, Field(min_length=1)] = None
+    """
+    Non-binding example listings of a commodity item (vendor, part number, URL). They show where the item can be found and never restrict the supplier
+    """
+    specification: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
+        Field(discriminator="status"),
+    ]
+    """
+    material grade, standard or datasheet the item conforms to
+    """
+    ratings: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
+        Field(discriminator="status"),
+    ]
+    """
+    load, speed, temperature or other ratings
+    """
+    optical: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    """
+    optical grade and transmission, for a transparent item
+    """
+    thickness: Annotated[
+        common_schema.QuantityFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    availability: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    """
+    a named supplier, or `commodity` (any supplier) for a standard or family designation
+    """
+    supplier_evidence: Annotated[list[common_schema.Source] | None, Field(min_length=1)] = None
+
+
+class Purchase2(ContractModel):
+    """
+    Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+    )
+    identity: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    """
+    manufacturer and part number (kind manufacturer_pn), or a free-text identification
+    """
+    designation: Annotated[Designation1 | Designation2, Field(discriminator="kind")]
+    """
+    A commodity item identified by standard or family instead of a vendor part number. standard_designation names the standard (ISO 4762, ISO 7380, ISO 4032, ISO 7089, ISO 8734 ...), size, length, property class or material and finish; family_designation covers items no ISO standard defines, such as a heat-set insert (thread, length, outside diameter, recommended hole)
+    """
+    reference_catalogue: Annotated[list[ReferenceCatalogueItem] | None, Field(min_length=1)] = None
+    """
+    Non-binding example listings of a commodity item (vendor, part number, URL). They show where the item can be found and never restrict the supplier
+    """
+    specification: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
+        Field(discriminator="status"),
+    ]
+    """
+    material grade, standard or datasheet the item conforms to
+    """
+    ratings: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable,
+        Field(discriminator="status"),
+    ]
+    """
+    load, speed, temperature or other ratings
+    """
+    optical: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    """
+    optical grade and transmission, for a transparent item
+    """
+    thickness: Annotated[
+        common_schema.QuantityFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    availability: Annotated[
+        common_schema.TextFact2 | common_schema.FactUnknown | common_schema.FactNotApplicable | None,
+        Field(discriminator="status"),
+    ] = None
+    """
+    a named supplier, or `commodity` (any supplier) for a standard or family designation
+    """
+    supplier_evidence: Annotated[list[common_schema.Source] | None, Field(min_length=1)] = None
+
+
 class Operation(ContractModel):
     """
     One route operation, in route order: the previous operation is its predecessor unless depends_on names the true dependencies. A made operation names its capability profile or why it is unknown; a purchase names its identity, specification and ratings
@@ -576,7 +710,10 @@ class Operation(ContractModel):
     evidence: Annotated[
         list[Annotated[str, StringConstraints(pattern=r"^EV-[0-9]{3}$")]] | None, Field(min_length=1)
     ] = None
-    purchase: Purchase | None = None
+    purchase: Purchase1 | Purchase2 | None = None
+    """
+    Traceable purchase criteria: the identity, specification and ratings that make a bought item the right one, never an unidentified description. A commodity item names a designation instead of, or beside, an identity
+    """
 
 
 class Route(RootModel[list[Operation]]):
