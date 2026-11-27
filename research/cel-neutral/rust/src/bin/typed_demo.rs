@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! The typed demo on the Rust engines.
 //!
 //! cel-core 0.5.1: the environment comes from the gate_guard profile manifest (lib.rs), checked at

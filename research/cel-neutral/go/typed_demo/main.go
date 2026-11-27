@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The typed demo on cel-go, the reference engine, built from the gate_guard profile manifest.
 //
 // It writes each accepted rule's CheckedExpr with a bundle.json (profile digest, checker, payload and

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Breaking-change check: each published contract against its version at the last release tag.
 
 It compares the published schemas (``SCHEMAS_OUT``), which have the same paths before and after the move to

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Checks the prototype-to-benchhand-next function map and writes its diagrams.
 
 ``docs/architecture/reference-map.yaml`` says where each prototype script, skill, agent and harness module

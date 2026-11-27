@@ -1,0 +1,22 @@
+Benchhand attribution
+=====================
+
+Benchhand is licensed under the Mozilla Public License, Version 2.0 (LICENSE).
+Each file's SPDX header, or REUSE.toml for files that cannot carry one, names
+its copyright holder and licence; `reuse lint` checks them.
+
+Third-party files keep their own licences. The licence texts are in LICENSES/.
+
+  research/cel-neutral/conformance/suite.json
+      cel-spec's simple conformance tests (Google LLC, Apache-2.0,
+      https://github.com/google/cel-spec), in the protobuf JSON form that
+      @bufbuild/cel-spec 0.6.2 ships (Buf Technologies, Inc., Apache-2.0,
+      https://github.com/bufbuild/cel-es). research/cel-neutral/ts/export_suite.ts
+      filters the tests; suite-summary.txt, beside it, counts what the filter
+      dropped. Both stay under Apache-2.0 (LICENSES/Apache-2.0.txt).
+
+  reference/skills/cad-model/tests/fixtures/3mf-schema/
+      3MF Consortium XML schemas, BSD 2-Clause (LICENSE.spec_core and
+      LICENSE.test_suites beside them). xml.xsd there is the W3C XML namespace
+      schema, (c) World Wide Web Consortium, under the W3C Document License
+      (LICENSES/LicenseRef-W3C-Document-2023.txt). It is shipped unmodified.

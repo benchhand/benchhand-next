@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The decoded comparison of the published schemas with the hand-written ones (``tools/equiv/decoded.py``)."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Judge every replay case, and mutations of every accepted one, against the hand-written and the published
 schemas with the real ``benchhand_contracts.violations``.
 

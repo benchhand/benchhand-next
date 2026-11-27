@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Runtime validation in benchhand_contracts.validation: a violation is typed and points at the bad value."""
 
 from __future__ import annotations

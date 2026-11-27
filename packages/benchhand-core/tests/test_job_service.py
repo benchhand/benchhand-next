@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The job service: start, progress, status, result, cancellation and reaping, with real processes."""
 
 from __future__ import annotations

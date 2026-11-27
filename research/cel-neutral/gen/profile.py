@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Write one environment profile manifest per structural scope, and its digest.
 
 A manifest is the identity of the environment a rule is checked and evaluated in:

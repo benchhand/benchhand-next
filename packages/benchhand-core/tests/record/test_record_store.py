@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The record store: typed reads and writes of hw/, validated against the contracts on read and on write."""
 
 from __future__ import annotations

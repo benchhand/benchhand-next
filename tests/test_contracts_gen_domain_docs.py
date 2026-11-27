@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The domain model's pages: every type is described, every link resolves, and the committed tree is current."""
 
 from __future__ import annotations

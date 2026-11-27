@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Targeted edits of YAML text: rename a key, replace a scalar value, insert or remove mapping entries.
 
 Each edit is a splice at the character positions PyYAML's composer reports for the nodes it touches, so every

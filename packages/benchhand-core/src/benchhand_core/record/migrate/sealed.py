@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Sealed history read through an in-memory upgrade.
 
 Migrate never rewrites `hw/versions/**` or `hw/checks/**` (docs/contract/record-migration.md), so a migrated

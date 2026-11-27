@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Helpers for the job service tests: real processes that ignore SIGTERM, and contract examples."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Compare two encodings of a shipped CheckedExpr as messages: proto.Equal ignores map order.
 package main
 

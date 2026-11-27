@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The hand-written architecture pages: every Mermaid block of docs/architecture/*.md renders."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Supervised process groups with real processes, ported from the prototype's process_lifecycle tests.
 
 A supervised family of a child and a grandchild that both ignore SIGTERM (a native solver stuck in

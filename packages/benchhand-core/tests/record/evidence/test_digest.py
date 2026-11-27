@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The acceptance digest pinned to the prototype's (evidence.py:1320 acceptance_digest and :306
 expected_digest at release.toml reference_commit 412b5d9). The golden values are the prototype functions'
 output on these inputs."""

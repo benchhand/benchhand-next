@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The record migrate service: prototype record version 2 to record version 3 (record-migration.md)."""
 
 from benchhand_core.record.migrate.rule import Rewrite, Rule

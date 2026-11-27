@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Rules for hw/product.yaml: the record version and the removed flow.profile.human_approval."""
 
 from __future__ import annotations

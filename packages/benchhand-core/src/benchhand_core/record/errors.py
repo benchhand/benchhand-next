@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Typed record errors. Each names the project-relative file and turns into findings with stable codes."""
 
 from __future__ import annotations

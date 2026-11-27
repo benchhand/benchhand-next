@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The benchhand CLI. Most subcommands arrive with Phase 3 (ADR-0001)."""
 
 from pathlib import Path

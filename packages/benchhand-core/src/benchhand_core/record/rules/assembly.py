@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The assembly's occurrence inventory, and the joints whose parent and child reference it.
 
 An occurrence is one placement of one part. `assembly.yaml` lists explicit occurrences under `occurrences`

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Findings: the generated model of contracts/common/finding.schema.json, and JSON Pointers into documents."""
 
 from __future__ import annotations

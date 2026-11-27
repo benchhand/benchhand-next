@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The typed demo on the TypeScript engines, from the gate_guard profile manifest and FileDescriptorSet.
 //
 // @bufbuild/cel 0.6.2: types come from a protobuf-es registry built from the FileDescriptorSet. Its

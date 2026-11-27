@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The lint findings the published schemas keep (``contracts_gen.lint``, ADR-0017)."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The run records of one project: <project>/.benchhand/runs/<jobId>.json.
 
 Each record is a JobRecord of contracts/jobs/job.schema.json: every read validates the file's JSON

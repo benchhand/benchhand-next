@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The acceptance inventory and its digest: what a freeze records and a release checks.
 
 A port of the prototype's evidence.py (skills/cad-record/scripts/evidence.py at release.toml reference_commit

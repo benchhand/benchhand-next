@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Waivers: when an approved, scoped waiver stands (prototype evidence.py:351 `waiver_problem`, 412b5d9).
 
 A waived obligation stays waived, never pass. A waiver needs an approved decision, the exact subject of the

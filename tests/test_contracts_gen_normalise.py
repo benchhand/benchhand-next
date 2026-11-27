@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The normaliser that splits TypeSpec's JSON Schema bundle into the published contracts (ADR-0017).
 
 Each rewrite must accept and reject the same instances as the emitted form, so the cases validate both.

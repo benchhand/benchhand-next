@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The record as the evidence rules read it: each document's JSON, keyed as the prototype's normalized record.
 
 The rules port the prototype's manufacturing_intent.Record reader (skills/cad-record/scripts/

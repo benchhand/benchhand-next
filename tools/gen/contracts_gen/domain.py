@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The domain model: the classes of the published contracts and how they refer to one another.
 
 ``build_model`` reads the published schemas the other generators read and returns the classes, one per

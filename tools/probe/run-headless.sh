@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # Headless capability-probe driver (dev only, ADR-0016). Usage: run.sh <claude|codex|opencode|kiro|pi>
 P=/Users/sjors/personal/dev/benchhand-next/tools/probe/probe.py
 PROMPT="$(cat "$(dirname "$0")/prompt.txt")"

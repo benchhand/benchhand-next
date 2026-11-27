@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """validate(): every finding on a project's record, without changing a file.
 
 It reports what reading met (presence, readability, record_version, contracts, part directory names,

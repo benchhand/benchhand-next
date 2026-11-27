@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """``docs/architecture/function-map.md``: one Mermaid flowchart per prototype area, prototype on the left."""
 
 from __future__ import annotations

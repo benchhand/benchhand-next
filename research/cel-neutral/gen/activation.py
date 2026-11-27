@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Write the typed demo's activation: real records taken from the published schemas' examples and fixtures."""
 
 from __future__ import annotations

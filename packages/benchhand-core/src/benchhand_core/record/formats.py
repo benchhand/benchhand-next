@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The file formats of the record: strict YAML, contract-shaped CSV and decision front matter."""
 
 from __future__ import annotations

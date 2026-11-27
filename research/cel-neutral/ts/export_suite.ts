@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Export the shared conformance suite: cel-spec's own simple tests, in their protobuf JSON form
 // (cel.expr.conformance.test.SimpleTestFile), taken from @bufbuild/cel-spec 0.6.2.
 //

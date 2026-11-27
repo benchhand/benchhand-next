@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # Compile every accept and reject rule of the typed demo with a cel-expr binary, and print each exit code
 # with the first lines of its output.
 # Usage: cli/compile_demo.sh <cel-expr binary> <env.json>   (run from research/cel-neutral)

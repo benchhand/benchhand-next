@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The record contracts (contracts/record/*.schema.json), as packaged in benchhand_contracts, and validation
 against them."""
 

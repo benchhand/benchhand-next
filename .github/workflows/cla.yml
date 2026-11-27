@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 name: cla
 # Contributor License Agreement (CLA.md). Signatures go to benchhand/cla-signers (signatures/cla.json on main).
 # The workflow reads the pull request's metadata and never checks out its code, which is what makes

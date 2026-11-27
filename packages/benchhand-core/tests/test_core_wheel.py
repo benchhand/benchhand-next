@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The built benchhand-core wheel runs a job when installed outside this checkout."""
 
 from __future__ import annotations

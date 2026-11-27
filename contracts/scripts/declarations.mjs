@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Print the contracts' JSON Schema declarations, in source order, for tools/gen (ADR-0017).
 //
 // The emitted bundle lists declarations in the order the emitter reached them, so the normaliser takes

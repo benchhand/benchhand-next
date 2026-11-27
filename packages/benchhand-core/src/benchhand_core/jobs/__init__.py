@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The job service: long jobs as supervised process groups with run records, progress and cancellation."""
 
 from benchhand_contracts.models.jobs.job_schema import JobHandle

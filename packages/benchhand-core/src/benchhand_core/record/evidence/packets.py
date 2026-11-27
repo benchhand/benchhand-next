@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Producer packets: whether a sealed required-check packet counts, and what each outcome shows.
 
 A port of the prototype's evidence.py (skills/cad-record/scripts/evidence.py at release.toml reference_commit

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """TypeScript types and Ajv standalone validators, written by ui/shared/scripts/gen-contracts.mjs."""
 
 from __future__ import annotations

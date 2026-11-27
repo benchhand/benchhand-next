@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Valid and invalid conformance fixtures from the ``examples`` in each contract (plan section 6a).
 
 Each example at a schema root or in a ``$defs`` entry is a valid fixture. Each invalid fixture is a

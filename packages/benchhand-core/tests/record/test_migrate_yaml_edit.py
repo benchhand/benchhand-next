@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Targeted YAML edits keep every other byte, in each layout the prototype writes, and refuse shared nodes."""
 
 from __future__ import annotations

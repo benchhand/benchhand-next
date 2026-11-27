@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Where each record document lives under the project root, which contract shapes it and in which format."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! Evaluate the compiled cel-policy bundles (generated/checked-policy/<profile>/) on cel-core 0.5.1.
 //!
 //! The reference checker (go/celcheck) wrote them; cel-core has no policy support, so this runs the

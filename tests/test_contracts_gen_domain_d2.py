@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The D2 renderer of the domain model: aggregates, the size limit, stubs and links, and the D2 version pin."""
 
 from __future__ import annotations

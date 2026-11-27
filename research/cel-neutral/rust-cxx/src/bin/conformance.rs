@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! Run the shared conformance suite on cel-cxx 0.2.5 (cel-cpp) and write results/cel-cxx.jsonl.
 //!
 //! cel-cxx doesn't read conformance/env.yaml, so this maps each extension it names onto a builder flag.

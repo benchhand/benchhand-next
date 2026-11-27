@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Render the Mermaid blocks of a Markdown file with mermaid-cli, so a block that doesn't render fails a test.
 
 mermaid-cli (``mmdc``) is pinned in contracts/package.json. It drives a system Chrome; its own browser

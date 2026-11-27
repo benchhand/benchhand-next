@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The Python side of the environment profile: load a manifest, check it, build cel-expr-python's env.
 
 The manifest (generated/profile/<name>.profile.json, written by gen/profile.py) is the only input. This

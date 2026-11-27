@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // toolscompiler runs the gate_guard profile cases through cel-go's tools/compiler package, loading the
 // generated env YAML and descriptor set with EnvironmentFile and TypeDescriptorSetFile. It shows why that
 // package isn't the reference checker: NewCompiler always adds the latest optional and bindings

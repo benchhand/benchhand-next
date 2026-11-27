@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # Run the shared conformance suite on every engine, then compare. Reuses the existing builds: the cel-cxx
 # runner needs rust-cxx/target/release/conformance, whose first build compiles cel-cpp with Bazel.
 #

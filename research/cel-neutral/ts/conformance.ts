@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Run the shared conformance suite on @bufbuild/cel 0.6.2 and @marcbachmann/cel-js 8.0.0, and write
 // results/bufbuild-cel.jsonl and results/cel-js.jsonl.
 //

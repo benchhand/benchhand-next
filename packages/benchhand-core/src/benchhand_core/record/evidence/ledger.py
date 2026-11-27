@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The status one accepted ledger entry (hw/manufacturing/evidence.yaml) shows for the assessed version.
 
 A port of the prototype's evidence.py `_entry` (skills/cad-record/scripts/evidence.py at release.toml

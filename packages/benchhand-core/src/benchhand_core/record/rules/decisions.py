@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Decision references: every cited DR-### has a readable record, a freeze, change or flow profile cites an
 approving decision, and an approved gate records its approval unless hw/policy.yaml sets its gate to auto."""
 

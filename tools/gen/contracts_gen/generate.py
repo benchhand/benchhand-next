@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Regenerate every output from contracts/, and compare a fresh generation with the tree (drift check).
 
 ``contracts/*.tsp`` compiles to the published schemas (``emit``); every other output is generated from them.

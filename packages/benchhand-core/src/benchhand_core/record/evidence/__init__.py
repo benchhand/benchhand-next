@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The evidence service: the status of every obligation of one built version, and its acceptance digest.
 
 The acceptance digest (evidence_sha256) covers every source artifact the record names, as well as the

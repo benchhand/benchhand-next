@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Evaluate the compiled cel-policy bundles (generated/checked-policy/<profile>/) on @bufbuild/cel 0.6.2.
 // The reference checker (go/celcheck) wrote them; @bufbuild/cel has no policy support and no public
 // checker, so this only evaluates the shipped CheckedExprs on policy/tests.json. Each bundle directory is

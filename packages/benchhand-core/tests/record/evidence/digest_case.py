@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A real, non-empty acceptance-inventory case: the lamp-arm record with a ledger entry, its cited artifact,
 bundle, source and criterion-source artifacts, files under hw/manufacturing/sources/, a built v1 and a sealed
 check packet bound to it whose outcomes contradict its result (the assessment refuses it; the inventory

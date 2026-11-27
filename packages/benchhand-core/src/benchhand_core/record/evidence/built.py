@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """What the evidence rules read about a built version, beside the record: the evidence service's only inputs.
 
 The reader (benchhand_core.record.evidence.reader) forms a BuiltVersion from the files of hw/versions/<V>/,

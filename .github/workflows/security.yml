@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 name: security
 # Network checks that a new advisory can fail without a change in this repository, so they run on a schedule
 # as well as when a lockfile changes. `main` keeps a result for each push.

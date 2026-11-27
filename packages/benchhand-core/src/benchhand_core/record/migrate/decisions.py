@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Rules for hw/decisions/DR-###-<slug>.md: MADR 4.0.0 front matter to the record version 3 decision.
 
 Each rule edits the front matter text in place (yaml_edit), so comments, quoting, block or flow style and the

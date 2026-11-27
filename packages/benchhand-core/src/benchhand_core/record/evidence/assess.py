@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The evidence assessment of one built version: the status of every obligation, the facets and the digest.
 
 A port of the prototype's evidence.py `assess` (skills/cad-record/scripts/evidence.py at release.toml

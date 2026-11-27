@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """celgen refuses two scopes that project one schema node with different fields.
 
 Run from the repository root: uv run --offline pytest research/cel-neutral/gen/test_celgen.py

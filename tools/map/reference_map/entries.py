@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The reference map file: its entries, and the checks that need no reference copy."""
 
 from __future__ import annotations

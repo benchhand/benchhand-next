@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Which guideline sets a record's capability profiles resolve through, and their digests: the part of the
 prototype's guidelines.py (release.toml reference_commit 412b5d9) that the `source` fingerprint folds in
 (impact.py:343-351).

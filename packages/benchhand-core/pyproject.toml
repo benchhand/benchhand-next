@@ -1,6 +1,8 @@
 [project]
 name = "benchhand-core"
 version = "0.0.0"
+license = "MPL-2.0"
+license-files = ["LICENSE"]
 description = "benchhand core: flow engine, guide, record service, jobs, middleware and provider host. No CAD dependencies."
 requires-python = ">=3.12"
 dependencies = ["benchhand-contracts", "benchhand-provider", "pyyaml>=6.0", "pydantic>=2.9"]
@@ -10,7 +12,7 @@ benchhand-contracts = { workspace = true }
 benchhand-provider = { workspace = true }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

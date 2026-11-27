@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """BOM numeric cells: ASCII white space around a number is stripped; a number the prototype read that record
 version 3 cannot read is refused, naming the row, column and value."""
 

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // celcheck is the reference checker: cel-go with exactly the profile manifest's environment, built by
 // go/profile with explicit options and nothing appended (unlike tools/compiler, whose NewCompiler always
 // adds the latest optional and bindings extensions). It is the same cel-go version as the conformance

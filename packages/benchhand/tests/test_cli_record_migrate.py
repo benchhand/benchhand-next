@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """`benchhand record migrate`: the dry run prints the diff and writes nothing; --apply writes behind a
 preimage backup; --undo BACKUP puts the files back."""
 

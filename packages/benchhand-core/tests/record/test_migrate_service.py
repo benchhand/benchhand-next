@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """migrate() and undo(): the dry run, apply in place behind a preimage backup and a lock, refusals, stopped
 applies and their --resume or --undo, on copies of the reference records."""
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Command line: ``python -m contracts_gen {generate,check,breaking,lint-allowed}`` (`just contracts`)."""
 
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The job supervisor: runs one command in a process group of its own and ends that group with it.
 
 Stdlib only, and run by path (`python -I -S -B supervisor.py <owner> <grace> <status fd> <command...>`),

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Decoded comparison of the published schemas with the hand-written ones they replaced (ADR-0017).
 
 The contracts moved from hand-written JSON Schema to TypeSpec on top of ``BASE``. This compares each

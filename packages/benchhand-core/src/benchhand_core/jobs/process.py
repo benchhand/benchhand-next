@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """A command in a process group of its own, under a supervisor that ends the group with it.
 
 `SupervisedProcess` starts the supervisor (see supervisor.py), which starts the command and kills

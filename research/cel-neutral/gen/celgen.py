@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Generate CEL type artefacts from the published contract schemas.
 
 One run reads `scopes.yaml`, walks every published JSON Schema node an activation variable can reach, and

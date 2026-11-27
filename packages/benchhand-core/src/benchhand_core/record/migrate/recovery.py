@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """How an apply is undone, and what keeps two migrations apart.
 
 Before apply writes anything, it copies the exact bytes of every file it will change (its preimages; not a

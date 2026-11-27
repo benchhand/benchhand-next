@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Edit CSV cells in place: rename header cells, or strip white space around numbers. Every other byte, the
 line endings included, stays as written."""
 

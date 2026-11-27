@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Build the replay cases, and write the hand-written schemas of ``decoded.BASE``, into a work directory.
 
 Usage: ``python tools/equiv/cases.py <work dir>``, after the package tests ran with ``record_plugin`` and

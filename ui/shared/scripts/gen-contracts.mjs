@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Generates TypeScript types and Ajv standalone validators from the published contract schemas (ADR-0017).
 // Run by tools/gen (`just contracts`), which passes the schema list, so discovery lives in one place.
 //

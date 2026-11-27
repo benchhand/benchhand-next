@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Compile contracts/*.tsp to the JSON Schema bundle, and split it into the published schemas (ADR-0017)."""
 
 from __future__ import annotations

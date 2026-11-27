@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The status of one obligation from all its evidence, and the evidence levels as independent facets.
 
 Each rule cites its source in the prototype, skills/cad-record/scripts/evidence.py at release.toml

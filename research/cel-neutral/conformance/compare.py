@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Compare every runner's results/<engine>.jsonl with the expected results in suite.json.
 
 Matching follows cel-spec's simple.proto: a value must equal the expected value (maps ignore order, any NaN

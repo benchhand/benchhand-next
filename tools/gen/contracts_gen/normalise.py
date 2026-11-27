@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Rewrite the JSON Schema bundle that TypeSpec emits into the published per-contract schemas (ADR-0017).
 
 ``tsp compile`` writes every declaration of ``contracts/*.tsp`` into one bundle, keyed by its ``$id``. A

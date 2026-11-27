@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Discover guideline sets on disk and hash their bytes: the observation half of the prototype's guideline
 discovery (guidelines.py:251-341 `_read`, `_scan`, `_refuse_key_collisions`, `discover`, at release.toml
 reference_commit 412b5d9). Only the reader calls this.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Dependency fingerprints: what each subject's evidence relied on, by domain, and what changed since a build.
 
 A port of the prototype's impact.py (skills/cad-record/scripts/impact.py at release.toml reference_commit

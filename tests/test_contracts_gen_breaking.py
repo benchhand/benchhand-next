@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The breaking-change check in contracts_gen.breaking, against the rules in docs/contract/versioning.md."""
 
 from __future__ import annotations

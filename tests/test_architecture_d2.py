@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The D2 diagrams of docs/architecture: every ``.d2`` renders, with the d2 that mise.toml pins, to the bytes of its ``.svg``.
 
 The SVG is committed beside its source, so the test fails when one changes without the other. The layout is part

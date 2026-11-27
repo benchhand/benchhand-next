@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # /// script
 # requires-python = ">=3.12"
 # dependencies = ["jsonschema>=4.23", "pyyaml>=6.0", "referencing>=0.28.4"]

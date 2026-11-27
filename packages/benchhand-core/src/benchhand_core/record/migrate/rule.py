@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """One migration rule: a row of the rule table in `rules.py`."""
 
 from __future__ import annotations

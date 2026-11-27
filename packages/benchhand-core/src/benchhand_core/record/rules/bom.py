@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """bom.csv against the part records: every row names a part or an assembly, states what its part record
 states, keeps a level sequence, and counts what assembly.yaml places."""
 

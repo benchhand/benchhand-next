@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """D2 diagrams of the domain model (``domain.py``).
 
 The model is split per contract into *aggregates*: a root class plus the classes only it owns, meaning the

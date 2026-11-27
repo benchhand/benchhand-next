@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The domain model built from the published schemas: classes, fields, relations, cardinality and unions."""
 
 from __future__ import annotations

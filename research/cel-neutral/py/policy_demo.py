@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Evaluate the compiled cel-policy bundles (generated/checked-policy/<profile>/) on cel-expr-python.
 
 cel-go's policy compiler wrote them; this binding has no policy support, so it only evaluates the shipped

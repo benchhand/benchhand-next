@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """migrate(): convert a prototype hw/ record (record_version 2, or PR #319's record version 1) to record
 version 3; undo(): put back the files an apply changed.
 

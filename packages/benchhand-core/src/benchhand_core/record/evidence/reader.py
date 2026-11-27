@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Read what the evidence rules need about a built version, from hw/versions/<V>/ and hw/checks/<V>/.
 
 This is the only module of the evidence service with I/O, and it only reads. It ports the prototype's

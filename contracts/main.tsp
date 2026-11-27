@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The benchhand contracts (ADR-0017). Every message and record shape is declared here, and nowhere else.
 // `just contracts` compiles this to one JSON Schema 2020-12 bundle and tools/gen/contracts_gen/normalise.py
 // splits it into the published per-contract schemas, from which the models, types, validators, fixtures and

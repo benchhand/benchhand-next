@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Run the shared conformance suite on cel-go and write results/cel-go.jsonl.
 //
 // The environment comes from conformance/env.yaml through cel-go's own env Config reader.

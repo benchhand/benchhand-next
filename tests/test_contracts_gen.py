@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The contract generator in tools/gen (ADR-0017): TypeSpec to the published schemas, then the models,
 fixtures, TypeScript and docs generated from those, and drift."""
 

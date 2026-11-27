@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! Shared pieces of the Rust harness: the cel-go environment YAML, read into cel-core declarations.
 //!
 //! Neither Rust engine reads the env YAML or a descriptor set by itself as an environment. This is the

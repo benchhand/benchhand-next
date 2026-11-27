@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Runtime validation against the packaged contracts (ADR-0017).
 
 Schema ids are the ``$id`` of a contract, optionally with a JSON pointer fragment into it, e.g.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Types for cel_core_py, the pyo3 binding over cel-core built from ../rust-py."""
 
 class Env:

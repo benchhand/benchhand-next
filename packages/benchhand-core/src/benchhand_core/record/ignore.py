@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """OS and tool junk under hw/ that no record service reads, rewrites or counts.
 
 TODO(benchhand-3fc): replace this fixed rule with the project ignore file mechanism once that bead lands.

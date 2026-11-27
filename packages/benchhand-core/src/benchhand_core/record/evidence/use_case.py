@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Whether the use case supports a final material and process choice (the intent.use_case obligation).
 
 A port of the prototype's manufacturing_intent.assess_use_case (skills/cad-record/scripts/

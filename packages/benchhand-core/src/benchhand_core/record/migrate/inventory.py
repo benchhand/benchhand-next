@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """What migrate() may read under hw/: every file, found by a walk whose errors are fatal, without OS and tool
 junk, sealed history, or the service's own lock and temporary files.
 

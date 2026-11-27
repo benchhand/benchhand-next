@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Fixtures: the reference lamp-arm record and the project template, migrated to record_version 3 by the
 migrate service."""
 

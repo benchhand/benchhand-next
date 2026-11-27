@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // The TypeScript side of the environment profile: load a manifest, check it, and build the @bufbuild/cel
 // environment from it, plus the bundle.json that binds CheckedExprs to a profile, a checker and their
 // exact payload bytes.

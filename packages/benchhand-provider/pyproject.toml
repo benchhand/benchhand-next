@@ -1,6 +1,8 @@
 [project]
 name = "benchhand-provider"
 version = "0.0.0"
+license = "MPL-2.0"
+license-files = ["LICENSE"]
 description = "Runtime and conformance kit for benchhand providers (JSON-RPC 2.0 over stdio)."
 requires-python = ">=3.11"
 dependencies = ["benchhand-contracts"]
@@ -9,7 +11,7 @@ dependencies = ["benchhand-contracts"]
 benchhand-contracts = { workspace = true }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

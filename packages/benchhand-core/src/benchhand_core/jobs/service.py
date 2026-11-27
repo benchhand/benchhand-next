@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The job service: long jobs as private process groups, with run records, progress and cancellation.
 
 A job is a command started under a supervisor (supervisor.py) that runs it in a process group of

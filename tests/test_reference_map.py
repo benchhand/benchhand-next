@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The function map from prototype to benchhand-next: its file, its check against a copy, its diagrams."""
 
 from __future__ import annotations

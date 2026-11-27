@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 // Judge every replay case, and every mutant replay.py made, with Ajv 2020, the engine of the generated
 // TypeScript validators, against the hand-written and the published schemas (ADR-0017).
 //

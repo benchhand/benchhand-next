@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Process identity and pid-reuse safety.
 
 The kernel reuses process ids, so a pid alone proves nothing once its process is gone. A recorded

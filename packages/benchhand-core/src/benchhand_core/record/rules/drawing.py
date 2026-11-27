@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Drawing intent references: tolerance policies against product.yaml, and datum labels against each part
 drawing's datum_features. The references sit at many optional places of a drawing, so these rules walk each
 document's JSON, keyed as in the file."""

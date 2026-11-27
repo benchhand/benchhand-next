@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Cleanup of run records when a service starts, ported from the prototype's run record tests.
 
 Records of live, orphaned, reused, foreign and broken entries; processes of dead owners.

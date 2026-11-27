@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Markdown reference pages for docs/contract/generated/, one per contract plus an index."""
 
 from __future__ import annotations

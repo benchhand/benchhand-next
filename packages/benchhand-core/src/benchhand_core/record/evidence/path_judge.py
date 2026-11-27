@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Judge each path a ledger cites against the project's filesystem and git: the observation half of the path
 rules (prototype evidence_paths.py `ProjectPaths`, lines 112-163, at release.toml reference_commit 412b5d9).
 

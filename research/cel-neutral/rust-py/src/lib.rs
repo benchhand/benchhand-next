@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! cel-core for Python: check a rule to a CheckedExpr, and evaluate a CheckedExpr on proto activations.
 //!
 //! The environment is the same env YAML plus FileDescriptorSet the other engines read, through the

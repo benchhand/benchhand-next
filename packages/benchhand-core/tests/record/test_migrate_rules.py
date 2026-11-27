@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The migrate rule table: each row turns its fixture's before/ tree into its after/ tree, byte for byte."""
 
 from __future__ import annotations

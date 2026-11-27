@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The built benchhand-contracts wheel validates by $id when installed outside this checkout, and the
 benchhand-core wheel beside it saves and loads a record against the packaged record contracts."""
 

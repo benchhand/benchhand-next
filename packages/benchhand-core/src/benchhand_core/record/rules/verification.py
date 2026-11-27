@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """verification.csv against requirements.yaml: one row per requirement, no row for an unknown one, and no
 requirement id given twice, which would let one row stand for two requirements."""
 

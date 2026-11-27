@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The `jsonschema lint` findings that the published schemas keep, each with its location, name and reason.
 
 ``required_properties_in_properties`` reads one schema object: a ``required`` there must name a property of

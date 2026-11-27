@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The typed demo through cel_core_py, our pyo3 binding over cel-core: Rust checks and evaluates for Python.
 
 Run with the wheel from ../rust-py (`maturin build --release`): `uv run --with <wheel> python rust_binding_demo.py`.

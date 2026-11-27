@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The domain model's pages and diagrams, written below ``docs/contract/generated/``.
 
 ``domain-model/README.md`` holds the overview diagram and an index; each contract has a page with its

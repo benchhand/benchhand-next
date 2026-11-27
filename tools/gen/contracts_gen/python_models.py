@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Pydantic v2 models in benchhand_contracts, generated from the published schemas."""
 
 from __future__ import annotations

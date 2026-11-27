@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Obligation enumeration: every check the record implies, before any producer runs.
 
 A port of the prototype's manufacturing_intent.required_checks (skills/cad-record/scripts/

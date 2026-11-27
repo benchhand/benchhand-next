@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The evidence reader upgrades a prototype (record_version 2) packet and snapshot of a built version in memory.
 
 Migrate leaves sealed history alone (docs/contract/record-migration.md), so a migrated project keeps its built

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Run the shared conformance suite on cel-expr-python and write results/python.jsonl.
 
 The environment comes from conformance/env.yaml through the binding's own env YAML reader.

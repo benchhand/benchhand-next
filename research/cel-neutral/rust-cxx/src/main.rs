@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! The typed demo on cel-cxx 0.2.5: Rust over cel-cpp, the same checker cel-expr-python wraps.
 //!
 //! cel-cxx takes the FileDescriptorSet at runtime; it has no env YAML reader and no CheckedExpr I/O, so

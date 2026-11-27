@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # Compile every policy in policy/bad/ with the reference checker in the checks_by_iteration profile and
 # record each exit code and first error line in results/policy-bad.txt. A file named not_caught_* is
 # one the compiler accepts; every other file must fail.

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The evidence service on a built lamp-arm version (record_version 3, converted from the prototype).
 
 Each test cites the prototype rule it ports: skills/cad-record/scripts/evidence.py, impact.py,

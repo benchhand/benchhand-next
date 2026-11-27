@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """The migration rule table: one row per prototype change, applied in this order to each file it names.
 
 Porting a later prototype change (ADR-0015, `just reference-changes`) is one new row here plus its fixture

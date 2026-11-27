@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """benchhand-contracts: models and validators generated from contracts/ (ADR-0017).
 
 The stable API:

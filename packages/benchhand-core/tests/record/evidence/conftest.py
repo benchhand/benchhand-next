@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Fixtures: a built version of the reference lamp-arm record (converted to record_version 3), sealed the way
 the prototype seals one (layout.py `seal`, 412b5d9): a manifest.json listing the sha256 of every file."""
 

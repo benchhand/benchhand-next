@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 name: trivy
 # Misconfiguration in Dockerfiles, Kubernetes manifests, Terraform and the like, uploaded to code scanning.
 # Trivy's vulnerability and secret scanners are off on purpose: osv-scanner and gitleaks (security.yml)

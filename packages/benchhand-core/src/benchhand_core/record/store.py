@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Read and write a project's hw/ record, validated against the record contracts on every read and write.
 
 `read_record` is lenient: it reads every document it can and keeps each problem as a typed error, so

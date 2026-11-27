@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Where the files an accepted ledger entry cites may live: the pure half of the path rules.
 
 A port of the prototype's evidence_paths.py (skills/cad-record/scripts/evidence_paths.py at release.toml

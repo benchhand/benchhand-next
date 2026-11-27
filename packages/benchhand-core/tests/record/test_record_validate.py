@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """validate(): the findings on a record, ported from the prototype's validator cases that still hold."""
 
 from __future__ import annotations

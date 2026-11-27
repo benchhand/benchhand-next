@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """pytest plugin: append each instance the tests validate to the JSON lines file ``$EQUIV_LOG``.
 
 ``just contracts-equivalence`` runs the package tests with it, so that the replay judges real instances

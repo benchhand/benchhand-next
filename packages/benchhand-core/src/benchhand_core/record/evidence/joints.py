@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """assembly.joint: each joining operation judged from its declared joint facts, on every read.
 
 A port of the prototype's assembly_operations.check_joints (skills/cad-record/scripts/assembly_operations.py

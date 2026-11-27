@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """``python -m reference_map [--write] [--reference DIR]``: check the function map or write its diagrams."""
 
 from __future__ import annotations

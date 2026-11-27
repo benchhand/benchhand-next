@@ -1,4 +1,9 @@
 #!/usr/bin/env -S uv run --script
+
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 # /// script
 # requires-python = ">=3.12"
 # dependencies = ["mcp==2.3.0"]

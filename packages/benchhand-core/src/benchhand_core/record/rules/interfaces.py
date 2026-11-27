@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """interfaces.yaml references to parts and occurrences: clearance pairs, fits, heat-set inserts, `@` ends."""
 
 from __future__ import annotations

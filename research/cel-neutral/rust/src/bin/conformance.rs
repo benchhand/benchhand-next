@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+
 //! Run the shared conformance suite on cel-core 0.5.1 and cel 0.16.1, and write
 //! results/cel-core.jsonl and results/cel-rust.jsonl.
 //!

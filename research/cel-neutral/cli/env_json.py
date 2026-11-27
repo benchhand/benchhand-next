@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Write a cel-go env YAML as the JSON environment the cel-expr CLI reads.
 
 cel-expr takes only JSON, and each variable has a `type` string (`list<string>`, a message name) where cel-go

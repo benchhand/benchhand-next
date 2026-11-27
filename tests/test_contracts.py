@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
 """Every published contract is a valid JSON Schema 2020-12, every $ref resolves, and every example validates.
 
 The published schemas are generated from contracts/*.tsp into the benchhand_contracts package (ADR-0017)."""
