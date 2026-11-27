@@ -719,7 +719,7 @@
       ]
     },
     "PrototypeCommand": {
-      "description": "A command a prototype skill told the agent to run, through cad-flow/scripts/run.py.",
+      "description": "A command line of the prototype at the pin, or a flag-only mode of one; the skills told the agent to run them through cad-flow/scripts/run.py.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -729,9 +729,9 @@
       ],
       "properties": {
         "command": {
-          "description": "The script name and its subcommand, if it has one.",
+          "description": "The script name, the subcommand words of one of its command lines, and optionally flags of that command line: an entry with flags is a flag-only mode, such as `stamp.py --verify`. The checker reads both from prototype-inventory.json.",
           "type": "string",
-          "pattern": "^[a-z_0-9]+\\.py( [a-z-]+)?$"
+          "pattern": "^[a-z_0-9]+\\.py( [a-z][a-z0-9-]*)*( --[a-z][a-z0-9-]*)*$"
         },
         "path": {
           "description": "Its docs/architecture/reference-map.yaml entry.",

@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import copy
-import os
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +14,7 @@ import pytest
 import yaml
 from capability_catalogue.catalogue import Catalogue, CatalogueError, load_catalogue
 from capability_catalogue.checks import check_catalogue
-from capability_catalogue.cli import CATALOGUE_FILE, OUTPUT_FILE, REFERENCE_ENV, REPO_ROOT, run
+from capability_catalogue.cli import CATALOGUE_FILE, OUTPUT_FILE, REPO_ROOT, run
 from capability_catalogue.coverage import check_prototype_commands
 from capability_catalogue.render import render_page
 from mermaid_render import mermaid_blocks, needs_mermaid, render_markdown
@@ -200,21 +199,71 @@ def test_a_schema_violation_is_reported_with_its_path(tmp_path: Path) -> None:
     assert "/capabilities/1: 'open_questions' is a required property" in text
 
 
-def test_a_runnable_prototype_script_needs_a_command_and_its_subcommand_must_exist(tmp_path: Path) -> None:
-    scripts = tmp_path / "skills" / "cad-model" / "scripts"
-    scripts.mkdir(parents=True)
-    (scripts / "cad_model.py").write_text('sub.add_parser("check")\nif __name__ == "__main__": main()\n')
-    (scripts / "lib.py").write_text("def helper(): ...\n")
-    (scripts / "test_cad_model.py").write_text('if __name__ == "__main__": main()\n')
-    (tmp_path / "skills" / "cad-flow" / "scripts").mkdir(parents=True)
-    (tmp_path / "skills" / "cad-flow" / "scripts" / "extra.py").write_text(
-        'if __name__ == "__main__": go()\n'
-    )
+def _inventory_file(path: str, commands: list[dict[str, Any]], entry: bool = True) -> dict[str, Any]:
+    """One file of prototype-inventory.json, with only the keys the coverage check reads."""
+    return {"path": path, "entry_points": ["main()"] if entry else [], "commands": commands}
+
+
+def _parser(words: str, *flags: str, choices: str = "") -> dict[str, Any]:
+    options = [{"flags": [flag], "kind": "option", "help": ""} for flag in flags]
+    if choices:
+        options.append({"flags": ["mode"], "kind": "positional", "help": "check it", "choices": choices})
+    return {
+        "command": words,
+        "framework": "argparse",
+        "summary": "",
+        "hidden": False,
+        "line": 1,
+        "options": options,
+    }
+
+
+def _coverage(commands: list[tuple[str, str]], files: list[dict[str, Any]]) -> list[str]:
     data = _catalogue()
-    data["prototype_commands"] = data["prototype_commands"][:1]
-    assert check_prototype_commands(Catalogue(data), tmp_path) == [
-        "skills/cad-flow/scripts/extra.py is a runnable prototype script with no entry in prototype_commands",
-        "prototype command cad_model.py run: skills/cad-model/scripts/cad_model.py declares no run",
+    data["prototype_commands"] = [
+        {"command": command, "path": path, "capability": "build"} for command, path in commands
+    ]
+    return check_prototype_commands(Catalogue(data), {"reference_commit": "0" * 40, "files": files})
+
+
+MOTION = "skills/cad-motion/scripts/motion.py"
+STAMP = "skills/cad-recheck/scripts/stamp.py"
+
+
+def test_a_command_line_the_pin_can_run_needs_an_entry_even_beside_its_sibling() -> None:
+    files = [_inventory_file(MOTION, [_parser(""), _parser("plan"), _parser("render")])]
+    assert _coverage([("motion.py plan", MOTION)], files) == [
+        f"{MOTION}: the pin can run `motion.py render`, and prototype_commands has no entry for it"
+    ]
+
+
+def test_a_matching_string_that_is_not_a_command_line_does_not_pass() -> None:
+    """`check` is a choice and a help word of motion.py's parser, which the old text search accepted."""
+    files = [_inventory_file(MOTION, [_parser("", choices="('check', 'plan')"), _parser("plan")])]
+    assert _coverage([("motion.py plan", MOTION), ("motion.py check", MOTION)], files) == [
+        f"prototype command motion.py check: {MOTION} has no command line `check` at the pin"
+    ]
+
+
+def test_a_flag_only_mode_needs_its_flags_and_does_not_stand_for_the_command_line() -> None:
+    files = [_inventory_file(STAMP, [_parser("", "--verify", "--committed")])]
+    assert _coverage([("stamp.py --verify --committed", STAMP), ("stamp.py --diff", STAMP)], files) == [
+        f"{STAMP}: the pin can run `stamp.py`, and prototype_commands has no entry for it",
+        "prototype command stamp.py --diff: `stamp.py` declares no --diff at the pin",
+    ]
+
+
+def test_a_runnable_script_without_a_parser_is_one_command_line_and_tests_are_left_out() -> None:
+    runner = "skills/cad-flow/scripts/run.py"
+    files = [
+        _inventory_file(runner, []),
+        _inventory_file("skills/cad-flow/scripts/lib.py", [], entry=False),
+        _inventory_file("skills/cad-flow/scripts/test_run.py", []),
+        _inventory_file("harness/generate.py", [_parser("", "--check")]),
+    ]
+    assert _coverage([("run.py", runner), ("gen.py", "harness/generate.py")], files) == [
+        "harness/generate.py: the pin can run `generate.py`, and prototype_commands has no entry for it",
+        "prototype command gen.py: names gen.py, and its path is harness/generate.py",
     ]
 
 
@@ -242,18 +291,9 @@ def test_the_gap_list_names_toolless_capabilities_undefined_contracts_and_unowne
 
 
 def test_the_committed_catalogue_is_valid_and_its_page_is_current() -> None:
-    """Without a reference copy this checks the file, its references and the committed page."""
-    assert "prototype commands not checked" in run(REPO_ROOT, None, write=False)
-
-
-def test_every_runnable_prototype_script_has_a_command() -> None:
-    """Mandatory in CI, which fetches the pinned copy; skipped locally without one."""
-    if REFERENCE_ENV not in os.environ:
-        if os.environ.get("CI") == "true":
-            pytest.fail(f"CI=true needs a prototype copy in ${REFERENCE_ENV}")
-        pytest.skip(f"needs a prototype copy in ${REFERENCE_ENV}")
-    assert "prototype commands checked against" in run(
-        REPO_ROOT, Path(os.environ[REFERENCE_ENV]), write=False
+    """The file, its references, its prototype commands against the committed inventory, and the page."""
+    assert "prototype commands checked against docs/architecture/prototype-inventory.json" in run(
+        REPO_ROOT, write=False
     )
 
 

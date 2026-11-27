@@ -240,7 +240,9 @@ def _prototype_table(catalogue: Catalogue) -> list[str]:
     lines = [
         "## Prototype commands",
         "",
-        "The commands the prototype's skills told the agent to run through `cad-flow/scripts/run.py`.",
+        "Every command line the prototype can run at the pin, as `prototype-inventory.json` lists them, and the "
+        "flag-only modes its skills told the agent to run through `cad-flow/scripts/run.py`. `just capabilities` "
+        "checks the list against the inventory both ways.",
         "",
         "| Command | Prototype path | Capability | Replaced by | Note |",
         "|---|---|---|---|---|",

@@ -234,10 +234,10 @@ issues-sync *args:
     PYTHONPATH=tools/issues:tools/map uv run python -m issue_register sync {{args}}
 
 # Check docs/architecture/capabilities.yaml against its JSON Schema and its cross references, and with `--write`
-# regenerate docs/architecture/capabilities.md from it. Offline and fast. With BENCHHAND_REFERENCE_DIR set (as for
-# `reference-map`) it also checks that every runnable prototype script has a prototype command entry.
+# regenerate docs/architecture/capabilities.md from it. Offline and fast. Its prototype commands are checked against
+# the committed prototype-inventory.json, which `inventory` keeps current, so no copy of the prototype is needed.
 capabilities *args:
-    PYTHONPATH=tools/catalogue:tools/map uv run python -m capability_catalogue {{args}}
+    PYTHONPATH=tools/catalogue:tools/inventory:tools/map uv run python -m capability_catalogue {{args}}
 
 # Install the git hooks (.pre-commit-config.yaml) for pre-commit and pre-push. Run `mise install` first: the
 # hooks call the tools pinned in mise.toml. Git keeps hooks per clone, so every worktree of it shares them.

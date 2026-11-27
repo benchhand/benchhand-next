@@ -22,7 +22,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 6 | 0 | 0 | 6 | 0 | 0 |
 | **all** | **77** | 6 | 5 | 60 | 6 | 0 |
 
-MCP tools: 105 (39 planned, 66 proposed). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 72. Open questions: 28.
+MCP tools: 105 (39 planned, 64 proposed, 2 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 28.
 
 ## Capabilities by phase
 
@@ -455,7 +455,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `model.measure` | [model-inspect](#model-inspect) | read | not yet defined | not yet defined | sync-or-job | none | P4 | planned | plan: `docs/design-plan.md:373` | – |
 | `model.section` | [model-inspect](#model-inspect) | read | not yet defined | not yet defined | sync-or-job | none | P4 | planned | plan: `docs/design-plan.md:373` | – |
 | `motion.access` | [motion-analysis](#motion-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `access.py` | `access.py` |
-| `motion.check` | [motion-analysis](#motion-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `motion.py` | `motion.py check` |
+| `motion.check` | [motion-analysis](#motion-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | dropped | catalogue: `motion.py` | – |
 | `motion.plan` | [motion-analysis](#motion-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `motion.py` | `motion.py plan` |
 | `motion.play` | [motion-analysis](#motion-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `play.py` | `play.py` |
 | `motion.pose` | [motion-analysis](#motion-analysis) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | planned | plan: `docs/design-plan.md:379` | `pose.py` |
@@ -477,9 +477,9 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `project.open` | [project-session](#project-session) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:301` | – |
 | `project.questions` | [project-profile](#project-profile) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `flow_profile.py` | `flow_profile.py questions` |
 | `project.record_profile` | [project-profile](#project-profile) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `flow_profile.py` | `flow_profile.py record` |
-| `recheck.diff` | [design-recheck](#design-recheck) | read | not yet defined | not yet defined | sync | none | no phase | proposed | catalogue: `stamp.py` | `stamp.py diff` |
+| `recheck.diff` | [design-recheck](#design-recheck) | read | not yet defined | not yet defined | sync | none | no phase | dropped | catalogue: `stamp.py` | – |
 | `recheck.stamp` | [design-recheck](#design-recheck) | write | not yet defined | not yet defined | sync | unspecified | no phase | proposed | catalogue: `stamp.py` | `stamp.py` |
-| `recheck.verify` | [design-recheck](#design-recheck) | read | not yet defined | not yet defined | sync | none | no phase | proposed | catalogue: `stamp.py` | `stamp.py --verify` |
+| `recheck.verify` | [design-recheck](#design-recheck) | read | not yet defined | not yet defined | sync | none | no phase | proposed | catalogue: `stamp.py` | `stamp.py --verify`, `stamp.py --verify --committed` |
 | `record.add_bom_row` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
 | `record.add_evidence` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
 | `record.add_interface` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
@@ -510,9 +510,9 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `viewer.parts` | [viewer](#viewer) | read | not yet defined | not yet defined | sync | none | P5 | proposed | catalogue: `viewer.py` | `viewer.py parts` |
 | `viewer.show` | [viewer](#viewer) | read | not yet defined | not yet defined | sync | none | P5 | planned | plan: `docs/design-plan.md:376` | `viewer.py show` |
 | `viewer.studio` | [viewer](#viewer) | read | not yet defined | not yet defined | sync | none | P5 | proposed | catalogue: `viewer.py` | `viewer.py studio` |
-| `work.check` | [scratch-workspaces](#scratch-workspaces) | read | not yet defined | not yet defined | sync | none | no phase | proposed | catalogue: `scratch.py` | `scratch.py check` |
+| `work.build` | [scratch-workspaces](#scratch-workspaces) | write | not yet defined | not yet defined | sync-or-job | unspecified | no phase | proposed | catalogue: `scratch.py` | `scratch.py build` |
+| `work.deliver` | [scratch-workspaces](#scratch-workspaces) | write | not yet defined | not yet defined | sync | unspecified | no phase | proposed | catalogue: `scratch.py` | `scratch.py deliver` |
 | `work.init` | [scratch-workspaces](#scratch-workspaces) | write | not yet defined | not yet defined | sync | unspecified | no phase | proposed | catalogue: `scratch.py` | `scratch.py init` |
-| `work.run` | [scratch-workspaces](#scratch-workspaces) | write | not yet defined | not yet defined | sync-or-job | unspecified | no phase | proposed | catalogue: `scratch.py` | `scratch.py run` |
 
 ## MCP resources, prompts and Apps
 
@@ -568,7 +568,7 @@ Each is an enhancement over a tool that returns the same content (ADR-0018).
 
 ## Prototype commands
 
-The commands the prototype's skills told the agent to run through `cad-flow/scripts/run.py`.
+Every command line the prototype can run at the pin, as `prototype-inventory.json` lists them, and the flag-only modes its skills told the agent to run through `cad-flow/scripts/run.py`. `just capabilities` checks the list against the inventory both ways.
 
 | Command | Prototype path | Capability | Replaced by | Note |
 |---|---|---|---|---|
@@ -596,12 +596,14 @@ The commands the prototype's skills told the agent to run through `cad-flow/scri
 | `process_lifecycle.py strays` | `skills/cad-flow/scripts/process_lifecycle.py` | [job-service](#job-service) | `jobs.strays` |  |
 | `run.py` | `skills/cad-flow/scripts/run.py` | [provider-environments](#provider-environments) | – | The launcher of every other command; D1 drops the per-skill uv run --script commands. |
 | `scratch.py init` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.init` |  |
-| `scratch.py run` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.run` |  |
-| `scratch.py check` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.check` |  |
+| `scratch.py build` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.build` |  |
+| `scratch.py deliver` | `skills/cad-flow/scripts/scratch.py` | [scratch-workspaces](#scratch-workspaces) | `work.deliver` |  |
 | `setup.py` | `skills/cad-flow/scripts/setup.py` | [setup](#setup) | – |  |
 | `cad_model.py run` | `skills/cad-model/scripts/cad_model.py` | [model-build](#model-build) | `model.build` |  |
 | `cad_model.py check` | `skills/cad-model/scripts/cad_model.py` | [model-inspect](#model-inspect) | `model.check` |  |
 | `cad_model.py diff` | `skills/cad-model/scripts/cad_model.py` | [model-diff](#model-diff) | `model.diff` |  |
+| `cad_model.py latest` | `skills/cad-model/scripts/cad_model.py` | [model-build](#model-build) | – | Repoints hw/versions/latest.json at the newest sealed version after a run that sealed one and could not write it. |
+| `cad_model.py store` | `skills/cad-model/scripts/cad_model.py` | [model-build](#model-build) | – | Maintains the part store under hw/.cad/cache. |
 | `run_build123d.py` | `skills/cad-model/scripts/run_build123d.py` | [model-build](#model-build) | – | The build123d kernel runner that cad_model.py starts; the kernel build hook replaces it. |
 | `run_cadquery.py` | `skills/cad-model/scripts/run_cadquery.py` | [model-build](#model-build) | – | The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it. |
 | `access.py` | `skills/cad-motion/scripts/access.py` | [motion-analysis](#motion-analysis) | `motion.access` |  |
@@ -609,16 +611,15 @@ The commands the prototype's skills told the agent to run through `cad-flow/scri
 | `merge_sweeps.py` | `skills/cad-motion/scripts/merge_sweeps.py` | [motion-analysis](#motion-analysis) | `motion.sweep` |  |
 | `motion.py plan` | `skills/cad-motion/scripts/motion.py` | [motion-analysis](#motion-analysis) | `motion.plan` |  |
 | `motion.py render` | `skills/cad-motion/scripts/motion.py` | [motion-analysis](#motion-analysis) | `motion.render` |  |
-| `motion.py check` | `skills/cad-motion/scripts/motion.py` | [motion-analysis](#motion-analysis) | `motion.check` |  |
 | `play.py` | `skills/cad-motion/scripts/play.py` | [motion-analysis](#motion-analysis) | `motion.play` |  |
 | `pose.py` | `skills/cad-motion/scripts/pose.py` | [motion-analysis](#motion-analysis) | `motion.pose` |  |
 | `spot_check.py` | `skills/cad-motion/scripts/spot_check.py` | [motion-analysis](#motion-analysis) | `motion.spot_check` |  |
 | `sweep.py` | `skills/cad-motion/scripts/sweep.py` | [motion-analysis](#motion-analysis) | `motion.sweep` |  |
 | `stamp.py` | `skills/cad-recheck/scripts/stamp.py` | [design-recheck](#design-recheck) | `recheck.stamp` |  |
 | `stamp.py --verify` | `skills/cad-recheck/scripts/stamp.py` | [design-recheck](#design-recheck) | `recheck.verify` |  |
-| `stamp.py diff` | `skills/cad-recheck/scripts/stamp.py` | [design-recheck](#design-recheck) | `recheck.diff` |  |
+| `stamp.py --verify --committed` | `skills/cad-recheck/scripts/stamp.py` | [design-recheck](#design-recheck) | `recheck.verify` |  |
 | `build_guide.py` | `skills/cad-record/scripts/build_guide.py` | [documentation-set](#documentation-set) | `docset.build` |  |
-| `emit.py check` | `skills/cad-record/scripts/emit.py` | [result-envelope](#result-envelope) | – | Printed a producer's result; every tool's envelope replaces it. |
+| `emit.py` | `skills/cad-record/scripts/emit.py` | [result-envelope](#result-envelope) | – | Printed a producer's result; every tool's envelope replaces it. |
 | `evidence.py check` | `skills/cad-record/scripts/evidence.py` | [evidence-assessment](#evidence-assessment) | `evidence.assess` |  |
 | `evidence.py digest` | `skills/cad-record/scripts/evidence.py` | [evidence-assessment](#evidence-assessment) | `evidence.digest` |  |
 | `evidence.py run` | `skills/cad-record/scripts/evidence.py` | [check-orchestration](#check-orchestration) | `checks.run` |  |
@@ -790,24 +791,26 @@ The commands the prototype's skills told the agent to run through `cad-flow/scri
 - `viewer.parts`: input and output
 - `viewer.show`: input and output
 - `viewer.studio`: input and output
-- `work.check`: input and output
+- `work.build`: input and output
+- `work.deliver`: input and output
 - `work.init`: input and output
-- `work.run`: input and output
 
 ### Prototype commands with no capability (0)
 
 None.
 
-### Prototype commands no tool replaces (12)
+### Prototype commands no tool replaces (14)
 
 - `build_reference.py` ([model-build](#model-build))
 - `review_render.py` ([render-output](#render-output))
 - `clean_envs.py` ([provider-environments](#provider-environments))
 - `run.py` ([provider-environments](#provider-environments))
 - `setup.py` ([setup](#setup))
+- `cad_model.py latest` ([model-build](#model-build))
+- `cad_model.py store` ([model-build](#model-build))
 - `run_build123d.py` ([model-build](#model-build))
 - `run_cadquery.py` ([model-build](#model-build))
-- `emit.py check` ([result-envelope](#result-envelope))
+- `emit.py` ([result-envelope](#result-envelope))
 - `layout.py` ([version-snapshots](#version-snapshots))
 - `viewer.py host` ([preview-host](#preview-host))
 - `generate.py` ([harness-install](#harness-install))
@@ -903,7 +906,7 @@ The plan names jobs.start, jobs.status and jobs.result, and no cancel tool, alth
 The plan names the middleware chain, the provider host, viewer-ocp, policy-default and the recheck and work modules, and no phase of its Steps delivers them. (existing)
 
 - Pointers: `docs/architecture/containers.md:179`
-- Cited by: [middleware-chain](#middleware-chain), [design-recheck](#design-recheck), [scratch-workspaces](#scratch-workspaces), [provider-host](#provider-host), [policy-provider](#policy-provider), `recheck.stamp`, `recheck.verify`, `recheck.diff`, `work.init`, `work.run`, `work.check`
+- Cited by: [middleware-chain](#middleware-chain), [design-recheck](#design-recheck), [scratch-workspaces](#scratch-workspaces), [provider-host](#provider-host), [policy-provider](#policy-provider), `recheck.stamp`, `recheck.verify`, `recheck.diff`, `work.init`, `work.build`, `work.deliver`
 
 ### artifact-placement
 
@@ -1442,7 +1445,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Phase and status: no phase, planned
 - Owner: `packages/benchhand-core`
 - Contracts: –
-- MCP tools: `work.init`, `work.run`, `work.check`
+- MCP tools: `work.init`, `work.build`, `work.deliver`
 - CLI: –
 - Depends on: [record-store](#record-store), [model-build](#model-build)
 - ADRs: ADR-0004

@@ -5,7 +5,8 @@
 # `just capabilities` checks this file against
 # tools/catalogue/capability_catalogue/capabilities.schema.json and its cross
 # references (capabilities, tools, the reference map, the published contracts,
-# the ADRs and every path:line pointer), and `just capabilities --write`
+# the ADRs and every path:line pointer), checks prototype_commands against
+# docs/architecture/prototype-inventory.json, and `just capabilities --write`
 # regenerates docs/architecture/capabilities.md from it.
 #
 # Conventions:
@@ -2722,6 +2723,7 @@ tools:
       ref: stamp.py
     replaces:
       - stamp.py --verify
+      - stamp.py --verify --committed
     open_questions:
       - no-phase
   - name: recheck.diff
@@ -2732,12 +2734,13 @@ tools:
     envelope: sync
     gate: none
     phase: null
-    status: proposed
+    status: dropped
     source:
       kind: catalogue
       ref: stamp.py
-    replaces:
-      - stamp.py diff
+    note: Proposed for `stamp.py diff`, which doesn't exist at the pin;
+      stamp.py has flag-only modes, and `--verify --committed` goes
+      to recheck.verify.
     open_questions:
       - no-phase
   - name: work.init
@@ -2756,7 +2759,7 @@ tools:
       - scratch.py init
     open_questions:
       - no-phase
-  - name: work.run
+  - name: work.build
     capability: scratch-workspaces
     access: write
     input: not yet defined
@@ -2769,23 +2772,27 @@ tools:
       kind: catalogue
       ref: scratch.py
     replaces:
-      - scratch.py run
+      - scratch.py build
+    note: Was work.run, for `scratch.py run`, which doesn't exist at
+      the pin.
     open_questions:
       - no-phase
-  - name: work.check
+  - name: work.deliver
     capability: scratch-workspaces
-    access: read
+    access: write
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: none
+    gate: unspecified
     phase: null
     status: proposed
     source:
       kind: catalogue
       ref: scratch.py
     replaces:
-      - scratch.py check
+      - scratch.py deliver
+    note: Was work.check, for `scratch.py check`, which doesn't exist
+      at the pin.
     open_questions:
       - no-phase
   - name: env.doctor
@@ -3175,12 +3182,13 @@ tools:
     envelope: sync-or-job
     gate: unspecified
     phase: 4
-    status: proposed
+    status: dropped
     source:
       kind: catalogue
       ref: motion.py
-    replaces:
-      - motion.py check
+    note: Proposed for `motion.py check`, which doesn't exist at the
+      pin; `motion.py plan` checks coverage, and motion.plan replaces
+      it.
   - name: motion.sweep
     capability: motion-analysis
     access: write
@@ -4237,10 +4245,10 @@ prototype_commands:
   - command: scratch.py init
     path: skills/cad-flow/scripts/scratch.py
     capability: scratch-workspaces
-  - command: scratch.py run
+  - command: scratch.py build
     path: skills/cad-flow/scripts/scratch.py
     capability: scratch-workspaces
-  - command: scratch.py check
+  - command: scratch.py deliver
     path: skills/cad-flow/scripts/scratch.py
     capability: scratch-workspaces
   - command: setup.py
@@ -4255,6 +4263,15 @@ prototype_commands:
   - command: cad_model.py diff
     path: skills/cad-model/scripts/cad_model.py
     capability: model-diff
+  - command: cad_model.py latest
+    path: skills/cad-model/scripts/cad_model.py
+    capability: model-build
+    note: Repoints hw/versions/latest.json at the newest sealed version
+      after a run that sealed one and could not write it.
+  - command: cad_model.py store
+    path: skills/cad-model/scripts/cad_model.py
+    capability: model-build
+    note: Maintains the part store under hw/.cad/cache.
   - command: run_build123d.py
     path: skills/cad-model/scripts/run_build123d.py
     capability: model-build
@@ -4280,9 +4297,6 @@ prototype_commands:
   - command: motion.py render
     path: skills/cad-motion/scripts/motion.py
     capability: motion-analysis
-  - command: motion.py check
-    path: skills/cad-motion/scripts/motion.py
-    capability: motion-analysis
   - command: play.py
     path: skills/cad-motion/scripts/play.py
     capability: motion-analysis
@@ -4301,13 +4315,13 @@ prototype_commands:
   - command: stamp.py --verify
     path: skills/cad-recheck/scripts/stamp.py
     capability: design-recheck
-  - command: stamp.py diff
+  - command: stamp.py --verify --committed
     path: skills/cad-recheck/scripts/stamp.py
     capability: design-recheck
   - command: build_guide.py
     path: skills/cad-record/scripts/build_guide.py
     capability: documentation-set
-  - command: emit.py check
+  - command: emit.py
     path: skills/cad-record/scripts/emit.py
     capability: result-envelope
     note: Printed a producer's result; every tool's envelope replaces
