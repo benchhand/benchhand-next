@@ -171,7 +171,7 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
 5. **Probe gaps.** Run the Codex / ChatGPT desktop app, and settle Kiro's tool exposure (`docs/client-support.md:15,17`). The 2026-11-25 document records both as paused at the owner's request.
 6. **Advance the pin.** 13 merged and 26 open prototype PRs follow `412b5d9`. The owner has decided that #331 to #341 are ported first (see Decided). Which of the other open PRs follow, and when `release.toml` `reference_commit` moves, stay open (ADR-0015, `just reference-changes`).
 7. **Scope of decisions that migrate leaves unscoped.** Decided 2026-11-27: a migrated decision needs confirmation at the next human gate. See [Decided](#decided) 7.
-8. **Shipped guideline sets** become a package asset when the guideline catalog is ported (`docs/design-plan.md:649`). Until then the caller names the directory.
+8. **Shipped guideline sets** become a package asset when the guideline catalog is ported (`docs/design-plan.md:648`). Until then the caller names the directory.
 9. **No ledger of ported test cases.** Criterion 1.11 can't be checked mechanically. Adding a `tests` field to the reference map is a possible fix; the owner decides.
 10. **Gaps the architecture pages list.** Each is a plan gap, not a Phase 1 defect:
    - the middleware chain, the provider host, `viewer-ocp` and `policy-default` have no phase (`docs/architecture/containers.md:181`);
@@ -193,7 +193,7 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
    - the interval citation that the engine supplies;
    - the confirmation of scopeless migrated decisions at the next gate.
 4. Version snapshots, seal and verify. Evidence staleness for v10 to v18 depends on reading these snapshots, and the freeze and `--since-version` baselines use them.
-5. `flow.yaml` and its interpreter, the CEL pipeline of ADR-0020 and the rule lists, on the contracts of criterion 1.3. The out-of-domain rule has no implementation yet. The Phase 2 evaluator records a fidelity outside F0 to F3, or a dispatch handler id that no handler has, as UNKNOWN with a finding that names the value, never a pass. The Phase 2 flow loader rejects a literal `"none"` in the flow's own fidelity list, because no schema can express that. The rule is in `contracts/flow/rules.tsp` and `docs/contract/flow.md`, and `tests/rule_lists.py` models it. ADR-0020 leaves four choices to Phase 2: where a user's bundle lives, how a scope is declared, the first profile's extensions, and the enum lint (`docs/adr/0020-cel-rule-pipeline.md:214-217`).
+5. `flow.yaml` and its interpreter, the CEL pipeline of ADR-0020 and the rule lists, on the contracts of criterion 1.3. The out-of-domain rule has no implementation yet. The Phase 2 evaluator records a fidelity outside F0 to F3, or a dispatch handler id that no handler has, as UNKNOWN with a finding that names the value, never a pass. The Phase 2 flow loader rejects a literal `"none"` in the flow's own fidelity list, because no schema can express that. The rule is in `contracts/flow/rules.tsp` and `docs/contract/flow.md`, and `tests/rule_lists.py` models it. ADR-0020 leaves four choices to Phase 2: where a user's bundle lives, how a scope is declared, the first profile's extensions, and the enum lint (`docs/adr/0020-cel-rule-pipeline.md:232-235`).
 6. Decision records, the VOID cascade, scoped approvals (ADR-0019), and `flow/guides/*.md`.
 
 ## Raw logs
