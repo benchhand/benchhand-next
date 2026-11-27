@@ -83,7 +83,7 @@ Types of other contracts, drawn as stubs: [`record/common`](common.md), [`record
 
 ### `candidate_part`
 
-One part of a candidate: a declared part (hw/parts/<PN>/part.yaml) or, with `proposed`, a part the candidate introduces that the record does not hold yet
+One part of a candidate: a declared part (hw/parts/\<PN>/part.yaml) or, with `proposed`, a part the candidate introduces that the record does not hold yet
 
 | Field | Type | Required | Description |
 |---|---|---|---|

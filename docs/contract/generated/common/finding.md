@@ -16,7 +16,7 @@ Type: object
 | `code` | string | yes | `pattern: "^[a-z][a-z0-9]*(\\.[a-z0-9_]+)+$"` |
 | `severity` | one of `"error"`, `"warning"`, `"info"` | yes |  |
 | `path` | string | yes | The file the finding is about, relative to the project root, with / separators `minLength: 1`, `pattern: "^[^/\\\\][^\\\\]*$"`, `not: {"pattern": "(^\|/)\\.\\.(/\|$)"}` |
-| `pointer` | string | no | A JSON Pointer (RFC 6901) into the document at path; for a CSV file /<row index>/<column> `pattern: "^(/([^~/]\|~[01])*)*$"` |
+| `pointer` | string | no | A JSON Pointer (RFC 6901) into the document at path; for a CSV file /\<row index>/\<column> `pattern: "^(/([^~/]\|~[01])*)*$"` |
 | `message` | string | yes | `minLength: 1` |
 | `action` | string | no | What fixes it `minLength: 1` |
 | `subject` | string | no | What the finding is about, for grouping: a part number or a document id `minLength: 1` |

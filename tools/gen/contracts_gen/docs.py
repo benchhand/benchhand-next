@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .domain_docs import README_PATH, write_domain_model
-from .sources import GENERATED_NOTICE, SCHEMA_SUFFIX, Contract
+from .sources import GENERATED_NOTICE, SCHEMA_SUFFIX, Contract, markdown_prose
 
 CONSTRAINT_KEYWORDS = (
     "minimum",
@@ -46,7 +46,7 @@ def render_index(contracts: list[Contract]) -> str:
     lines = ["# Contract reference", "", f"{GENERATED_NOTICE} Sources: `contracts/`.", ""]
     lines += [f"- [Domain model]({README_PATH}): D2 diagrams and field tables of every contract", ""]
     for contract in contracts:
-        title = contract.schema.get("title", contract.stem)
+        title = markdown_prose(contract.schema.get("title", contract.stem))
         lines.append(f"- [{title}]({contract.stem}.md): `{contract.source}`, version {_version(contract)}")
     return "\n".join(lines) + "\n"
 
@@ -54,11 +54,11 @@ def render_index(contracts: list[Contract]) -> str:
 def render_contract(contract: Contract) -> str:
     schema = contract.schema
     depth = contract.stem.count("/") + 3  # docs/contract/generated/<dirs>/
-    lines = [f"# {schema.get('title', contract.stem)}", ""]
+    lines = [f"# {markdown_prose(schema.get('title', contract.stem))}", ""]
     lines += [f"{GENERATED_NOTICE} Source: [`{contract.source}`]({'../' * depth}{contract.source}).", ""]
     lines += [f"- `$id`: `{contract.schema_id}`", f"- Version: {_version(contract)}", ""]
     if schema.get("description"):
-        lines += [schema["description"], ""]
+        lines += [markdown_prose(schema["description"]), ""]
     root = {key: value for key, value in schema.items() if key not in ("$defs", "description", "title")}
     lines += ["## Root", "", *_schema_body(root, contract)]
     definitions = schema.get("$defs", {})
@@ -67,7 +67,7 @@ def render_contract(contract: Contract) -> str:
     for name, definition in definitions.items():
         lines += [f"### `{name}`", ""]
         if isinstance(definition, dict) and definition.get("description"):
-            lines += [definition["description"], ""]
+            lines += [markdown_prose(definition["description"]), ""]
         lines += _schema_body(definition, contract)
     return "\n".join(lines).rstrip("\n") + "\n"
 
@@ -143,7 +143,7 @@ def _variants(schema: dict[str, Any], contract: Contract) -> list[str]:
     for keyword in ("oneOf", "anyOf"):
         for branch in schema.get(keyword, []):
             if isinstance(branch, dict) and branch.get("description"):
-                lines.append(f"- {type_expr(branch, contract)}: {branch['description']}")
+                lines.append(f"- {type_expr(branch, contract)}: {markdown_prose(branch['description'])}")
     return ["Variants:", "", *lines, ""] if lines else []
 
 
@@ -160,7 +160,7 @@ def _constraints(schema: dict[str, Any]) -> str:
 
 
 def _cell(text: str) -> str:
-    return text.replace("|", "\\|").replace("\n", " ")
+    return markdown_prose(text).replace("|", "\\|").replace("\n", " ")
 
 
 def type_expr(schema: Any, contract: Contract) -> str:

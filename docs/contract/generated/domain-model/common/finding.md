@@ -23,7 +23,7 @@ Diagram 1 has no relationships.
 | `code` | `string` | yes |  |
 | `severity` | `enum error\|warning\|info` | yes |  |
 | `path` | `string` | yes | The file the finding is about, relative to the project root, with / separators |
-| `pointer` | `string` | no | A JSON Pointer (RFC 6901) into the document at path; for a CSV file /<row index>/<column> |
+| `pointer` | `string` | no | A JSON Pointer (RFC 6901) into the document at path; for a CSV file /\<row index>/\<column> |
 | `message` | `string` | yes |  |
 | `action` | `string` | no | What fixes it |
 | `subject` | `string` | no | What the finding is about, for grouping: a part number or a document id |

@@ -57,7 +57,7 @@ Constraints: `pattern: "^[A-Z]{2,5}-[0-9]{4}$"`
 
 ### `decision`
 
-A decision record id; hw/decisions/DR-###-<slug>.md holds it
+A decision record id; hw/decisions/DR-###-\<slug>.md holds it
 
 Type: string
 
@@ -917,7 +917,7 @@ Constraints: `pattern: "^[a-z][a-z0-9_]*(\\.[a-z0-9][a-z0-9_]*)+$"`
 
 ### `obligation_id`
 
-family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:<assembly operation>
+family@anchor: anchor is product, a PN with optional @occurrence, .component, /operation and #feature (with an optional :region), an IF with optional #feature, a REQ, or op:\<assembly operation>
 
 Type: string
 

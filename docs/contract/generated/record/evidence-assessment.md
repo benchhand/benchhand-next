@@ -14,11 +14,11 @@ Type: object
 | Property | Type | Required | Description |
 |---|---|---|---|
 | `version` | [`version`](common.md#version) | yes |  |
-| `manifest_sha256` | [`sha256`](common.md#sha256) | yes | sha256 of hw/versions/<V>/manifest.json |
+| `manifest_sha256` | [`sha256`](common.md#sha256) | yes | sha256 of hw/versions/\<V>/manifest.json |
 | `build_staleness` | one of `"computed"`, `"not_computed"` | yes | computed: producer outcomes whose inputs changed since the build are stale. not_computed: the built record could not be compared with the current one, so no producer pass, fail or not_applicable outcome counts, and a finding says why |
 | `expected_sha256` | [`sha256`](common.md#sha256) | yes | sha256 of the expected obligations, as canonical JSON |
 | `statuses` | array of [`obligation_status`](#obligation_status) | yes | one status per expected obligation, sorted by obligation id |
-| `facets` | object | yes | per requirement, part, interface, op:<assembly operation> and product: each evidence level's worst status over its obligations, or not_required where none applies |
+| `facets` | object | yes | per requirement, part, interface, op:\<assembly operation> and product: each evidence level's worst status over its obligations, or not_required where none applies |
 | `findings` | array of [`finding.schema.json`](../common/finding.md) | yes |  |
 | `critical` | array of [`critical_finding`](#critical_finding) | yes | producer findings of severity critical whose outcome is fail or unknown and that no disposition settles |
 | `complete` | boolean | yes | false when a producer packet was partial or refused |

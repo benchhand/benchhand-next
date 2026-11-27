@@ -12,8 +12,14 @@ import { repoRoot, repoUrl } from "../site-url.mjs";
 
 const CONTRACT_PAGES = "docs/contract/generated";
 
-// Markdown table cells can't hold a pipe or a line break.
-const cell = (text) => text.replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+// Markdown table cells can't hold a pipe or a line break. A schema title's `<` is escaped, so a placeholder
+// such as the `<PN>` of `hw/parts/<PN>/part.yaml` is not read as an HTML tag (tools/gen markdown_prose).
+const cell = (text) =>
+  text
+    .replace(/\|/g, "\\|")
+    .replace(/<(?=[A-Za-z/!?])/g, "\\<")
+    .replace(/\s+/g, " ")
+    .trim();
 
 // The areas of the contracts, in reading order. A schema directory missing here fails the sync.
 const AREAS = [

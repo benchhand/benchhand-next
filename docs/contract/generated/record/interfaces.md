@@ -261,7 +261,7 @@ Type: object
 | `acceptance[].verification.evidence_required` | array of [`evidence_level`](common.md#evidence_level) | yes | `minItems: 1`, `uniqueItems: true` |
 | `acceptance[].verification.stage` | [`stage`](common.md#stage) | yes |  |
 | `variation` | object | no | The tolerance stack: its managed analysis case, the contributors it includes and the governing method; RSS needs the decision that justifies its statistical assumptions |
-| `variation.stack_case` | string | yes | an hw/analysis/cases/<ID> case id `pattern: "^[a-z][a-z0-9_-]*$"` |
+| `variation.stack_case` | string | yes | an hw/analysis/cases/\<ID> case id `pattern: "^[a-z][a-z0-9_-]*$"` |
 | `variation.contributors` | array of one of `"manufacture"`, `"assembly"`, `"thermal"`, `"moisture"`, `"wear"`, `"deformation"`, `"coating"`, `"adhesive"`, `"joining"` | yes | `minItems: 1`, `uniqueItems: true` |
 | `variation.method` | one of `"worst_case"`, `"justified_rss"` | yes |  |
 | `variation.decision` | [`decision`](common.md#decision) | no |  |
@@ -283,7 +283,7 @@ Type: object
 | `play.compliance.axial` | [`quantity_fact`](common.md#quantity_fact) | no |  |
 | `play.compliance.radial` | [`quantity_fact`](common.md#quantity_fact) | no |  |
 | `play.compliance.angular` | [`quantity_fact`](common.md#quantity_fact) | no |  |
-| `play.scenario_cases` | array of string | no | hw/motion/cases/<ID> case ids `minItems: 1`, `uniqueItems: true` |
+| `play.scenario_cases` | array of string | no | hw/motion/cases/\<ID> case ids `minItems: 1`, `uniqueItems: true` |
 | `assembly_operations` | array of [`assembly_operation_id`](common.md#assembly_operation_id) | no | `minItems: 1`, `uniqueItems: true` |
 | `print_in_place` | array of object | no | The joints at this interface that print already assembled: each joint's kind, the joint value it prints at, the face pairs its gap separates and how it breaks free after printing. min_clearance_mm must be at least the governing product.yaml flow.profile processes.fdm.pip_clearance_mm `minItems: 1` |
 | `print_in_place[].joint` | one of `"hinge"`, `"pin"`, `"ball"`, `"captive"`, `"living_hinge"` | yes |  |

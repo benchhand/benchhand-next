@@ -168,7 +168,7 @@ In diagram 2.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `stack_case` | `string` | yes | an hw/analysis/cases/<ID> case id |
+| `stack_case` | `string` | yes | an hw/analysis/cases/\<ID> case id |
 | `contributors` | `enum[1..*]` | yes |  |
 | `method` | `enum worst_case\|justified_rss` | yes |  |
 | `decision` | `decision` | no |  |
@@ -199,7 +199,7 @@ In diagram 2.
 | `angular` | `quantity_fact` | no |  |
 | `backlash` | `quantity_fact` | no |  |
 | `compliance` | `object` | no |  |
-| `scenario_cases` | `string[1..*]` | no | hw/motion/cases/<ID> case ids |
+| `scenario_cases` | `string[1..*]` | no | hw/motion/cases/\<ID> case ids |
 
 ### `functional.play.compliance`
 

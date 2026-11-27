@@ -34,6 +34,7 @@ from contracts_gen.sources import (
     TYPESCRIPT_OUT,
     ContractSourceError,
     load_contracts,
+    markdown_prose,
 )
 from contracts_gen.typescript import write_typescript
 
@@ -389,10 +390,56 @@ def test_docs_show_every_description(tmp_path: Path) -> None:
     for contract in contracts:
         page = (tmp_path / f"{contract.stem}.md").read_text()
         for pointer, text in _descriptions(contract.schema):
-            shown = (text, text.replace("|", "\\|").replace("\n", " "), json.dumps(text, ensure_ascii=False))
+            prose = markdown_prose(text)
+            shown = (
+                prose,
+                prose.replace("|", "\\|").replace("\n", " "),
+                json.dumps(text, ensure_ascii=False),
+            )
             if not any(form in page for form in shown):
                 missing.append(f"{contract.rel_path}#{pointer}")
     assert missing == []
+
+
+def test_markdown_prose_escapes_a_tag_opener_outside_code_spans_only() -> None:
+    assert (
+        markdown_prose("One part's record, hw/parts/<PN>/part.yaml.")
+        == r"One part's record, hw/parts/\<PN>/part.yaml."
+    )
+    assert markdown_prose('one of `"<="` or `<PN>`, and a <= b') == 'one of `"<="` or `<PN>`, and a <= b'
+    assert markdown_prose("hw/checks/<V>/<S>/ and <!-- x -->") == r"hw/checks/\<V>/\<S>/ and \<!-- x -->"
+
+
+_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
+_UNESCAPED_TAG = re.compile(r"(?<!\\)<[A-Za-z/!?]")
+
+
+def _unescaped_tags(markdown: str) -> list[str]:
+    """The lines of ``markdown`` with a ``<`` that opens an HTML tag in prose: outside fences and code spans."""
+    found, fence = [], ""
+    for line in markdown.splitlines():
+        opener = _FENCE.match(line)
+        if opener and (not fence or opener.group(1).startswith(fence)):
+            fence = "" if fence else opener.group(1)
+            continue
+        if not fence and any(_UNESCAPED_TAG.search(part) for part in re.split(r"`[^`]*`", line)):
+            found.append(line)
+    return found
+
+
+def test_docs_keep_every_placeholder_in_a_path_visible(tmp_path: Path) -> None:
+    """A placeholder such as <PN> in a path is not an HTML tag on any page (bhn-vi9)."""
+    write_docs(load_contracts(REPO_ROOT / SCHEMAS_OUT), tmp_path)
+    pages = sorted(tmp_path.rglob("*.md"))
+    assert len(pages) > 40
+    assert [
+        f"{page.relative_to(tmp_path)}: {line}"
+        for page in pages
+        for line in _unescaped_tags(page.read_text())
+    ] == []
+    part = (tmp_path / "record" / "part.md").read_text()
+    assert part.startswith(r"# benchhand part record (hw/parts/\<PN>/part.yaml)")
+    assert r"hw/parts/\<PN>/part.yaml" in (tmp_path / "domain-model" / "record" / "part.md").read_text()
 
 
 def test_docs_say_which_branch_requires_a_property(tmp_path: Path) -> None:

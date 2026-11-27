@@ -35,11 +35,11 @@ Types of other contracts, drawn as stubs: [`common/finding`](../common/finding.m
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `version` | `version` | yes |  |
-| `manifest_sha256` | `sha256` | yes | sha256 of hw/versions/<V>/manifest.json |
+| `manifest_sha256` | `sha256` | yes | sha256 of hw/versions/\<V>/manifest.json |
 | `build_staleness` | `enum computed\|not_computed` | yes | computed: producer outcomes whose inputs changed since the build are stale. not_computed: the built record could not be compared with the current one, so no producer pass, fail or not_applicable outcome counts, and a finding says why |
 | `expected_sha256` | `sha256` | yes | sha256 of the expected obligations, as canonical JSON |
 | `statuses` | `obligation_status[]` | yes | one status per expected obligation, sorted by obligation id |
-| `facets` | `facets by key` | yes | per requirement, part, interface, op:<assembly operation> and product: each evidence level's worst status over its obligations, or not_required where none applies |
+| `facets` | `facets by key` | yes | per requirement, part, interface, op:\<assembly operation> and product: each evidence level's worst status over its obligations, or not_required where none applies |
 | `findings` | `finding[]` | yes |  |
 | `critical` | `critical_finding[]` | yes | producer findings of severity critical whose outcome is fail or unknown and that no disposition settles |
 | `complete` | `boolean` | yes | false when a producer packet was partial or refused |

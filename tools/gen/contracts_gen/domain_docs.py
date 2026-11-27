@@ -45,7 +45,7 @@ from .domain_d2 import (
     render_overview,
     stubs_of,
 )
-from .sources import GENERATED_NOTICE, Contract
+from .sources import GENERATED_NOTICE, Contract, markdown_prose
 
 STUB_FILE = "domain-model.md"
 MODEL_DIR = "domain-model"
@@ -225,7 +225,7 @@ def render_contract_page(model: DomainModel, plan: DiagramPlan, contract: Contra
         "",
     ]
     if contract.schema.get("description"):
-        lines += [contract.schema["description"], ""]
+        lines += [markdown_prose(contract.schema["description"]), ""]
     lines += _diagram_section(model, plan, contract.stem, diagrams, page)
     lines += _type_section(nodes, diagrams, {contract.schema.get("description", "")})
     lines += _enum_section(contract, nodes)
@@ -343,7 +343,7 @@ def _enum_rows(contract: Contract, nodes: list[ClassNode]) -> list[tuple[str, tu
 
 
 def _text(text: str) -> str:
-    return " ".join(text.split())
+    return markdown_prose(" ".join(text.split()))
 
 
 def _cell(text: str) -> str:
