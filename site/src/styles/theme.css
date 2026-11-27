@@ -119,6 +119,10 @@
   font-size: var(--sl-text-sm);
   color: var(--sl-color-gray-3);
 }
+/* Inline code sits on gray-5; gray-3 on it falls below 4.5:1 in dark, so code text steps up. */
+.bh-figure figcaption code {
+  color: var(--sl-color-gray-2);
+}
 
 .bh-split {
   display: grid;
