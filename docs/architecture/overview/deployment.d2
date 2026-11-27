@@ -39,10 +39,12 @@ machine: "The designer's machine" {
       class: layer_planned
       endpoint: "MCP endpoint\nstdio, or loopback streamable HTTP\nwith a bearer token (--http)\nPhase 3" {class: planned}
       preview: "Preview listener\n127.0.0.1, ephemeral port,\nHost-header check, path token\nPhase 5" {class: planned}
+      flow: "Flow engine, benchhand-core\nloads and verifies the rules bundle\n(ADR-0020): Phase 2\nin the server from Phase 3" {class: planned}
       provider_host: "Provider host\nopen: no phase in Steps" {class: open}
       jobs: "Job service, benchhand_core.jobs\nsupervisor in its own session,\nanchored process group" {class: main}
     }
     cli: "benchhand record migrate\npackages/benchhand/src/benchhand/cli.py" {class: main}
+    rules_compile: "benchhand rules compile\nruns the benchhand-celcheck binary\non a user's rule lists (ADR-0020)\nPhase 3" {class: planned}
     probe: "Capability probe, dev only\ntools/probe/probe.py (ADR-0016)" {class: main}
     providers: "Provider processes, providers/\none per provider, each in its own uv env\nPhase 4" {class: planned}
     freecadcmd: "freecadcmd\nrun by the freecad provider\nPhase 4" {class: planned}
@@ -65,9 +67,9 @@ machine: "The designer's machine" {
 
 ci: "CI: GitHub Actions" {
   class: layer
-  celgo: "Pinned cel-go checker\ncompiles the CEL rule lists\nPhase 2, ADR-0020 being written" {class: planned}
-  bundle: "Rules bundle\ncompiled rule lists and the profile digest\nPhase 2, ADR-0020 being written" {class: planned}
-  celgo -> bundle: "Phase 2" {class: planned_call}
+  celgo: "Pinned cel-go tool, tools/celcheck/\ncompiles flow/*.celpolicy\nPhase 2 (ADR-0020)" {class: planned}
+  bundle: "Rules bundle\nprofile digest, checker, entry hashes\nPhase 2 (ADR-0020)" {class: planned}
+  celgo -> bundle: "fails on a stale entry\nPhase 2" {class: planned_call}
 }
 
 ghcr: "GHCR\nthe pinned benchhand image\nPhase 7" {class: external}
@@ -82,6 +84,7 @@ machine.native.providers -> machine.native.freecadcmd: "Phase 4" {class: planned
 machine.native.mcp -> machine.project.hw: "reads and writes the record\nPhase 3" {class: planned_call}
 machine.native.cli -> machine.project.hw: "migrates the record" {class: on_main}
 machine.native.mcp.jobs -> machine.project.dot: "writes run records" {class: on_main}
+machine.native.rules_compile -> machine.project: "writes a user's bundle beside its rule lists\nthe path is open (ADR-0020)\nPhase 3" {class: planned_call}
 machine.native.freecadcmd -> machine.project.cache: "runs the managed FreeCAD\nPhase 4" {class: planned_call}
 
 machine.host -> machine.container.launcher: "spawns uvx benchhand@<ver> mcp --container\ninstall --container: Phase 6" {class: planned_call}
@@ -90,4 +93,4 @@ machine.container.runtime -> machine.container.image: "runs\nPhase 7" {class: pl
 machine.container.runtime -> ghcr: "pulls the pinned image\nPhase 7" {class: planned_call}
 machine.container.image -> machine.project: "mounts the whole project root\nat the same path\nPhase 7" {class: planned_call}
 
-ci.bundle -> machine.native.mcp: "shipped with benchhand; the host verifies it\nand refuses a missing or stale entry\nPhase 2, ADR-0020 being written" {class: planned_call}
+ci.bundle -> machine.native.mcp.flow: "ships with benchhand; refused at load\nwhen missing or stale\nPhase 2" {class: planned_call}

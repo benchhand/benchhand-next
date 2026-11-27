@@ -29,11 +29,11 @@ Six layers stack from the clients down to storage. The contracts sit beside them
 | Claude Code CLI, Claude Desktop, Codex CLI, OpenCode, Pi | Outside benchhand | Probe runs in `docs/client-support.md`; run records for Claude Code, Codex, OpenCode and Pi in `tools/probe/runs/` |
 | Codex / ChatGPT desktop | Open | `docs/client-support.md`: "manual run needed" |
 | Kiro CLI | Open | `docs/client-support.md`: Kiro connects and lists the probe tools, and the model's tools lack them, under the default and a custom agent |
-| benchhand CLI | On `main` | `packages/benchhand/src/benchhand/cli.py` has `version` and `record migrate`. The other subcommands are in Phase 3 |
+| benchhand CLI | On `main` | `packages/benchhand/src/benchhand/cli.py` has `version` and `record migrate`. The other subcommands, `rules compile` included, are in Phase 3 |
 | Browser UI | Phase 5 | `ui/` holds only `shared/` on `main`. Phase 5 builds the viewer, concept, gallery, gate card and flow view |
 | benchhand server and its MCP surface, interaction layer and tools | Phase 3, Apps and tasks Phase 5 | No `benchhand mcp` on `main`. Phase 3 lists the tools; Phase 4 the output, drawing and release tools |
-| Flow engine | Phase 2 | No `flow/` directory and no flow code on `main` |
 | Preview host | Phase 5 | Not on `main` |
+| Flow engine | Phase 2 | Plan section 1 puts it in core. No `flow/` directory and no flow code on `main`. Phase 2 builds the interpreter and the host's bundle verification ([ADR-0020](../adr/0020-cel-rule-pipeline.md)) |
 | Record: store, validate, migrate, evidence | On `main` | `packages/benchhand-core/src/benchhand_core/record/`: `store.py`, `validate.py` with `rules/`, `migrate/`, `evidence/` |
 | Versions | Phase 2 | Not on `main`; the Phase 1 step moves snapshot, seal and verify to Phase 2 |
 | Jobs | On `main` | `packages/benchhand-core/src/benchhand_core/jobs/`: `service.py`, `supervisor.py`, `store.py` |
@@ -48,7 +48,7 @@ Six layers stack from the clients down to storage. The contracts sit beside them
 | User cache with managed FreeCAD | Phase 4, on a branch | `<data>/freecad/<version>` on `pi-subagents/task-5-e1402fe-4bd3-s0-t0` (design plan D5) |
 | TypeSpec, JSON Schema, Pydantic, TypeScript | On `main` | `contracts/*.tsp`, `benchhand_contracts/schemas/`, `benchhand_contracts/models/`, `ui/shared/contracts/`. `benchhand-core` imports the models and `validate` |
 | Envelope, flow, flow rules and policy contribution contracts | Phase 1 list, on a branch | On `pi-subagents/task-1-3d530ac-2da9-s0-t0`, provisional. `main` has no `contracts/envelope/`, `contracts/flow/` or `contracts/policy/` |
-| CEL environment | Phase 2 | Not on `main` ([containers.md](containers.md#contracts-and-codegen)) |
+| CEL environment: descriptor set and profile manifest | Phase 2 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): `contracts_gen` generates them from the published schemas. Not on `main` |
 
 ## Deployment and runtime
 
@@ -62,16 +62,18 @@ The host talks MCP to `benchhand mcp` over stdio, or over loopback HTTP with `--
 | Host to `uvx benchhand@<ver> mcp` | Phase 3, the config Phase 6 | ADR-0002 "Decision"; `install` is in Phase 6 |
 | `benchhand mcp`, MCP endpoint | Phase 3 | Plan section 3; not on `main` |
 | Preview listener | Phase 5 | Plan section 3: a separate loopback listener with a Host-header check and a path token |
+| Flow engine, which verifies the rules bundle | Phase 2; in the server from Phase 3 | [ADR-0020](../adr/0020-cel-rule-pipeline.md) "Compilation and the rules bundle": at load the host refuses a missing or stale entry. Phase 2 builds the verification, Phase 3 the server |
 | Job service | On `main` | `jobs/supervisor.py` and `jobs/process.py` start each job in its own session and process group |
 | Provider host to provider processes | Phase 4, the provider host open | [provider-protocol.md](../contract/provider-protocol.md#1-transport); no phase names the provider host |
 | `freecadcmd` | Phase 4 | Plan section 8: the freecad provider runs it |
 | `benchhand record migrate` to `hw/` | On `main` | `cli.py` calls `benchhand_core.record.migrate` |
+| `benchhand rules compile` | Phase 3 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): it runs the `benchhand-celcheck` binary on a user's rule lists. Where the bundle lives in a project is open there |
 | Capability probe over stdio | On `main` | `tools/probe/probe.py`, a stdio MCP server (ADR-0016), with runs in `tools/probe/runs/` |
 | Job service to `.benchhand/runs/` | On `main` | `jobs/store.py` |
 | User cache | Phase 4, on a branch | As in the first diagram |
 | `--container` launcher | Open | Plan section 8 describes it; no phase of the Steps delivers it ([context.md](context.md#legend)) |
 | OCI image, the pull from GHCR, the project-root mount | Phase 7 | Plan section 8: `-v <project>:<project>`, the project directory the launcher resolved. Phase 7 publishes the image |
-| Pinned cel-go checker, rules bundle, host verification | Phase 2, ADR-0020 being written | The rule lists arrive in Phase 2. ADR-0020 is not on `main`, so the bundle's shape is unspecified |
+| Pinned cel-go tool in CI and the rules bundle | Phase 2 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): `tools/celcheck/` compiles `flow/*.celpolicy`, and CI fails on a stale entry. No `tools/celcheck/` on `main` |
 
 ## Rendering
 
@@ -88,7 +90,7 @@ d2 --layout elk --pad 40 deployment.d2 deployment.svg
 ## Sources
 
 - `docs/design-plan.md`: [1. Layered architecture](../design-plan.md#1-layered-architecture), [3. Transport](../design-plan.md#3-transport-stdio-vs-localhost-http-d10), [5. Flow engine and rules](../design-plan.md#5-flow-engine-and-rules-d14), [6a. Contracts](../design-plan.md#6a-contracts-generated-and-enforced-d17), [8. Prerequisites, FreeCAD and the container](../design-plan.md#8-prerequisites-freecad-and-the-container) and [Steps (phased)](../design-plan.md#steps-phased).
-- `docs/adr/`: [0002](../adr/0002-install-uvx-and-container.md) (install and container), [0010](../adr/0010-stdio-transport.md) (stdio), [0013](../adr/0013-provider-protocol.md) (provider protocol), [0014](../adr/0014-flow-rules-cel.md) (CEL), [0016](../adr/0016-dev-only-probe.md) (probe) and [0017](../adr/0017-contracts.md) (contracts).
+- `docs/adr/`: [0002](../adr/0002-install-uvx-and-container.md) (install and container), [0010](../adr/0010-stdio-transport.md) (stdio), [0013](../adr/0013-provider-protocol.md) (provider protocol), [0014](../adr/0014-flow-rules-cel.md) (CEL), [0016](../adr/0016-dev-only-probe.md) (probe), [0017](../adr/0017-contracts.md) (contracts) and [0020](../adr/0020-cel-rule-pipeline.md) (the CEL rule pipeline).
 - [docs/client-support.md](../client-support.md) and [docs/contract/provider-protocol.md](../contract/provider-protocol.md).
 - Code on `main` at `518c2ae`: `packages/*/src/`, `contracts/`, `ui/shared/contracts/` and `tools/probe/`.
 - Branches, for the orange boxes: `pi-subagents/task-1-3d530ac-2da9-s0-t0` (envelope, flow and policy contracts), `pi-subagents/task-4-a307ae9-5a16-s0-t0` (provider runtime and kit) and `pi-subagents/task-5-e1402fe-4bd3-s0-t0` (FreeCAD install and probe).

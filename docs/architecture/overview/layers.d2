@@ -43,7 +43,7 @@ stack: "" {
       kiro: "Kiro CLI\nopen: the model lacks\nthe probe tools" {class: open}
       pi: "Pi" {class: external}
     }
-    cli: "benchhand CLI, packages/benchhand\non main: version, record migrate\nmcp, doctor, setup, policy, debug call: Phase 3" {class: main}
+    cli: "benchhand CLI, packages/benchhand\non main: version, record migrate\nmcp, doctor, setup, policy, rules compile, debug call: Phase 3" {class: main}
     browser: "Browser UI, ui/\nviewer, concept, gallery, gate card, flow view\nPhase 5" {class: planned}
   }
 
@@ -51,13 +51,13 @@ stack: "" {
     class: layer_planned
     surface: "MCP surface\ntools, resources, prompts\nPhase 3; Apps and tasks Phase 5" {class: planned}
     interaction: "Interaction layer\nchat fallbacks Phase 3\nApp shells, images Phase 5" {class: planned}
-    flow: "Flow engine\nflow.yaml, CEL guards\nand rule lists\nPhase 2" {class: planned}
     tools: "Tools\nflow.*, project.*, record.*, jobs.*: Phase 3\noutput, drawing, release: Phase 4" {class: planned}
     preview: "Preview host\nloopback HTTP listener\nPhase 5" {class: planned}
   }
 
   core: "Core services: packages/benchhand-core" {
     class: layer
+    flow: "Flow engine\nflow.yaml, CEL guards, rule lists;\nverifies the rules bundle (ADR-0020)\nPhase 2" {class: planned}
     record: "Record: benchhand_core.record" {
       class: main
       store: "store\ntyped reads and writes" {class: main}
@@ -97,7 +97,7 @@ stack: "" {
   clients.cli -> server.surface: "mcp, debug call\nPhase 3" {class: planned_call}
   clients.cli -> core.record.migrate: "record migrate" {class: on_main}
   clients.browser -> server.preview: "loopback URL\nPhase 5" {class: planned_call}
-  server -> core: "Phase 2 and 3" {class: planned_call}
+  server -> core: "Phase 3" {class: planned_call}
   core -> runtime.protocol: "provider host\nopen: no phase in Steps" {class: planned_call}
   runtime.kit -> providers: "Phase 4" {class: planned_call}
   core.record -> storage.hw: "reads and writes" {class: on_main}
@@ -112,11 +112,11 @@ contracts: "Contracts: the side band every layer depends on (ADR-0017)" {
   schema: "Published JSON Schema 2020-12\nbenchhand_contracts/schemas" {class: main}
   pydantic: "Pydantic v2 models and validate\nbenchhand_contracts\nimported by benchhand-core,\nand by the CLI through it" {class: main}
   ts: "TypeScript types and Ajv validators\nui/shared/contracts\nfor the browser UI, Phase 5" {class: main}
-  cel: "CEL environment\ntypes for the flow engine's rules\nPhase 2" {class: planned}
+  cel: "CEL environment: descriptor set\nand profile manifest (ADR-0020)\nfor the flow engine's rules\nPhase 2" {class: planned}
 
   branch_contracts -> tsp: "Phase 1" {class: planned_call}
   tsp -> schema: "tsp compile, normalise" {class: on_main}
   schema -> pydantic: "datamodel-code-generator" {class: on_main}
   schema -> ts: "json-schema-to-typescript, Ajv" {class: on_main}
-  schema -> cel: "Phase 2" {class: planned_call}
+  schema -> cel: "contracts_gen\nPhase 2" {class: planned_call}
 }
