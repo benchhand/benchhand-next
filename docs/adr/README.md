@@ -20,3 +20,4 @@
 - [ADR-0018: Plain tool calls are the baseline; forms are dropped from v1](0018-baseline-and-no-forms.md)
 - [ADR-0019: A design change reopens the approvals it touches, not the stage](0019-scoped-reapproval.md)
 - [ADR-0020: The CEL rule pipeline](0020-cel-rule-pipeline.md)
+- [ADR-0021: Assembly operation kinds](0021-assembly-operation-kinds.md), proposed
