@@ -19,7 +19,7 @@ Reasons:
 
 ### A. The `starlight-versions` plugin
 
-Facts, from the plugin's docs on GitHub (`HiDeoo/starlight-versions`, main branch, read 2026-11-27) and the npm registry:
+Facts, from the plugin's [documentation](https://starlight-versions.vercel.app/) and its [repository](https://github.com/HiDeoo/starlight-versions) (main branch, read 2026-11-27), and the npm registry:
 
 - The latest release is 0.10.2, published 2026-10-30. It needs `@astrojs/starlight` 0.39 or later; this site uses 0.43.2 (published 2026-11-26).
 - Its docs call it opinionated and in early development, and warn to expect frequent changes.
@@ -52,20 +52,20 @@ The `$id`s are `https://benchhand.github.io/benchhand/contracts/<dir>/<name>.sch
 
 - A site version, such as 1.0, doesn't map to one contract version. A contract page should show its `x-version`, and the versioned site shows the `x-version` that the tag carried.
 - A `$id` names one schema, so it can only resolve to one build. It should resolve to the latest, at `/contracts/<name>` on the site root. A versioned copy at `/1.0/contracts/<name>` is not at the `$id`, and a tool that loads both under one `$id` would see two different documents with one identifier.
-- Putting the major version into the `$id` (for example `.../contracts/v2/record/part.schema.json`) would give each major its own resolvable address. It also changes every identifier that `validate(schema_id, ...)`, the `$ref`s and stored data use, so it is a contract decision to take once, at the first major bump, not a docs change.
+- Putting the major version into the `$id` (for example `.../contracts/v2/record/part.schema.json`) would give each major its own resolvable address. It also changes every identifier that `validate(schema_id, ...)` and stored data use, and the base that each file-relative `$ref` resolves against; the `$ref` strings in the schemas may stay as they are (`docs/adr/0017-contracts.md` describes the file-relative layout), so it is a contract decision to take once, at the first major bump, not a docs change.
 - The `$id`s don't resolve today, because the site isn't at the `$id` host (`README.md`, "The schema `$id`s"). Versioning doesn't change that.
 - The per-release tarball keeps each tag's schemas by version, whatever the site shows.
 
 ## Pages size and build limits
 
-From GitHub's "GitHub Pages limits" page (docs.github.com, no publication date, read 2026-11-27):
+From GitHub's [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) page (no publication date, read 2026-11-27):
 
 - A published site may be no larger than 1 GB.
 - A deployment times out after 10 minutes.
 - The soft bandwidth limit is 100 GB a month.
 - The soft limit of 10 builds an hour doesn't apply to a site built and published by a custom Actions workflow, which this one is.
 
-From the `actions/upload-pages-artifact` README (main branch, no publication date, read 2026-11-27): the artifact must be under 10 GB, and 1 GB is the recommended size, since a larger tarball is more likely to exceed the 10-minute deployment timeout.
+From the [`actions/upload-pages-artifact` README](https://github.com/actions/upload-pages-artifact#readme) (main branch, no publication date, read 2026-11-27): the artifact must be under 10 GB, and 1 GB is the recommended size, since a larger tarball is more likely to exceed the 10-minute deployment timeout.
 
 ## Build cost
 
@@ -86,5 +86,5 @@ Estimates for a versioned site, which I haven't measured:
 
 ## Limits of the latest-only setup to keep in mind
 
-- `release-docs` deploys whatever tag it runs on. A backport tag, such as `v0.9.1` after `v1.0.0`, would replace the site with the older docs. Before the first backport, deploy only when the tag is the highest `v*` tag, or move to option B.
+- `release-docs` deploys a published release only when its tag is the highest stable `vX.Y.Z` tag at that moment, so a backport such as `v0.9.1` after `v1.0.0` leaves the site alone and still gets its schema assets. Option B would replace that check with a rebuild of each retained version.
 - The `github-pages` environment must allow `v*` tags (`README.md`, "Workflows").

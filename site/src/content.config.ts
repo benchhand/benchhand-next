@@ -9,8 +9,9 @@ export const collections = {
     schema: docsSchema({
       extend: z.object({
         // The design-plan phase that writes this placeholder page. MarkdownContent shows the
-        // "Planned" aside for it, and scripts/planned-pages.mjs checks and lists it.
-        phase: z.number().int().min(0).max(7).optional(),
+        // "Planned" aside for it. docs/design-plan.md's phase list decides which numbers are valid:
+        // scripts/planned-pages.mjs checks the page against it and lists the page by it.
+        phase: z.number().int().nonnegative().optional(),
       }),
     }),
   }),

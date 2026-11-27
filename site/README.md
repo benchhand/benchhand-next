@@ -38,13 +38,16 @@ Because the default follows `release.toml`, the repo swap moves the site to `htt
 Every schema's `$id` is `https://benchhand.github.io/benchhand/contracts/<name>` (owner decision, 2026-11-27), and the site serves `<name>` at `/contracts/<name>` below its root.
 `pnpm test` checks that mapping for every schema: the path of the `$id` below its prefix must be a file under `dist/contracts/` with the schema's own bytes.
 
-The `$id`s don't resolve until the site is published at `https://benchhand.github.io/benchhand/`, or at a domain that redirects to that address.
+The `$id`s resolve only when the site is published at `https://benchhand.github.io/benchhand/`, or when each `$id` URL redirects to the URL where the site serves that schema.
+The JSON Schemas page carries a notice when the configured `DOCS_URL` doesn't serve the schemas at their `$id`s.
 Until then they identify the schemas without locating them. The JSON Schemas page lists where this site serves each one.
 
 ## Workflows
 
 - `docs-site` runs on pull requests that touch the site, `docs/`, `contracts/`, the generator or the published schemas. It runs `just contracts-drift` and fails when the committed generated files differ from a fresh run, then builds the site with the links validator and runs `pnpm test`. A run by hand also deploys to Pages.
-- `release-docs` runs when a release is published and when a `v*` tag is pushed. It runs `just contracts-drift` on the tagged commit, regenerates the generated docs, builds the site, deploys it to Pages, and attaches `benchhand-schemas-<tag>.tar.gz` and `SHA256SUMS` to the release. The two triggers can fire for one release; the runs queue, and the second leaves the same result. A tag push with no release yet skips the attachment, and the release run adds it.
+- `release-docs` runs when a release is published and when a `v*` tag is pushed. Both run `just contracts-drift` on the tagged commit, regenerate the generated docs and build the site; a tag push stops there. A published release then
+  - deploys the site to Pages, but only when its tag is the highest stable `vX.Y.Z` tag at that moment. The job checks this through the GitHub API inside the shared `pages` concurrency group, and a backport, an older release or a prerelease skips the deploy and says why in the job summary;
+  - attaches `benchhand-schemas-<tag>.tar.gz` and `SHA256SUMS` to the release in every case. An upload failure fails the job.
 
 The `github-pages` environment allows only the default branch by default. Add the tag pattern `v*` under Settings, Environments, `github-pages`, Deployment branches and tags, or the release run's deploy job is refused.
 
