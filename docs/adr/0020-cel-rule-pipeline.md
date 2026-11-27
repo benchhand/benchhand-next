@@ -1,6 +1,6 @@
 # ADR-0020: The CEL rule pipeline
 
-Status: accepted. Source: the owner, 2026-11-27, on `research/cel-neutral/REPORT.md` and `research/cel-k8s/REPORT.md`. It supersedes part of [ADR-0014](0014-flow-rules-cel.md): rule lists are cel-policy files compiled before load, not CEL checked at load, and the types "generated from the contracts" are a descriptor set and a profile manifest. It refines section 5 of [the plan](../design-plan.md). Amended 2026-11-27, at the Phase 0 and 1 gate: the owner decided the composition of providers' rule lists ("Open items"), and added `explanation` to the restricted profile ("The restricted cel-policy profile").
+Status: accepted. Source: the owner, 2026-11-27, on `research/cel-neutral/REPORT.md` and `research/cel-k8s/REPORT.md`. It supersedes part of [ADR-0014](0014-flow-rules-cel.md): rule lists are cel-policy files compiled before load, not CEL checked at load, and the types "generated from the contracts" are a descriptor set and a profile manifest. It refines section 5 of [the plan](../design-plan.md). Amended 2026-11-27, at the Phase 0 and 1 gate: the owner decided the composition of providers' rule lists ("Open items"), and admitted `explanation` to the restricted profile ("The restricted cel-policy profile"). The supervisor added the rules that make it safe, which the owner didn't decide.
 
 ## Context
 
@@ -117,7 +117,7 @@ The profile has no `variables`, no `aggregate` and no nested `rule`. Every other
 - In the copy, a choice without an explanation has neither an output nor a rule, and the compiler drops it without an error (`policy/compiler.go:373-397`). The copy's first match would then answer for another choice. An explanation on the final choice alone would explain every output.
 - cel-go doesn't check the type of the explanation's result.
 
-So the profile adds three rules. Every choice of a list has an explanation, or none does; the rule-list schema checks this. The pinned cel-go tool compiles the explanation copy of a list that has explanations into a second CheckedExpr of the list's bundle entry. It refuses a result type other than `string`, as it checks the output's slot type. The host evaluates the explanation's CheckedExpr on the same activation as the output's and uses its text as the finding's.
+The owner decided only to admit `explanation`. The supervisor added the three rules below, from the cel-go behaviour above; the owner didn't decide them. Every choice of a list has an explanation, or none does; the rule-list schema checks this. The pinned cel-go tool compiles the explanation copy of a list that has explanations into a second CheckedExpr of the list's bundle entry. It refuses a result type other than `string`, as it checks the output's slot type. The host evaluates the explanation's CheckedExpr on the same activation as the output's and uses its text as the finding's.
 
 The final choice keeps "no match means UNKNOWN". A dispatch list ends with `- output: '"unknown"'`. The rule-list schema reserves the value `unknown`, and the host records it as UNKNOWN coverage, never PASS. Every other list's final choice outputs an explicit default of the same type as its other outputs, so the compiler's output-type check still holds. How the lists that policy providers contribute combine with the flow's own was open for the owner, who decided it on 2026-11-27 (see "Open items").
 
@@ -125,13 +125,13 @@ The policy compiler checks output-type assignability between the choices, a lite
 
 ### Compilation and the rules bundle
 
-The pinned cel-go tool lives in `tools/celcheck/`, a Go module pinned to one `cel.dev/cel-go` version and its matching `policy` module. It verifies the descriptor-set bytes against the manifest, then builds its environment from the manifest with explicit options and appends nothing. It compiles each rule list into one CheckedExpr in a `google.protobuf.Any`, and writes the rules bundle.
+The pinned cel-go tool lives in `tools/celcheck/`, a Go module pinned to one `cel.dev/cel-go` version and its matching `policy` module. It verifies the descriptor-set bytes against the manifest, then builds its environment from the manifest with explicit options and appends nothing. It compiles each rule list into a bundle entry and writes the rules bundle. An entry has one output expression, a CheckedExpr in a `google.protobuf.Any`. When the list has explanations, the entry has a second CheckedExpr, the explanation expression, in the same form; its checked type must be `string`.
 
 A bundle's identity is three things:
 
 - the profile digest;
 - the checker: the cel-go version and the tool's version, which must be a checker of record in the manifest;
-- the SHA-256 of each entry's exact payload bytes, taken when the tool writes them.
+- the SHA-256 of the exact payload bytes of each entry's expressions, the output's and, when there is one, the explanation's, taken when the tool writes them.
 
 Each entry also carries the rule list's path, its output type and the SHA-256 of its exact source bytes. A recompile writes new bytes and a new bundle together, and nothing compares two encodings. The profile manifest and the rules bundle are contracts in `contracts/` (ADR-0017), like every other shape.
 
@@ -146,7 +146,7 @@ At load the host:
 2. builds its environment from the manifest and computes the profile digest;
 3. refuses a bundle whose profile digest differs;
 4. refuses a bundle whose checker isn't of record in the manifest;
-5. refuses an entry whose payload SHA-256 differs;
+5. refuses an entry with a payload whose SHA-256 differs;
 6. hashes each rule-list source and refuses a list with no entry, or with an entry whose source SHA-256 differs.
 
 A refusal stops the load. It names the file and the command to run, `benchhand rules compile`. After the checks, the host evaluates each CheckedExpr with cel-expr-python without checking it again.
@@ -177,15 +177,18 @@ In CI, each engine passes the supported-profile cases of its role, for every pro
   - reject cases for a wrong field, a wrong operand type, a read of an omitted field and an undeclared variable;
   - profile cases in which an enabled feature checks and an excluded one fails;
   - a refusal fixture for each excluded cel-policy feature, and for a list whose result type differs from its slot type;
+  - explanation cases: a list with explanations compiles to an entry with a second CheckedExpr, and a list whose explanation has a result type other than `string` is refused at compile time;
   - tampered-bundle cases on its bundles, all refused: another profile's digest, an edited source, a substituted payload and a checker not of record.
 - **cel-expr-python:**
   - the same accept, reject, profile and presence cases, with the presence cases run through the activation path (parse a record, then evaluate);
   - the tampered-bundle cases, refused by the host's verifier;
-  - every CheckedExpr the cel-go tool shipped, evaluated to its expected value.
+  - every CheckedExpr the cel-go tool shipped, evaluated to its expected value, including the second CheckedExpr of each entry that has explanations.
 - **Both checkers of record** check every standalone expression that benchhand ships. CI fails when they disagree on whether it checks, or on its output type.
 - **The cel-spec simple tests**, in protobuf JSON, run on both engines against a committed failure baseline. The suite starts as the research's subset, 1,640 of cel-spec's 2,344 simple tests. A missing engine, a new failure or a new pass fails the run. The scores are diagnostic data about that subset.
 - **Each adapter** has a test that an unknown extension version is refused at load, and a refusal fixture: a descriptor set whose bytes differ from the manifest's SHA-256, refused before any environment is built.
 - **The JCS vector:** the cel-go tool and the host reproduce its canonical bytes and digest exactly.
+
+The Phase 2 conformance suite must cover both explanation requirements. The Phase 1 stand-in doesn't: `tests/rule_lists.py` evaluates the matched choice's explanation directly, so it exercises neither a second CheckedExpr nor the compile-time refusal of a non-string explanation.
 
 ## Consequences
 

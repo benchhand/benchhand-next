@@ -34,6 +34,5 @@ Deciding which items a change affects is CEL in `flow.yaml` (ADR-0014), next to 
 
 The owner decided the open choice at the Phase 0 and 1 gate. A migrated decision carries no approval scope, so it needs confirmation at the next human gate. It doesn't count as covering the whole stage.
 
-- Phase 2 treats a scopeless migrated decision as unconfirmed. The next human gate's packet lists it. Approving that gate records a new decision with an approval scope, which cites the migrated one, as in decision 3.
-- Until then the stage can't freeze or release, as with an item that is `changed_since_approval`.
+- The next human gate confirms it. How the confirmation is recorded, and whether the stage can freeze or release before it, are Phase 2 design questions. The owner hasn't approved any mechanics for them yet.
 - [Record migration](../contract/record-migration.md#decided-defaults) records this as a Phase 2 requirement.

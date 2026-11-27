@@ -78,15 +78,15 @@ What they fix:
 - **Rule lists:** one `*.celpolicy` file per list, in the restricted profile of ADR-0020: a name and one first-match match block, with `condition` and `output`. Each match list has exactly one unconditional choice. The compiler checks that it is last.
 - **Policy contribution:** a provider contributes rule lists by kind, each as `{file, rules_version}`, and gate requirements.
 
-Tests: `uv run pytest --collect-only -q tests/test_flow_contract.py tests/test_policy_contract.py tests/test_envelope_contract.py` collects 249 cases from 64 test functions (log 19 ran them in the full suite):
+Tests: `uv run pytest --collect-only -q tests/test_flow_contract.py tests/test_policy_contract.py tests/test_envelope_contract.py` collects 259 cases from 70 test functions (log 19 ran them in the full suite):
 
 | File | Cases | Test functions | Covers |
 |---|---|---|---|
-| `tests/test_flow_contract.py` | 199 | 42 | the prototype flow and its four rule lists, every human gate, stage coverage, gate-decision identity, the schema's refusals |
+| `tests/test_flow_contract.py` | 209 | 48 | the prototype flow and its four rule lists, every human gate, stage coverage, gate-decision identity, the schema's refusals |
 | `tests/test_policy_contract.py` | 39 | 16 | the contribution shape, the merge (fall-through, ordering, reserved values, rigor union, no waiver) |
 | `tests/test_envelope_contract.py` | 11 | 6 | each status's example, verdict, refusal, job handle, error, artifact path |
 
-`tests/test_rule_lists.py` (8 cases) tests the helper that evaluates the lists. Three of the test names carry the decisions below: `test_a_prototype_staged_human_gate_passes_only_on_an_approval_that_cites_its_decisions`, `test_a_result_outside_its_kinds_domain_is_unknown_never_a_pass` and `test_rigor_gives_the_union_of_every_lists_messages_each_once_in_evaluation_order`.
+`tests/test_rule_lists.py` (14 cases) tests the helper that evaluates the lists. Three of the test names carry the decisions below: `test_a_prototype_staged_human_gate_passes_only_on_an_approval_that_cites_its_decisions`, `test_a_result_outside_its_kinds_domain_is_unknown_never_a_pass` and `test_rigor_gives_the_union_of_every_lists_messages_each_once_in_evaluation_order`.
 
 Fixture: `tests/fixtures/flow/prototype-412b5d9/` holds the prototype's flow as `flow.yaml` and its four rule lists, `checks-by-iteration`, `dispatch`, `fidelity` and `rigor`, as `*.celpolicy`. The tests validate them against the schemas and evaluate them with cel-expr-python 0.1.4 (`pyproject.toml:20`; `tests/rule_lists.py`), a dev-only stand-in for the cel-go-compiled bundle that Phase 2 builds. The cases come from the prototype's behaviour: the check list at each iteration, the handler for each owned family, the fidelity at each stage, and the rigor refusal.
 
@@ -123,9 +123,14 @@ The owner decided these on 2026-11-27.
 
    The `relicense` commit that `git log main` also finds is the prototype's (`2f6cef77`, in the imported history under `reference/`).
 4. **Composing providers' rule lists, as proposed.** The contributions in ascending provider name, then the flow's list, whose result is final. A list that gives its kind's reserved no-match value passes to the next list. Rigor is the union of every list's messages, each once, and no list can waive one. Recorded in ADR-0020 ("Open items", decided 2026-11-27), `docs/contract/policy.md` and `contracts/policy/contribution.tsp`.
-5. **`explanation` joins ADR-0020's restricted profile.** A choice's explanation is a CEL expression that gives a string. Every choice of a list has one, or none does, because cel-go's explanation copy drops a choice without one. The cel-go tool compiles the explanations as a second checked expression and refuses a result other than a string. Recorded in ADR-0020 ("The restricted cel-policy profile", amended 2026-11-27), `contracts/flow/rules.tsp` and `docs/contract/flow.md`. The fixture's dispatch list carries the prototype's "no handler for ..." text.
+5. **`explanation` joins ADR-0020's restricted profile.** The owner decided to admit it: a choice's explanation is a CEL expression that gives a string. The supervisor added three rules to make it safe, which the owner didn't decide:
+   - every choice of a list has an explanation, or none does, because cel-go's explanation copy drops a choice without one;
+   - the cel-go tool compiles the explanations as a second checked expression in the list's bundle entry;
+   - the tool refuses an explanation whose checked type isn't `string`.
+
+   Recorded in ADR-0020 ("The restricted cel-policy profile", amended 2026-11-27), `contracts/flow/rules.tsp` and `docs/contract/flow.md`. The fixture's dispatch list carries the prototype's "no handler for ..." text.
 6. **The engine supplies the interval-acceptance citation from the record.** `GateDecisionRequest` gets no new field. The fixture's `answer.cites` stays as a test stand-in. Recorded in `docs/contract/flow.md` ("Gate decisions") and in the `GateDecisionRequest` description in `contracts/flow/flow.tsp`.
-7. **A migrated decision without an approval scope needs confirmation at the next human gate.** It doesn't count as covering the whole stage. This is a Phase 2 requirement. Recorded in ADR-0019 ("Amendment, 2026-11-27") and `docs/contract/record-migration.md` (decided default 4).
+7. **A migrated decision without an approval scope needs confirmation at the next human gate.** It doesn't count as covering the whole stage. This is a Phase 2 requirement. How the confirmation is recorded is a Phase 2 design question, and no mechanics are approved. Recorded in ADR-0019 ("Amendment, 2026-11-27") and `docs/contract/record-migration.md` (decided default 4).
 
 ## Verification on the test project
 
@@ -165,7 +170,7 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
 ## Open items for the owner
 
 1. **Composing policy providers' rule lists.** Decided 2026-11-27: as proposed. See [Decided](#decided) 4.
-2. **`explanation` in ADR-0020's restricted profile.** Decided 2026-11-27: added, on every choice of a list or on none. See [Decided](#decided) 5.
+2. **`explanation` in ADR-0020's restricted profile.** The owner decided on 2026-11-27 to admit it. The supervisor added the all-or-none and checked-string rules, which the owner hasn't confirmed. See [Decided](#decided) 5.
 3. **How the gate request cites an interval-acceptance decision.** Decided 2026-11-27: the engine supplies it from the record, and the request gets no field. See [Decided](#decided) 6.
 4. **53 `basis: inferred` entries in the reference map.** They are entries of `docs/architecture/reference-map.yaml` whose home the plan's behavioural reference map doesn't name (header, `:18`). They are not in the migrate output, which has no such notion. They cover 127 prototype files, which is the "about 130" (`inferred.py`, log 13). By status: 36 `planned`, 7 `partial`, 9 `dropped` and 1 `ported`. By phase: 8 in Phase 1, 15 in Phase 2, 5 in Phase 3, 13 in Phase 4, 1 each in Phases 5 and 6, and 10 with no phase. The owner confirms or corrects the homes. The 10 with no phase need a phase first.
 5. **Probe gaps.** Run the Codex / ChatGPT desktop app, and settle Kiro's tool exposure (`docs/client-support.md:15,17`). The 2026-11-25 document records both as paused at the owner's request.
@@ -187,11 +192,11 @@ The original was only read. I copied it to a `mktemp -d` directory (`diff -rq` f
    - fits by explicit limits (#348, still open in the prototype).
 
    The annotation set and test-coupon evidence follow (plan Phase 2).
-3. What the owner decided on 2026-11-27 ([Decided](#decided) 4 to 7):
+3. What 2026-11-27 settled ([Decided](#decided) 4 to 7):
    - the merge of providers' rule lists;
-   - explanations in the cel-go tool and the host;
+   - explanations in the cel-go tool and the host: the owner admitted `explanation`, and the supervisor's all-or-none and checked-string rules wait for the owner's confirmation;
    - the interval citation that the engine supplies;
-   - the confirmation of scopeless migrated decisions at the next gate.
+   - the confirmation of scopeless migrated decisions at the next gate, with its mechanics left to Phase 2 design.
 4. Version snapshots, seal and verify. Evidence staleness for v10 to v18 depends on reading these snapshots, and the freeze and `--since-version` baselines use them.
 5. `flow.yaml` and its interpreter, the CEL pipeline of ADR-0020 and the rule lists, on the contracts of criterion 1.3. The out-of-domain rule has no implementation yet. The Phase 2 evaluator records a fidelity outside F0 to F3, or a dispatch handler id that no handler has, as UNKNOWN with a finding that names the value, never a pass. The Phase 2 flow loader rejects a literal `"none"` in the flow's own fidelity list, because no schema can express that. The rule is in `contracts/flow/rules.tsp` and `docs/contract/flow.md`, and `tests/rule_lists.py` models it. ADR-0020 leaves four choices to Phase 2: where a user's bundle lives, how a scope is declared, the first profile's extensions, and the enum lint (`docs/adr/0020-cel-rule-pipeline.md:232-235`).
 6. Decision records, the VOID cascade, scoped approvals (ADR-0019), and `flow/guides/*.md`.
