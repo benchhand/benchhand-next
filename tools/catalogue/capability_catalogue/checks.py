@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -238,18 +238,41 @@ def pointer_problem(repo_root: Path, pointer: str) -> str | None:
 
 def _named_sources(catalogue: Catalogue, repo_root: Path) -> Iterator[str]:
     """A tool or command whose source points into the repository is named on the line it points to."""
-    for kind, items, last_part in (
-        ("tool", catalogue.tools, lambda name: name.split(".")[-1]),
-        ("CLI command", catalogue.cli, lambda name: name.split()[-1]),
+    for kind, items, named in (
+        ("tool", catalogue.tools, tool_named),
+        ("CLI command", catalogue.cli, cli_named),
     ):
         for item in items:
             if item["source"]["kind"] in REPO_SOURCES:
-                problem = _named_on_line(repo_root, item["source"]["ref"], last_part(item["name"]))
+                problem = _named_on_line(repo_root, item["source"]["ref"], item["name"], named)
                 if problem:
                     yield f"{kind} {item['name']}: {problem}"
 
 
-def _named_on_line(repo_root: Path, pointer: str, word: str) -> str | None:
+def _word_named(name: str, line: str) -> bool:
+    return re.search(rf"(?<![\w.-]){re.escape(name)}(?![\w-])", line) is not None
+
+
+def cli_named(name: str, line: str) -> bool:
+    """``line`` names the command's words in order, in full or in the usage forms the sources use: optional
+    words in brackets (`mcp [--http]`), alternatives (`policy get|set`) and a Typer group's command
+    (`@record.command("migrate")`)."""
+    text = re.sub(r'\.command\("([\w-]+)"\)', r" \1", line).replace("[", " ").replace("]", " ")
+    words = r"\s+".join(rf"(?:[\w-]+\|)*{re.escape(word)}(?:\|[\w-]+)*" for word in name.split())
+    return re.search(rf"(?<![\w.-]){words}(?![\w-])", text) is not None
+
+
+def tool_named(name: str, line: str) -> bool:
+    """``line`` names the tool in full, or in the one shorthand the plan uses: after a tool of the same
+    namespace, the rest of the name alone in a code span, as in "`model.measure`, `section`"."""
+    if _word_named(name, line):
+        return True
+    namespace, _, rest = name.rpartition(".")
+    sibling = re.search(rf"`{re.escape(namespace)}\.\w", line)
+    return sibling is not None and re.search(rf"`{re.escape(rest)}[`(]", line[sibling.end() :]) is not None
+
+
+def _named_on_line(repo_root: Path, pointer: str, name: str, named: Callable[[str, str], bool]) -> str | None:
     found = _LINE.match(pointer)
     if not found or found["line"] is None:
         return f"its {pointer} needs a path:LINE"
@@ -257,4 +280,4 @@ def _named_on_line(repo_root: Path, pointer: str, word: str) -> str | None:
     if problem:
         return problem
     line = (repo_root / found["path"]).read_text(encoding="utf-8").splitlines()[int(found["line"]) - 1]
-    return None if word in line else f"{pointer} doesn't name {word}"
+    return None if named(name, line) else f"{pointer} doesn't name {name}"

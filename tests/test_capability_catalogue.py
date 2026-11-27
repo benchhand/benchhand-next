@@ -13,13 +13,15 @@ from typing import Any
 import pytest
 import yaml
 from capability_catalogue.catalogue import Catalogue, CatalogueError, load_catalogue
-from capability_catalogue.checks import check_catalogue
+from capability_catalogue.checks import check_catalogue, cli_named, tool_named
 from capability_catalogue.cli import CATALOGUE_FILE, OUTPUT_FILE, REPO_ROOT, run
 from capability_catalogue.coverage import check_prototype_commands
 from capability_catalogue.render import render_page
 from mermaid_render import mermaid_blocks, needs_mermaid, render_markdown
 
 BASE = "https://benchhand.github.io/benchhand/contracts/"
+PREVIEW_LINE = "docs/design-plan.md:377"
+"""The plan's preview-hosting line: `preview.serve(kind, target)`, then `preview.stop` and `preview.list`."""
 
 
 def _catalogue() -> dict[str, Any]:
@@ -156,7 +158,13 @@ def test_a_name_that_does_not_resolve_is_reported(change: Any, message: str) -> 
         (lambda d: d["capabilities"][0].update(evidence=["../outside.md"]), "stays inside the repository"),
         (
             lambda d: d["tools"][1]["source"].update(ref="docs/design-plan.md:9"),
-            "docs/design-plan.md:9 doesn't name status",
+            "docs/design-plan.md:9 doesn't name jobs.status",
+        ),
+        (
+            lambda d: d["tools"][1].update(
+                name="unrelated.list", source={"kind": "plan", "ref": PREVIEW_LINE}
+            ),
+            f"{PREVIEW_LINE} doesn't name unrelated.list",
         ),
         (
             lambda d: d["capabilities"][0].update(contracts=["jobs/job.schema.json#/$defs/Nothing"]),
@@ -183,6 +191,50 @@ def test_a_pointer_contract_or_path_that_does_not_resolve_is_reported(change: An
     data = _catalogue()
     change(data)
     assert any(message in problem for problem in _problems(data)), _problems(data)
+
+
+@pytest.mark.parametrize(
+    ("name", "line", "named"),
+    [
+        (
+            "preview.list",
+            "`preview.serve(kind, target)` hosts it. `preview.stop` and `preview.list` manage them.",
+            True,
+        ),
+        (
+            "model.section",
+            "- **Inspect:** `model.measure`, `section`, `mass_props` and `interference`.",
+            True,
+        ),
+        ("unrelated.list", "`preview.stop` and `preview.list` manage them.", False),
+        (
+            "unrelated.section",
+            "- **Inspect:** `model.measure`, `section`, `mass_props` and `interference`.",
+            False,
+        ),
+        ("model.section", "`section` is cut before `model.measure` runs.", False),
+        ("jobs.status", "`jobs.statuses` lists them.", False),
+    ],
+)
+def test_a_tool_source_line_names_the_tool_in_full_or_after_a_sibling_of_its_namespace(
+    name: str, line: str, named: bool
+) -> None:
+    assert tool_named(name, line) is named
+
+
+@pytest.mark.parametrize(
+    ("name", "line", "named"),
+    [
+        ("record migrate", '@record.command("migrate")', True),
+        ("mcp --http", "- `mcp [--http] [--project DIR]` starts the MCP server.", True),
+        ("policy set", "- `policy get|set` changes the gate modes and records the DR.", True),
+        ("rules compile", "mcp, serve, install, doctor, setup, policy, rules compile and debug call", True),
+        ("policy set", "- `policy` changes the gate modes; set them at setup.", False),
+        ("debug call", "debug calls", False),
+    ],
+)
+def test_a_cli_source_line_names_the_command_words_in_order(name: str, line: str, named: bool) -> None:
+    assert cli_named(name, line) is named
 
 
 def test_a_schema_violation_is_reported_with_its_path(tmp_path: Path) -> None:
