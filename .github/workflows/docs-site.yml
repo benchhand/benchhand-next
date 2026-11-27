@@ -22,11 +22,9 @@ permissions:
   contents: read
 
 env:
-  # The schemas' $ids are https://benchhand.github.io/benchhand/contracts/...,
-  # so these defaults serve each schema at its $id.
-  # Repository variables override them.
-  DOCS_SITE: ${{ vars.DOCS_SITE || 'https://benchhand.github.io' }}
-  DOCS_BASE: ${{ vars.DOCS_BASE || '/benchhand' }}
+  # Where the site is published, from the repository variable DOCS_URL. Unset, it is
+  # https://<owner>.github.io/<name>/ from release.toml (site/site-url.mjs).
+  DOCS_URL: ${{ vars.DOCS_URL }}
 
 jobs:
   build:

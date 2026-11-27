@@ -1,5 +1,5 @@
 // Prefix the site base to root-relative links in Markdown, so pages write `/reference/` and the
-// built site links to `/benchhand/reference/` (or `/reference/` under DOCS_BASE=/).
+// built site links to `/benchhand-next/reference/` (or `/reference/` when DOCS_URL is at a domain root).
 // starlight-links-validator then sees the final URLs and checks them.
 import { visit } from "unist-util-visit";
 

@@ -10,18 +10,36 @@ pnpm --dir site test       # each schema's $id is served by the build
 pnpm --dir site preview    # serve dist/
 ```
 
-## Base path and URL
+## Where the site is published
 
-`site-url.mjs` reads two environment variables:
+The site is published on GitHub Pages for `benchhand/benchhand-next`, at `https://benchhand.github.io/benchhand-next/`.
+A custom domain comes later.
 
-| Variable | Default | Use |
+`site-url.mjs` holds the one config value, the environment variable `DOCS_URL`. It is the full URL of the site root, and the site's origin and base path are both derived from it:
+
+| `DOCS_URL` | Origin | Base |
 |---|---|---|
-| `DOCS_SITE` | `https://benchhand.github.io` | The origin the site is published at. |
-| `DOCS_BASE` | `/benchhand` | The path below the origin. Set `DOCS_BASE=/` for a local copy. |
+| unset | `https://<owner>.github.io` | `/<name>/`, with owner and name from `release.toml` `repo` |
+| `https://docs.example.org/` | `https://docs.example.org` | `/` |
+| `http://localhost:4321/` | `http://localhost:4321` | `/` |
 
-The contracts' `$id`s are `https://benchhand.github.io/benchhand/contracts/...`.
-With the defaults, the site serves each published schema at its `$id`, and `pnpm test` checks that.
-`pnpm test` reads the same variables as the build, so run both with the same values.
+The workflows read `DOCS_URL` from a repository variable of the same name, and use the default when it is unset.
+Because the default follows `release.toml`, the repo swap moves the site to `https://benchhand.github.io/benchhand/` without an edit.
+
+### Switch to a custom domain
+
+1. In the DNS zone, add a `CNAME` record from the host name (for example `docs.example.org`) to `benchhand.github.io`.
+2. In the repository's Settings, Pages, enter the custom domain and enable HTTPS. A site that a workflow deploys takes its domain from this setting; a `CNAME` file in the artifact is ignored.
+3. Set the repository variable `DOCS_URL` to `https://docs.example.org/`. The base becomes `/`, so no path prefix remains.
+4. Run the `release-docs` workflow again, or the `docs-site` workflow by hand, to rebuild with the new URL.
+
+### The schema `$id`s
+
+Every schema's `$id` is `https://benchhand.github.io/benchhand/contracts/<name>` (owner decision, 2026-11-27), and the site serves `<name>` at `/contracts/<name>` below its root.
+`pnpm test` checks that mapping for every schema: the path of the `$id` below its prefix must be a file under `dist/contracts/` with the schema's own bytes.
+
+The `$id`s don't resolve until the site is published at `https://benchhand.github.io/benchhand/`, or at a domain that redirects to that address.
+Until then they identify the schemas without locating them. The JSON Schemas page lists where this site serves each one.
 
 ## What is hand-written and what is synced
 
@@ -51,7 +69,7 @@ Edit the sources, not the copies. Each synced page's edit link points at its sou
 
 The sync prints a count per rule and writes every rewrite to `.cache/link-rewrites.tsv`.
 
-`src/remark-base-links.mjs` then prefixes `DOCS_BASE` to every root-relative link, so pages write `/reference/` under any base.
+`src/remark-base-links.mjs` then prefixes the base to every root-relative link, so pages write `/reference/` under any base.
 `astro.config.mjs` `KNOWN_BROKEN_LINKS` excludes the broken anchors that the synced sources contain, one by one.
 
 ## Placeholder pages

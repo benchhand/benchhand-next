@@ -15,7 +15,7 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 import { visit } from "unist-util-visit";
 
-import { repoRoot, repoUrl } from "../site-url.mjs";
+import { repoRoot, repoUrl, schemaIdPrefix } from "../site-url.mjs";
 
 const siteRoot = fileURLToPath(new URL("..", import.meta.url));
 const docsOut = path.join(siteRoot, "src/content/docs");
@@ -174,7 +174,8 @@ function write(dest, content) {
   writeFileSync(file, content);
 }
 
-// Serve every published schema under public/contracts/, so each is at its $id below the base.
+// Serve every published schema under public/contracts/, so each is at /contracts/<name> below the
+// site root. Its $id is at schemaIdPrefix; the schema-URL test checks the mapping between the two.
 function syncSchemas() {
   const rows = [];
   for (const file of listFiles(schemasSource, true).filter((f) => f.endsWith(".schema.json")).sort()) {
@@ -183,7 +184,8 @@ function syncSchemas() {
     mkdirSync(path.dirname(outFile), { recursive: true });
     cpSync(path.join(repoRoot, file), outFile);
     const schema = JSON.parse(readFileSync(outFile, "utf8"));
-    rows.push(`| \`${rel}\` | [\`${schema.$id}\`](/contracts/${rel}) |`);
+    if (!schema.$id.startsWith(schemaIdPrefix)) throw new Error(`${file}: $id ${schema.$id} is outside ${schemaIdPrefix}`);
+    rows.push(`| [\`${rel}\`](/contracts/${rel}) | \`${schema.$id}\` |`);
   }
   write(
     "reference/contracts/schemas.md",
@@ -195,9 +197,15 @@ function syncSchemas() {
       "---",
       "",
       `The published JSON Schemas, copied from [\`${schemasSource}\`](${repoUrl}/tree/main/${schemasSource}).`,
-      "The site serves each one at its `$id`.",
+      "This site serves each one at `/contracts/<name>` below its root, which is the path of its `$id` below `https://benchhand.github.io/benchhand/`.",
       "",
-      "| Schema | `$id` |",
+      ":::caution[The `$id`s don't resolve yet]",
+      "The `$id`s name `benchhand.github.io/benchhand`, and this site is published at a different address.",
+      "Until the site is published at that host, or at a domain that redirects to it, a `$id` is an identifier, not a link that works.",
+      "Use the first column to fetch a schema.",
+      ":::",
+      "",
+      "| Schema, served by this site | `$id` |",
       "|---|---|",
       ...rows,
       "",
