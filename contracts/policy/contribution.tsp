@@ -51,10 +51,7 @@ model PolicyGateRequirements {
   PolicyContribution,
   #{
     rules: #{
-      dispatch: #{
-        file: "rules/welding-dispatch.celpolicy",
-        rules_version: 1,
-      },
+      dispatch: #{ file: "rules/welding-dispatch.celpolicy", rules_version: 1 },
     },
   }
 );

@@ -73,8 +73,13 @@ def _flow_list(kind: str) -> dict[str, Any]:
 
 def _contributed(kind: str, condition: str, output: str) -> dict[str, Any]:
     """A contributed list: one conditional choice, then its kind's no-match value."""
-    no_match = {"checks_by_iteration": "[]", "dispatch": '"unknown"', "fidelity": '"none"', "rigor": "[]"}[kind]
-    return {"name": kind, "rule": {"match": [{"condition": condition, "output": output}, {"output": no_match}]}}
+    no_match = {"checks_by_iteration": "[]", "dispatch": '"unknown"', "fidelity": '"none"', "rigor": "[]"}[
+        kind
+    ]
+    return {
+        "name": kind,
+        "rule": {"match": [{"condition": condition, "output": output}, {"output": no_match}]},
+    }
 
 
 # Per fall-through kind: an activation, the flow's own value for it, a contributed choice's output and its value.
@@ -142,7 +147,10 @@ def test_a_contributed_none_fidelity_falls_through_to_the_flows_stage_fidelity()
     assert merged("fidelity", contributed, _flow_list("fidelity"), data) == flow_value
 
 
-REGULATED_OFF = {"policy": {"rigor": "regulated"}, "record": {"flow": {"profile": [{"turns_check_off": True}]}}}
+REGULATED_OFF = {
+    "policy": {"rigor": "regulated"},
+    "record": {"flow": {"profile": [{"turns_check_off": True}]}},
+}
 FLOW_RIGOR_MESSAGE = "regulated rigor refuses a flow profile that turns a check off"
 
 
