@@ -20,8 +20,12 @@ export default defineConfig({
   vite: { define: { __BENCHHAND_REPO_URL__: JSON.stringify(repoUrl) } },
   integrations: [
     // The architecture pages and the domain model draw their diagrams in Mermaid.
-    // astro-mermaid must come before Starlight.
-    mermaid({ autoTheme: true }),
+    // astro-mermaid must come before Starlight. Diagrams keep their natural size and scroll sideways
+    // (theme.css) instead of shrinking to the column: useMaxWidth makes Mermaid size the SVG to 100%.
+    mermaid({
+      autoTheme: true,
+      mermaidConfig: { flowchart: { useMaxWidth: false }, state: { useMaxWidth: false } },
+    }),
     starlight({
       title: "benchhand",
       description: "An MCP server and CLI that guide an AI coding agent through a hardware design flow, with a design record.",
@@ -29,6 +33,14 @@ export default defineConfig({
       // public/favicon.svg, Starlight's default path; it switches colour with prefers-color-scheme.
       favicon: "/favicon.svg",
       customCss: ["./src/styles/theme.css"],
+      // A scrolling diagram must be reachable by keyboard: make each Mermaid panel a focusable region.
+      head: [
+        {
+          tag: "script",
+          content:
+            "document.addEventListener('DOMContentLoaded',()=>{for(const d of document.querySelectorAll('pre.mermaid')){d.tabIndex=0;d.setAttribute('role','region');d.setAttribute('aria-label','Diagram, scrolls sideways');}});",
+        },
+      ],
       social: [{ icon: "github", label: "GitHub", href: repoUrl }],
       editLink: { baseUrl: `${repoUrl}/edit/main/site/` },
       components: {

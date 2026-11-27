@@ -84,12 +84,22 @@
   background: var(--bh-diagram-paper);
 }
 
-/* Mermaid diagrams follow the active theme (astro-mermaid autoTheme); give them the same frame. */
+/* Mermaid diagrams follow the active theme (astro-mermaid autoTheme); give them the same frame. They keep
+ * their natural size, so a wide one scrolls sideways rather than shrinking its labels to a few pixels
+ * (astro.config.mjs turns off Mermaid's useMaxWidth). astro-mermaid centres the SVG with justify-content,
+ * which hides the overflowing left edge; an auto margin centres a narrow SVG and keeps a wide one scrollable. */
 .sl-markdown-content pre.mermaid {
   padding: 1rem;
   border: 1px solid var(--sl-color-hairline-light);
   border-radius: 0.5rem;
   background: var(--sl-color-bg-nav);
+  overflow-x: auto;
+  justify-content: flex-start;
+}
+.sl-markdown-content pre.mermaid svg {
+  flex: none;
+  max-width: none;
+  margin-inline: auto;
 }
 
 /* Tables built by the index generators: keep short columns on one line where there is room; on narrow
