@@ -1,0 +1,20 @@
+---
+// SPDX-FileCopyrightText: 2026 Sjors Robroek
+//
+// SPDX-License-Identifier: MPL-2.0
+// Starlight's Search. The header button is named "Search" (aria-label) but shows "Search" and a shortcut
+// hint, Ctrl K or ⌘ K, which axe reads as visible text missing from the name (label-content-name-mismatch,
+// WCAG 2.5.3). Its name is set to the text it shows, "Search ⌘ K", once Starlight's inline script has picked
+// the platform's key.
+import Default from "@astrojs/starlight/components/Search.astro";
+---
+
+<Default {...Astro.props} />
+
+<script>
+  for (const button of document.querySelectorAll<HTMLElement>("site-search button[data-open-modal]")) {
+    const keys = [...button.querySelectorAll(":scope > kbd > kbd")].map((key) => key.textContent?.trim());
+    const label = button.getAttribute("aria-label") ?? "Search";
+    if (keys.length) button.setAttribute("aria-label", [label, ...keys].join(" "));
+  }
+</script>

@@ -226,7 +226,16 @@ site-search button[data-open-modal] > kbd {
   text-decoration-thickness: 2px;
 }
 
-/* Tables: a mono uppercase header over a 1.5px ink rule, hairline row rules and a mono first column. */
+/* Tables: a mono uppercase header over a 1.5px ink rule, hairline row rules and a mono first column. The
+ * wrapper (src/rehype-table-scroll.mjs) scrolls a wide table sideways; the table keeps its own semantics. */
+.sl-markdown-content .bh-table-scroll {
+  overflow-x: auto;
+}
+.sl-markdown-content .bh-table-scroll > table:not(:where(.not-content *)) {
+  display: table;
+  width: 100%;
+  overflow: visible;
+}
 .sl-markdown-content th:not(:where(.not-content *)) {
   font: var(--bh-label);
   letter-spacing: 0.08em;

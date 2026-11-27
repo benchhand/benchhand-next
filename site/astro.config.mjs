@@ -12,6 +12,7 @@ import { base, repoUrl, site } from "./site-url.mjs";
 import { codeThemeDark, codeThemeLight } from "./src/code-themes.mjs";
 import remarkBaseLinks from "./src/remark-base-links.mjs";
 import remarkDiagramFrames from "./src/remark-diagram-frames.mjs";
+import rehypeTableScroll from "./src/rehype-table-scroll.mjs";
 
 // Mermaid draws in the site's tokens: ink lines on paper in light, light lines on navy in dark. astro-mermaid
 // gives both themes one config, so the colours are CSS variables that follow [data-theme] (theme.css), and
@@ -29,7 +30,10 @@ const MERMAID_THEME_CSS = [
 export default defineConfig({
   site,
   base,
-  markdown: { remarkPlugins: [[remarkBaseLinks, { base, repoUrl }], remarkDiagramFrames] },
+  markdown: {
+    remarkPlugins: [[remarkBaseLinks, { base, repoUrl }], remarkDiagramFrames],
+    rehypePlugins: [rehypeTableScroll],
+  },
   // src/site-link.ts links "repo:<path>" to the repository; site-url.mjs reads release.toml, so
   // components get its result as a constant rather than importing it.
   vite: { define: { __BENCHHAND_REPO_URL__: JSON.stringify(repoUrl) } },
@@ -109,6 +113,8 @@ export default defineConfig({
         SocialIcons: "./src/components/SocialIcons.astro",
         // Loads the script that makes sideways-scrolling boxes focusable, labelled regions.
         MarkdownContent: "./src/components/MarkdownContent.astro",
+        // Hides the shortcut hint from the button's name, so its label matches its visible text.
+        Search: "./src/components/Search.astro",
       },
       plugins: [starlightLinksValidator()],
       sidebar: [
