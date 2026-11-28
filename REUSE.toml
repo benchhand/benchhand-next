@@ -108,3 +108,10 @@ path = [".specify/**", ".pi/prompts/speckit.*.md"]
 precedence = "override"
 SPDX-FileCopyrightText = "GitHub, Inc."
 SPDX-License-Identifier = "MIT"
+
+# speckit-beads 2.0.0 (srobroek/harness-plugins): the beads formulas speckit_setup copies in
+[[annotations]]
+path = [".beads/formulas/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Sjors Robroek"
+SPDX-License-Identifier = "Apache-2.0"

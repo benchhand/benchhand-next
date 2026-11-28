@@ -19,3 +19,6 @@ tools/issues/private-patterns.txt
 
 # The beads plugin's gate lock
 .beads.gate.lock
+
+# speckit-beads: a generated per-spec status page
+specs/**/spec-status.md
