@@ -123,12 +123,16 @@ version = "0.0.0"
 source = { editable = "packages/benchhand" }
 dependencies = [
     { name = "benchhand-core" },
+    { name = "openfeature-sdk" },
+    { name = "pyyaml" },
     { name = "typer" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "benchhand-core", editable = "packages/benchhand-core" },
+    { name = "openfeature-sdk", specifier = "==0.10.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "typer", specifier = ">=0.15" },
 ]
 
@@ -844,6 +848,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e6/99/d27cfc9518f49e4cbc25c683ec7cf8704a9d31311341c291c0e78ddf791b/nodeenv-1.12.0.tar.gz", hash = "sha256:4ea7f88339310afebc3253f2c7a91b94bacf97d73a36a5c108962abdfaca501e", size = 131292, upload-time = "2026-10-31T19:03:18.847Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2d/6a/8a9ac7d5e2f7cf53c459bfef90ebc17a2f8cd54b665af96799d4c534840e/nodeenv-1.12.0-py3-none-any.whl", hash = "sha256:80644d65c10cc2be12e3e4b54b3367ff288c7ad24ae75c2dcc65454fc7449d4d", size = 39442, upload-time = "2026-10-31T19:03:17.427Z" },
+]
+
+[[package]]
+name = "openfeature-sdk"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/30/cfc684b7d8314398d476ae8ed515c10db99c4d7f950989db464b4ded12ce/openfeature_sdk-0.10.0.tar.gz", hash = "sha256:938c2540bdea4da3b01ef507517ee636f223a35abaaca845c5587e594151b052", size = 33516, upload-time = "2026-06-01T19:45:35.136Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/44/8a4f5225e930ff0d999fd43f5d743a4babeb6c7e76dddc00f0e118878ef3/openfeature_sdk-0.10.0-py3-none-any.whl", hash = "sha256:75497ea75d73f684eef509a25f79ad6386368862e050af80ab70a44ae49b33e4", size = 38941, upload-time = "2026-06-01T19:45:33.011Z" },
 ]
 
 [[package]]

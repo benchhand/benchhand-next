@@ -5,7 +5,7 @@ license = "MPL-2.0"
 license-files = ["LICENSE"]
 description = "Agent-guided mechanical CAD: the benchhand MCP server, preview host and CLI."
 requires-python = ">=3.12"
-dependencies = ["benchhand-core", "typer>=0.15"]
+dependencies = ["benchhand-core", "openfeature-sdk==0.10.0", "pyyaml>=6.0", "typer>=0.15"]
 
 [project.scripts]
 benchhand = "benchhand.cli:app"

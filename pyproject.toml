@@ -98,13 +98,16 @@ ignore_decorators = [
   "@record.command", # a typer command (packages/benchhand/src/benchhand/cli.py)
 ]
 ignore_names = [
-  "model_config", # read by pydantic
-  "exc_type",     # the arguments of __exit__
+  "model_config",       # read by pydantic
+  "exc_type",           # the arguments of __exit__
   "exc",
   "tb",
-  "missing_ok",   # a test's stand-in for Path.unlink keeps its signature
-  "form_class",   # a pydantic field a test assigns
-  "inferred",     # a field of docs/architecture/reference-map.yaml entries, which tools/map reads by name
+  "missing_ok",         # a test's stand-in for Path.unlink keeps its signature
+  "form_class",         # a pydantic field a test assigns
+  "inferred",           # a field of docs/architecture/reference-map.yaml entries, which tools/map reads by name
+  "remove_by",          # a feature flag's removal date (benchhand/flags.py), for its owner and the cleanup chore
+  "get_metadata",       # an OpenFeature provider method (benchhand/flag_provider.py), called by the SDK
+  "evaluation_context", # a parameter of the OpenFeature provider methods, which the file provider ignores
   # Keys of the TypedDicts that tools/inventory writes to prototype-inventory.json; the renderer and the drift
   # check read them by name.
   "map_entry",

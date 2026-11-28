@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# The benchhand feature flags, in the flagd flag-definition format.
+# benchhand/flags.py defines each flag's key, default, owner and removal
+# date; this file only chooses its variant. To turn a flag on, set its
+# defaultVariant to "on".
+$schema: https://flagd.dev/schema/v0/flags.json
+flags:
+  record-migration:
+    state: ENABLED
+    variants: {"on": true, "off": false}
+    defaultVariant: "off"
