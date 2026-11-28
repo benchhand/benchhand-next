@@ -8,7 +8,6 @@ capabilities:
 questions:
   - validate-surface
   - record-migrate-tool
-  - standards-sourcing-phase
 rules:
   - RULE-05
   - RULE-08
@@ -53,13 +52,6 @@ issues:
     - id: IR-136
       to: assembly-steps-and-coupons
       reason: The cylindrical joint is a record/assembly change.
-    - id: IR-047
-      to: existing-equipment
-      reason: >-
-        The not_applicable procurement reason is the record-contract change that IR-003 and RULE-36 put with
-        existing equipment in Phase 2. The sourcing order through the standards-data package and parts.search is
-        standards-parts-data, which the catalogue puts in Phase 4; the open question standards-sourcing-phase asks
-        the owner.
 blocks:
   - id: RV-1
     title: Verification rows by header name
@@ -173,7 +165,6 @@ A contract change here that renames or restructures a prototype field needs a mi
 | IR-077 | `selection-assessment` | Needs the selection digest; RV-6 builds the validate half. |
 | IR-085 | `result-envelope` | An envelope test. |
 | IR-136 | `assembly-steps-and-coupons` | A record/assembly change. |
-| IR-047 | `existing-equipment` | The not_applicable procurement reason is that capability's contract change. Standards sourcing is `standards-parts-data`, Phase 4 in the catalogue: `standards-sourcing-phase` asks the owner. |
 
 ## Prototype behaviour replaced
 
@@ -194,7 +185,7 @@ The reference map leaves `check_motion_cases` and `check_release_readiness` for 
 - The migrate rows of prototype PRs #331 to #341. They land with the contract changes that need them (`docs/phases/prototype-port-331-341.md`), under `existing-equipment` and `assembly-steps-and-coupons`.
 - SARIF output of findings, homed in Phase 3 (`docs/architecture/reference-map.yaml:858-860`) behind the open `sarif-export` question.
 - Release readiness and motion cases: Phase 4. Release readiness takes RV-2's `not_applicable` rows from the evidence assessment, under `release-packaging`.
-- The standards-data sourcing order and `parts.search` of IR-047 and RULE-36: `standards-parts-data`, whose phase `standards-sourcing-phase` asks the owner.
+- The standards-data sourcing order and `parts.search` of IR-047 and RULE-36: `standards-parts-data`, Phase 4, with the `part-source` providers. The owner decided this on 2026-11-28, and the register moved IR-047 to Phase 4 (`docs/migration/issue-register.yaml:1802`). The `not_applicable` procurement reason stays in Phase 2 with existing equipment (IR-003).
 
 ## Open questions
 
@@ -202,7 +193,6 @@ The reference map leaves `check_motion_cases` and `check_release_readiness` for 
 |---|---|---|
 | [`validate-surface`](../architecture/capabilities.md#validate-surface) | yes | no Phase 2 block: it names the Phase 3 tools |
 | [`record-migrate-tool`](../architecture/capabilities.md#record-migrate-tool) | yes | no Phase 2 block: it decides the Phase 3 MCP path |
-| [`standards-sourcing-phase`](../architecture/capabilities.md#standards-sourcing-phase) | yes | no block here: IR-047 is deferred to `existing-equipment` |
 
 ## Blocks
 

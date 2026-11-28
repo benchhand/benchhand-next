@@ -67,6 +67,12 @@ The flow's list is evaluated last, and its result is final, so a flow's `[]` or 
 - A VOID the user names is `decision: void` with an approval, and cites the provisional decision.
 - A refusal names the missing step or approval in `next_actions`.
 
+**Decided 2026-11-28: stages, key gates and the freeze digest.** The owner answered three questions of the Phase 2 specs, in the Inbox thread "benchhand-next build".
+
+- **Key gates are never `auto`.** The design-freeze gate and the release gate always need the user's explicit approval, so `hw/policy.yaml` can't set either to `auto` ([policy](policy.md#the-projects-policy-file)). Another gate may be `auto` when the policy cites the decision that set it. Tests use a test-only override, not the policy file.
+- **Tool calls and the stage.** Building and checking run at any stage, so the user can explore. Only a tool that seals, freezes or releases has a stage check, and an out-of-order call fails it with a reason and a next action, as an out-of-order transition does.
+- **A freeze needs its digest.** A freeze requires `evidence_sha256`. A refusal by the evidence assessment refuses the freeze.
+
 ## Approval scope
 
 `ApprovalScope`, `ApprovedItemState` and the flow's `reapproval_scope` are provisional, and Phase 2 owns them (ADR-0019).
@@ -76,6 +82,11 @@ The flow's list is evaluated last, and its result is final, so a flow's `[]` or 
 - An `ApprovedItemState` gives an item's status now. The status is `approved` while the fingerprint matches the one recorded at approval, and `changed_since_approval` after it changes. The stage stays where it is, and the next human gate confirms the item with a diff.
 
 The decision contract doesn't refer to `ApprovalScope` yet. Phase 2 adds the reference.
+
+**Decided 2026-11-28: confirming migrated decisions.** A migrated decision has no approval scope, and the owner decided how it is confirmed.
+
+- At the next human gate, the gate card lists the migrated decisions. The user's approval through `flow.transition` confirms them, and the decision that approval writes records which migrated decisions it confirmed.
+- Freeze and release are refused until the migrated decisions are confirmed, and the refusal names them.
 
 ## The prototype fixture
 

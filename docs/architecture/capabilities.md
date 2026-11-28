@@ -23,7 +23,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | no phase | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 7 |
 | **all** | **94** | 6 | 5 | 73 | 9 | 1 | 77 | 17 |
 
-MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 27. Doc corrections: 1.
+MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 21. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -523,7 +523,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `jobs.status` | [job-service](#job-service) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:345` | – |
 | `jobs.strays` | [job-service](#job-service) | read | not yet defined | not yet defined | sync | none | P4 | proposed | catalogue: `process_lifecycle.py` | `process_lifecycle.py strays` |
 | `layout.from_concept` | [layout-skeleton](#layout-skeleton) | write | not yet defined | not yet defined | sync | unspecified | P5 | planned | plan: `docs/design-plan.md:380` | `concept.py handoff` |
-| `model.build` | [model-build](#model-build) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | planned | plan: `docs/design-plan.md:363` | `cad_model.py run` |
+| `model.build` | [model-build](#model-build) | write | not yet defined | not yet defined | sync-or-job | none | P4 | planned | plan: `docs/design-plan.md:363` | `cad_model.py run` |
 | `model.check` | [model-inspect](#model-inspect) | write | not yet defined | not yet defined | sync-or-job | unspecified | P4 | proposed | catalogue: `cad_model.py` | `cad_model.py check` |
 | `model.diff` | [model-diff](#model-diff) | read | not yet defined | not yet defined | sync-or-job | none | P4 | proposed | study: `lane8-agentcad.md section 6, item 4` | `cad_model.py diff` |
 | `model.edit_loop` | [edit-loop](#edit-loop) | write | not yet defined | not yet defined | job-handle | unspecified | P4 | proposed | design: `docs/design/edit-loop-performance.md:147` | – |
@@ -555,22 +555,22 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `project.check_profile` | [project-profile](#project-profile) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `flow_profile.py` | `flow_profile.py check` |
 | `project.open` | [project-session](#project-session) | read | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:301` | – |
 | `project.questions` | [project-profile](#project-profile) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `flow_profile.py` | `flow_profile.py questions` |
-| `project.record_profile` | [project-profile](#project-profile) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `flow_profile.py` | `flow_profile.py record` |
+| `project.record_profile` | [project-profile](#project-profile) | write | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `flow_profile.py` | `flow_profile.py record` |
 | `recheck.diff` | [design-recheck](#design-recheck) | read | not yet defined | not yet defined | sync | none | no phase | dropped | catalogue: `stamp.py` | – |
 | `recheck.stamp` | [design-recheck](#design-recheck) | write | not yet defined | not yet defined | sync | unspecified | no phase | proposed | catalogue: `stamp.py` | `stamp.py` |
 | `recheck.verify` | [design-recheck](#design-recheck) | read | not yet defined | not yet defined | sync | none | no phase | proposed | catalogue: `stamp.py` | `stamp.py --verify`, `stamp.py --verify --committed` |
-| `record.add_bom_row` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
-| `record.add_evidence` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
-| `record.add_interface` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
-| `record.add_part` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
-| `record.add_requirement` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
+| `record.add_bom_row` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
+| `record.add_evidence` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
+| `record.add_interface` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
+| `record.add_part` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
+| `record.add_requirement` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
 | `record.check_machine_profile` | [machine-profile](#machine-profile) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `machine_profile.py` | `machine_profile.py check` |
 | `record.cite_source` | [standards-parts-data](#standards-parts-data) | write | not yet defined | not yet defined | sync | unspecified | P4 | proposed | study: `lane8-agentcad.md section 6, item 7` | – |
 | `record.migrate` | [record-migrate](#record-migrate) | write | not yet defined | not yet defined | sync | unspecified | no phase | unresolved | contract: `contracts/envelope/envelope.tsp:183` | – |
 | `record.propose_coupons` | [assembly-steps-and-coupons](#assembly-steps-and-coupons) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `plan section 12b, coupons from the requirement` | – |
 | `record.read` | [record-store](#record-store) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `ADR-0018 readable content` | – |
 | `record.set_machine_profile` | [machine-profile](#machine-profile) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `machine_profile.py` | `machine_profile.py write` |
-| `record.set_route` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | unspecified | P3 | planned | plan: `docs/design-plan.md:378` | – |
+| `record.set_route` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
 | `record.validate` | [record-validate](#record-validate) | read | not yet defined | `common/finding.schema.json` | sync | none | P3 | proposed | catalogue: `validate.py` | `validate.py` |
 | `release.package` | [release-packaging](#release-packaging) | write | not yet defined | `record/bundle-manifest.schema.json` | sync-or-job | unspecified | P4 | proposed | catalogue: `release.py, the plan's release tools` | `release.py` |
 | `render.compare` | [render-output](#render-output) | read | not yet defined | not yet defined | sync | none | P4 | proposed | catalogue: `compare_renders.py, under the plan's render.*` | `compare_renders.py` |
@@ -1089,14 +1089,6 @@ How does the agent read and change gate modes over MCP? D3 says the `policy.*` r
 - Blocking: yes. Owner: project-owner. Decision needed: The tools that read and change gate modes over MCP, with the policy.* resources as an enhancement, or no MCP path at all.
 - Cited by: [gate-policy](#gate-policy), `policy.get`, `policy.set`
 
-### tool-stage-check
-
-Whether a tool call such as model.build is checked against flow.stage; CEL guards run on transitions only. (existing)
-
-- Pointers: `docs/architecture/data-flow.md:344`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether a writing tool call is checked against flow.stage, and which tools are.
-- Cited by: [flow-engine](#flow-engine), [record-ops](#record-ops), [model-build](#model-build), `project.record_profile`, `record.add_requirement`, `record.add_interface`, `record.add_part`, `record.set_route`, `record.add_evidence`, `record.add_bom_row`, `model.build`
-
 ### cancel-tool
 
 The plan names jobs.start, jobs.status and jobs.result, and no cancel tool, although the job service cancels. (existing)
@@ -1120,14 +1112,6 @@ Which component moves a provider's verified artifacts into hw/; the record store
 - Pointers: `docs/architecture/data-flow.md:345`
 - Blocking: yes. Owner: project-owner. Decision needed: The component that moves a provider's verified artifacts into hw/.
 - Cited by: [object-store](#object-store), [provider-host](#provider-host), [model-build](#model-build), [store-provider](#store-provider)
-
-### freeze-digest
-
-A freeze whose evidence assessment refuses has no digest; product.yaml allows flow.frozen without evidence_sha256. (existing)
-
-- Pointers: `docs/architecture/data-flow.md:346`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether a freeze without an evidence digest is allowed, and what product.yaml then requires.
-- Cited by: [evidence-assessment](#evidence-assessment), [release-packaging](#release-packaging)
 
 ### provider-job
 
@@ -1252,40 +1236,6 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Pointers: `docs/design-plan.md:249`, `docs/design-plan.md:258`
 - Blocking: yes. Owner: project-owner. Decision needed: Whether the agent can run setup over MCP, or setup stays a CLI command that env.doctor points to.
 - Cited by: [setup](#setup), `benchhand setup`
-
-### unscoped-confirmation
-
-A migrated decision has no approval scope and needs confirmation at the next human gate. How is that confirmation recorded? ADR-0019 leaves the mechanics to Phase 2 design, and the owner has approved none. (existing)
-
-- Pointers: `docs/adr/0019-scoped-reapproval.md:37`, `docs/contract/record-migration.md:137`, `packages/benchhand-core/src/benchhand_core/record/migrate/decisions.py:79`
-- Blocking: yes. Owner: project-owner. Decision needed: How the engine tells a migrated gate approval from an ordinary design decision after a reload, and how the next human gate records its confirmation of it, before the blocks that write or read that confirmation. Migrate removes the gate key and keeps such a decision kind design, with only an info finding.
-- Cited by: [scoped-reapproval](#scoped-reapproval)
-
-### standards-sourcing-phase
-
-The register gives the standards-data package and parts.search to Phase 2, with the not_applicable procurement reason. The catalogue's standards-parts-data, which holds them, is a Phase 4 proposal. Which phase builds them? (catalogue)
-
-- Pointers: `docs/migration/issue-register.yaml:1681`, `docs/architecture/capabilities.yaml:2693`
-- Blocking: yes. Owner: project-owner. Decision needed: The phase of the standards-data sourcing order and parts.search, which IR-047 and RULE-36 put in Phase 2 and the catalogue's standards-parts-data in Phase 4.
-- Cited by: [standards-parts-data](#standards-parts-data)
-
-### unscoped-freeze
-
-Can a stage freeze or release before the next human gate confirms a migrated decision without an approval scope? ADR-0019 names this as a Phase 2 design question that the owner hasn't decided. (existing)
-
-- Pointers: `docs/adr/0019-scoped-reapproval.md:37`
-- Blocking: yes. Owner: project-owner. Decision needed: Whether a stage can freeze or release while a migrated decision still waits for its confirmation.
-- Cited by: [scoped-reapproval](#scoped-reapproval)
-
-### key-gate-auto
-
-The policy contract lets any gate run in auto mode, for development and tests. IR-061 has the middle gates close without the user under the key-gates profile, while the design-freeze gate refuses that approval. Can a key gate be set to auto? (catalogue)
-
-- Pointers: `docs/contract/policy.md:13`, `docs/migration/issue-register.yaml:2041`
-- `docs/contract/policy.md:13`: auto approves without a human, for development and tests.
-- `docs/migration/issue-register.yaml:2041`: under key approvals, the detail gate advances on a profile approval and the design-freeze gate refuses one.
-- Blocking: yes. Owner: project-owner. Decision needed: Whether hw/policy.yaml may set a key gate to auto, or the flow refuses auto there, as IR-061's acceptance test expects.
-- Cited by: [gate-policy](#gate-policy)
 
 ## Doc corrections
 
@@ -1415,9 +1365,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [record-store](#record-store)
 - ADRs: ADR-0017, ADR-0019
 - Evidence: `packages/benchhand-core/src/benchhand_core/record/evidence/assess.py:383`, `packages/benchhand-core/src/benchhand_core/record/evidence/reader.py:394`
-- Note: Left out: the stage and selection gates (Phase 2), release policy, stamped packets and version acceptance (Phase 4), and producer orchestration, which goes to check-orchestration (reference-map entry skills/cad-record/scripts/evidence.py).
+- Note: Left out: the stage and selection gates (Phase 2), release policy, stamped packets and version acceptance (Phase 4), and producer orchestration, which goes to check-orchestration (reference-map entry skills/cad-record/scripts/evidence.py). The owner decided on 2026-11-28 that a freeze requires evidence_sha256 and is refused when the assessment refuses (docs/specs/flow-engine.md REQ-24, docs/contract/flow.md:74).
 - Prototype: `skills/cad-record/scripts/evidence.py`, `skills/cad-record/scripts/evidence_paths.py`, `skills/cad-record/scripts/check_packet.py`, `skills/cad-record/scripts/guidelines.py`, `skills/cad-record/scripts/manufacturing_intent.py`, `skills/cad-record/assets/manufacturing/`, `skills/cad-model/scripts/cadmodel/record.py`
-- Open questions: [guideline-asset](#guideline-asset), [freeze-digest](#freeze-digest)
+- Open questions: [guideline-asset](#guideline-asset)
 
 ### job-service
 
@@ -1448,9 +1398,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [record-store](#record-store), [cel-rule-pipeline](#cel-rule-pipeline)
 - ADRs: ADR-0003, ADR-0014, ADR-0019, ADR-0020
+- Note: The owner decided on 2026-11-28 that only a tool that seals, freezes or releases is checked against flow.stage, and that a freeze requires evidence_sha256 and is refused when the assessment refuses (docs/specs/flow-engine.md REQ-23 and REQ-24, docs/contract/flow.md:73-74).
 - Source: plan: `docs/design-plan.md:552`
 - Prototype: `skills/cad-record/scripts/stages.py`, `skills/cad-flow/references/`
-- Open questions: [tool-stage-check](#tool-stage-check)
 
 ### cel-rule-pipeline
 
@@ -1496,9 +1446,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: `benchhand policy get`, `benchhand policy set`
 - Depends on: [flow-engine](#flow-engine), [decision-records](#decision-records), [rule-lists](#rule-lists)
 - ADRs: ADR-0003, ADR-0006, ADR-0020
-- Note: The owner decided the composition on 2026-11-27. Contributed lists run in ascending provider name, then the flow's list, which is final; a list that gives its kind's no-match value falls through; rigor is the union of every list's messages, and no list waives one (docs/phases/phase-0-1.md:125, docs/adr/0020-cel-rule-pipeline.md:228-234).
+- Note: The owner decided the composition on 2026-11-27. Contributed lists run in ascending provider name, then the flow's list, which is final; a list that gives its kind's no-match value falls through; rigor is the union of every list's messages, and no list waives one (docs/phases/phase-0-1.md:125, docs/adr/0020-cel-rule-pipeline.md:228-234). The owner decided on 2026-11-28 that the design-freeze and release gates are never auto, and that another gate may be auto when the policy cites the decision that set it (docs/specs/flow-engine.md REQ-27, docs/contract/policy.md:15).
 - Source: plan: `docs/design-plan.md:552`
-- Open questions: [policy-resources](#policy-resources), [key-gate-auto](#key-gate-auto)
+- Open questions: [policy-resources](#policy-resources)
 
 ### decision-records
 
@@ -1528,9 +1478,8 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [decision-records](#decision-records), [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0019
-- Note: A migrated decision has no approval scope and needs confirmation at the next human gate; it does not cover the whole stage. The owner decided this on 2026-11-27, and the confirmation's mechanics are a Phase 2 design question (docs/phases/phase-0-1.md:133, docs/adr/0019-scoped-reapproval.md:33-36).
+- Note: A migrated decision has no approval scope and needs confirmation at the next human gate; it does not cover the whole stage (docs/phases/phase-0-1.md:133, docs/adr/0019-scoped-reapproval.md:33-36). The owner decided on 2026-11-28 how the confirmation is recorded, and that freeze and release are refused until then (docs/specs/approvals.md REQ-17 and REQ-18, docs/contract/flow.md:88-89).
 - Source: plan: `docs/design-plan.md:563`
-- Open questions: [unscoped-confirmation](#unscoped-confirmation), [unscoped-freeze](#unscoped-freeze)
 
 ### result-envelope
 
@@ -1888,8 +1837,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [record-store](#record-store), [mcp-server](#mcp-server)
 - ADRs: ADR-0007, ADR-0017, ADR-0018
+- Note: The owner decided on 2026-11-28 that building and checking run at any stage, so these tools are not checked against flow.stage (docs/specs/flow-engine.md REQ-23, docs/contract/flow.md:73).
 - Source: plan: `docs/design-plan.md:573`
-- Open questions: [validate-surface](#validate-surface), [tool-stage-check](#tool-stage-check)
+- Open questions: [validate-surface](#validate-surface)
 
 ### machine-profile
 
@@ -2022,9 +1972,10 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [provider-host](#provider-host), [provider-environments](#provider-environments), [version-snapshots](#version-snapshots), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0007, ADR-0013
+- Note: The owner decided on 2026-11-28 that building and checking run at any stage, so model.build is not checked against flow.stage (docs/specs/flow-engine.md REQ-23, docs/contract/flow.md:73).
 - Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-model/scripts/cad_model.py`, `skills/cad-model/scripts/cadmodel/build.py`, `skills/cad-model/scripts/cadmodel/agreement.py`, `skills/cad-model/scripts/cadmodel/stepfile.py`, `skills/cad-model/scripts/cadmodel/manufacture.py`, `skills/cad-model/scripts/run_cadquery.py`, `skills/cad-model/scripts/run_build123d.py`, `skills/cad-design/scripts/build_reference.py`
-- Open questions: [tool-stage-check](#tool-stage-check), [artifact-placement](#artifact-placement)
+- Open questions: [artifact-placement](#artifact-placement)
 
 ### model-export
 
@@ -2235,9 +2186,10 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: –
 - Depends on: [version-snapshots](#version-snapshots), [evidence-assessment](#evidence-assessment), [existing-equipment](#existing-equipment)
 - ADRs: ADR-0017, ADR-0023
+- Note: The owner decided on 2026-11-28 that a release is checked against flow.stage and that a freeze requires evidence_sha256 (docs/specs/flow-engine.md REQ-23 and REQ-24, docs/contract/flow.md:73-74).
 - Source: plan: `docs/design-plan.md:583`
 - Prototype: `skills/cad-record/scripts/release.py`
-- Open questions: [release-refusals](#release-refusals), [freeze-digest](#freeze-digest)
+- Open questions: [release-refusals](#release-refusals)
 
 ### documentation-set
 
@@ -2640,9 +2592,9 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: `benchhand standards search`, `benchhand standards show`
 - Depends on: [record-store](#record-store), [evidence-assessment](#evidence-assessment)
 - ADRs: ADR-0017, ADR-0023
-- Note: Its FTS5 index for standards.search and parts.search is the search table of the state database (docs/adr/0023-storage-layout.md:51).
+- Note: Its FTS5 index for standards.search and parts.search is the search table of the state database (docs/adr/0023-storage-layout.md:51). The owner put its sourcing order and parts.search in Phase 4, with the part-source providers, on 2026-11-28 (docs/design-plan.md:694, docs/migration/issue-register.yaml:1802).
 - Source: study: `lane8-agentcad.md section 6, item 7`
-- Open questions: [read-only-cli](#read-only-cli), [standards-sourcing-phase](#standards-sourcing-phase)
+- Open questions: [read-only-cli](#read-only-cli)
 
 ### step-import
 

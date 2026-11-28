@@ -96,16 +96,6 @@ open_questions:
       - source: docs/adr/0018-baseline-and-no-forms.md:28
         says: readable content comes from a tool; a resource is an
           enhancement.
-  - id: tool-stage-check
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether a writing tool call is checked against
-      flow.stage, and which tools are.'
-    origin: existing
-    question: Whether a tool call such as model.build is checked against
-      flow.stage; CEL guards run on transitions only.
-    pointers:
-      - docs/architecture/data-flow.md:344
   - id: cancel-tool
     blocking: true
     owner: project-owner
@@ -138,16 +128,6 @@ open_questions:
       into hw/; the record store writes YAML, CSV and decisions only.
     pointers:
       - docs/architecture/data-flow.md:345
-  - id: freeze-digest
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether a freeze without an evidence digest is
-      allowed, and what product.yaml then requires.'
-    origin: existing
-    question: A freeze whose evidence assessment refuses has no digest;
-      product.yaml allows flow.frozen without evidence_sha256.
-    pointers:
-      - docs/architecture/data-flow.md:346
   - id: provider-job
     blocking: true
     owner: project-owner
@@ -318,67 +298,6 @@ open_questions:
     pointers:
       - docs/design-plan.md:249
       - docs/design-plan.md:258
-  - id: unscoped-confirmation
-    blocking: true
-    owner: project-owner
-    decision_needed: How the engine tells a migrated gate approval from an
-      ordinary design decision after a reload, and how the next human gate
-      records its confirmation of it, before the blocks that write or read
-      that confirmation. Migrate removes the gate key and keeps such a
-      decision kind design, with only an info finding.
-    origin: existing
-    question: A migrated decision has no approval scope and needs
-      confirmation at the next human gate. How is that confirmation
-      recorded? ADR-0019 leaves the mechanics to Phase 2 design, and the
-      owner has approved none.
-    pointers:
-      - docs/adr/0019-scoped-reapproval.md:37
-      - docs/contract/record-migration.md:137
-      - packages/benchhand-core/src/benchhand_core/record/migrate/decisions.py:79
-  - id: standards-sourcing-phase
-    blocking: true
-    owner: project-owner
-    decision_needed: The phase of the standards-data sourcing order and
-      parts.search, which IR-047 and RULE-36 put in Phase 2 and the
-      catalogue's standards-parts-data in Phase 4.
-    origin: catalogue
-    question: The register gives the standards-data package and parts.search
-      to Phase 2, with the not_applicable procurement reason. The
-      catalogue's standards-parts-data, which holds them, is a Phase 4
-      proposal. Which phase builds them?
-    pointers:
-      - docs/migration/issue-register.yaml:1681
-      - docs/architecture/capabilities.yaml:2693
-  - id: unscoped-freeze
-    blocking: true
-    owner: project-owner
-    decision_needed: Whether a stage can freeze or release while a migrated
-      decision still waits for its confirmation.
-    origin: existing
-    question: Can a stage freeze or release before the next human gate
-      confirms a migrated decision without an approval scope? ADR-0019 names
-      this as a Phase 2 design question that the owner hasn't decided.
-    pointers:
-      - docs/adr/0019-scoped-reapproval.md:37
-  - id: key-gate-auto
-    blocking: true
-    owner: project-owner
-    decision_needed: Whether hw/policy.yaml may set a key gate to auto, or
-      the flow refuses auto there, as IR-061's acceptance test expects.
-    origin: catalogue
-    question: The policy contract lets any gate run in auto mode, for
-      development and tests. IR-061 has the middle gates close without the
-      user under the key-gates profile, while the design-freeze gate
-      refuses that approval. Can a key gate be set to auto?
-    pointers:
-      - docs/contract/policy.md:13
-      - docs/migration/issue-register.yaml:2041
-    positions:
-      - source: docs/contract/policy.md:13
-        says: auto approves without a human, for development and tests.
-      - source: docs/migration/issue-register.yaml:2041
-        says: under key approvals, the detail gate advances on a profile
-          approval and the design-freeze gate refuses one.
 
 capabilities:
 
@@ -620,7 +539,10 @@ capabilities:
     note: 'Left out: the stage and selection gates (Phase 2), release
       policy, stamped packets and version acceptance (Phase 4), and
       producer orchestration, which goes to check-orchestration (reference-map
-      entry skills/cad-record/scripts/evidence.py).'
+      entry skills/cad-record/scripts/evidence.py).
+      The owner decided on 2026-11-28 that a freeze requires
+      evidence_sha256 and is refused when the assessment refuses
+      (docs/specs/flow-engine.md REQ-24, docs/contract/flow.md:74).'
     owner:
       - packages/benchhand-core
     contracts:
@@ -641,7 +563,6 @@ capabilities:
       - record-store
     open_questions:
       - guideline-asset
-      - freeze-digest
     adrs:
       - 17
       - 19
@@ -714,8 +635,11 @@ capabilities:
     depends_on:
       - record-store
       - cel-rule-pipeline
-    open_questions:
-      - tool-stage-check
+    note: The owner decided on 2026-11-28 that only a tool that seals, freezes
+      or releases is checked against flow.stage, and that a freeze requires
+      evidence_sha256 and is refused when the assessment refuses
+      (docs/specs/flow-engine.md REQ-23 and REQ-24,
+      docs/contract/flow.md:73-74).
     adrs:
       - 3
       - 14
@@ -822,7 +746,6 @@ capabilities:
       - rule-lists
     open_questions:
       - policy-resources
-      - key-gate-auto
     adrs:
       - 3
       - 6
@@ -833,6 +756,10 @@ capabilities:
       rigor is the union of every list's messages, and no list waives
       one (docs/phases/phase-0-1.md:125,
       docs/adr/0020-cel-rule-pipeline.md:228-234).
+      The owner decided on 2026-11-28 that the design-freeze and release
+      gates are never auto, and that another gate may be auto when the
+      policy cites the decision that set it (docs/specs/flow-engine.md
+      REQ-27, docs/contract/policy.md:15).
   - id: decision-records
     title: Gate decisions and decision records
     purpose: Record who approved what, through which channel (app,
@@ -889,16 +816,15 @@ capabilities:
     depends_on:
       - decision-records
       - evidence-assessment
-    open_questions:
-      - unscoped-confirmation
-      - unscoped-freeze
     adrs:
       - 19
-    note: A migrated decision has no approval scope and needs confirmation
-      at the next human gate; it does not cover the whole stage. The
-      owner decided this on 2026-11-27, and the confirmation's mechanics
-      are a Phase 2 design question (docs/phases/phase-0-1.md:133,
-      docs/adr/0019-scoped-reapproval.md:33-36).
+    note: A migrated decision has no approval scope and needs confirmation at
+      the next human gate; it does not cover the whole stage
+      (docs/phases/phase-0-1.md:133,
+      docs/adr/0019-scoped-reapproval.md:33-36). The owner decided on
+      2026-11-28 how the confirmation is recorded, and that freeze and
+      release are refused until then (docs/specs/approvals.md REQ-17 and
+      REQ-18, docs/contract/flow.md:88-89).
   - id: result-envelope
     title: Result envelope and next actions
     purpose: 'Every tool returns one envelope as structuredContent:
@@ -1599,7 +1525,9 @@ capabilities:
       - mcp-server
     open_questions:
       - validate-surface
-      - tool-stage-check
+    note: The owner decided on 2026-11-28 that building and checking run at any
+      stage, so these tools are not checked against flow.stage
+      (docs/specs/flow-engine.md REQ-23, docs/contract/flow.md:73).
     adrs:
       - 7
       - 17
@@ -1868,8 +1796,10 @@ capabilities:
       - version-snapshots
       - existing-equipment
     open_questions:
-      - tool-stage-check
       - artifact-placement
+    note: The owner decided on 2026-11-28 that building and checking run at any
+      stage, so model.build is not checked against flow.stage
+      (docs/specs/flow-engine.md REQ-23, docs/contract/flow.md:73).
     adrs:
       - 7
       - 13
@@ -2323,7 +2253,10 @@ capabilities:
       - existing-equipment
     open_questions:
       - release-refusals
-      - freeze-digest
+    note: The owner decided on 2026-11-28 that a release is checked against
+      flow.stage and that a freeze requires evidence_sha256
+      (docs/specs/flow-engine.md REQ-23 and REQ-24,
+      docs/contract/flow.md:73-74).
     adrs:
       - 17
       - 23
@@ -3098,10 +3031,12 @@ capabilities:
       - evidence-assessment
     open_questions:
       - read-only-cli
-      - standards-sourcing-phase
     note: Its FTS5 index for standards.search and parts.search is the
       search table of the state database
       (docs/adr/0023-storage-layout.md:51).
+      The owner put its sourcing order and parts.search in Phase 4, with
+      the part-source providers, on 2026-11-28 (docs/design-plan.md:694,
+      docs/migration/issue-register.yaml:1802).
     adrs:
       - 17
       - 23
@@ -3444,7 +3379,7 @@ tools:
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: proposed
     source:
@@ -3452,8 +3387,6 @@ tools:
       ref: flow_profile.py
     replaces:
       - flow_profile.py record
-    open_questions:
-      - tool-stage-check
   - name: project.check_profile
     capability: project-profile
     access: read
@@ -3521,84 +3454,72 @@ tools:
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: planned
     source:
       kind: plan
       ref: docs/design-plan.md:378
-    open_questions:
-      - tool-stage-check
   - name: record.add_interface
     capability: record-ops
     access: write
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: planned
     source:
       kind: plan
       ref: docs/design-plan.md:378
-    open_questions:
-      - tool-stage-check
   - name: record.add_part
     capability: record-ops
     access: write
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: planned
     source:
       kind: plan
       ref: docs/design-plan.md:378
-    open_questions:
-      - tool-stage-check
   - name: record.set_route
     capability: record-ops
     access: write
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: planned
     source:
       kind: plan
       ref: docs/design-plan.md:378
-    open_questions:
-      - tool-stage-check
   - name: record.add_evidence
     capability: record-ops
     access: write
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: planned
     source:
       kind: plan
       ref: docs/design-plan.md:378
-    open_questions:
-      - tool-stage-check
   - name: record.add_bom_row
     capability: record-ops
     access: write
     input: not yet defined
     output: not yet defined
     envelope: sync
-    gate: unspecified
+    gate: none
     phase: 3
     status: planned
     source:
       kind: plan
       ref: docs/design-plan.md:378
-    open_questions:
-      - tool-stage-check
   - name: record.check_machine_profile
     capability: machine-profile
     access: read
@@ -3916,7 +3837,7 @@ tools:
     input: not yet defined
     output: not yet defined
     envelope: sync-or-job
-    gate: unspecified
+    gate: none
     phase: 4
     status: planned
     source:
@@ -3924,8 +3845,6 @@ tools:
       ref: docs/design-plan.md:363
     replaces:
       - cad_model.py run
-    open_questions:
-      - tool-stage-check
   - name: model.export
     capability: model-export
     access: write

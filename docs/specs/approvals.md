@@ -5,9 +5,7 @@ status: draft
 capabilities:
   - decision-records
   - scoped-reapproval
-questions:
-  - unscoped-confirmation
-  - unscoped-freeze
+questions: []
 rules:
   - RULE-05
   - RULE-35
@@ -79,7 +77,7 @@ blocks:
     title: Migrated decisions without a scope
     size: M
     requirements: [REQ-17, REQ-18]
-    depends_on: [AP-7, question:unscoped-confirmation, question:unscoped-freeze]
+    depends_on: [AP-7]
 ---
 
 # Decision records and scoped re-approval
@@ -106,10 +104,10 @@ The prototype's agent writes decision files by hand, and a later change to somet
 - **REQ-3.** An approval records the channel and the user's words. Source: `docs/design-plan.md:618`.
 - **REQ-4.** The engine supplies the citation of the decision that accepts unproved between-sample intervals from the record: the decision on the same version. The request has no field for it. Source: `docs/contract/flow.md:60`, `docs/phases/phase-0-1.md:132`.
 - **REQ-5.** A decision for a gate whose transition the flow doesn't declare, such as a backward gate, is refused when the engine writes it and is a finding when validate meets it in the record. A decision states the transition it approves (RULE-35). Source: IR-081.
-- **REQ-6.** The design-decision contract holds several chosen options and a carry-forward disposition. Source: IR-084. The field names are a **Proposal** for the owner in AP-3.
+- **REQ-6.** The design-decision contract holds several chosen options and a carry-forward disposition. Source: IR-084, owner, 2026-11-28. AP-3 picks the field names in the contract.
 - **REQ-7.** The engine records the provisional decision of a staged gate itself, on `flow.transition` with a `version` and no `approval`. The step is refused unless every fast check for that version passed and is current, its fingerprints matching. The decision has `channel: auto` and cites the evidence. The step is idempotent per gate and version, and it refuses an `approval`. Source: `docs/design-plan.md:621`, `docs/contract/flow.md:12`, `docs/contract/flow.md:65`.
 - **REQ-8.** Each human-gate approval lists the items it approved, each with its kind, id and fingerprint at approval time, and the decision contract refers to `ApprovalScope`. The fingerprint is computed the way the evidence service fingerprints its inputs. Source: `docs/adr/0019-scoped-reapproval.md:19`, `docs/contract/flow.md:66`, `docs/contract/flow.md:70`.
-- **REQ-9.** AP-5 uses the evidence service's fingerprint unchanged (`packages/benchhand-core/src/benchhand_core/record/evidence/fingerprints.py:508-517`). It digests the record's values per domain, with each relied-on file's SHA-256 under its path (`packages/benchhand-core/src/benchhand_core/record/evidence/fingerprints.py:223-228`), and reads no modification time. Changed bytes change it, and so does a moved file, which then asks for re-approval. **Proposal** for the owner: the fingerprint also covers the digest of the code that computed the evidence, so a fact holds only for its input hashes and that code. That changes the evidence service's fingerprint for every consumer, so it goes to `evidence-assessment` with a compatibility review, not into AP-5.
+- **REQ-9.** AP-5 uses the evidence service's fingerprint unchanged (`packages/benchhand-core/src/benchhand_core/record/evidence/fingerprints.py:508-517`). It digests the record's values per domain, with each relied-on file's SHA-256 under its path (`packages/benchhand-core/src/benchhand_core/record/evidence/fingerprints.py:223-228`), and reads no modification time. Changed bytes change it, and so does a moved file, which then asks for re-approval. The fingerprint also covers the digest of the code that computed the evidence (owner, 2026-11-28), so a fact holds only for its input hashes and that code. That changes the evidence service's fingerprint for every consumer, so it goes to `evidence-assessment` with a compatibility review, not into AP-5.
 - **REQ-10.** An approved item whose fingerprint differs from the one recorded at approval is `changed_since_approval`. The stage and `flow.stage` stay where they are, and the other items and their evidence stay valid. Source: `docs/adr/0019-scoped-reapproval.md:20`, `docs/contract/flow.md:68`.
 - **REQ-11.** `reapproval_scope`, a CEL expression in `flow.yaml`, selects the approved items a change affects, and the loader checks it at start. Source: `docs/contract/flow.md:67`, `docs/adr/0019-scoped-reapproval.md:25`, `docs/design-plan.md:161`.
 - **REQ-12.** A new part, joint or interface is not a change to an approval. It goes through the current stage's checks and shows at the next gate as an addition. Source: `docs/adr/0019-scoped-reapproval.md:22`.
@@ -117,9 +115,9 @@ The prototype's agent writes decision files by hand, and a later change to somet
 - **REQ-14.** The next human gate lists each changed item with a diff against what was approved. Approving the gate re-approves those items, and the new decision cites the original one. Source: `docs/adr/0019-scoped-reapproval.md:21`, `docs/adr/0019-scoped-reapproval.md:30`.
 - **REQ-15.** A stage with a changed item can't freeze or release until the item is confirmed. Source: `docs/adr/0019-scoped-reapproval.md:21`, `docs/contract/flow.md:79`.
 - **REQ-16.** A flow test: a change to an approved item reopens only that item's approval, and the next gate shows its diff. Source: `docs/design-plan.md:620`, `docs/adr/0019-scoped-reapproval.md:29`.
-- **REQ-17.** A migrated decision has no approval scope. It needs confirmation at the next human gate, and it doesn't cover the whole stage. Source: `docs/adr/0019-scoped-reapproval.md:35`, `docs/contract/record-migration.md:137`. Migrate removes a prototype decision's `gate` key and keeps it `kind: design`, with only an info finding to show it was a gate approval (`packages/benchhand-core/src/benchhand_core/record/migrate/decisions.py:79-100`). How the engine tells such a decision from an ordinary design decision after a reload, and how the confirmation is recorded, wait on `unscoped-confirmation`.
-- **REQ-18.** Whether a stage can freeze or release before that confirmation follows the owner's answer to `unscoped-freeze` (`docs/adr/0019-scoped-reapproval.md:37`).
-- **REQ-19.** A gate decision persists what it is bound to. A decision states the transition it approves (RULE-35), and an edge has its own `from` and `to` (`contracts/flow/flow.tsp:115-119`), while `gate_decision` stores only the gate and one stage (`contracts/record/decision.tsp:59-79`). **Proposal** for the owner: `gate_decision` gains `transition`, the `from` and `to` stages of the declared edge, and `evidence_sha256`, the assessment's canonical digest at the decision, the digest a freeze anchors (`contracts/record/product.tsp:325-330`). Both are optional in the contract, so a migrated record stays valid, and the writer always fills them: a minor bump (`docs/contract/versioning.md:86`).
+- **REQ-17.** A migrated decision has no approval scope. It needs confirmation at the next human gate, and it doesn't cover the whole stage. At the next human gate, the gate card lists the migrated decisions, and the user's approval through `flow.transition` confirms them. The decision that approval writes records which migrated decisions it confirmed. Source: `docs/adr/0019-scoped-reapproval.md:35`, `docs/contract/record-migration.md:137`, owner, 2026-11-28 (`docs/contract/flow.md:88`). Migrate removes a prototype decision's `gate` key and keeps it `kind: design`, with only an info finding to show it was a gate approval (`packages/benchhand-core/src/benchhand_core/record/migrate/decisions.py:79-100`), so the engine must find such a decision again after a reload.
+- **REQ-18.** Freeze and release are refused until the migrated decisions are confirmed, and the refusal names them. Source: owner, 2026-11-28 (`docs/contract/flow.md:89`), `docs/adr/0019-scoped-reapproval.md:37`.
+- **REQ-19.** A gate decision persists what it is bound to. A decision states the transition it approves (RULE-35), and an edge has its own `from` and `to` (`contracts/flow/flow.tsp:115-119`), while `gate_decision` stores only the gate and one stage (`contracts/record/decision.tsp:59-79`). `gate_decision` gains `transition`, the `from` and `to` stages of the declared edge, and `evidence_sha256`, the assessment's canonical digest at the decision, the digest a freeze anchors (`contracts/record/product.tsp:325-330`). Both are optional in the contract, so a migrated record stays valid, and the writer always fills them: a minor bump (`docs/contract/versioning.md:86`). Source: owner, 2026-11-28.
 - **REQ-20.** `GateDecisionRequest` becomes the request of `flow.transition`, `{to?, version?, decision?, approval?}`: `to` names the stage, `version` the built version, `decision` a `void`, and `approval` the human channel, who and their words. Source: `docs/contract/flow.md:62`.
 
 ## Interfaces
@@ -129,7 +127,8 @@ The prototype's agent writes decision files by hand, and a later change to somet
 - **Contracts:**
   - changed: `record/decision`'s `gate_decision` (`contracts/record/decision.tsp:59`) refers to `ApprovalScope` for a human-gate approval (AP-5), a minor bump;
   - changed: `record/decision`'s `design_decision` (`contracts/record/decision.tsp:86`) gains the chosen options and the carry-forward disposition (AP-3), a minor bump;
-  - changed: `gate_decision` gains `transition` (AP-2) and `evidence_sha256` (AP-6), as REQ-19 proposes, each a minor bump;
+  - changed: `gate_decision` gains `transition` (AP-2) and `evidence_sha256` (AP-6), as REQ-19 says, each a minor bump;
+  - changed: `gate_decision` gains the list of migrated decisions its approval confirmed (AP-8), a minor bump;
   - changed: `flow/flow`'s `GateDecisionRequest` becomes the transition request (AP-9). Its fields change, so the bump follows `docs/contract/versioning.md` while the contract is provisional;
   - read: `flow/flow`'s `ApprovalScope`, `ApprovedItemState` and `reapproval_scope`. They stay provisional until AP-6 merges, and then the owner decides whether they leave `x-status: provisional`.
 - **Provider methods:** none.
@@ -167,15 +166,12 @@ The prototype writes MADR 4.0.0 files with a `gate: {from, to}` key. Record vers
 - Working out what a change affects across the record's dependency domains: `change-impact`, which builds on AP-6.
 - The VOID cascade: the [flow engine spec](flow-engine.md), FE-6, on AP-1's writer.
 - Recheck stamps (IR-087): the `design-recheck` capability, deferred above. It reads the transition that AP-2 records.
-- Refusing a release while an item is unconfirmed: `release-packaging`, Phase 4. AP-7 gives it the unconfirmed items, and refuses the freeze itself.
-- Making the fingerprint cover the code digest, REQ-9's proposal: `evidence-assessment`.
+- Refusing a release while an item or a migrated decision is unconfirmed: `release-packaging`, Phase 4. AP-7 and AP-8 give it the unconfirmed items and decisions, and refuse the freeze themselves.
+- Making the fingerprint cover the code digest, REQ-9's second part: `evidence-assessment`.
 
 ## Open questions
 
-| Question | Blocking | Blocks that wait |
-|---|---|---|
-| [`unscoped-confirmation`](../architecture/capabilities.md#unscoped-confirmation) | yes | AP-8 |
-| [`unscoped-freeze`](../architecture/capabilities.md#unscoped-freeze) | yes | AP-8 |
+None. The owner answered the two questions about migrated decisions on 2026-11-28, and REQ-17 and REQ-18 hold the answers.
 
 ## Blocks
 
@@ -205,7 +201,7 @@ Request tests for REQ-2: `form`, a blank quote, and a `void` without its provisi
 
 Size S. After AP-1 and FE-1.
 
-**Scope.** Add `transition` to `gate_decision` in TypeSpec, as the owner approves REQ-19, and regenerate. The writer records the declared edge a decision approves, and refuses one whose transition the loaded flow doesn't declare. Validate reports such a decision in the record.
+**Scope.** Add `transition` to `gate_decision` in TypeSpec, as REQ-19 says, and regenerate. The writer records the declared edge a decision approves, and refuses one whose transition the loaded flow doesn't declare. Validate reports such a decision in the record.
 
 **Acceptance.** The IR-081 test in the table above. A flow with two edges through one gate: a decision for one edge doesn't authorise the other.
 
@@ -213,7 +209,7 @@ Size S. After AP-1 and FE-1.
 
 Size M. No dependencies.
 
-**Scope.** Add the chosen options and the carry-forward disposition to `design_decision` in TypeSpec, as the owner approves their names, and regenerate. The writer and the reader handle them.
+**Scope.** Add the chosen options and the carry-forward disposition to `design_decision` in TypeSpec, and regenerate, with the field names REQ-6 leaves to this block. The writer and the reader handle them.
 
 **Acceptance.** The IR-084 test in the table above. `just contracts-check` records the minor bump, and the migrate reference test still passes.
 
@@ -234,7 +230,7 @@ Size S. After AP-1 and FE-4.
 
 Size M. After AP-1. Needs `evidence-assessment`'s fingerprints.
 
-**Scope.** Make `gate_decision` refer to `ApprovalScope` for a human-gate approval, and have the writer fill each item's fingerprint from the evidence service. Apply REQ-9 once the owner approves it.
+**Scope.** Make `gate_decision` refer to `ApprovalScope` for a human-gate approval, and have the writer fill each item's fingerprint from the evidence service. Apply REQ-9.
 
 **Acceptance.** A decision test where an approval of two interfaces and a part records three items with their fingerprints. A fingerprint test where changing a byte of a relied-on file changes the item's fingerprint, and touching its modification time without changing its bytes keeps it.
 
@@ -242,7 +238,7 @@ Size M. After AP-1. Needs `evidence-assessment`'s fingerprints.
 
 Size M. After AP-5 and FE-1.
 
-**Scope.** Compute each approved item's `ApprovedItemState` from the record, evaluate `reapproval_scope` for a change, and keep a new item as an addition. Add `evidence_sha256` to `gate_decision`, as the owner approves REQ-19, and bind an approval to its gate, transition, version and that digest.
+**Scope.** Compute each approved item's `ApprovedItemState` from the record, evaluate `reapproval_scope` for a change, and keep a new item as an addition. Add `evidence_sha256` to `gate_decision`, as REQ-19 says, and bind an approval to its gate, transition, version and that digest.
 
 **Acceptance.** The IR-060 test in the table above, across a reread: approve, change an evidence file, reload the record from disk, and the approval no longer authorises the advance. A test where changing one of two approved interfaces marks only that one `changed_since_approval` and leaves `flow.stage` unchanged, and one where a new part is an addition with no earlier stage reopened.
 
@@ -256,8 +252,8 @@ Size M. After AP-6, FE-4 and FE-12.
 
 ### AP-8: Migrated decisions without a scope
 
-Size M. After AP-7. Waits on `unscoped-confirmation` and `unscoped-freeze`.
+Size M. After AP-7.
 
-**Scope.** A migrated record reached its stage through prototype gate decisions that migrate turned into design decisions (`docs/contract/record-migration.md:135`). Find those decisions by the means the owner picks in `unscoped-confirmation`, treat them as covering no items so the next human gate confirms them, and record that confirmation as the owner decides.
+**Scope.** A migrated record reached its stage through prototype gate decisions that migrate turned into design decisions (`docs/contract/record-migration.md:135`). Find those decisions after a reload, treat them as covering no items, and list them on the gate card of the next human gate. The user's approval through `flow.transition` confirms them, and the decision it writes records which ones it confirmed, in a new optional list of `gate_decision` (TypeSpec, regenerated, a minor bump). Refuse a freeze while any is unconfirmed, and name them in the refusal. How the engine finds them again is this block's design, because migrate leaves only an info finding and a `kind: design` decision.
 
-**Acceptance.** A test on a migrated synthetic record that holds a former gate approval and an ordinary design decision. After a reload, the next human gate asks to confirm only the former, and records the confirmation. Whether the stage freezes first follows the owner's answer.
+**Acceptance.** A test on a migrated synthetic record that holds a former gate approval and an ordinary design decision. After a reload, the gate card of the next human gate lists only the former. A freeze is refused and the refusal names it. The user's approval through `flow.transition` writes a decision that records it as confirmed, and the freeze then goes through. `just contracts-check` records the minor bump.

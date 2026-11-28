@@ -12,6 +12,8 @@ Gates guide the standard process. They are not a security control (ADR-0003).
 - `chat` asks in the conversation.
 - `auto` approves without a human, for development and tests.
 
+**Decided 2026-11-28: key gates.** The owner decided that the design-freeze gate and the release gate always need the user's explicit approval, and can never be `auto`, in `hw/policy.yaml` or through `default`. Another gate may be `auto` when the policy cites the decision that set it. Tests use a test-only override, not the policy file ([flow contract](flow.md#gate-decisions)).
+
 `default` sets the mode of every gate without its own entry in `gates`. A mode other than `ask` cites the decision that records the relaxation.
 
 `rigor` is the rigor policy, `standard` or `regulated`. Under `regulated`, the requirements of the flow's `rigor` rules apply as well as each gate's own.

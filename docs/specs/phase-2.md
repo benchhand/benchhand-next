@@ -108,13 +108,8 @@ flowchart TD
   question_user_bundle_location{{"question: user-bundle-location"}}
   question_envelope_phase{{"question: envelope-phase"}}
   capability_evidence_assessment(["capability: evidence-assessment"])
-  question_key_gate_auto{{"question: key-gate-auto"}}
-  question_tool_stage_check{{"question: tool-stage-check"}}
   capability_version_snapshots(["capability: version-snapshots"])
-  question_freeze_digest{{"question: freeze-digest"}}
   capability_selection_assessment(["capability: selection-assessment"])
-  question_unscoped_confirmation{{"question: unscoped-confirmation"}}
-  question_unscoped_freeze{{"question: unscoped-freeze"}}
   question_user_bundle_location --> CP_1
   question_user_bundle_location --> CP_2
   CP_1 --> CP_3
@@ -150,13 +145,10 @@ flowchart TD
   FE_1 --> FE_8
   CP_11 --> FE_8
   FE_7 --> FE_9
-  question_key_gate_auto --> FE_9
   FE_4 --> FE_10
   FE_4 --> FE_11
-  question_tool_stage_check --> FE_11
   FE_5 --> FE_12
   capability_version_snapshots --> FE_12
-  question_freeze_digest --> FE_12
   FE_6 --> FE_13
   FE_7 --> FE_13
   FE_10 --> FE_13
@@ -177,8 +169,6 @@ flowchart TD
   FE_4 --> AP_7
   FE_12 --> AP_7
   AP_7 --> AP_8
-  question_unscoped_confirmation --> AP_8
-  question_unscoped_freeze --> AP_8
   RV_4 --> RV_5
   RV_8 --> RV_10
   capability_version_snapshots --> RV_10
@@ -259,14 +249,14 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 - **FE-6** (M, flow-engine): The VOID cascade. After FE-4, AP-1.
 - **FE-7** (M, flow-engine): Gate modes, rigor and policy changes. After FE-4, FE-8, AP-1.
 - **FE-10** (M, flow-engine): Next actions from the gate state. After FE-4.
-- **FE-11** (S, flow-engine): Tool calls against flow.stage. After FE-4. Waits on `tool-stage-check` (blocking).
+- **FE-11** (S, flow-engine): Tool calls against flow.stage. After FE-4.
 - **AP-4** (S, approvals): Recording a provisional approval. After AP-1, FE-4.
 - **AP-6** (M, approvals): Changed since approval. After AP-5, FE-1, FE-4.
 
 ### Wave 12
 
-- **FE-9** (S, flow-engine): Middle gates without the user under the key-gates profile. After FE-7. Waits on `key-gate-auto` (blocking).
-- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`, `freeze-digest` (blocking).
+- **FE-9** (S, flow-engine): Middle gates without the user under the key-gates profile. After FE-7.
+- **FE-12** (M, flow-engine): The design freeze. After FE-5. Waits on capability `version-snapshots`.
 - **FE-13** (M, flow-engine): The flow end to end through the services. After FE-6, FE-7, FE-10. Waits on capability `selection-assessment`.
 
 ### Wave 13
@@ -276,7 +266,7 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 
 ### Wave 14
 
-- **AP-8** (M, approvals): Migrated decisions without a scope. After AP-7. Waits on `unscoped-confirmation` (blocking), `unscoped-freeze` (blocking).
+- **AP-8** (M, approvals): Migrated decisions without a scope. After AP-7.
 
 ## Open questions that hold blocks
 
@@ -284,15 +274,10 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 |---|---|---|---|
 | [user-bundle-location](../architecture/capabilities.md#user-bundle-location) | no | none | CP-1, CP-2 |
 | [envelope-phase](../architecture/capabilities.md#envelope-phase) | no | none | FE-3 |
-| [key-gate-auto](../architecture/capabilities.md#key-gate-auto) | yes | project-owner | FE-9 |
-| [tool-stage-check](../architecture/capabilities.md#tool-stage-check) | yes | project-owner | FE-11 |
-| [freeze-digest](../architecture/capabilities.md#freeze-digest) | yes | project-owner | FE-12 |
-| [unscoped-confirmation](../architecture/capabilities.md#unscoped-confirmation) | yes | project-owner | AP-8 |
-| [unscoped-freeze](../architecture/capabilities.md#unscoped-freeze) | yes | project-owner | AP-8 |
 
 ## Phase 2 register entries no spec closes
 
-71 of the 83 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
+70 of the 82 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
 
 | Entry | Disposition | Deferred to | Title |
 |---|---|---|---|
@@ -311,7 +296,6 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-036 | contract | none | There are no assembly configurations, so a sweep can't cover alternative operating envelopes such as several bundle sizes. |
 | IR-039 | contract | none | Validate accepts an operation acceptance with the wrong feature count for its kind, which the access check then refuses. |
 | IR-043 | design-input | check-orchestration | The commit-scope evidence run stops at the first failing step, so later producers never run and their obligations show as unknown. |
-| IR-047 | contract | existing-equipment | A catalogue or standard part needs a frozen, hashed copy of its specification even when nothing can be frozen or the standard is paywalled. |
 | IR-049 | contract | evidence-assessment | The service-class rules live as code and prose in several copies, and two lists of the service classes can drift apart. |
 | IR-050 | contract | none | A CAD-and-simulation release can't close a physical obligation as checked before use. |
 | IR-051 | port-fix | version-snapshots | After a release, the next change is validated against the released version's rules and frozen digest, so it can't add a planned row. |

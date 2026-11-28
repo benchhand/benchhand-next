@@ -7,9 +7,6 @@ capabilities:
   - gate-policy
   - result-envelope
 questions:
-  - tool-stage-check
-  - freeze-digest
-  - key-gate-auto
   - policy-resources
   - envelope-phase
   - bounded-results
@@ -106,8 +103,8 @@ blocks:
   - id: FE-9
     title: Middle gates without the user under the key-gates profile
     size: S
-    requirements: [REQ-18]
-    depends_on: [FE-7, question:key-gate-auto]
+    requirements: [REQ-18, REQ-27]
+    depends_on: [FE-7]
   - id: FE-10
     title: Next actions from the gate state
     size: M
@@ -117,12 +114,12 @@ blocks:
     title: Tool calls against flow.stage
     size: S
     requirements: [REQ-23]
-    depends_on: [FE-4, question:tool-stage-check]
+    depends_on: [FE-4]
   - id: FE-12
     title: The design freeze
     size: M
     requirements: [REQ-24]
-    depends_on: [FE-5, capability:version-snapshots, question:freeze-digest]
+    depends_on: [FE-5, capability:version-snapshots]
   - id: FE-13
     title: The flow end to end through the services
     size: M
@@ -172,15 +169,16 @@ In the prototype the process lives in prose. The agent writes `hw/decisions/` an
 - **REQ-15.** For each kind, the engine evaluates the contributed lists in ascending provider name, then the flow's list, whose result is final. A list that gives its kind's reserved no-match value passes to the next. The loader refuses a contributed list whose last choice isn't its kind's no-match value, because its default would mask every later list (`docs/adr/0020-cel-rule-pipeline.md:224`). Rigor is the union of every list's messages, each once, and no list can waive one. Source: `docs/contract/policy.md:28-32`, `docs/adr/0020-cel-rule-pipeline.md:228-234`, `docs/phases/phase-0-1.md:125`.
 - **REQ-16.** A gate's contributed requirements hold as well as the flow's, checked after them in provider order. The loader refuses a requirement for a gate that `flow.yaml` doesn't declare, or for a step the gate doesn't have. Source: `docs/contract/policy.md:33-35`.
 - **REQ-17.** A merged fidelity outside F0 to F3, or a dispatch handler id that no handler has, gives UNKNOWN with a finding that names the value, never a pass. Source: `docs/phases/phase-0-1.md:201`, RULE-05.
-- **REQ-18.** Under the key-gates profile, a middle gate closes without the user when its full check passes, citing the relaxation decision and the full-check packet. The key gates still need the user, and the variant gate means CONCEPT (RULE-14). Migrate tells such a project how to set `hw/policy.yaml` (`docs/contract/record-migration.md:134`). Source: IR-061. Whether a key gate may be set to `auto` waits on `key-gate-auto`.
+- **REQ-18.** Under the key-gates profile, a middle gate closes without the user when its full check passes, citing the relaxation decision and the full-check packet. The key gates still need the user, and the variant gate means CONCEPT (RULE-14). Migrate tells such a project how to set `hw/policy.yaml` (`docs/contract/record-migration.md:134`). Source: IR-061.
 - **REQ-19.** `packages/benchhand-core` builds the envelope, the home of the prototype's `emit.py` (`docs/architecture/reference-map.yaml:762-763`). `status` is `ok`, `refused`, `pending` or `error`, with the parts each one requires, and `verdict` is set only by a check on an `ok` result. Source: `docs/contract/envelope.md:11-18`.
-- **REQ-20.** Every result carries `next_actions`: the tool calls that make sense next, most useful first, with the arguments the server can fill, a `reason`, and `needs_user` when the call needs the user. Source: `docs/contract/envelope.md:24`, `docs/design-plan.md:316`. A refused `flow.transition` names the missing step or approval: a `flow.transition` call with the `to` and `version` the server knows, and `needs_user` true when the step needs an approval (`docs/contract/flow.md:68`). **Proposal** for the owner: a result that leaves a human gate open, such as a passing full check, also lists that gate's `flow.transition` call, with `needs_user` true.
+- **REQ-20.** Every result carries `next_actions`: the tool calls that make sense next, most useful first, with the arguments the server can fill, a `reason`, and `needs_user` when the call needs the user. Source: `docs/contract/envelope.md:24`, `docs/design-plan.md:316`. A refused `flow.transition` names the missing step or approval: a `flow.transition` call with the `to` and `version` the server knows, and `needs_user` true when the step needs an approval (`docs/contract/flow.md:68`). A result that leaves a human gate open, such as a passing full check, also lists that gate's `flow.transition` call, with `needs_user` true. Source: owner, 2026-11-28.
 - **REQ-21.** A YAML error is a finding with its file and line, and a malformed record gives status `error` with findings, never a crash. Exit 2 stays for usage and infrastructure errors (RULE-08). Source: IR-085.
-- **REQ-22.** The envelope's first finding is the first actionable one, and `guidance` names it with its subject and `path:line`, such as a build error's PN and file line, or a blocking pair and its overlap volume. **Proposal** for the owner: an agent that reads only the summary then meets the finding it must act on first, instead of an info row. The prototype's compact summary names the blockers (`reference/skills/cad-record/tests/test_emit.py:97`). The bounded envelope itself stays with `bounded-results`.
-- **REQ-23.** If the owner decides that writing tool calls are checked against `flow.stage`, the engine refuses an out-of-stage call in the shape of REQ-5. Source: `docs/architecture/data-flow.md:344`. Waits on `tool-stage-check`.
-- **REQ-24.** The design-freeze gate records `flow.frozen` on a sealed version, with the evidence digest of its assessment. Source: `docs/design-plan.md:561`. A freeze whose assessment refuses, and so has no digest, waits on `freeze-digest` (`docs/architecture/data-flow.md:346`).
+- **REQ-22.** The envelope's first finding is the first actionable one, and `guidance` names it with its subject and `path:line`, such as a build error's PN and file line, or a blocking pair and its overlap volume. An agent that reads only the summary then meets the finding it must act on first, instead of an info row. Source: owner, 2026-11-28. The prototype's compact summary names the blockers (`reference/skills/cad-record/tests/test_emit.py:97`). The bounded envelope itself stays with `bounded-results`.
+- **REQ-23.** Building and checking tools run at any stage, so the user can explore. Only a tool that seals, freezes or releases has a stage check against `flow.stage`, and an out-of-order call fails it in the shape of REQ-5, with a reason and a next action. Source: owner, 2026-11-28 (`docs/contract/flow.md:73`), `docs/architecture/data-flow.md:344`.
+- **REQ-24.** The design-freeze gate records `flow.frozen` on a sealed version, with the evidence digest of its assessment. A freeze requires `evidence_sha256` and is refused when the evidence assessment refuses, and then it records no `flow.frozen`. Source: `docs/design-plan.md:561`, owner, 2026-11-28 (`docs/contract/flow.md:74`).
 - **REQ-26.** `flow.transition {to?, version?, decision?, approval?}` is the one way the flow moves. Which steps need an approval comes from the gate's `kind` in `flow.yaml` and its mode in `hw/policy.yaml`, and a plain edge needs no approval. A human gate is refused without an `approval` of channel `chat` or `app` with `by` and `quote`, unless its mode is `auto`, when the engine records `channel: auto`. Source: `docs/contract/flow.md:62-68`.
 - **REQ-25.** A flow test advances a stage, writes its decision record and refreshes the selection digest through the services, with no hand edit of the record. Source: IR-083.
+- **REQ-27.** The `design_freeze` and `release` gates always need the user's explicit approval and are never `auto`. A policy that gives either gate the mode `auto` is refused when it loads, and `default: auto` leaves both at `ask`. Any other gate may be `auto` when the policy cites the decision that set it (REQ-12). A test sets a mode through a test-only override that the engine's caller passes in, and `hw/policy.yaml` has no such field. Source: owner, 2026-11-28 (`docs/contract/flow.md:72`, `docs/contract/policy.md:15`).
 
 ## Interfaces
 
@@ -236,9 +234,6 @@ The prototype's `emit.py` output modes (`--json`, `CAD_OUTPUT`, a terminal again
 
 | Question | Blocking | Blocks that wait |
 |---|---|---|
-| [`tool-stage-check`](../architecture/capabilities.md#tool-stage-check) | yes | FE-11 |
-| [`freeze-digest`](../architecture/capabilities.md#freeze-digest) | yes | FE-12 |
-| [`key-gate-auto`](../architecture/capabilities.md#key-gate-auto) | yes | FE-9 |
 | [`policy-resources`](../architecture/capabilities.md#policy-resources) | yes | no Phase 2 block: it decides the Phase 3 MCP path to the policy |
 | [`envelope-phase`](../architecture/capabilities.md#envelope-phase) | no | FE-3 builds the envelope in Phase 2 and leaves the tools to Phase 3 |
 | [`bounded-results`](../architecture/capabilities.md#bounded-results) | yes | no Phase 2 block: REQ-22 orders findings and needs no bounded envelope |
@@ -265,9 +260,13 @@ Size M. After FE-1 and CP-11.
 
 Size S. Depends on `envelope-phase`, which this block settles by building the envelope in Phase 2 and leaving the tools to Phase 3.
 
-**Scope.** A builder in `packages/benchhand-core` that makes a valid `envelope/envelope` for each status, puts the first actionable finding first (REQ-22, once approved), and turns a parse error or a malformed record into findings.
+**Scope.** A builder in `packages/benchhand-core` that makes a valid `envelope/envelope` for each status, puts the first actionable finding first (REQ-22), and turns a parse error or a malformed record into findings.
 
-**Acceptance.** Envelope tests: each status with its required parts, and a refused envelope without `next_actions` refused by the contract; the IR-085 test, whose YAML-error finding names the offending value in its message; once the owner approves REQ-22, a check result with an info finding and a blocking one lists the blocking one first and names it in `guidance`.
+**Acceptance.** Envelope tests:
+
+- each status with its required parts, and a refused envelope without `next_actions` refused by the contract;
+- the IR-085 test, whose YAML-error finding names the offending value in its message;
+- a check result with an info finding and a blocking one lists the blocking one first and names it in `guidance`.
 
 ### FE-4: The interpreter, its transitions and refusals
 
@@ -328,17 +327,21 @@ Size M. After FE-1 and CP-11.
 
 ### FE-9: Middle gates without the user under the key-gates profile
 
-Size S. After FE-7. Waits on `key-gate-auto`.
+Size S. After FE-7.
 
-**Scope.** Close a middle gate on a passing full check under `auto`, citing the relaxation decision and the full-check packet, and treat the key gates as the owner decides.
+**Scope.** Close a middle gate on a passing full check under `auto`, citing the relaxation decision and the full-check packet. Refuse `auto` at the `design_freeze` and `release` gates (REQ-27), and give tests the override.
 
-**Acceptance.** The IR-061 test in the table above.
+**Acceptance.** The IR-061 test in the table above. Policy tests for REQ-27:
+
+- a policy that gives `design_freeze` or `release` the mode `auto` is refused at load;
+- `default: auto` leaves both asking and any other gate closing under `auto`;
+- the test-only override sets a mode in a test, and no `hw/policy.yaml` field does.
 
 ### FE-10: Next actions from the gate state
 
 Size M. After FE-4.
 
-**Scope.** Derive `next_actions` from the gate state as REQ-20 says, and fill the arguments the server knows. The open-gate entry follows REQ-20's proposal once the owner approves it.
+**Scope.** Derive `next_actions` from the gate state as REQ-20 says, and fill the arguments the server knows. The open-gate entry follows REQ-20.
 
 **Acceptance.** Tests:
 
@@ -348,19 +351,19 @@ Size M. After FE-4.
 
 ### FE-11: Tool calls against flow.stage
 
-Size S. After FE-4. Waits on `tool-stage-check`.
+Size S. After FE-4.
 
-**Scope.** A stage check the Phase 3 tools call before a writing operation, for the tools the owner names.
+**Scope.** A stage check that the Phase 3 and Phase 4 tools which seal, freeze or release call first (REQ-23). Building and checking tools don't call it.
 
-**Acceptance.** A test where a named writing call at the wrong stage is refused with a reason and a next action, and a read-only call is not checked.
+**Acceptance.** A test where a seal, freeze or release call at the wrong stage is refused with a reason and a next action, and the same call at its stage passes. A test where a build call and a check call run at every stage and are never refused for it.
 
 ### FE-12: The design freeze
 
-Size M. After FE-5. Needs `version-snapshots`, and waits on `freeze-digest`. The freeze records `flow.frozen` on a version sealed under `.benchhand/sealed/versions/<V>/`, as [ADR-0023](../adr/0023-storage-layout.md) places it; the code writes `hw/` until bead `bhn-aef` renames the record folder to `design/`.
+Size M. After FE-5. Needs `version-snapshots`. The freeze records `flow.frozen` on a version sealed under `.benchhand/sealed/versions/<V>/`, as [ADR-0023](../adr/0023-storage-layout.md) places it; the code writes `hw/` until bead `bhn-aef` renames the record folder to `design/`.
 
-**Scope.** On the design-freeze approval, record `flow.frozen` on the sealed version with the assessment's evidence digest, and handle a refused assessment as the owner decides.
+**Scope.** On the design-freeze approval, record `flow.frozen` on the sealed version with the assessment's evidence digest, and refuse the freeze when the assessment refuses (REQ-24).
 
-**Acceptance.** A freeze test that seals a version and records its digest, and one for a refused assessment that follows the owner's answer. Before the design-freeze approval, `flow.frozen` is unset, so versioning finds no freeze and no built version stands in for one (IR-086).
+**Acceptance.** A freeze test that seals a version and records its digest, and one where a refused assessment refuses the freeze, names the refusal and records no `flow.frozen`. Before the design-freeze approval, `flow.frozen` is unset, so versioning finds no freeze and no built version stands in for one (IR-086).
 
 ### FE-13: The flow end to end through the services
 

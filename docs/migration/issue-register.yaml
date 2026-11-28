@@ -417,9 +417,10 @@ design_rules:
       - findings 7.9
     benchhand_next: Not built yet. Its home is the standards-data
       package from the CAD study (the bd_warehouse, Fasteners, Onshape
-      and BOSL2 tables) and a parts.search tool, with the procurement
-      not_applicable reason in the record contract (IR-047, IR-003),
-      Phase 2.
+      and BOSL2 tables) and a parts.search tool, Phase 4, with the
+      part-source providers; the owner decided this on 2026-11-28
+      (IR-047). The procurement not_applicable reason in the record
+      contract stays in Phase 2, with existing equipment (IR-003).
     pointer: docs/design-plan.md §12
   - id: RULE-37
     rule: 'Owner decision of 2026-11-27 (IR-026). Parallel work
@@ -1837,8 +1838,13 @@ issues:
         source gives a named, non-blocking finding with the search
         recorded. A part with no supplier chosen stays open as a
         sourcing decision. The procurement guides tell the agent
-        to do the search instead of asking the user.
-      phase: 2
+        to do the search instead of asking the user. Moved to
+        Phase 4 on 2026-11-28, when the owner put the standards-data
+        package and parts.search there, with the part-source providers
+        (the capability standards-parts-data). The not_applicable
+        reason for a part with nothing to freeze is the record-contract
+        change that IR-003 carries in Phase 2.
+      phase: 4
     acceptance: Drawing and BOM tests where a standard screw with
       a frozen library row passes and an existing customer envelope
       has a not-applicable specification with its reason. A designation

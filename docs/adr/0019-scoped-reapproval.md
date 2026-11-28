@@ -36,3 +36,10 @@ The owner decided the open choice at the Phase 0 and 1 gate. A migrated decision
 
 - The next human gate confirms it. How the confirmation is recorded, and whether the stage can freeze or release before it, are Phase 2 design questions. The owner hasn't approved any mechanics for them yet.
 - [Record migration](../contract/record-migration.md#decided-defaults) records this as a Phase 2 requirement.
+
+## Amendment, 2026-11-28
+
+The owner answered both questions that the first amendment left to Phase 2 design ([flow contract](../contract/flow.md#approval-scope)).
+
+- At the next human gate, the gate card lists the migrated decisions. The user's approval through `flow.transition` confirms them, and the decision it writes records which migrated decisions it confirmed.
+- Freeze and release are refused until the migrated decisions are confirmed, and the refusal names them.
