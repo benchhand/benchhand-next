@@ -38,10 +38,15 @@ from issue_register.sync import (
     load_sources,
     read_ledger,
     sections,
-    tool_issue_hashes,
     tracked_file,
     triage,
 )
+
+
+def tool_issue_hashes(text: str) -> dict[str, str]:
+    """The snapshot's per-issue hashes of a tool-issue log, as the sync computes them."""
+    return SourceHashes([tracked_file("project:log", "issues", text)]).tool_issues
+
 
 MAP = """\
 reference_commit: abc1234

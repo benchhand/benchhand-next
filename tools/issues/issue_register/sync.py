@@ -290,14 +290,6 @@ def read_sources(sources: list[TrackedSource], roots: dict[str, Path]) -> Source
     return SourceHashes(files, unmatched)
 
 
-def tool_issue_hashes(text: str) -> dict[str, str]:
-    """Per issue number, a SHA-256 prefix of its sections: each `## <number>` heading and the body under it.
-
-    An issue gains a section per status update, and a follow-up may change only a body, so both count.
-    """
-    return SourceHashes([tracked_file("lead:log", "issues", text)]).tool_issues
-
-
 @dataclass
 class Triage:
     new_beads: list[tuple[str, str]] = field(default_factory=list)
