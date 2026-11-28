@@ -5,8 +5,9 @@
 """Compare the register with the prototype's live ledger and the private files that feed it.
 
 Local only: CI has none of them. It reads, and writes nothing unless asked to update the snapshot. The files it
-reads are listed in tools/issues/tracked-sources.yaml as globs relative to two roots: the test project's lead
-folder and the prototype challenge's handover folder. The report names files and section titles, because it is
+reads are listed in tools/issues/tracked-sources.yaml as globs relative to two roots: the test project's root
+and the prototype challenge's handover folder. A file belongs to the first entry whose glob matches it, so a
+named file with its own split can sit above a broad glob. The report names files and section titles, because it is
 local. The snapshot it writes holds bead ids, statuses, a date, tool-issue and brief-item numbers, and hashes
 only: a file or section is keyed by the hash of its name, so no private name enters the register.
 """
@@ -29,10 +30,10 @@ import yaml
 from .register import BRIEF_SOURCE, REGISTER_FILE, SNAPSHOT_KEY, Register, item_order, register_from_text
 
 LEDGER_ENV = "BENCHHAND_PROTOTYPE_LEDGER"
-LEAD_ENV = "BENCHHAND_TEST_PROJECT_LEAD"
+PROJECT_ENV = "BENCHHAND_TEST_PROJECT"
 CHALLENGE_ENV = "BENCHHAND_CHALLENGE_DIR"
 SOURCES_FILE = "tools/issues/tracked-sources.yaml"
-ROOTS = ("lead", "challenge")
+ROOTS = ("project", "challenge")
 SPLITS = ("issues", "items", "headings")
 _SECTION_START = re.compile(r"^(?=## )", re.MULTILINE)
 _ISSUE_HEADING = re.compile(r"## ([0-9]+)\b")
@@ -264,20 +265,28 @@ class SourceHashes:
 
 
 def read_sources(sources: list[TrackedSource], roots: dict[str, Path]) -> SourceHashes:
-    """Hash every file each source matches; a required source that matches nothing is reported, not an error."""
+    """Hash every file each source matches; a required source that matches nothing is reported, not an error.
+
+    A file goes to the first source that matches it, and a later, broader glob skips it.
+    """
     files: list[TrackedFile] = []
     unmatched: list[str] = []
+    claimed: set[str] = set()
     for source in sources:
         root = roots[source.root]
         matched = sorted(name for name in glob.glob(source.glob, root_dir=root) if (root / name).is_file())
         if not matched and not source.optional:
             unmatched.append(source.label)
         for name in matched:
+            label = f"{source.root}:{name}"
+            if label in claimed:
+                continue
+            claimed.add(label)
             try:
                 text = (root / name).read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError) as error:
                 raise SyncError(f"cannot read {root / name}: {error}") from error
-            files.append(tracked_file(f"{source.root}:{name}", source.split, text))
+            files.append(tracked_file(label, source.split, text))
     return SourceHashes(files, unmatched)
 
 

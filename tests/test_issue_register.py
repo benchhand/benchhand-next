@@ -28,8 +28,8 @@ from issue_register.register import (
 from issue_register.render import render_register
 from issue_register.sync import (
     CHALLENGE_ENV,
-    LEAD_ENV,
     LEDGER_ENV,
+    PROJECT_ENV,
     SOURCES_FILE,
     TOP_OF_FILE,
     SourceHashes,
@@ -141,9 +141,10 @@ A second private section with the same title.
 
 SOURCES = """\
 sources:
-  - {root: lead, glob: tool-issues.md, split: issues, what: the log}
-  - {root: lead, glob: architect-prompt-tool-issues.md, split: items, what: the brief}
-  - {root: lead, glob: ../study/*.md, split: headings, what: a study}
+  - {root: project, glob: lead/tool-issues.md, split: issues, what: the log}
+  - {root: project, glob: lead/architect-prompt-tool-issues.md, split: items, what: the brief}
+  - {root: project, glob: lead/*.md, split: headings, what: the lead's notes}
+  - {root: project, glob: study-*/*.md, split: headings, what: a study}
   - {root: challenge, glob: handoff.md, split: headings, what: the handoff}
   - {root: challenge, glob: owner-direction-*.md, split: headings, what: directions, optional: true}
 """
@@ -355,11 +356,11 @@ def test_brief_items_run_over_their_indented_lines_and_the_rest_is_cut_by_headin
 @pytest.mark.parametrize(
     ("entry", "message"),
     [
-        ("{root: lead, glob: /abs/x.md, split: headings, what: x}", "glob must be a path relative"),
-        ("{root: home, glob: x.md, split: headings, what: x}", "root must be one of lead, challenge"),
-        ("{root: lead, glob: x.md, split: lines, what: x}", "split must be one of"),
-        ("{root: lead, glob: x.md, split: headings}", "say what the files are"),
-        ("{root: lead, glob: x.md, split: headings, what: x, extra: 1}", "expected root, glob"),
+        ("{root: project, glob: /abs/x.md, split: headings, what: x}", "glob must be a path relative"),
+        ("{root: home, glob: x.md, split: headings, what: x}", "root must be one of project, challenge"),
+        ("{root: project, glob: x.md, split: lines, what: x}", "split must be one of"),
+        ("{root: project, glob: x.md, split: headings}", "say what the files are"),
+        ("{root: project, glob: x.md, split: headings, what: x, extra: 1}", "expected root, glob"),
     ],
 )
 def test_a_bad_source_list_entry_is_refused(tmp_path: Path, entry: str, message: str) -> None:
@@ -371,7 +372,7 @@ def test_a_bad_source_list_entry_is_refused(tmp_path: Path, entry: str, message:
 
 def test_the_committed_source_list_is_valid_and_relative() -> None:
     sources = load_sources(REPO_ROOT / SOURCES_FILE)
-    assert {source.root for source in sources} == {"lead", "challenge"}
+    assert {source.root for source in sources} == {"project", "challenge"}
     assert [source.split for source in sources].count("issues") == 1
     assert "/Users/" not in (REPO_ROOT / SOURCES_FILE).read_text(encoding="utf-8")
 
@@ -381,15 +382,15 @@ def test_triage_reports_beads_then_issues_with_their_file_and_section(tmp_path: 
     ledger = ledger_statuses(
         [{"id": "benchhand-aaa", "status": "closed"}, {"id": "benchhand-ccc", "status": "open"}]
     )
-    found = SourceHashes([tracked_file("lead:tool-issues.md", "issues", LOG)])
+    found = SourceHashes([tracked_file("project:lead/tool-issues.md", "issues", LOG)])
     assert triage(register, ledger, found).lines() == [
         "benchhand-ccc (open): not in the register",
         "benchhand-aaa: open -> closed since the snapshot",
         "benchhand-bbb: in the register, not in the ledger",
-        "test-project tool-issues #1: its text changed — lead:tool-issues.md § 1 (open, 2026-11-26): a check "
+        "test-project tool-issues #1: its text changed — project:lead/tool-issues.md § 1 (open, 2026-11-26): a check "
         "passes with no limit",
-        "test-project tool-issues #2: new — lead:tool-issues.md § 2 (open, 2026-11-27): a second issue",
-        "lead:tool-issues.md § Tool issues: new",
+        "test-project tool-issues #2: new — project:lead/tool-issues.md § 2 (open, 2026-11-27): a second issue",
+        "project:lead/tool-issues.md § Tool issues: new",
     ]
 
 
@@ -419,12 +420,12 @@ def _sources(tmp_path: Path) -> tuple[Path, dict[str, Path]]:
     root = _repo(
         tmp_path / "repo", REGISTER.replace("sources: ['test-project tool-issues #1']", CITES_THE_BRIEF)
     )
-    roots = {"lead": tmp_path / "project" / "lead", "challenge": tmp_path / "challenge"}
+    roots = {"project": tmp_path / "project", "challenge": tmp_path / "challenge"}
     files = {
-        roots["lead"] / "tool-issues.md": FIRST_ISSUE,
-        roots["lead"] / "architect-prompt-tool-issues.md": BRIEF,
-        roots["lead"] / "unit-brief.md": "Project work, not tracked.\n",
-        roots["lead"].parent / "study" / "notes.md": NOTES,
+        roots["project"] / "lead" / "tool-issues.md": FIRST_ISSUE,
+        roots["project"] / "lead" / "architect-prompt-tool-issues.md": BRIEF,
+        roots["project"] / "scratch" / "unit-output.md": "Project work, not tracked.\n",
+        roots["project"] / "study-a" / "notes.md": NOTES,
         roots["challenge"] / "handoff.md": "# Handoff\n\n## 1 Private section\nPrivate text.\n",
     }
     for path, text in files.items():
@@ -458,10 +459,10 @@ def _in_sync(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> tuple[Path, dic
     ("argv", "env", "message"),
     [
         (["sync"], {}, f"no the prototype checkout: pass --ledger or set {LEDGER_ENV}"),
-        (["sync", "--ledger", "x"], {}, f"pass --lead or set {LEAD_ENV}"),
-        (["sync"], {LEDGER_ENV: "x"}, f"pass --lead or set {LEAD_ENV}"),
-        (["sync", "--lead", "y"], {LEAD_ENV: ""}, f"pass --ledger or set {LEDGER_ENV}"),
-        (["sync", "--ledger", "x", "--lead", "y"], {}, f"pass --challenge or set {CHALLENGE_ENV}"),
+        (["sync", "--ledger", "x"], {}, f"pass --project or set {PROJECT_ENV}"),
+        (["sync"], {LEDGER_ENV: "x"}, f"pass --project or set {PROJECT_ENV}"),
+        (["sync", "--project", "y"], {PROJECT_ENV: ""}, f"pass --ledger or set {LEDGER_ENV}"),
+        (["sync", "--ledger", "x", "--project", "y"], {}, f"pass --challenge or set {CHALLENGE_ENV}"),
     ],
 )
 def test_sync_needs_the_ledger_and_both_roots_and_has_no_default(
@@ -471,7 +472,7 @@ def test_sync_needs_the_ledger_and_both_roots_and_has_no_default(
     env: dict[str, str],
     message: str,
 ) -> None:
-    for name in (LEDGER_ENV, LEAD_ENV, CHALLENGE_ENV):
+    for name in (LEDGER_ENV, PROJECT_ENV, CHALLENGE_ENV):
         monkeypatch.delenv(name, raising=False)
     for name, value in env.items():
         monkeypatch.setenv(name, value)
@@ -486,20 +487,38 @@ def test_a_snapshot_from_before_sections_were_tracked_reports_each_one_new_until
     assert _sync(monkeypatch, where, LEDGER) == 1
     out = capsys.readouterr().out
     expected = [
-        f"{BRIEF_ITEM} 1: new — lead:architect-prompt-tool-issues.md § 1. A first item. Private text.",
-        f"{BRIEF_ITEM} 4b: new — lead:architect-prompt-tool-issues.md § 4b. A lettered item. Private text.",
-        "lead:architect-prompt-tool-issues.md § Deliverable: new",
-        "lead:../study/notes.md § (top of file): new",
-        "lead:../study/notes.md § Results (2): new",
+        f"{BRIEF_ITEM} 1: new — project:lead/architect-prompt-tool-issues.md § 1. A first item. Private text.",
+        f"{BRIEF_ITEM} 4b: new — project:lead/architect-prompt-tool-issues.md § 4b. A lettered item. Private text.",
+        "project:lead/architect-prompt-tool-issues.md § Deliverable: new",
+        "project:study-a/notes.md § (top of file): new",
+        "project:study-a/notes.md § Results (2): new",
         "challenge:handoff.md § 1 Private section: new",
-        "lead:tool-issues.md § Tool issues: new",
+        "project:lead/tool-issues.md § Tool issues: new",
     ]
     assert all(f"issues-sync: {line}\n" in out for line in expected)
     assert "tool-issues #1" not in out
-    assert "unit-brief" not in out
+    assert "unit-output" not in out
     assert "owner-direction" not in out
     assert _sync(monkeypatch, where, LEDGER, "acknowledge") == 0
     assert _sync(monkeypatch, where, LEDGER) == 0
+
+
+def test_a_file_goes_to_the_first_source_that_matches_it_and_the_report_lists_every_tracked_file(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    where = _sources(tmp_path)
+    (where[1]["project"] / "lead" / "notes.md").write_text("# Lead notes\nPrivate.\n", encoding="utf-8")
+    _sync(monkeypatch, where, LEDGER)
+    tracking = [
+        line for line in capsys.readouterr().out.splitlines() if line.startswith("issues-sync: tracking ")
+    ]
+    assert tracking == [
+        "issues-sync: tracking project:lead/tool-issues.md (issues, 2 sections)",
+        "issues-sync: tracking project:lead/architect-prompt-tool-issues.md (items, 4 sections)",
+        "issues-sync: tracking project:lead/notes.md (headings, 1 sections)",
+        "issues-sync: tracking project:study-a/notes.md (headings, 4 sections)",
+        "issues-sync: tracking challenge:handoff.md (headings, 2 sections)",
+    ]
 
 
 def test_sync_exits_non_zero_while_anything_needs_triage(
@@ -516,7 +535,7 @@ def test_an_update_clears_a_change_only_when_acknowledged_and_reports_it_either_
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
     where = _in_sync(monkeypatch, tmp_path)
-    lead = where[1]["lead"]
+    lead = where[1]["project"] / "lead"
     (lead / "tool-issues.md").write_text(
         FIRST_ISSUE.replace("must never", "must still never"), encoding="utf-8"
     )
@@ -524,7 +543,7 @@ def test_an_update_clears_a_change_only_when_acknowledged_and_reports_it_either_
     changed = {**LEDGER, "benchhand-aaa": "closed"}
     reported = [
         "benchhand-aaa: open -> closed since the snapshot",
-        "tool-issues #1: its text changed — lead:",
+        "tool-issues #1: its text changed — project:lead/",
     ]
     capsys.readouterr()
     assert _sync(monkeypatch, where, changed, "update") == 1
@@ -543,23 +562,28 @@ def test_a_changed_new_or_retitled_section_is_reported_with_its_file_and_title(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
     where = _in_sync(monkeypatch, tmp_path)
-    lead, challenge = where[1]["lead"], where[1]["challenge"]
+    project, challenge = where[1]["project"], where[1]["challenge"]
     notes = NOTES.replace("A private result.", "A changed result.").replace(
         "# Private study", "# Renamed study"
     )
-    (lead.parent / "study" / "notes.md").write_text(notes, encoding="utf-8")
+    (project / "study-a" / "notes.md").write_text(notes, encoding="utf-8")
     (challenge / "owner-direction-x.md").write_text("# A direction\nDo it.\n", encoding="utf-8")
-    (lead / "architect-prompt-tool-issues.md").write_text(
+    (project / "lead" / "architect-prompt-tool-issues.md").write_text(
         BRIEF.replace("A first", "A reworded"), encoding="utf-8"
     )
     capsys.readouterr()
     assert _sync(monkeypatch, where, LEDGER) == 1
-    lines = [line.removeprefix("issues-sync: ") for line in capsys.readouterr().out.splitlines()[:-1]]
+    lines = [
+        line.removeprefix("issues-sync: ")
+        for line in capsys.readouterr().out.splitlines()[:-1]
+        if not line.startswith("issues-sync: tracking ")
+    ]
     assert lines == [
-        f"{BRIEF_ITEM} 1: its text changed — lead:architect-prompt-tool-issues.md § 1. A reworded item. Private text.",
-        "lead:../study/notes.md § Renamed study: new",
-        "lead:../study/notes.md § Results: its text changed",
-        "lead:../study/notes.md: 1 section(s) recorded in the snapshot are gone or retitled",
+        f"{BRIEF_ITEM} 1: its text changed — project:lead/architect-prompt-tool-issues.md § 1. A reworded item. "
+        "Private text.",
+        "project:study-a/notes.md § Renamed study: new",
+        "project:study-a/notes.md § Results: its text changed",
+        "project:study-a/notes.md: 1 section(s) recorded in the snapshot are gone or retitled",
         "challenge:owner-direction-x.md § A direction: new",
     ]
 
@@ -594,14 +618,16 @@ def test_updating_the_snapshot_writes_statuses_numbers_and_hashes_only(
     assert list(snapshot["brief_item_hashes"]) == ["1", "4b"]
     assert len(snapshot["source_hashes"]) == 4
     tail = after[after.index("ledger_snapshot:") :]
-    assert all(word not in tail for word in ("Private", "notes", "handoff", "study", "Results", "lead"))
+    assert all(
+        word not in tail for word in ("Private", "notes", "handoff", "study", "Results", "lead", "project")
+    )
 
 
 def test_an_uncited_brief_item_keeps_the_snapshot_from_being_written(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     where = _in_sync(monkeypatch, tmp_path)
-    brief = where[1]["lead"] / "architect-prompt-tool-issues.md"
+    brief = where[1]["project"] / "lead" / "architect-prompt-tool-issues.md"
     brief.write_text(BRIEF + "\n7. **A new item.** Text.\n", encoding="utf-8")
     before = (where[0] / REGISTER_FILE).read_text(encoding="utf-8")
     with pytest.raises(RegisterError, match="architect-prompt-tool-issues item 7: no issue cites it"):

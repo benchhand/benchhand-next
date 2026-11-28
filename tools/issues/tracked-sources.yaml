@@ -6,11 +6,12 @@
 # the one list of them.
 #
 # Each entry is a glob relative to a root, never an absolute path:
-#   lead       the test project's lead folder (`--lead` or
-#              BENCHHAND_TEST_PROJECT_LEAD); its parent folders hold the
-#              project's studies and its record
+#   project    the test project's root folder (`--project` or
+#              BENCHHAND_TEST_PROJECT)
 #   challenge  the prototype challenge's handover folder (`--challenge`
 #              or BENCHHAND_CHALLENGE_DIR)
+# A file belongs to the first entry that matches it, so the named files
+# with their own split come before the broad globs that also match them.
 # split: how each matched file is cut into sections, each hashed on its
 # own, so the report names the section:
 #   issues     one section per `## <number>` issue (cited as
@@ -24,103 +25,32 @@
 # that matches nothing is reported.
 # what: what the files are.
 #
-# The lead folder's other files (unit briefs of finished work, scratch
-# scripts and their output) are project work and stay untracked. Study
-# results and project decisions are test-project data: only the generic
-# tool lessons they carry enter the register.
+# Study results, unit briefs and project decisions are test-project data:
+# only the generic tool lessons they carry enter the register.
 
 sources:
-  - root: lead
-    glob: HANDOVER.md
-    split: headings
-    what: the lead's index of project state, checks, final-gate
-      blockers, decisions and next steps
-  - root: lead
-    glob: tool-issues.md
+  - root: project
+    glob: .cad-work/lead/tool-issues.md
     split: issues
     what: the tool-issue log, a section per issue and per status update
-  - root: lead
-    glob: architect-prompt-tool-issues.md
+  - root: project
+    glob: .cad-work/lead/architect-prompt-tool-issues.md
     split: items
     what: the owner's brief on every logged tool issue, as numbered items
-  - root: lead
-    glob: architect-prompt-reference-geometry.md
+  - root: project
+    glob: .cad-work/lead/*.md
     split: headings
-    what: side brief on customer-furnished reference geometry (current)
-  - root: lead
-    glob: architect-prompt-inclined-bores.md
+    what: the lead's other notes, among them the index of project state,
+      the side briefs, the gate reports and the unit briefs
+  - root: project
+    glob: .cad-work/study-*/*.md
     split: headings
-    what: side brief on drawing features off the frame axes (current)
-  - root: lead
-    glob: architect-prompt-cad-libraries.md
+    what: every design study's notes, results and progress log, with
+      the tools each had to write
+  - root: project
+    glob: hw/decisions/*.md
     split: headings
-    what: side brief on geometry libraries and external tools (current)
-  - root: lead
-    glob: architect-prompt-access.md
-    split: headings
-    what: older side brief on the access check's tools, paths and
-      scenes (2026-11-25)
-  - root: lead
-    glob: architect-prompt-gitignore.md
-    split: headings
-    what: older side brief on a per-project ignore file for
-      snapshots (2026-11-25)
-  - root: lead
-    glob: agent-prompt-drawing-fix.md
-    split: headings
-    what: older upstream fix brief for three drawing defects, with
-      causes and tests (2026-11-25)
-  - root: lead
-    glob: gate-v1[0-9]-blockers.md
-    split: headings
-    what: gate reports listing the blockers of one version, by obligation
-  - root: lead
-    glob: brief-detail-layout3.md
-    split: headings
-    what: a detail-rework brief to two parallel work units, with the
-      scratch-build and id-range rules they ran under
-  - root: lead
-    glob: cradle-r2-free-lengths.md
-    split: headings
-    what: a work unit's calculated free lengths, copied so a
-      decision can cite a file
-  - root: lead
-    glob: ../study-rocking/notes2.md
-    split: headings
-    what: a layout study's working notes
-  - root: lead
-    glob: ../study-rocking/layouts.md
-    split: headings
-    what: the same study's candidate layouts
-  - root: lead
-    glob: ../study-rocking/summary.md
-    split: headings
-    what: the same study's summary
-  - root: lead
-    glob: ../study-rocking/progress.md
-    split: headings
-    what: the same study's progress log, with the tools it had to write
-  - root: lead
-    glob: ../study-clamp-concepts/scoring.md
-    split: headings
-    what: a concept study's scoring of candidate concepts
-  - root: lead
-    glob: ../study-clamp-concepts/progress.md
-    split: headings
-    what: the same study's progress log
-  - root: lead
-    glob: ../../hw/decisions/DR-049-*.md
-    split: headings
-    what: the project's decision records from the detail rework on
-  - root: lead
-    glob: ../../hw/decisions/DR-0[5-9][0-9]-*.md
-    split: headings
-    what: the project's later decision records
-  - root: lead
-    glob: ../../hw/decisions/DR-[1-9][0-9][0-9]-*.md
-    split: headings
-    what: the project's decision records from DR-100 on
-    optional: true
+    what: the project's decision records and their index
   - root: challenge
     glob: handoff-migration.md
     split: headings

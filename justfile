@@ -228,12 +228,13 @@ issues *args:
 
 # Local only (CI has none of them): compare the register with the prototype's ledger (`--ledger` or
 # BENCHHAND_PROTOTYPE_LEDGER) and the private files listed in tools/issues/tracked-sources.yaml, as globs under two
-# roots: the test project's lead folder (`--lead` or BENCHHAND_TEST_PROJECT_LEAD) and the prototype challenge's
-# handover folder (`--challenge` or BENCHHAND_CHALLENGE_DIR); all three are required. It hashes each file, each
-# tool issue, each numbered brief item and each heading section, and prints one line per new or changed one, with
-# its file and section, for triage. Exits 1 when something needs triage. `--update-snapshot --acknowledge` records
-# bead statuses, a date and the hashes (private names only as hashes) once the report is triaged; the new file must
-# pass `just issues`, which needs every recorded tool issue and brief item cited, before it is written.
+# roots: the test project's root folder (`--project` or BENCHHAND_TEST_PROJECT) and the prototype challenge's
+# handover folder (`--challenge` or BENCHHAND_CHALLENGE_DIR); all three are required. It lists the files it tracks,
+# then hashes each file, each tool issue, each numbered brief item and each heading section, and prints one line per
+# new or changed one, with its file and section, for triage. Exits 1 when something needs triage.
+# `--update-snapshot --acknowledge` records bead statuses, a date and the hashes (private names only as hashes) once
+# the report is triaged; the new file must pass `just issues`, which needs every recorded tool issue and brief item
+# cited, before it is written.
 issues-sync *args:
     PYTHONPATH=tools/issues:tools/map uv run python -m issue_register sync {{args}}
 

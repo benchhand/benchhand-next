@@ -16,8 +16,8 @@ from .register import OUTPUT_FILE, RegisterError, load_register
 from .render import render_register
 from .sync import (
     CHALLENGE_ENV,
-    LEAD_ENV,
     LEDGER_ENV,
+    PROJECT_ENV,
     SOURCES_FILE,
     SyncError,
     load_sources,
@@ -45,9 +45,9 @@ def main(argv: list[str] | None = None) -> int:
         help=f"the prototype checkout (default: ${LEDGER_ENV})",
     )
     sync.add_argument(
-        "--lead",
-        default=os.environ.get(LEAD_ENV),
-        help=f"the test project's lead folder, the `lead` root (default: ${LEAD_ENV})",
+        "--project",
+        default=os.environ.get(PROJECT_ENV),
+        help=f"the test project's root folder, the `project` root (default: ${PROJECT_ENV})",
     )
     sync.add_argument(
         "--challenge",
@@ -68,7 +68,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         ledger = _required_dir(arguments.ledger, "--ledger", LEDGER_ENV, "the prototype checkout")
         roots = {
-            "lead": _required_dir(arguments.lead, "--lead", LEAD_ENV, "the test project's lead folder"),
+            "project": _required_dir(
+                arguments.project, "--project", PROJECT_ENV, "the test project's root folder"
+            ),
             "challenge": _required_dir(
                 arguments.challenge, "--challenge", CHALLENGE_ENV, "the challenge's handover folder"
             ),
@@ -123,6 +125,8 @@ def run_sync(repo_root: Path, ledger_dir: Path, roots: dict[str, Path], sources_
     sources = load_sources(sources_file)
     ledger = read_ledger(ledger_dir)
     found = read_sources(sources, roots)
+    for tracked in found.files:
+        print(f"issues-sync: tracking {tracked.label} ({tracked.split}, {len(tracked.sections)} sections)")
     lines = triage(register, ledger, found).lines()
     for line in lines:
         print(f"issues-sync: {line}")

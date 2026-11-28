@@ -118,8 +118,8 @@ def render_register(register: Register) -> str:
         f"The register follows the prototype at `{register.data['reference_commit'][:7]}`. The ledger "
         f"snapshot is from {register.snapshot['date']}; `just issues-sync` reports what changed since, in the "
         "ledger and in the private files it tracks (tools/issues/tracked-sources.yaml): the test project's "
-        "tool-issue log, the owner's tool-issues brief item by item, the side briefs, studies and decision "
-        "records, and the prototype challenge's handover, each section by section. Every tool issue and brief "
+        "tool-issue log, the owner's tool-issues brief item by item, the lead's other notes, every study and "
+        "decision record, and the prototype challenge's handover, each section by section. Every tool issue and brief "
         "item is cited by at least one entry.",
         "",
         "## Issues",
