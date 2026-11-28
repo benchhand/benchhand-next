@@ -202,7 +202,7 @@ Size M. No dependencies.
 
 Request tests for REQ-2: `form`, a blank quote, and a `void` without its provisional are each refused. An interval-acceptance test for REQ-4: the engine cites the accepting decision on the decided version, and not one on an earlier version.
 
-The IR-214 test in the table above, for REQ-21: a retitle renames the file, rewrites every link and regenerates the index; a status change to superseded writes `superseded_by`; and a superseding decision rewritten in place leaves every decision readable.
+The IR-214 test in the table above covers REQ-21. A retitle renames the file, rewrites every link and regenerates the index. A status change to superseded writes `superseded_by`, and a superseding decision rewritten in place leaves every decision readable.
 
 ### AP-2: Decisions for undeclared transitions
 

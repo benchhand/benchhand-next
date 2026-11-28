@@ -6,7 +6,7 @@ SPDX-License-Identifier: MPL-2.0
 
 # Assembly and part structure: the owner's decisions of 2026-11-28
 
-Status: owner decisions, recorded on 2026-11-28 for the assembly-structure spec (spec 21, "Assembly structure and steps") and the export specs. This note changes no contract, ADR or code. The catalogue records it as the proposed capability `product-scene-structure`, and the register's IR-227 carries the lesson that asked for it: the only assembly a build wrote was the check scene, with context, tooling and every variant in it. The example product is the lamp-arm fixture.
+Status: owner decisions, recorded on 2026-11-28 for the assembly-structure spec (spec 21, "Assembly structure and steps") and the export specs. This note changes no contract, ADR or code. The catalogue records it as the proposed capability `product-scene-structure`. The register's IR-227 carries the lesson that asked for it: the only assembly a build wrote was the check scene, with context, tooling and every variant in it. The example product is the lamp-arm fixture.
 
 ## Decisions
 
