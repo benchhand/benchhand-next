@@ -41,7 +41,7 @@ stack: "" {
       kiro: "Kiro CLI\nopen: Phase 0 probe result,\nthe model lacks the probe tools" {class: open}
       pi: "Pi" {class: external}
     }
-    cli: "benchhand CLI, packages/benchhand\non main: version, record migrate\nmcp, doctor, setup, policy, rules compile, debug call: Phase 3" {class: main}
+    cli: "benchhand CLI, packages/benchhand\non main: version, record migrate (flag off)\nmcp, doctor, setup, policy, rules compile, debug call: Phase 3" {class: main}
     browser: "Browser UI, ui/\nviewer, concept, gallery, gate card, flow view\nPhase 5" {class: planned}
   }
 
@@ -93,7 +93,7 @@ stack: "" {
 
   clients.hosts -> server.surface: "MCP over stdio, or loopback HTTP with --http\nPhase 3" {class: planned_call}
   clients.cli -> server.surface: "mcp, debug call\nPhase 3" {class: planned_call}
-  clients.cli -> core.record.migrate: "record migrate" {class: on_main}
+  clients.cli -> core.record.migrate: "record migrate\nrecord-migration flag on" {class: on_main}
   clients.browser -> server.preview: "loopback URL\nPhase 5" {class: planned_call}
   server -> core: "Phase 3" {class: planned_call}
   core -> runtime.protocol: "provider host\nopen: no phase in Steps" {class: planned_call}

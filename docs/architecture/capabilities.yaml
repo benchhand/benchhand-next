@@ -31,7 +31,7 @@ doc_corrections:
       - docs/design-plan.md:353
       - docs/adr/0018-baseline-and-no-forms.md:27
       - docs/adr/0018-baseline-and-no-forms.md:36
-      - docs/architecture/data-flow.md:347
+      - docs/architecture/data-flow.md:349
 
 open_questions:
   - id: cli-command-list
@@ -57,24 +57,6 @@ open_questions:
       - source: packages/benchhand/src/benchhand/cli.py:17
         says: main has version and record migrate, and neither list
           names them.
-  - id: record-migrate-tool
-    blocking: true
-    owner: project-owner
-    decision_needed: 'Whether record.migrate is an MCP tool and in which
-      phase, or the envelope example names the CLI command instead.'
-    origin: catalogue
-    question: Is there a record.migrate MCP tool, and in which phase?
-      The envelope contract's example names it; the architecture pages
-      say no tool for migration is named, and no phase lists one.
-    pointers:
-      - contracts/envelope/envelope.tsp:183
-      - docs/architecture/data-flow.md:351
-    positions:
-      - source: contracts/envelope/envelope.tsp:183
-        says: an error result's next action is the tool record.migrate.
-      - source: docs/architecture/data-flow.md:351
-        says: no MCP tool for migration is named; main has the CLI
-          subcommand.
   - id: policy-resources
     blocking: true
     owner: project-owner
@@ -105,7 +87,7 @@ open_questions:
     question: The plan names jobs.start, jobs.status and jobs.result,
       and no cancel tool, although the job service cancels.
     pointers:
-      - docs/architecture/data-flow.md:349
+      - docs/architecture/data-flow.md:351
   - id: no-phase
     blocking: true
     owner: project-owner
@@ -137,7 +119,7 @@ open_questions:
     question: How a provider request becomes a job; JobService runs
       a command under a supervisor.
     pointers:
-      - docs/architecture/data-flow.md:348
+      - docs/architecture/data-flow.md:350
   - id: release-refusals
     blocking: true
     owner: project-owner
@@ -146,7 +128,7 @@ open_questions:
     question: The full list of release refusal checks; the plan names
       the acceptance digest and the context and tooling refusal only.
     pointers:
-      - docs/architecture/data-flow.md:350
+      - docs/architecture/data-flow.md:352
   - id: envelope-phase
     blocking: false
     origin: existing
@@ -502,10 +484,15 @@ capabilities:
     container: containers.md:migrate
     phase: 1
     status: built
-    scope: baseline
+    scope: deferred
+    note: 'The code exists behind the record-migration feature flag, off
+      by default (owner 2026-11-27: no migration offered at first release).
+      The evidence reader''s in-memory upgrade of sealed v2 snapshots
+      uses the same rules and is not behind the flag.'
     evidence:
       - packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674
       - packages/benchhand/src/benchhand/cli.py:43
+      - packages/benchhand/src/benchhand/flags.py:35
     owner:
       - packages/benchhand-core
       - packages/benchhand
@@ -516,7 +503,6 @@ capabilities:
       - record-store
       - record-validate
     open_questions:
-      - record-migrate-tool
       - cli-command-list
     adrs:
       - 15
@@ -3442,12 +3428,12 @@ tools:
     envelope: sync
     gate: unspecified
     phase: null
-    status: unresolved
+    status: dropped
     source:
       kind: contract
-      ref: contracts/envelope/envelope.tsp:183
-    open_questions:
-      - record-migrate-tool
+      ref: docs/contract/record-migration.md:8
+    note: 'owner 2026-11-27: no migration offered at first release'
+    open_questions: []
   - name: record.add_requirement
     capability: record-ops
     access: write
@@ -3777,7 +3763,7 @@ tools:
       ref: tasks/cancel without its baseline
     implied_by:
       - docs/design-plan.md:345
-      - docs/architecture/data-flow.md:349
+      - docs/architecture/data-flow.md:351
     open_questions:
       - cancel-tool
   - name: jobs.strays
@@ -4756,16 +4742,15 @@ cli:
     evidence:
       - packages/benchhand/src/benchhand/cli.py:43
     phase: 1
-    mcp:
-      - record.migrate
     access: write
     role: admin
     source:
       kind: code
       ref: packages/benchhand/src/benchhand/cli.py:42
+    note: Behind the record-migration feature flag, off by default; with
+      it off the command refuses with feature.disabled.
     open_questions:
       - cli-command-list
-      - record-migrate-tool
   - name: mcp
     capability: mcp-server
     status: planned

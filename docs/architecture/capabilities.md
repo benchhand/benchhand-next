@@ -13,7 +13,7 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | Phase | Capabilities | built | partial | planned | proposed | dropped | baseline | deferred |
 |---|---|---|---|---|---|---|---|---|
 | P0 | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 0 |
-| P1 | 7 | 5 | 2 | 0 | 0 | 0 | 7 | 0 |
+| P1 | 7 | 5 | 2 | 0 | 0 | 0 | 6 | 1 |
 | P2 | 25 | 0 | 1 | 24 | 0 | 0 | 25 | 0 |
 | P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
 | P4 | 29 | 0 | 0 | 23 | 6 | 0 | 23 | 6 |
@@ -21,9 +21,9 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | no phase | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 7 |
-| **all** | **94** | 6 | 5 | 73 | 9 | 1 | 77 | 17 |
+| **all** | **94** | 6 | 5 | 73 | 9 | 1 | 76 | 18 |
 
-MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 21. Doc corrections: 1.
+MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 20. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -42,7 +42,7 @@ MCP tools: 107 (37 planned, 1 unresolved, 64 proposed, 5 dropped). CLI commands:
 | [contract-validation](#contract-validation) | Runtime contract validation | contracts | `containers.md:validator` | built | baseline | `packages/benchhand-contracts` | 0 | 0 |
 | [record-store](#record-store) | Record store, typed reads and writes | core | `containers.md:store` | built | baseline | `packages/benchhand-core` | 1 | 0 |
 | [record-validate](#record-validate) | Record validation | core | `containers.md:validate` | partial | baseline | `packages/benchhand-core` | 1 | 0 |
-| [record-migrate](#record-migrate) | Record migration | core | `containers.md:migrate` | built | baseline | `packages/benchhand-core`, `packages/benchhand` | 1 | 1 |
+| [record-migrate](#record-migrate) | Record migration | core | `containers.md:migrate` | built | deferred | `packages/benchhand-core`, `packages/benchhand` | 1 | 1 |
 | [evidence-assessment](#evidence-assessment) | Evidence assessment | core | `containers.md:evidence` | partial | baseline | `packages/benchhand-core` | 2 | 0 |
 | [job-service](#job-service) | Job service | core | `containers.md:jobService` | built | baseline | `packages/benchhand-core` | 5 | 0 |
 
@@ -566,7 +566,7 @@ Every tool returns the result envelope (`envelope/envelope.schema.json`); *outpu
 | `record.add_requirement` | [record-ops](#record-ops) | write | not yet defined | not yet defined | sync | none | P3 | planned | plan: `docs/design-plan.md:378` | – |
 | `record.check_machine_profile` | [machine-profile](#machine-profile) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `machine_profile.py` | `machine_profile.py check` |
 | `record.cite_source` | [standards-parts-data](#standards-parts-data) | write | not yet defined | not yet defined | sync | unspecified | P4 | proposed | study: `lane8-agentcad.md section 6, item 7` | – |
-| `record.migrate` | [record-migrate](#record-migrate) | write | not yet defined | not yet defined | sync | unspecified | no phase | unresolved | contract: `contracts/envelope/envelope.tsp:183` | – |
+| `record.migrate` | [record-migrate](#record-migrate) | write | not yet defined | not yet defined | sync | unspecified | no phase | dropped | contract: `docs/contract/record-migration.md:8` | – |
 | `record.propose_coupons` | [assembly-steps-and-coupons](#assembly-steps-and-coupons) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `plan section 12b, coupons from the requirement` | – |
 | `record.read` | [record-store](#record-store) | read | not yet defined | not yet defined | sync | none | P3 | proposed | catalogue: `ADR-0018 readable content` | – |
 | `record.set_machine_profile` | [machine-profile](#machine-profile) | write | not yet defined | not yet defined | sync | unspecified | P3 | proposed | catalogue: `machine_profile.py` | `machine_profile.py write` |
@@ -615,7 +615,7 @@ ADR-0018 makes a tool the baseline for readable content: each resource, prompt a
 | Command | Capability | Status | Phase | MCP equivalent | Access | Role | Source |
 |---|---|---|---|---|---|---|---|
 | `benchhand version` | [cli-app](#cli-app) | built | P1 | – | read | admin | code: `packages/benchhand/src/benchhand/cli.py:28` |
-| `benchhand record migrate` | [record-migrate](#record-migrate) | built | P1 | `record.migrate` | write | admin | code: `packages/benchhand/src/benchhand/cli.py:42` |
+| `benchhand record migrate` | [record-migrate](#record-migrate) | built | P1 | – | write | admin | code: `packages/benchhand/src/benchhand/cli.py:42` |
 | `benchhand mcp` | [mcp-server](#mcp-server) | planned | P3 | – | write | launcher | plan: `docs/design-plan.md:246` |
 | `benchhand mcp --http` | [mcp-server](#mcp-server) | planned | P3 | – | write | launcher | plan: `docs/design-plan.md:246` |
 | `benchhand mcp --container` | [container-launcher](#container-launcher) | planned | no phase | – | write | launcher | plan: `docs/design-plan.md:10` |
@@ -924,7 +924,7 @@ None.
 - `run_cadquery.py` ([model-build](#model-build)): The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it.
 - `viewer.py host` ([preview-host](#preview-host)): The hidden subcommand the viewer host runs as; the preview host replaces it.
 
-### Proposals awaiting approval (91)
+### Proposals awaiting approval (92)
 
 #### Proposed capabilities (9)
 
@@ -1021,19 +1021,20 @@ None.
 - `benchhand standards show` ([standards-parts-data](#standards-parts-data), study)
 - `benchhand view` ([viewer](#viewer), study): Opens serve on two versions.
 
-#### Dropped tools (5)
+#### Dropped tools (6)
 
 - `flow.advance` ([flow-engine](#flow-engine), catalogue): The owner dropped it on 2026-11-27 for flow.transition (docs/contract/flow.md:62). The interpreter is the normal writer of flow.stage; the prototype agent wrote it by hand.
 - `flow.record_decision` ([decision-records](#decision-records), contract): The owner dropped it on 2026-11-27 for flow.transition, which records a human-gate decision as its approval (docs/contract/flow.md:62).
 - `flow.record_provisional` ([decision-records](#decision-records), contract): The owner dropped it on 2026-11-27 for flow.transition, whose provisional step the engine records itself (docs/contract/flow.md:62). The envelope example still names it until the Phase 2 contract change.
 - `motion.check` ([motion-analysis](#motion-analysis), catalogue): Proposed for `motion.py check`, which doesn't exist at the pin; `motion.py plan` checks coverage, and motion.plan replaces it.
 - `recheck.diff` ([design-recheck](#design-recheck), catalogue): Proposed for `stamp.py diff`, which doesn't exist at the pin; stamp.py has flag-only modes, and `--verify --committed` goes to recheck.verify.
+- `record.migrate` ([record-migrate](#record-migrate), contract): owner 2026-11-27: no migration offered at first release
 
-### Pending decisions (1)
+### Pending decisions (0)
 
-#### Unresolved tools (1)
+#### Unresolved tools (0)
 
-- `record.migrate` ([record-migrate](#record-migrate)): [record-migrate-tool](#record-migrate-tool)
+None.
 
 ### Dependencies on a later phase (16)
 
@@ -1069,16 +1070,6 @@ Which subcommands does the CLI have? The lists differ, and `main` has two comman
 - Blocking: yes. Owner: project-owner. Decision needed: The CLI subcommand list, reconciling D1, ADR-0001 and the version and record migrate commands on main, before the cli-app spec.
 - Cited by: [record-migrate](#record-migrate), [mcp-server](#mcp-server), [cli-app](#cli-app), `benchhand version`, `benchhand record migrate`, `benchhand rules compile`
 
-### record-migrate-tool
-
-Is there a record.migrate MCP tool, and in which phase? The envelope contract's example names it; the architecture pages say no tool for migration is named, and no phase lists one. (catalogue)
-
-- Pointers: `contracts/envelope/envelope.tsp:183`, `docs/architecture/data-flow.md:351`
-- `contracts/envelope/envelope.tsp:183`: an error result's next action is the tool record.migrate.
-- `docs/architecture/data-flow.md:351`: no MCP tool for migration is named; main has the CLI subcommand.
-- Blocking: yes. Owner: project-owner. Decision needed: Whether record.migrate is an MCP tool and in which phase, or the envelope example names the CLI command instead.
-- Cited by: [record-migrate](#record-migrate), `record.migrate`, `benchhand record migrate`
-
 ### policy-resources
 
 How does the agent read and change gate modes over MCP? D3 says the `policy.*` resources change them, but an MCP resource is read-only, and ADR-0018 makes a tool the baseline for readable content. No policy tool is named. (catalogue)
@@ -1093,7 +1084,7 @@ How does the agent read and change gate modes over MCP? D3 says the `policy.*` r
 
 The plan names jobs.start, jobs.status and jobs.result, and no cancel tool, although the job service cancels. (existing)
 
-- Pointers: `docs/architecture/data-flow.md:349`
+- Pointers: `docs/architecture/data-flow.md:351`
 - Blocking: yes. Owner: project-owner. Decision needed: Whether jobs.cancel joins jobs.start, jobs.status and jobs.result.
 - Cited by: [job-service](#job-service), `jobs.cancel`
 
@@ -1117,7 +1108,7 @@ Which component moves a provider's verified artifacts into hw/; the record store
 
 How a provider request becomes a job; JobService runs a command under a supervisor. (existing)
 
-- Pointers: `docs/architecture/data-flow.md:348`
+- Pointers: `docs/architecture/data-flow.md:350`
 - Blocking: yes. Owner: project-owner. Decision needed: How a provider request becomes a job of the job service.
 - Cited by: [job-service](#job-service), [provider-host](#provider-host)
 
@@ -1125,7 +1116,7 @@ How a provider request becomes a job; JobService runs a command under a supervis
 
 The full list of release refusal checks; the plan names the acceptance digest and the context and tooling refusal only. (existing)
 
-- Pointers: `docs/architecture/data-flow.md:350`
+- Pointers: `docs/architecture/data-flow.md:352`
 - Blocking: yes. Owner: project-owner. Decision needed: The full list of release refusal checks.
 - Cited by: [release-packaging](#release-packaging), `release.package`
 
@@ -1241,7 +1232,7 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 
 Settled questions whose old wording is still in a page. The fix belongs in that page.
 
-- `docs/contract/envelope.md:37` says the design documents give two long-call thresholds, about 50 s in plan section 11 and about 30 s in ADR-0018, and Phase 3 settles it. It should say: the threshold is about 30 s; plan section 11 and the provider protocol follow ADR-0018 since 2026-11-26. Settled by `docs/design-plan.md:353`, `docs/adr/0018-baseline-and-no-forms.md:27`, `docs/adr/0018-baseline-and-no-forms.md:36`, `docs/architecture/data-flow.md:347`.
+- `docs/contract/envelope.md:37` says the design documents give two long-call thresholds, about 50 s in plan section 11 and about 30 s in ADR-0018, and Phase 3 settles it. It should say: the threshold is about 30 s; plan section 11 and the provider protocol follow ADR-0018 since 2026-11-26. Settled by `docs/design-plan.md:353`, `docs/adr/0018-baseline-and-no-forms.md:27`, `docs/adr/0018-baseline-and-no-forms.md:36`, `docs/architecture/data-flow.md:349`.
 
 ## Capability details
 
@@ -1342,15 +1333,16 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Record migration.** Migrate a prototype record (record_version 2) to record version 3 as a table of rules, one row per prototype change: a dry run by default, an apply that backs up every file it changes, resume after a stop, and undo from the backup. Each later prototype change is ported as its own row with a fixture (ADR-0015).
 
 - Layer and container: core, `containers.md:migrate`
-- Phase and status: P1, built, baseline
+- Phase and status: P1, built, deferred
 - Owner: `packages/benchhand-core`, `packages/benchhand`
 - Contracts: `record/product.schema.json`, `record/decision.schema.json`
 - MCP tools: `record.migrate`
 - CLI: `benchhand record migrate`
 - Depends on: [record-store](#record-store), [record-validate](#record-validate)
 - ADRs: ADR-0015, ADR-0017
-- Evidence: `packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674`, `packages/benchhand/src/benchhand/cli.py:43`
-- Open questions: [record-migrate-tool](#record-migrate-tool), [cli-command-list](#cli-command-list)
+- Evidence: `packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674`, `packages/benchhand/src/benchhand/cli.py:43`, `packages/benchhand/src/benchhand/flags.py:35`
+- Note: The code exists behind the record-migration feature flag, off by default (owner 2026-11-27: no migration offered at first release). The evidence reader's in-memory upgrade of sealed v2 snapshots uses the same rules and is not behind the flag.
+- Open questions: [cli-command-list](#cli-command-list)
 
 ### evidence-assessment
 

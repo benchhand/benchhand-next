@@ -2,6 +2,14 @@
 
 Status: the list of changes the migrate service applies. Schemas: [`contracts/record/`](../../contracts/record/). Decisions: [ADR-0012](../adr/0012-python-host-rewrite.md), [ADR-0017](../adr/0017-contracts.md).
 
+**Not offered at the first release.** Prototype record v2 exists only inside the benchhand repositories, so the owner decided on 2026-11-27 that the first release offers no migration. The code stays, behind the feature flag `record-migration`, which is off by default:
+
+- With the flag off, `benchhand record migrate` reads nothing. It prints the finding `feature.disabled` and exits 1. Its help marks it experimental.
+- No MCP tool replaces it: the catalogue drops the tool `record.migrate`.
+- The evidence reader's in-memory upgrade of sealed history uses the same rules, and the flag doesn't gate it ([How the service edits](#how-the-service-edits)).
+
+To turn the flag on in a checkout, set `flags.record-migration.defaultVariant` to `"on"` in `packages/benchhand/src/benchhand/flags.yaml`. Then run `uv run benchhand record migrate` from that checkout. The flag's definition, with its owner and removal date, is in `packages/benchhand/src/benchhand/flags.py`.
+
 The record service reads `record_version: 3` only. It refuses any other value, or a missing one, with the finding `record.version_unsupported`, and it changes nothing. The migrate service, `benchhand_core.record.migrate`, accepts two sources: prototype record version 2, and the record version 1 of prototype PR #319, which is the same format. This page lists every difference between those sources and record version 3, and the rule that applies each one ([Migrate rules](#migrate-rules)).
 
 ## Renames
@@ -125,7 +133,7 @@ The owner file and the lock keep out a second migration only. **Stop every other
 
 **Frozen records.** Any prototype record with `flow.frozen` is refused with `migrate.frozen_anchor`, whatever the rules would change. Its acceptance digest, `flow.frozen.evidence_sha256`, covers the bytes of the ledgers and of the artifacts they cite (prototype `evidence.py`). The digest is never recomputed. The freeze can't be re-anchored until the Phase 2 flow engine can record an engineering change for it. No real project was frozen on 2026-11-25.
 
-The CLI is `benchhand record migrate [--apply [--resume]] HW`, and `benchhand record migrate --undo BACKUP`. It exits 1 on a refusal or a failure, and 2 on bad arguments.
+The CLI is `benchhand record migrate [--apply [--resume]] HW`, and `benchhand record migrate --undo BACKUP`. It exits 1 on a refusal or a failure, and 2 on bad arguments. With the `record-migration` flag off, every form exits 1 with `feature.disabled`.
 
 ## Decided defaults
 

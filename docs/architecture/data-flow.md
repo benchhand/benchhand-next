@@ -224,12 +224,14 @@ sequenceDiagram
 
 ## (e) Migrate
 
+The first release offers no migration (owner, 2026-11-27). `benchhand record migrate` is behind the `record-migration` feature flag, which is off. With the flag off, the CLI reports `feature.disabled` and exits 1, and `migrate` never runs. The sequence shows the flag on.
+
 ```mermaid
 %%{init: {"theme": "neutral"}}%%
 sequenceDiagram
   autonumber
   actor A as Person or agent at a shell
-  participant CLI as benchhand record migrate, on main
+  participant CLI as benchhand record migrate, on main, record-migration flag on
   participant M as migrate and undo, on main
   participant T as Temporary copy of the migrated record
   participant O as hw/.benchhand-migrate.owner
@@ -348,7 +350,7 @@ sequenceDiagram
 - **Open: provider request to job.** The plan says the server manages provider workers and jobs, and that `$/progress` feeds job-handle status. `JobService` runs a command under a supervisor, and no document says how a provider request becomes such a job.
 - **Open: the cancel tool.** The plan names `jobs.start`, `jobs.status` and `jobs.result`, and `jobs.*` for Phase 3; no cancel tool name.
 - **Open: release refusals.** The plan names refusal checks and the acceptance digest against the freeze, and section 12a names the context and tooling refusal. It doesn't list the rest.
-- **Open: migrate entry point.** The plan's CLI list (D1) has no `record migrate`, and no MCP tool for migration is named. `main` has the CLI subcommand.
+- **Settled: migrate entry point.** The owner decided on 2026-11-27 that the first release offers no migration and no MCP tool for it. The CLI subcommand stays on `main` behind the `record-migration` flag, which is off. The plan's CLI list (D1) still has no `record migrate` (open question `cli-command-list`).
 - None of these are in the plan's [Open questions](../design-plan.md#open-questions).
 
 ## Sources

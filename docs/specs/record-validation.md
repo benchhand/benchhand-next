@@ -7,7 +7,6 @@ capabilities:
   - record-migrate
 questions:
   - validate-surface
-  - record-migrate-tool
 rules:
   - RULE-05
   - RULE-08
@@ -112,7 +111,7 @@ Baseline: pointers checked against `main` at `58dea29e`.
 ## Capabilities
 
 - [`record-validate`](../architecture/capabilities.md#record-validate): check a whole record against its contracts and the cross-document rules, and report findings. Phase 1, partial: the library is on `main` (`packages/benchhand-core/src/benchhand_core/record/validate.py:47`) with no CLI or tool. Tool: `record.validate` (proposed, Phase 3). Contract: `common/finding`.
-- [`record-migrate`](../architecture/capabilities.md#record-migrate): migrate a prototype record to record version 3 as a table of rules. Phase 1, built, with the CLI `benchhand record migrate`. Tool: `record.migrate` (unresolved). Contracts: `record/product`, `record/decision`.
+- [`record-migrate`](../architecture/capabilities.md#record-migrate): migrate a prototype record to record version 3 as a table of rules. Phase 1, built, with the CLI `benchhand record migrate`, behind the `record-migration` flag, which is off: the first release offers no migration (owner, 2026-11-27). The tool `record.migrate` is dropped. Contracts: `record/product`, `record/decision`.
 
 Neither is a Phase 2 capability. This spec holds their Phase 2 work: the register's Phase 2 fixes in validate, the rest of the prototype's design rules, and the guard that keeps a migrated record valid as the rules grow.
 
@@ -136,8 +135,8 @@ Direct edits of `hw/` are caught as findings, not prevented (`docs/design-plan.m
 
 ## Interfaces
 
-- **MCP tools**, Phase 3: `record.validate` (proposed; which `record.*` tools exist waits on `validate-surface`) and `record.migrate` (unresolved; `record-migrate-tool`).
-- **CLI:** `benchhand record migrate`, unchanged. No validate command (`docs/phases/phase-0-1.md:163`).
+- **MCP tools**, Phase 3: `record.validate` (proposed; which `record.*` tools exist waits on `validate-surface`). `record.migrate` is dropped.
+- **CLI:** `benchhand record migrate`, unchanged, behind the `record-migration` flag (off). No validate command (`docs/phases/phase-0-1.md:163`).
 - **Contracts:**
   - changed: `record/verification-row` gains the `not_applicable` result with its reason or decision (RV-2), a minor bump. Release readiness, which reads it, is `release-packaging` in Phase 4;
   - changed: `record/assembly`'s `torque_path` type (`contracts/record/assembly.tsp:139`) gains `weld`, `braze` and `solder` (RV-5), a minor bump;
@@ -181,7 +180,7 @@ The reference map leaves `check_motion_cases` and `check_release_readiness` for 
 
 ## Non-goals
 
-- The `record.validate` and `record.migrate` tools and a validate CLI command: Phase 3, behind `validate-surface` and `record-migrate-tool`.
+- The `record.validate` tool and a validate CLI command: Phase 3, behind `validate-surface`.
 - The migrate rows of prototype PRs #331 to #341. They land with the contract changes that need them (`docs/phases/prototype-port-331-341.md`), under `existing-equipment` and `assembly-steps-and-coupons`.
 - SARIF output of findings, homed in Phase 3 (`docs/architecture/reference-map.yaml:858-860`) behind the open `sarif-export` question.
 - Release readiness and motion cases: Phase 4. Release readiness takes RV-2's `not_applicable` rows from the evidence assessment, under `release-packaging`.
@@ -192,7 +191,6 @@ The reference map leaves `check_motion_cases` and `check_release_readiness` for 
 | Question | Blocking | Blocks that wait |
 |---|---|---|
 | [`validate-surface`](../architecture/capabilities.md#validate-surface) | yes | no Phase 2 block: it names the Phase 3 tools |
-| [`record-migrate-tool`](../architecture/capabilities.md#record-migrate-tool) | yes | no Phase 2 block: it decides the Phase 3 MCP path |
 
 ## Blocks
 

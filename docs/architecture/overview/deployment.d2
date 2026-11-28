@@ -41,7 +41,7 @@ machine: "The designer's machine" {
       provider_host: "Provider host\nopen: no phase in Steps" {class: open}
       jobs: "Job service, benchhand_core.jobs\nsupervisor in its own session,\nanchored process group" {class: main}
     }
-    cli: "benchhand record migrate\npackages/benchhand/src/benchhand/cli.py" {class: main}
+    cli: "benchhand record migrate\nbehind the record-migration flag, off\npackages/benchhand/src/benchhand/cli.py" {class: main}
     rules_compile: "benchhand rules compile\nruns the benchhand-celcheck binary\non a user's rule lists (ADR-0020)\nPhase 3" {class: planned}
     probe: "Capability probe, dev only\ntools/probe/probe.py (ADR-0016)" {class: main}
     providers: "Provider processes, providers/\none per provider, each in its own uv env\nPhase 4" {
@@ -88,7 +88,7 @@ machine.native.mcp.provider_host <-> machine.native.providers: "provider protoco
 machine.native.providers.freecad -> machine.cache: "installs FreeCAD here\nPhase 4" {class: planned_call}
 machine.native.providers.freecad -> machine.native.freecadcmd: "locates and runs it\nPhase 4" {class: planned_call}
 machine.native.mcp -> machine.project.hw: "reads and writes the record\nPhase 3" {class: planned_call}
-machine.native.cli -> machine.project.hw: "migrates the record" {class: on_main}
+machine.native.cli -> machine.project.hw: "migrates the record\nrecord-migration flag on" {class: on_main}
 machine.native.mcp.jobs -> machine.project.dot: "writes run records" {class: on_main}
 machine.native.rules_compile -> machine.project: "writes a user's bundle beside its rule lists\nthe path is open (ADR-0020)\nPhase 3" {class: planned_call}
 

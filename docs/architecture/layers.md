@@ -52,7 +52,7 @@ Solid arrows are the `dependencies` of each `pyproject.toml` on `main`, and noth
 ```mermaid
 flowchart LR
   subgraph workspace["uv workspace: packages/*"]
-    benchhand["benchhand<br/>CLI: version, record migrate<br/>requires-python >=3.12"]:::impl
+    benchhand["benchhand<br/>CLI: version, record migrate (flag off)<br/>requires-python >=3.12"]:::impl
     core["benchhand-core<br/>record and job services<br/>requires-python >=3.12"]:::impl
     contracts["benchhand-contracts<br/>generated models and validators<br/>requires-python >=3.12"]:::impl
     provider["benchhand-provider<br/>empty stub<br/>requires-python >=3.11"]:::impl
@@ -154,7 +154,7 @@ The contract source, the repo name, the TypeSpec timing, forms and the long-call
 | Envelope phase | Phase 1 writes the envelope contract; Phase 2 lists "the result envelope and `next_actions`" | Two phases name the envelope; neither is on `main` |
 | Annotation-set phase | Phase 2 lists the annotation set as a record contract addition; Phase 4 lists "the annotation-set contract" | Two phases name it; neither is on `main` |
 | Phase 1 services | Phase 1: migrate and evidence | Both are on `main`. `docs/phases/phase-0-1.md` still lists both under "Not built": migrate as "built on a branch, not yet reviewed", and evidence as "Nothing writes evidence or checks what it cites". The evidence service now checks what evidence cites, and still writes nothing: `evidence/reader.py` only reads |
-| CLI | D1 and section 7: `mcp`, `serve`, `install`, `doctor`, `setup`, `policy`, `debug call` | `main` has `version` and `record migrate`, and D1 lists neither |
+| CLI | D1 and section 7: `mcp`, `serve`, `install`, `doctor`, `setup`, `policy`, `debug call` | `main` has `version` and `record migrate`, and D1 lists neither. `record migrate` is behind the `record-migration` flag, off at the first release |
 | Golden fixture | Section 2: `examples/lamp-arm/` | Only `reference/examples/lamp-arm/` |
 | Tools | Section 2 lists `tools/probe/` | `main` also has `tools/gen/` and `tools/equiv/` |
 

@@ -18,7 +18,7 @@ flowchart LR
     contractsPkg["benchhand-contracts<br/>generated pydantic models and validators"]:::impl
   end
 
-  cli["benchhand CLI, Typer<br/>on main: version, record migrate<br/>Phase 3: mcp, doctor, setup, policy, rules compile, debug call<br/>Phase 4: provider subcommands<br/>Phase 5: serve, Phase 6: install"]:::impl
+  cli["benchhand CLI, Typer<br/>on main: version, record migrate (flag off)<br/>Phase 3: mcp, doctor, setup, policy, rules compile, debug call<br/>Phase 4: provider subcommands<br/>Phase 5: serve, Phase 6: install"]:::impl
 
   subgraph providers["Providers: one subprocess each, in its own environment"]
     providerRuntime["benchhand-provider runtime and conformance kit<br/>stub on main, Phase 4"]:::planned
@@ -180,7 +180,7 @@ flowchart LR
 - **Open: OpenAPI and Zod.** ADR-0017 adds them with the first HTTP or Zod consumer, which no phase names yet.
 - **Open: the integration points.** Plan section 5 puts CEL on transitions only: guards on the edges, `requires` on the gates. No source says a guard runs on every tool call. The provider host verifies artifacts and moves them into `hw/`, but no source routes them through the typed record store, which reads and writes YAML, CSV and decision documents only. No source names a call between record versions and the evidence service.
 - The record counts come from the generated [domain model](../contract/generated/domain-model/README.md): the documents (blue) and the libraries (amber) of its overview.
-- The `benchhand` CLI node is solid because the CLI exists; on `main` it has `version` and `record migrate`. The provider and SDK packages exist on `main` as empty stubs, so their nodes stay dashed until Phase 4.
+- The `benchhand` CLI node is solid because the CLI exists; on `main` it has `version` and `record migrate`. The `record-migration` feature flag keeps `record migrate` off: the first release offers no migration (owner, 2026-11-27). The provider and SDK packages exist on `main` as empty stubs, so their nodes stay dashed until Phase 4.
 
 ## Sources
 

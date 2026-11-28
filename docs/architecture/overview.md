@@ -30,7 +30,7 @@ The layers stack from the clients down to storage. The contracts sit beside them
 | Claude Code CLI, Claude Desktop, Codex CLI, OpenCode, Pi | Outside benchhand | Probe runs in `docs/client-support.md`; run records for Claude Code, Codex, OpenCode and Pi in `tools/probe/runs/` |
 | Codex / ChatGPT desktop | Open, Phase 0 | `docs/client-support.md`: "manual run needed". Phase 0 runs the probe in the 7 hosts |
 | Kiro CLI | Open, Phase 0 | `docs/client-support.md`: Kiro connects and lists the probe tools, and the model's tools lack them, under the default and a custom agent |
-| benchhand CLI | On `main` | `packages/benchhand/src/benchhand/cli.py` has `version` and `record migrate`. The other subcommands, `rules compile` included, are in Phase 3 |
+| benchhand CLI | On `main` | `packages/benchhand/src/benchhand/cli.py` has `version` and `record migrate`, which the `record-migration` feature flag keeps off at the first release. The other subcommands, `rules compile` included, are in Phase 3 |
 | Browser UI | Phase 5 | `ui/` holds only `shared/` on `main`. Phase 5 builds the viewer, concept, gallery, gate card and flow view |
 | benchhand server and its MCP surface, interaction layer and tools | Phase 3, Apps and tasks Phase 5 | No `benchhand mcp` on `main`. Phase 3 lists the tools; Phase 4 the output, drawing and release tools |
 | Preview host | Phase 5 | Not on `main` |
@@ -57,7 +57,7 @@ The layers stack from the clients down to storage. The contracts sit beside them
 On `main` at `fb9cb2e`, three parts run:
 
 - the capability probe, which a host starts as a stdio MCP server;
-- `benchhand record migrate`, which migrates `hw/`;
+- `benchhand record migrate`, which migrates `hw/` when the `record-migration` feature flag is on. The flag is off, so the first release offers no migration;
 - the job service, which supervises each job in its own process group and writes its run record under `.benchhand/runs/`.
 
 The rest of the diagram is for later phases. In Phase 3 the host talks MCP to `benchhand mcp` over stdio, or over loopback HTTP with `--http`. From Phase 4 the server talks to each provider process over stdio with the provider protocol, and from Phase 5 the browser reaches the preview listener on loopback. The container option replaces the native process with a launcher that runs the same server in the OCI image, with the whole project root mounted at the same path (ADR-0002).
@@ -73,7 +73,7 @@ The rest of the diagram is for later phases. In Phase 3 the host talks MCP to `b
 | Job service | On `main` | `jobs/supervisor.py` and `jobs/process.py` start each job in its own session and process group |
 | Provider host to provider processes | Phase 4, the provider host open | [provider-protocol.md](../contract/provider-protocol.md#1-transport); no phase names the provider host |
 | freecad provider to the user cache, and to `freecadcmd` | Phase 4 | Plan section 8: the provider looks FreeCAD up (`FREECADCMD`, PATH, the macOS bundle, an AppImage, the managed directory), or installs a supported one, gates its version, and runs `freecadcmd` |
-| `benchhand record migrate` to `hw/` | On `main` | `cli.py` calls `benchhand_core.record.migrate` |
+| `benchhand record migrate` to `hw/` | On `main`, behind the `record-migration` flag, which is off | `cli.py` calls `benchhand_core.record.migrate` when the flag is on |
 | `benchhand rules compile` | Phase 3 | [ADR-0020](../adr/0020-cel-rule-pipeline.md): it runs the `benchhand-celcheck` binary on a user's rule lists. Where the bundle lives in a project is open there |
 | Capability probe over stdio | On `main` | `tools/probe/probe.py`, a stdio MCP server (ADR-0016), with runs in `tools/probe/runs/` |
 | Job service to `.benchhand/runs/` | On `main` | `jobs/store.py` |
