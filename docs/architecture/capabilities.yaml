@@ -280,16 +280,15 @@ open_questions:
     pointers:
       - docs/design-plan.md:249
       - docs/design-plan.md:258
-  - id: sketch-mode-phase
+  - id: sketch-mode-checks
     blocking: false
     owner: project-owner
-    decision_needed: The phase of sketch mode, which checks count as
-      high-level, how a promoted sketch carries its geometry into the
-      record, and how its renders are stamped.
+    decision_needed: Which checks count as high-level in sketch mode,
+      how a promoted sketch carries its geometry into the record, and
+      how its renders are stamped.
     origin: existing
-    question: The owner asked for sketch mode on 2026-11-28 and left
-      its phase open. Which phase builds it, and what does a sketch
-      check and carry over when it is promoted?
+    question: The owner set sketch mode in Phase 4 on 2026-11-28 and left
+      these details to the CONCEPT stage spec's clarify step.
     pointers:
       - docs/design/edit-loop-performance.md:288
 
@@ -3273,7 +3272,7 @@ capabilities:
       build.
     layer: providers
     container: containers.md:kernels
-    phase: null
+    phase: 4
     status: proposed
     scope: deferred
     source:
@@ -3288,7 +3287,7 @@ capabilities:
       - render-output
       - job-service
     open_questions:
-      - sketch-mode-phase
+      - sketch-mode-checks
     adrs:
       - 18
   - id: shared-parts

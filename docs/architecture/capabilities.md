@@ -16,11 +16,11 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | P1 | 7 | 5 | 2 | 0 | 0 | 0 | 6 | 1 |
 | P2 | 26 | 0 | 1 | 24 | 1 | 0 | 25 | 1 |
 | P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
-| P4 | 30 | 0 | 0 | 23 | 7 | 0 | 23 | 7 |
+| P4 | 31 | 0 | 0 | 23 | 8 | 0 | 23 | 8 |
 | P5 | 9 | 0 | 0 | 7 | 1 | 1 | 7 | 2 |
 | P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
-| no phase | 8 | 0 | 0 | 7 | 1 | 0 | 0 | 8 |
+| no phase | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 7 |
 | **all** | **97** | 6 | 5 | 73 | 12 | 1 | 76 | 21 |
 
 MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 21. Doc corrections: 1.
@@ -126,6 +126,7 @@ MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 
 | [fact-cache](#fact-cache) | Content-addressed fact cache | core | `containers.md:middleware` | proposed | deferred | `packages/benchhand-core` | 0 | 0 |
 | [resident-kernels](#resident-kernels) | Resident kernel providers with a worker per job | providers | `containers.md:kernels` | proposed | deferred | `providers/kernel-cadquery`, `providers/kernel-build123d`, `packages/benchhand-provider` | 0 | 0 |
 | [edit-loop](#edit-loop) | One edit-loop job | providers | `containers.md:kernels` | proposed | deferred | `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 0 |
+| [sketch-mode](#sketch-mode) | Sketch mode | providers | `containers.md:kernels` | proposed | deferred | `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d` | 0 | 0 |
 | [shared-parts](#shared-parts) | Shared parts across projects | core | `containers.md:record` | proposed | deferred | `packages/benchhand-core` | 0 | 0 |
 
 ### P5
@@ -167,7 +168,6 @@ MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 
 | [policy-provider](#policy-provider) | Default policy provider | providers | `containers.md:policy` | planned | deferred | `providers/policy-default` | 0 | 0 |
 | [container-launcher](#container-launcher) | Container launcher | distribution | `layers.md:containerDir` | planned | deferred | `packages/benchhand`, `container` | 0 | 2 |
 | [hazards-risk-assessment](#hazards-risk-assessment) | Hazards and risk assessment | contracts | `containers.md:record` | planned | deferred | `contracts`, `packages/benchhand-core` | 0 | 0 |
-| [sketch-mode](#sketch-mode) | Sketch mode | providers | `containers.md:kernels` | proposed | deferred | `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d` | 0 | 0 |
 
 ## Dependency graph
 
@@ -259,6 +259,7 @@ flowchart LR
     fact_cache["Content-addressed fact cache<br/>P4, proposed"]:::proposed
     resident_kernels["Resident kernel providers with a worker per job<br/>P4, proposed"]:::proposed
     edit_loop["One edit-loop job<br/>P4, proposed"]:::proposed
+    sketch_mode["Sketch mode<br/>P4, proposed"]:::proposed
     shared_parts["Shared parts across projects<br/>P4, proposed"]:::proposed
   end
   subgraph phase_P5["P5"]
@@ -288,7 +289,6 @@ flowchart LR
     policy_provider["Default policy provider<br/>no phase, planned"]:::open
     container_launcher["Container launcher<br/>no phase, planned"]:::open
     hazards_risk_assessment["Hazards and risk assessment<br/>no phase, planned"]:::open
-    sketch_mode["Sketch mode<br/>no phase, proposed"]:::proposed
   end
   contract_validation --> contracts_pipeline
   provider_protocol_contract --> contracts_pipeline
@@ -764,7 +764,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [viewer-ocp](#viewer-ocp) (P5, dropped)
 - [bounded-results](#bounded-results) (P3, proposed)
 - [product-scene-structure](#product-scene-structure) (P2, proposed)
-- [sketch-mode](#sketch-mode) (no phase, proposed)
+- [sketch-mode](#sketch-mode) (P4, proposed)
 - [shared-parts](#shared-parts) (P4, proposed)
 
 #### MCP surfaces with a missing baseline (2)
@@ -956,7 +956,7 @@ None.
 - [resident-kernels](#resident-kernels) (P4): design: `docs/design/edit-loop-performance.md:106`
 - [edit-loop](#edit-loop) (P4): design: `docs/design/edit-loop-performance.md:135`
 - [product-scene-structure](#product-scene-structure) (P2): design: `docs/design/assembly-structure.md:11`
-- [sketch-mode](#sketch-mode) (no phase): design: `docs/design/edit-loop-performance.md:288`
+- [sketch-mode](#sketch-mode) (P4): design: `docs/design/edit-loop-performance.md:288`
 - [shared-parts](#shared-parts) (P4): design: `docs/design/shared-parts.md:12`
 
 #### Proposed tools (64)
@@ -1250,9 +1250,9 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Blocking: yes. Owner: project-owner. Decision needed: Whether the agent can run setup over MCP, or setup stays a CLI command that env.doctor points to.
 - Cited by: [setup](#setup), `benchhand setup`
 
-### sketch-mode-phase
+### sketch-mode-checks
 
-The owner asked for sketch mode on 2026-11-28 and left its phase open. Which phase builds it, and what does a sketch check and carry over when it is promoted? (existing)
+The owner set sketch mode in Phase 4 on 2026-11-28 and left these details to the CONCEPT stage spec's clarify step. (existing)
 
 - Pointers: `docs/design/edit-loop-performance.md:288`
 - Blocking: no; the spec that cites it decides it or works around it.
@@ -2732,7 +2732,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 **Sketch mode.** A quick iterative build that seals nothing and runs none of the slow checks, giving conceptual renders and high-level checks only. Nothing it produces is a version or counts as evidence, and a sketch can be promoted into a normal design build.
 
 - Layer and container: providers, `containers.md:kernels`
-- Phase and status: no phase, proposed, deferred
+- Phase and status: P4, proposed, deferred
 - Owner: `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d`
 - Contracts: –
 - MCP tools: –
@@ -2740,7 +2740,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - Depends on: [model-build](#model-build), [render-output](#render-output), [job-service](#job-service)
 - ADRs: ADR-0018
 - Source: design: `docs/design/edit-loop-performance.md:288`
-- Open questions: [sketch-mode-phase](#sketch-mode-phase)
+- Open questions: [sketch-mode-checks](#sketch-mode-checks)
 
 ### shared-parts
 

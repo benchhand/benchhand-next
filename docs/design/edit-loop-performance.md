@@ -293,7 +293,7 @@ The owner, 2026-11-28, asked for a sketch mode next to the normal design build:
 - **Concept output only.** It gives conceptual renders and high-level checks. Nothing it produces is a version, and no gate or evidence entry counts it.
 - **Promotion.** A sketch can be promoted into a normal design build, which then seals and runs the full checks as any build does.
 
-Its phase is open. These are open too: which checks count as high-level, how promotion carries the sketch's geometry into the record, and how sketch renders are stamped. The overlay rule of 2026-11-28 stamps every concept overlay and never counts it as record geometry (RULE-47). The catalogue records it as the proposed capability `sketch-mode`.
+Its phase is Phase 4 (owner, 2026-11-28), with the fast edit loop it needs. These stay open for the CONCEPT stage spec: which checks count as high-level, how promotion carries the sketch's geometry into the record, and how sketch renders are stamped. The overlay rule of 2026-11-28 stamps every concept overlay and never counts it as record geometry (RULE-47). The catalogue records it as the proposed capability `sketch-mode`.
 
 ## Beads
 
