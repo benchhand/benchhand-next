@@ -33,6 +33,7 @@ Every Phase 2 capability of the catalogue, in catalogue order.
 | [supplier-calibration](../architecture/capabilities.md#supplier-calibration) | Supplier data as calibration | planned | not yet specced |
 | [product-identity](../architecture/capabilities.md#product-identity) | Product identity fields | planned | not yet specced |
 | [decision-manifest-hash](../architecture/capabilities.md#decision-manifest-hash) | The manifest hash of an approval | planned | not yet specced |
+| [product-scene-structure](../architecture/capabilities.md#product-scene-structure) | Product and scene exports by occurrence role | proposed | not yet specced |
 
 The specs also cover capabilities of other phases: `record-validate` (record-validation), `record-migrate` (record-validation).
 
@@ -277,7 +278,7 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 
 ## Phase 2 register entries no spec closes
 
-70 of the 82 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
+71 of the 86 Phase 2 entries of the issue register. "Deferred to" names the capability that a spec has handed the entry to.
 
 | Entry | Disposition | Deferred to | Title |
 |---|---|---|---|
@@ -351,3 +352,4 @@ The port of prototype PRs #331 to #341 is the first Phase 2 work (`docs/phases/p
 | IR-177 | design-input | none | There is no guided machine setup that builds a capability profile from published specifications. |
 | IR-190 | port-fix | none | Scratch delivery copies and renames by path name, so a linked parts folder can redirect publication outside the record. |
 | IR-202 | port-fix | none | A killed build leaves its staging folder behind for good, and while it is there the store's garbage collection refuses to run. |
+| IR-227 | contract | none | The only assembly a build writes is the check scene, with context equipment, fitting tools and every variant in it, so there is no product export. |

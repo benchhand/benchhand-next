@@ -280,6 +280,30 @@ open_questions:
     pointers:
       - docs/design-plan.md:249
       - docs/design-plan.md:258
+  - id: sketch-mode-phase
+    blocking: false
+    owner: project-owner
+    decision_needed: The phase of sketch mode, which checks count as
+      high-level, how a promoted sketch carries its geometry into the
+      record, and how its renders are stamped.
+    origin: existing
+    question: The owner asked for sketch mode on 2026-11-28 and left
+      its phase open. Which phase builds it, and what does a sketch
+      check and carry over when it is promoted?
+    pointers:
+      - docs/design/edit-loop-performance.md:288
+  - id: shared-parts
+    blocking: false
+    owner: project-owner
+    decision_needed: Whether separate projects can share a part by a
+      pinned reference with a drift finding, and in which phase.
+    origin: catalogue
+    question: A variant is its own project (RULE-06), so siblings copy
+      their common parts and interfaces with no drift check. Should a
+      part be a pinned reference to another project's part, by path
+      and content hash, with validate reporting a changed source?
+    pointers:
+      - docs/migration/issue-register.yaml:6084
 
 capabilities:
 
@@ -437,6 +461,8 @@ capabilities:
       - skills/cad-record/scripts/yaml_loader.py
     depends_on:
       - contract-validation
+    open_questions:
+      - shared-parts
     adrs:
       - 17
   - id: record-validate
@@ -3217,6 +3243,66 @@ capabilities:
       - fact-cache
       - resident-kernels
       - job-service
+    adrs:
+      - 18
+  - id: product-scene-structure
+    title: Product and scene exports by occurrence role
+    purpose: 'The owner''s structure of 2026-11-28 for every exported
+      model, an assembly or a single part: a product.step grouped
+      by built subassembly, then [Made] and [Purchased], with the
+      kit; a scene.step that is never released, holding [Context],
+      [Tooling], [Joints], [Poses], [Envelopes], [Findings] and
+      [Construction]; hidden-by-default rules; and sections as saved
+      views. The checks read the scene, and the release and the BOM
+      read the product.'
+    layer: core
+    container: containers.md:record
+    phase: 2
+    status: proposed
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/assembly-structure.md:11
+    note: Spec 21, assembly structure and steps, specs it. The register's
+      IR-227 carries the lesson that asked for it.
+    owner:
+      - contracts
+      - packages/benchhand-core
+    contracts_planned:
+      - the product and scene group names and their hidden flags on
+        record/assembly occurrences and subassemblies
+    depends_on:
+      - existing-equipment
+      - assembly-steps-and-coupons
+      - model-export
+    adrs:
+      - 17
+      - 21
+  - id: sketch-mode
+    title: Sketch mode
+    purpose: A quick iterative build that seals nothing and runs none
+      of the slow checks, giving conceptual renders and high-level
+      checks only. Nothing it produces is a version or counts as
+      evidence, and a sketch can be promoted into a normal design
+      build.
+    layer: providers
+    container: containers.md:kernels
+    phase: null
+    status: proposed
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/edit-loop-performance.md:288
+    owner:
+      - packages/benchhand-core
+      - providers/kernel-cadquery
+      - providers/kernel-build123d
+    depends_on:
+      - model-build
+      - render-output
+      - job-service
+    open_questions:
+      - sketch-mode-phase
     adrs:
       - 18
 

@@ -12,7 +12,8 @@
 # entry describes the tool's behaviour in generic terms and cites its source
 # by name only:
 #   test-project tool-issues #N, test-project brief <name> [item N],
-#   test-project gate-vN-blockers, handoff §x, findings <area.number>,
+#   test-project gate-vN-blockers, test-project study <name>, handoff §x,
+#   findings <area.number>,
 #   design <name> <section or question>, handover-2026-11-20 §x,
 #   decisions-while-away <entry>, pkgB <bead>-decision,
 #   agentcad product test 2026-11-27, REPORT §<section> [item N],
@@ -550,6 +551,17 @@ design_rules:
       it; model.diff and model.inspect (Phase 4) follow it.
     pointer: docs/design-plan.md §4
 
+  - id: RULE-47
+    rule: Owner decision of 2026-11-28 on the concept overlay. An overlay
+      may move or hide existing parts and add simple solids or STEP
+      parts. It never stretches a real part. Every overlay is stamped
+      as a concept overlay and never counts as record geometry.
+    sources:
+      - handoff §4
+      - 'test-project tool-issues #42'
+    benchhand_next: Not built yet; the render tool and viewer overlay
+      mode of IR-213 (Phase 5).
+
 issues:
   - id: IR-001
     title: The gate's form judge ignores approved waivers and dispositions,
@@ -680,8 +692,9 @@ issues:
     benchhand_next:
       action: Port the sub-build and hold kinds of prototype PR
         334 into the assembly contract, the order checks and later
-        access; the test project's local bench kind migrates to
-        them.
+        access, as ADR-0021 decides them (`bench` opens a sub-build
+        and names its base); the test project's local bench kind
+        migrates to them.
       phase: 2
     acceptance: The port survey's PR 334 tests, plus a migrate fixture
       where a record using the local bench kind becomes a sub-build.
@@ -737,15 +750,18 @@ issues:
     prototype_paths:
       - skills/cad-record/scripts/assembly_operations.py
     disposition: already-covered
-    pointer: docs/design-plan.md §12b
+    pointer: docs/adr/0021-assembly-operation-kinds.md
     benchhand_next:
-      action: The `place` step kind with a required `retained_by`,
-        and placed parts marked not_applicable for joint obligations,
-        are Phase 2 record contract additions.
+      action: ADR-0021's `place` kind installs without a joint. Its
+        `retained_by` lists later joining steps in the same build,
+        or is an open fact with a reason, and the record validator
+        requires it only when the placed part is delivered. Placed
+        parts are not_applicable for joint obligations.
       phase: 2
-    acceptance: Record tests where a place step without retained_by,
-      or naming a step that isn't a joint, is refused, and the retaining
-      joint's change makes the placed part's evidence stale.
+    acceptance: Record tests where a delivered place step without
+      retained_by, or naming a step that isn't a later joint, is
+      refused, a non-delivered one validates without it, and the
+      retaining joint's change makes the placed part's evidence stale.
   - id: IR-008
     title: Drawings order a chamfer's legs two ways, print a partial
       bore's fit as a radius, and print ±0 on seats with no tolerance.
@@ -756,6 +772,7 @@ issues:
       - test-project brief architect-prompt-tool-issues item 13
       - handoff §1.3
       - handoff §1.4
+      - test-project brief agent-prompt-drawing-fix
     beads:
       - benchhand-c7q.35
       - benchhand-fct
@@ -807,7 +824,6 @@ issues:
     acceptance: An access test with a cable tie around a bundle
       that passes or is not_applicable with its coverage, never
       a silent pass.
-    needs_recheck: true
   - id: IR-010
     title: Several stations or size classes in one record put each
       other in every access path and tool approach.
@@ -837,7 +853,6 @@ issues:
     acceptance: A guide test that the variant rule and its split
       steps are in the guide, and a migrate dry run on a two-station
       record that reports the split as a manual step.
-    needs_recheck: true
   - id: IR-011
     title: A tool that engages a part other than the operated one
       (a key holding a bolt) collides with it, because bought fasteners
@@ -860,7 +875,6 @@ issues:
       phase: 4
     acceptance: An access test where a key holding a bolt's head
       passes a nut step, with the exemption named in the coverage.
-    needs_recheck: true
   - id: IR-012
     title: OS metadata files enter version snapshots and make sealed
       versions stale; the tools have no project ignore rules.
@@ -880,31 +894,31 @@ issues:
       - skills/cad-flow/scripts/setup.py
       - skills/cad-model/scripts/cadmodel/record.py
     disposition: design-input
-    pointer: docs/design-plan.md §Steps
+    pointer: docs/adr/0023-storage-layout.md
     benchhand_next:
-      action: Covered already, in Phase 2 - the record reader skips OS
-        and tool junk files (record/ignore.py), and snapshot, seal and
-        verify honour the project ignore rules. Still to design, from
-        the gitignore brief - one deterministic plugin rule set that
-        every tool reads, independent of the user's global excludes
-        and usable outside git; setup writes it as a marked managed
-        block that keeps user lines and the storage block, and
-        migrates an existing project with a hand-written ignore file;
-        scratch init and deliver and release packaging honour it; no
-        rule matches hw/parts/; a cited ignored untracked artifact is
-        an error in validate and the build.
+      action: ADR-0023 settles where the rules live. benchhand writes
+        only .benchhand/.gitignore and .gitattributes, nothing in
+        design/ is ignored, and the user's top-level .gitignore stays
+        as the user wrote it. So the gitignore brief's managed block
+        in a project ignore file, its vendored OS templates and its
+        hw/parts/ trap no longer apply. Still needed - the record
+        reader and every copy, snapshot, seal and verify step skip
+        OS and tool junk (record/ignore.py) by one deterministic rule
+        set that doesn't depend on git or the user's global excludes;
+        junk written into a sealed folder after sealing doesn't stale
+        it; a version built before the change still verifies; scratch
+        delivery and release packaging leave the junk out; and a
+        cited artifact is hashed from disk, so a missing one blocks
+        the freeze.
       phase: 2
     acceptance: Version tests where planted metadata never enters
       a snapshot, one written after sealing doesn't stale the version,
-      a version built before the change still verifies, a tracked
-      ignored file stays, and a cited ignored file is refused; setup
-      tests where the managed block leaves user lines and the storage
-      block intact and an existing ignore file survives; a snapshot
-      that a global excludes file does not change; a project outside
-      git that falls back to the plugin rule set; scratch and release
-      tests that leave ignored junk out; and no rule matching
-      hw/parts/.
-    needs_recheck: true
+      a version built before the change still verifies, and a cited
+      artifact that is missing blocks the freeze; a snapshot that a
+      global excludes file does not change; a project outside git
+      with the same snapshot; scratch and release tests that leave
+      junk out; and a managed-ignores test where setup leaves the
+      user's top-level .gitignore byte-identical.
   - id: IR-013
     title: With no printer calibration every printed part is unknown
       at detail, so no gate passes until physical coupons are measured.
@@ -1059,10 +1073,13 @@ issues:
       - test-project brief architect-prompt-tool-issues item 17
       - design inclined-features §5
       - handoff §4
+      - 'test-project tool-issues #51'
+      - test-project brief architect-prompt-tool-issues item 55
     beads:
       - benchhand-c7q.33
       - benchhand-c7q.48
       - benchhand-x6h.14
+      - benchhand-raco
     prototype_prs:
       - 361
     prototype_status: open-pr
@@ -1078,12 +1095,17 @@ issues:
       action: The drawing tools take the inclined-features design
         (local datum frames, auxiliary views along the feature axis,
         angular and position dimensions, mirrored pairs once with
-        2×), and a frame-aligned sheet stays unchanged.
+        2×), and a frame-aligned sheet stays unchanged. A depth
+        between two parallel planes at any angle is a request of
+        its own, shown in an auxiliary or section view normal to
+        them.
       phase: 4
     acceptance: A drawing test where a synthetic block with one bore
       inclined to the frame axes passes with angle, position and depth
       dimensioned, a mirrored
       pair is dimensioned once, and a frame-aligned sheet is byte-identical.
+      A notch whose floor is parallel to an inclined face gets its
+      depth dimensioned.
   - id: IR-019
     title: A datum axis can position its own feature, so a feature
       set as its own datum passes coverage unlocated.
@@ -1114,6 +1136,7 @@ issues:
     beads:
       - benchhand-mb2
       - benchhand-tpak
+      - benchhand-tw09
     prototype_prs:
       - 354
     prototype_status: open-pr
@@ -1131,7 +1154,8 @@ issues:
       phase: 2
     acceptance: A contract example with a standard calibration state
       validates; a check report names the state and still grades
-      on guideline values.
+      on guideline values. A guideline-backed pass for an operation
+      with no machine profile quotes no calibration state.
   - id: IR-021
     title: The static check's overlap volume for an allowed pair
       changes between runs, and mirror-image placements differ.
@@ -1579,9 +1603,12 @@ issues:
       - test-project brief architect-prompt-tool-issues item 13
       - test-project brief architect-prompt-tool-issues item 34
       - handoff §1.4
+      - 'test-project tool-issues #52'
+      - test-project brief architect-prompt-tool-issues item 56
     beads:
       - benchhand-05q2
       - benchhand-hml
+      - benchhand-2ruv
     prototype_status: open
     area: cad-flow
     prototype_paths:
@@ -1592,11 +1619,15 @@ issues:
       action: Tool results carry the failing cause as findings in
         the envelope, outputs go where the server puts them, a failure
         report lists one line per finding, and a delivery lists
-        only changed files.
+        only changed files. An output folder outside the allowed
+        root is refused with the root it must sit under, and a
+        visibility finding lists every feature and request that
+        has no visible point, not only the first.
       phase: 3
     acceptance: Envelope tests where a failed build returns its
       cause as a finding, and a delivery result names only changed
-      files.
+      files. A drawing test with two features that have no visible
+      point gets one finding naming both.
   - id: IR-039
     title: Validate accepts an operation acceptance with the wrong
       feature count for its kind, which the access check then refuses.
@@ -1774,6 +1805,7 @@ issues:
       - benchhand-hqg
       - benchhand-ah3x
       - benchhand-5pzr
+      - benchhand-98ve
     prototype_status: open
     area: cad-record
     prototype_paths:
@@ -1798,7 +1830,10 @@ issues:
       no crash, an uncited decision record with an invalid status
       gives a finding, and a decision-record index that differs
       from the regenerated one gives a finding; a docs check that
-      the supersession guidance names superseded-by.
+      the supersession guidance names superseded-by. A product
+      document without a required key gives a schema finding, and
+      the acceptance digest reports its inputs incomplete, not an
+      unchanged freeze as stale.
   - id: IR-047
     title: A catalogue or standard part needs a frozen, hashed copy
       of its specification even when nothing can be frozen or the
@@ -2274,9 +2309,10 @@ issues:
       - benchhand-glk.6
       - benchhand-yjq.6
       - benchhand-yjq.7
+      - benchhand-bwyc
     prototype_prs:
       - 346
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#346'
     area: cad-record
     prototype_paths:
@@ -2286,12 +2322,15 @@ issues:
     benchhand_next:
       action: Selection matches a result or approval on its full
         identity, including provider, operation, capability, thickness,
-        dimension state and test conditions.
+        dimension state and test conditions. A recorded route's sheet
+        check compares the stock coating with the approval's, and an
+        unknown coating stays unknown.
       phase: 2
     acceptance: Selection tests for two shops with the same operation
       and alloy, an engraving approval offered for cutting, and
       a pre-coat result offered for the assembled state; each is
-      refused.
+      refused. Coated stock offered against an approval for uncoated
+      stock is refused too.
   - id: IR-066
     title: Candidate-only declarations vanish from selection, and
       a candidate's supplier evidence is read from the current route.
@@ -2380,7 +2419,7 @@ issues:
       - benchhand-yjq.5
     prototype_prs:
       - 346
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#346'
     area: cad-record
     prototype_paths:
@@ -2402,7 +2441,7 @@ issues:
       - benchhand-yjq.8
     prototype_prs:
       - 346
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#346'
     area: cad-record
     prototype_paths:
@@ -2423,9 +2462,10 @@ issues:
       - findings 2.M8
     beads:
       - benchhand-yjq.4
+      - benchhand-x6ql
     prototype_prs:
       - 346
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#346'
     area: cad-record
     prototype_paths:
@@ -2433,10 +2473,13 @@ issues:
     disposition: port-fix
     benchhand_next:
       action: Obligation generation keys each obligation by its
-        full subject, so both obligations are kept.
+        full subject, so both obligations are kept. A sealed producer
+        packet is credited only for the subject it measured.
       phase: 2
     acceptance: An obligation test with two seal regions on one
-      feature that gives two obligations.
+      feature that gives two obligations, and a sealed stack packet
+      from before the change that isn't credited for a region it
+      never measured.
   - id: IR-072
     title: A populated loads list hides a load whose magnitude is
       unknown.
@@ -2447,7 +2490,7 @@ issues:
       - benchhand-yjq.9
     prototype_prs:
       - 346
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#346'
     area: cad-record
     prototype_paths:
@@ -2733,9 +2776,12 @@ issues:
       codes don't match the outcome, and tools return differently
       shaped results.
     kind: gap
-    sources: []
+    sources:
+      - 'test-project tool-issues #49'
+      - test-project brief architect-prompt-tool-issues item 53
     beads:
       - benchhand-c7q.4
+      - benchhand-wyui
     prototype_status: open
     area: cad-record
     prototype_paths:
@@ -2749,7 +2795,10 @@ issues:
         usage and infrastructure errors (RULE-08).
       phase: 2
     acceptance: Envelope tests for a YAML error with its line, and
-      a malformed record that gives findings and exit 1.
+      a malformed record that gives findings and exit 1. A CLI test
+      where a check that passes with unknown obligations exits with
+      the one documented code for that status, which the result
+      also carries.
   - id: IR-086
     title: Release compares file drift with the built snapshot when
       no design freeze exists, which invites calling the build frozen.
@@ -4494,7 +4543,7 @@ issues:
       - benchhand-vwo.15
     prototype_prs:
       - 345
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#345'
     area: cad-flow
     prototype_paths:
@@ -4543,7 +4592,7 @@ issues:
       - benchhand-vwo.10
     prototype_prs:
       - 355
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#355'
     area: cad-analysis
     prototype_paths:
@@ -4749,7 +4798,7 @@ issues:
       - benchhand-miw.2
     prototype_prs:
       - 324
-    prototype_status: open-pr
+    prototype_status: fixed-on-main
     prototype_ref: '#324'
     area: cad-record
     prototype_paths:
@@ -5224,6 +5273,9 @@ issues:
     kind: false-pass
     sources:
       - 'test-project tool-issues #39'
+      - test-project brief architect-prompt-tool-issues item 43
+      - test-project study clamp-concepts
+      - test-project study rocking
     beads:
       - benchhand-xjkc
     prototype_status: open
@@ -5250,6 +5302,8 @@ issues:
     kind: gap
     sources:
       - 'test-project tool-issues #40'
+      - test-project brief architect-prompt-tool-issues item 44
+      - test-project study clamp-concepts
     beads:
       - benchhand-98s5
     prototype_status: open
@@ -5275,6 +5329,8 @@ issues:
     kind: gap
     sources:
       - 'test-project tool-issues #41'
+      - test-project brief architect-prompt-tool-issues item 45
+      - test-project study rocking
     beads:
       - benchhand-z0em
     prototype_status: open
@@ -5643,6 +5699,565 @@ issues:
       the mm³ and the limit. A declared fit with zero overlap raises
       no finding.
 
+  - id: IR-213
+    title: No tool shows a design alternative on a built version, so
+      layout questions are answered with unchecked one-off render scripts.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #42'
+      - test-project brief architect-prompt-tool-issues item 46
+      - handoff §4
+    beads:
+      - benchhand-jlj8
+    prototype_status: open
+    area: cad-render
+    prototype_paths:
+      - skills/cad-render/scripts/render.py
+      - skills/cad-viewer/SKILL.md
+    disposition: design-input
+    benchhand_next:
+      action: 'A concept overlay mode of the render tool and the viewer
+        loads a built version and applies named edits: move or hide
+        an occurrence, and add a primitive or a STEP solid. It never
+        stretches a real part. Every overlay is stamped as a concept
+        overlay in the image and its metadata, and nothing reads it
+        as record geometry or evidence (RULE-47).'
+      phase: 5
+    acceptance: A render test on a synthetic built version with one
+      moved occurrence, one hidden occurrence and one added primitive,
+      whose image and metadata both carry the overlay stamp; a stretch
+      edit is refused with a named finding; and the evidence assessment
+      refuses an overlay cited as evidence.
+  - id: IR-214
+    title: A decision record can't be retitled or have its status changed
+      through the tool, and rewriting a superseding record makes the
+      whole decision folder unreadable.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #43'
+      - test-project brief architect-prompt-tool-issues item 47
+      - handoff §1.4
+    beads:
+      - benchhand-v8bc
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/decision_records.py
+    disposition: port-fix
+    benchhand_next:
+      action: The decision writer updates an existing decision. A retitle
+        renames its file and rewrites every link to the old name in
+        the record and the index. A status change, such as superseded
+        with its superseded_by list, goes through the same call. Rewriting
+        a superseding decision keeps the superseded one valid, so the
+        folder stays readable.
+      phase: 2
+    acceptance: 'Decision-writer tests on a synthetic record: a retitle
+      renames the file, rewrites every link and regenerates the index;
+      a status change to superseded writes superseded_by; and a superseding
+      decision rewritten in place leaves every decision readable.'
+  - id: IR-215
+    title: The build's refusal for files changed during the build names
+      no file and no record root.
+    kind: bug
+    sources:
+      - 'test-project tool-issues #44'
+      - test-project brief architect-prompt-tool-issues item 48
+    beads:
+      - benchhand-ovek
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/build.py
+    disposition: port-fix
+    benchhand_next:
+      action: The guard stays. Its finding lists each path that changed
+        between the two input snapshots, and the record root it read.
+      phase: 4
+    acceptance: A build test that edits one record file while a synthetic
+      build runs, and gets one refusal naming that file and the root.
+  - id: IR-216
+    title: Generated agent definitions give every command through an
+      environment variable that agent shells don't set, so each command
+      fails as written.
+    kind: bug
+    sources:
+      - 'test-project tool-issues #45'
+      - test-project brief architect-prompt-tool-issues item 49
+      - handoff §1.4
+    beads:
+      - benchhand-gj77
+    prototype_status: open
+    area: agents-and-harness
+    prototype_paths:
+      - harness/install.py
+      - agents/cad-part-designer.md
+    disposition: design-input
+    benchhand_next:
+      action: Agents reach benchhand through its MCP tools, so a definition
+        names no install path or environment variable. A unit reads
+        the record through a read-only tool, so it needs no shell discovery.
+      phase: 6
+    acceptance: A harness-install test where every generated agent definition
+      names only MCP tools and no environment variable, and a unit's
+      read-only query of a part file succeeds in a fresh session.
+  - id: IR-217
+    title: A build or scratch-build summary gives finding codes only,
+      without the failing subject, the measured value, the limit or
+      the full result's path.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #46'
+      - test-project brief architect-prompt-tool-issues item 50
+    beads:
+      - benchhand-u9o7
+    prototype_status: open
+    area: cad-flow
+    prototype_paths:
+      - skills/cad-flow/scripts/scratch.py
+    disposition: contract
+    benchhand_next:
+      action: A blocking check finding carries its subject (the occurrence
+        pair, or the part and feature), the measured value, the limit
+        and the path of the full result, and a build result lists its
+        blocking findings that way.
+      phase: 4
+    acceptance: A build test with one clashing pair and one failed form
+      rule, whose result names both subjects, each value and limit,
+      and the full result's path.
+  - id: IR-218
+    title: Validate passes a part folder that no occurrence uses, which
+      the build refuses, and a placed part with no BOM row.
+    kind: false-pass
+    sources:
+      - 'test-project tool-issues #47'
+      - test-project brief architect-prompt-tool-issues item 51
+      - handoff §1.4
+    beads:
+      - benchhand-3lhy
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/validate.py
+    disposition: port-fix
+    benchhand_next:
+      action: Validate reports a part folder that no occurrence uses,
+        in the build's words, and a placed part number with no BOM row.
+      phase: 2
+    acceptance: 'Validate tests on a synthetic record: an unused part
+      folder gives one finding, a placed part with no BOM row gives
+      one finding, and the record with both fixed is clean.'
+  - id: IR-219
+    title: A part model's printed output is not in the build log, so
+      its own self-check values can't be read.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #48'
+      - test-project brief architect-prompt-tool-issues item 52
+    beads:
+      - benchhand-v69m
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/build.py
+    disposition: design-input
+    benchhand_next:
+      action: The kernel provider captures each part model's stdout
+        and stderr in the build job's log, by part, and the part SDK
+        has a report hook whose values the build writes to the part's
+        metrics.
+      phase: 4
+    acceptance: A provider test where a synthetic model prints a line
+      and reports a value, and the job log shows the line under its
+      part and the metrics hold the value.
+  - id: IR-220
+    title: An operation's direction is in the receiving part's frame,
+      and nothing flags one given in the assembly frame; the default
+      path also starts far beyond a hand-turned part's real travel.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #50'
+      - test-project brief architect-prompt-tool-issues item 54
+      - handoff §1.4
+    beads:
+      - benchhand-s9rx
+    prototype_status: open
+    area: cad-motion
+    prototype_paths:
+      - skills/cad-motion/scripts/access.py
+    disposition: design-input
+    benchhand_next:
+      action: The access check prints each blocked path in the assembly
+        frame. A fasten whose direction, taken into the assembly frame,
+        isn't parallel to its joint axis gives a warning. The docs give
+        a worked example of the receiver frame.
+      phase: 4
+    acceptance: An access test on a synthetic rotated insert where an
+      assembly-frame direction gives the parallelism warning and a blocked
+      path reported in the assembly frame, and the receiver-frame direction
+      passes.
+  - id: IR-221
+    title: Drawing layout failures give no sheet, view or position,
+      and the section-plane rules are undocumented.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #53'
+      - test-project brief architect-prompt-tool-issues item 57
+    beads:
+      - benchhand-jdva
+    prototype_status: open
+    area: cad-drawings
+    prototype_paths:
+      - skills/cad-drawings/scripts/drawing.py
+      - skills/cad-drawings/scripts/sheet.py
+    disposition: port-fix
+    benchhand_next:
+      action: Each overlap finding names its sheet, view, both bounding
+        boxes and the request or feature behind each text. Any section
+        plane normal to a frame axis is accepted, and the rule is documented.
+      phase: 4
+    acceptance: Drawing tests where two overlapping texts give a finding
+      with both boxes, the view and both sources, and a section normal
+      to each frame axis is accepted.
+  - id: IR-222
+    title: A drawing's title-block scale may differ from the scale its
+      views are drawn at, on a sheet that passes.
+    kind: false-pass
+    sources:
+      - 'test-project tool-issues #53'
+      - test-project brief architect-prompt-tool-issues item 57
+      - handoff §1.4
+    beads:
+      - benchhand-vblb
+    prototype_status: open
+    area: cad-drawings
+    prototype_paths:
+      - skills/cad-drawings/scripts/sheet.py
+    disposition: port-fix
+    benchhand_next:
+      action: The title-block scale comes from the view placement, and
+        the layout check fails a sheet whose printed scale differs from
+        a view's drawn scale.
+      phase: 4
+    acceptance: A drawing test with an automatic sheet pick whose title
+      block shows the scale the main view is drawn at, and a sheet forced
+      to disagree fails the layout check.
+  - id: IR-223
+    title: No characteristic can be assigned to a view, cutting-plane
+      letters always land on the front view, and detail views fail on
+      dense parts.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #54'
+      - test-project brief architect-prompt-tool-issues item 58
+      - handoff §1.4
+    beads:
+      - benchhand-nij0
+    prototype_status: open
+    area: cad-drawings
+    prototype_paths:
+      - skills/cad-drawings/scripts/drawing_intent.py
+    disposition: contract
+    benchhand_next:
+      action: The drawing intent gains an optional view on each characteristic,
+        which the view assigner honours. Cutting-plane letters go on
+        the view with the most free space, and a detail view clips hidden
+        geometry to its circle.
+      phase: 4
+    acceptance: A contract example with a characteristic assigned to
+      a section validates, and drawing tests on a synthetic dense part
+      place that characteristic in its view, the letters where they
+      don't overlap, and a detail view of a hidden pocket without an
+      edge finding.
+  - id: IR-224
+    title: A scratch output with a versioned access run is refused only
+      after the full run, and the help doesn't say so.
+    kind: bug
+    sources:
+      - 'test-project tool-issues #55'
+      - test-project brief architect-prompt-tool-issues item 59
+    beads:
+      - benchhand-puln
+    prototype_status: open
+    area: cad-motion
+    prototype_paths:
+      - skills/cad-motion/scripts/access.py
+    disposition: design-input
+    benchhand_next:
+      action: A check's inputs are validated against its contract before
+        its job starts. A versioned check can run as an unpublished
+        trial with other sampling settings, which never replaces the
+        published result.
+      phase: 4
+    acceptance: An access tool test where a contradictory input is refused
+      before the job starts, and a trial run with finer sampling returns
+      its result and leaves the published one unchanged.
+  - id: IR-225
+    title: Access can't prove a fasten whose end pose is the designed
+      contact, or a part pressed through a locating fit along its path;
+      both stay unknown.
+    kind: false-fail
+    sources:
+      - 'test-project tool-issues #56'
+      - test-project brief architect-prompt-tool-issues item 60
+      - handoff §1.4
+    beads:
+      - benchhand-kdy5
+    prototype_status: open
+    area: cad-motion
+    prototype_paths:
+      - skills/cad-motion/scripts/access.py
+    disposition: port-fix
+    benchhand_next:
+      action: The access check exempts the operation's declared acceptance
+        contact over the path's last segment, and a declared locating
+        fit over its engagement length, as it exempts press-fit partners.
+        Each exemption is stated in the outcome's coverage.
+      phase: 4
+    acceptance: 'Access tests on a synthetic assembly: a fasten ending
+      in its declared contact with a present part passes with the exemption
+      in its coverage, a part pressed through a declared locating fit
+      passes the same way, and the same contact without a declaration
+      stays unknown.'
+  - id: IR-226
+    title: The verification matrix repeats each requirement's criteria
+      as free text, and validate passes rows that have drifted from
+      the requirement.
+    kind: false-pass
+    sources:
+      - 'test-project tool-issues #57'
+      - test-project brief architect-prompt-tool-issues item 61
+      - handoff §1.4
+    beads:
+      - benchhand-q6w2
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/validate.py
+    disposition: port-fix
+    benchhand_next:
+      action: Validate gives a finding for a verification row whose
+        criteria don't start with its requirement's current criteria.
+      phase: 2
+    acceptance: A validate test on a synthetic record where a requirement's
+      criteria change and its unchanged row gives one finding naming
+      both, and a row re-based on the new text is clean.
+  - id: IR-227
+    title: The only assembly a build writes is the check scene, with
+      context equipment, fitting tools and every variant in it, so there
+      is no product export.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #58'
+      - test-project brief architect-prompt-tool-issues item 62
+      - handoff §1.4
+    beads:
+      - benchhand-9u4k
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cad_model.py
+      - skills/cad-model/scripts/cadmodel/build.py
+      - skills/cad-record/scripts/release.py
+      - skills/cad-bom/scripts/bom.py
+    disposition: contract
+    pointer: docs/design/assembly-structure.md §Decisions
+    benchhand_next:
+      action: The owner's assembly-structure decisions of 2026-11-28.
+        A build writes a product.step, grouped by built subassembly,
+        then [Made] and [Purchased], with the kit beside it. It also
+        writes a scene.step that is never released, holding [Context],
+        [Tooling], [Joints], [Poses], [Envelopes], [Findings] and
+        [Construction].
+        Hidden-by-default rules apply, sections are saved views, and
+        a single part follows the same rules. The checks read the scene,
+        and the release and the BOM read the product. The occurrence
+        roles come from IR-003 and IR-025, and a variant is its own
+        project (IR-010).
+      phase: 2
+    acceptance: 'Export tests on a synthetic assembly with one context
+      part, one tool and one kit item: product.step holds the made and
+      purchased parts in their groups, and the kit; scene.step holds
+      all of them, with the hidden flags the note sets; the release
+      refuses a product file that contains a context or tooling part;
+      and a single-part export has the same groups.'
+  - id: IR-228
+    title: Separate projects can't share a part, so a product split
+      into projects duplicates its common parts and interfaces with
+      no drift check.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #59'
+      - test-project brief architect-prompt-tool-issues item 63
+      - handoff §1.4
+    beads:
+      - benchhand-ygav
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/references/
+    disposition: decide
+    recommendation: A part may be a pinned reference to another project's
+      part, by path and content hash, and validate reports a reference
+      whose source has changed. A variant stays its own project (RULE-06),
+      so this is how its siblings share parts. The owner decides whether
+      to build it and in which phase (catalogue question shared-parts).
+    benchhand_next:
+      action: Waits on the owner. The recommendation is a pinned part
+        reference across projects, with a drift finding.
+      phase: null
+    acceptance: 'After the decision: a validate test where two synthetic
+      projects share one part by reference, an edit to the source makes
+      the other project''s validate report the drift, and re-pinning
+      clears it.'
+  - id: IR-229
+    title: The product id can't be renamed, because the concept scene's
+      file name and its hashed handoff embed it.
+    kind: gap
+    sources:
+      - 'test-project tool-issues #60'
+      - test-project brief architect-prompt-tool-issues item 64
+      - handoff §1.4
+    beads:
+      - benchhand-kmgn
+    prototype_status: open
+    area: cad-concept
+    prototype_paths:
+      - skills/cad-concept/scripts/concept.py
+    disposition: design-input
+    benchhand_next:
+      action: The concept scene's file name doesn't embed the product
+        id, so a product id change is one record operation that leaves
+        the scene and its handoff binding valid.
+      phase: 5
+    acceptance: A concept test that renames a synthetic product's id
+      and still opens its scene, with the handoff verifying.
+  - id: IR-230
+    title: The build guide lists no assembly steps without an assembly
+      drawing, leaves out the tools recorded for access, and lists customer
+      equipment as parts to buy.
+    kind: false-pass
+    sources:
+      - 'test-project tool-issues #61'
+      - test-project brief architect-prompt-tool-issues item 65
+    beads:
+      - benchhand-qdzv
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/build_guide.py
+    disposition: port-fix
+    benchhand_next:
+      action: Without a drawing plan, the guide lists the declared operations
+        in order, with their instructions, acceptance and torque. Its
+        tool table includes the tools recorded for access, and existing
+        equipment is left out of the buy list. A guide that has no steps
+        for recorded operations gives a finding.
+      phase: 4
+    acceptance: 'Build-guide tests on a synthetic record with operations
+      and no assembly drawing: the guide lists every step with its instructions,
+      the access tools are in the tool table, an existing part isn''t
+      in the buy list, and a guide with no steps gives a finding.'
+  - id: IR-231
+    title: The Boolean wrappers accept a cut or fuse that changed nothing,
+      and a fuse that kept its tool as a separate solid, and they drop
+      the kernel's warnings.
+    kind: false-pass
+    sources:
+      - cad-libraries decision D-1
+    beads:
+      - benchhand-lwc0
+      - benchhand-9wi3
+      - benchhand-lhpl
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/safe.py
+    disposition: port-fix
+    benchhand_next:
+      action: 'The part SDK''s cut and fuse keep their generic contract
+        and gain an opt-in guard for a caller that knows the tool must
+        change the body: it requires a change, and for a fuse, a single
+        solid. The kernel''s warnings go into the result or the error
+        text, for diagnosis only, never as a verdict.'
+      phase: 4
+    acceptance: 'Part SDK tests: a guarded cut whose tool misses the
+      host and a guarded fuse that leaves two solids are each refused,
+      the same calls unguarded still pass, and a kernel warning appears
+      in the error text.'
+  - id: IR-232
+    title: The FEA mesh record states a mesh setting that the mesher
+      never received.
+    kind: false-pass
+    sources:
+      - cad-libraries decision D-1
+    beads:
+      - benchhand-6fyr
+    prototype_status: open
+    area: cad-analysis
+    prototype_paths:
+      - skills/cad-analysis/scripts/fea_static.py
+    disposition: port-fix
+    benchhand_next:
+      action: The analysis records each mesher setting it read back
+        from the mesher's input or log, or records it as unknown, and
+        never states a value it didn't pass.
+      phase: 4
+    acceptance: An FEA test where a setting the mesher input lacks is
+      recorded as unknown, and one it holds is recorded with its value.
+  - id: IR-233
+    title: The build guide and release documents claim a format they
+      don't follow, name product fields the schema lacks, write unknown
+      values into a manifest, and filter on one example's drawing number.
+    kind: bug
+    sources:
+      - cad-libraries decision D-1
+    beads:
+      - benchhand-v9qq
+      - benchhand-vc03
+      - benchhand-sa58
+      - benchhand-jm3r
+    prototype_status: open
+    area: cad-record
+    prototype_paths:
+      - skills/cad-record/scripts/build_guide.py
+      - skills/cad-record/scripts/generated_docs.py
+    disposition: port-fix
+    benchhand_next:
+      action: The documentation set claims only the formats it follows
+        and fills only fields that exist (the identity fields of D-36).
+        The release manifest follows its template's shape and leaves
+        out a key whose value is unknown. The assembly's drawing number
+        comes from the record, never from a constant.
+      phase: 4
+    acceptance: 'Documentation-set tests on a synthetic record with
+      another product''s drawing number: its measured gaps are kept,
+      the manifest has no unknown-value key, and no text names a field
+      the product contract lacks or claims a format the output doesn''t
+      follow.'
+  - id: IR-234
+    title: The version diff has no time budget, so one slow exact Boolean
+      leaves it unbounded.
+    kind: gap
+    sources:
+      - cad-libraries decision D-1
+    beads:
+      - benchhand-f1ye
+    prototype_status: open
+    area: cad-model
+    prototype_paths:
+      - skills/cad-model/scripts/cadmodel/diff.py
+    disposition: port-fix
+    benchhand_next:
+      action: The diff bounds its exact operations per part, with a
+        timeout parameter that has a default, and reports a timeout
+        as its own labelled status beside error, while it still returns
+        the part's other metrics.
+      phase: 4
+    acceptance: A diff test where a part's exact operation exceeds a
+      small budget and is reported as timed out, with its other metrics
+      present, and the other parts are diffed in full.
+
 bead_dispositions:
   - bead_id: benchhand-0gx
     area: agents-and-harness
@@ -5657,6 +6272,12 @@ bead_dispositions:
     disposition: design-input
     reason: Quick start, install routes and troubleshooting; Phase
       7 writes benchhand-next's docs.
+  - bead_id: benchhand-3gje
+    area: agents-and-harness
+    disposition: design-input
+    reason: A test derives its expected values independently of the
+      code under test and never edits an expected value to pass;
+      benchhand-next's testing rules and review hold it.
   - bead_id: benchhand-3ly
     area: agents-and-harness
     disposition: not-applicable
@@ -5696,6 +6317,13 @@ bead_dispositions:
     area: agents-and-harness
     disposition: not-applicable
     reason: The prototype's guard against skipping commit hooks.
+  - bead_id: benchhand-9ywc
+    area: cad-model
+    disposition: already-covered
+    pointer: docs/design/cad-libraries-2026-11-27.md §Decisions
+    reason: 'The supplier STEP policy: record each file by its sha256
+      and commit its bytes only where the supplier''s terms allow (RULE-41,
+      RULE-42).'
   - bead_id: benchhand-ci0
     area: agents-and-harness
     disposition: not-applicable
@@ -5704,6 +6332,11 @@ bead_dispositions:
     area: agents-and-harness
     disposition: not-applicable
     reason: The prototype's complexity ratchet baseline.
+  - bead_id: benchhand-g6q3
+    area: cad-record
+    disposition: not-applicable
+    reason: Code quality in the prototype's packet writer; benchhand-next's
+      lint (ruff B904) keeps every re-raised exception's cause.
   - bead_id: benchhand-gv0
     area: agents-and-harness
     disposition: not-applicable
@@ -5716,6 +6349,17 @@ bead_dispositions:
     area: agents-and-harness
     disposition: not-applicable
     reason: A prose-lint error in a prototype document.
+  - bead_id: benchhand-puz2
+    area: agents-and-harness
+    disposition: not-applicable
+    reason: The prototype's complexity baseline; benchhand-next enforces
+      its complexity limits with no baseline.
+  - bead_id: benchhand-tju7
+    area: cad-model
+    disposition: already-covered
+    pointer: docs/architecture/capabilities.yaml §provider-environments
+    reason: An unpinned kernel dependency; benchhand-next's provider
+      environments pin every package they resolve.
   - bead_id: benchhand-vcrz
     area: agents-and-harness
     disposition: not-applicable
@@ -5764,7 +6408,8 @@ bead_dispositions:
     area: agents-and-harness
     disposition: design-input
     reason: A codes page for the benchhand-next docs site, once
-      a finding-code registry exists.
+      a finding-code registry exists. Closed in the prototype on
+      2026-11-28 as moved to the benchhand-next ledger.
   - bead_id: benchhand-whf
     area: agents-and-harness
     disposition: not-applicable
@@ -6421,6 +7066,7 @@ ledger_snapshot:
     benchhand-2nl: in_progress
     benchhand-2nl.1: open
     benchhand-2nl.2: closed
+    benchhand-2ruv: open
     benchhand-2yo: closed
     benchhand-308: closed
     benchhand-39v: closed
@@ -6428,6 +7074,8 @@ ledger_snapshot:
     benchhand-3f0: closed
     benchhand-3fc: open
     benchhand-3g4: closed
+    benchhand-3gje: open
+    benchhand-3lhy: open
     benchhand-3lr: open
     benchhand-3lr.1: open
     benchhand-3lr.10: open
@@ -6472,6 +7120,7 @@ ledger_snapshot:
     benchhand-652: closed
     benchhand-6a0: closed
     benchhand-6cf: open
+    benchhand-6fyr: open
     benchhand-6im: closed
     benchhand-6pw: open
     benchhand-6v3: open
@@ -6505,8 +7154,12 @@ ledger_snapshot:
     benchhand-8yw: closed
     benchhand-90f1: open
     benchhand-98s5: open
+    benchhand-98ve: open
     benchhand-9mw: closed
     benchhand-9rqu: open
+    benchhand-9u4k: open
+    benchhand-9wi3: open
+    benchhand-9ywc: open
     benchhand-a0m: closed
     benchhand-aa73: open
     benchhand-ah3x: open
@@ -6516,6 +7169,7 @@ ledger_snapshot:
     benchhand-b9r: closed
     benchhand-bkc: closed
     benchhand-bpp: closed
+    benchhand-bwyc: open
     benchhand-c66: closed
     benchhand-c7q: open
     benchhand-c7q.1: open
@@ -6593,6 +7247,7 @@ ledger_snapshot:
     benchhand-dq2: closed
     benchhand-dxp3: open
     benchhand-e0m: open
+    benchhand-f1ye: open
     benchhand-f4j: closed
     benchhand-f6q: closed
     benchhand-fct: open
@@ -6605,8 +7260,10 @@ ledger_snapshot:
     benchhand-fpo: closed
     benchhand-fq7: closed
     benchhand-fxj: closed
+    benchhand-g6q3: open
     benchhand-gbm: open
     benchhand-gbm.1: in_progress
+    benchhand-gj77: open
     benchhand-glk: open
     benchhand-glk.1: open
     benchhand-glk.10: open
@@ -6635,20 +7292,27 @@ ledger_snapshot:
     benchhand-isy: closed
     benchhand-iu8: closed
     benchhand-j65: open
+    benchhand-jdva: open
+    benchhand-jlj8: open
+    benchhand-jm3r: open
     benchhand-jqr: open
     benchhand-k12: closed
     benchhand-k12.1: closed
     benchhand-k12.2: closed
     benchhand-k6e: in_progress
+    benchhand-kdy5: open
     benchhand-kk13: open
+    benchhand-kmgn: open
     benchhand-kmo2: open
     benchhand-koq: open
     benchhand-kqu: open
     benchhand-l6d3: open
     benchhand-lc1: closed
     benchhand-lch: closed
+    benchhand-lhpl: open
     benchhand-lnif: open
     benchhand-lns: closed
+    benchhand-lwc0: open
     benchhand-mb2: in_progress
     benchhand-mfo: closed
     benchhand-miw: in_progress
@@ -6656,9 +7320,11 @@ ledger_snapshot:
     benchhand-miw.2: in_progress
     benchhand-nd2: closed
     benchhand-nd8: open
+    benchhand-nij0: open
     benchhand-nip: closed
     benchhand-odb: open
     benchhand-oozo: open
+    benchhand-ovek: open
     benchhand-pci: closed
     benchhand-pcy: open
     benchhand-pcy.1: in_progress
@@ -6671,9 +7337,14 @@ ledger_snapshot:
     benchhand-pd6: closed
     benchhand-pg0: closed
     benchhand-prd: closed
+    benchhand-puln: open
+    benchhand-puz2: open
     benchhand-pyq: closed
+    benchhand-q6w2: open
     benchhand-q79: closed
+    benchhand-qdzv: open
     benchhand-qfbw: closed
+    benchhand-raco: open
     benchhand-rfwu: open
     benchhand-rp8: closed
     benchhand-rt6: in_progress
@@ -6687,7 +7358,9 @@ ledger_snapshot:
     benchhand-s10: open
     benchhand-s1q: closed
     benchhand-s6lr: open
+    benchhand-s9rx: open
     benchhand-s9y: closed
+    benchhand-sa58: open
     benchhand-scc: open
     benchhand-scc.1: open
     benchhand-scc.10: open
@@ -6716,12 +7389,14 @@ ledger_snapshot:
     benchhand-t0p.2: open
     benchhand-t0p.3: open
     benchhand-tchj: open
+    benchhand-tju7: open
     benchhand-tjy9: open
     benchhand-tmz: in_progress
     benchhand-tn4: closed
     benchhand-tna: open
     benchhand-to6: closed
     benchhand-tpak: open
+    benchhand-tw09: open
     benchhand-tw6: open
     benchhand-tw6.1: closed
     benchhand-tw6.10: closed
@@ -6751,10 +7426,16 @@ ledger_snapshot:
     benchhand-tw6.7: closed
     benchhand-tw6.8: closed
     benchhand-tw6.9: closed
+    benchhand-u9o7: open
     benchhand-ua2: closed
     benchhand-ubp: open
     benchhand-usww: open
     benchhand-v3x: closed
+    benchhand-v69m: open
+    benchhand-v8bc: open
+    benchhand-v9qq: open
+    benchhand-vblb: open
+    benchhand-vc03: open
     benchhand-vcrz: open
     benchhand-vdcb: open
     benchhand-vla: open
@@ -6778,6 +7459,7 @@ ledger_snapshot:
     benchhand-w7qz: open
     benchhand-wc2: open
     benchhand-whf: closed
+    benchhand-wyui: open
     benchhand-x29y: open
     benchhand-x6h: open
     benchhand-x6h.1: closed
@@ -6802,10 +7484,12 @@ ledger_snapshot:
     benchhand-x6h.7: open
     benchhand-x6h.8: closed
     benchhand-x6h.9: open
+    benchhand-x6ql: open
     benchhand-xg6w: open
     benchhand-xjkc: open
     benchhand-xmy0: open
     benchhand-y87: closed
+    benchhand-ygav: open
     benchhand-yj9: closed
     benchhand-yjq: open
     benchhand-yjq.1: open

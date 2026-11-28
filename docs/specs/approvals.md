@@ -20,6 +20,9 @@ issues:
     - id: IR-084
       block: AP-3
       test: test_a_design_decision_records_two_chosen_options_and_a_carry_forward_disposition
+    - id: IR-214
+      block: AP-1
+      test: test_a_retitled_decision_renames_its_file_and_rewrites_every_link_and_a_rewritten_superseding_one_stays_readable
   defers:
     - id: IR-061
       to: gate-policy
@@ -41,7 +44,7 @@ blocks:
   - id: AP-1
     title: The decision writer
     size: M
-    requirements: [REQ-1, REQ-2, REQ-3, REQ-4]
+    requirements: [REQ-1, REQ-2, REQ-3, REQ-4, REQ-21]
     depends_on: [AP-9]
   - id: AP-2
     title: Decisions for undeclared transitions
@@ -119,6 +122,7 @@ The prototype's agent writes decision files by hand, and a later change to somet
 - **REQ-18.** Freeze and release are refused until the migrated decisions are confirmed, and the refusal names them. Source: owner, 2026-11-28 (`docs/contract/flow.md:89`), `docs/adr/0019-scoped-reapproval.md:37`.
 - **REQ-19.** A gate decision persists what it is bound to. A decision states the transition it approves (RULE-35), and an edge has its own `from` and `to` (`contracts/flow/flow.tsp:115-119`), while `gate_decision` stores only the gate and one stage (`contracts/record/decision.tsp:59-79`). `gate_decision` gains `transition`, the `from` and `to` stages of the declared edge, and `evidence_sha256`, the assessment's canonical digest at the decision, the digest a freeze anchors (`contracts/record/product.tsp:325-330`). Both are optional in the contract, so a migrated record stays valid, and the writer always fills them: a minor bump (`docs/contract/versioning.md:86`). Source: owner, 2026-11-28.
 - **REQ-20.** `GateDecisionRequest` becomes the request of `flow.transition`, `{to?, version?, decision?, approval?}`: `to` names the stage, `version` the built version, `decision` a `void`, and `approval` the human channel, who and their words. Source: `docs/contract/flow.md:62`.
+- **REQ-21.** The decision writer updates an existing decision. A retitle renames its file and rewrites every link to the old name in the record and the index. A status change, such as `superseded` with its `superseded_by` list, goes through the same call, and rewriting a superseding decision keeps the superseded one valid. Source: IR-214.
 
 ## Interfaces
 
@@ -141,6 +145,7 @@ The prototype's agent writes decision files by hand, and a later change to somet
 | IR-060 | already-covered | AP-6 | `test_an_approval_whose_evidence_digest_changed_no_longer_authorises_the_advance` |
 | IR-081 | port-fix | AP-2 | `test_a_decision_for_an_undeclared_backward_gate_is_refused_when_written_and_a_finding_in_the_record` |
 | IR-084 | already-covered | AP-3 | `test_a_design_decision_records_two_chosen_options_and_a_carry_forward_disposition` |
+| IR-214 | port-fix | AP-1 | `test_a_retitled_decision_renames_its_file_and_rewrites_every_link_and_a_rewritten_superseding_one_stays_readable` |
 
 IR-084 is the plan's `c7q.3` (`docs/design-plan.md:565`).
 
@@ -196,6 +201,8 @@ Size M. No dependencies.
 - the next write overwrites a hand edit of the index.
 
 Request tests for REQ-2: `form`, a blank quote, and a `void` without its provisional are each refused. An interval-acceptance test for REQ-4: the engine cites the accepting decision on the decided version, and not one on an earlier version.
+
+The IR-214 test in the table above, for REQ-21: a retitle renames the file, rewrites every link and regenerates the index; a status change to superseded writes `superseded_by`; and a superseding decision rewritten in place leaves every decision readable.
 
 ### AP-2: Decisions for undeclared transitions
 

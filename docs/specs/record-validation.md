@@ -25,6 +25,12 @@ issues:
     - id: IR-094
       block: RV-5
       test: test_a_welded_torque_path_with_its_joining_operation_validates_and_one_without_is_a_finding
+    - id: IR-218
+      block: RV-6
+      test: test_an_unused_part_folder_and_a_placed_part_without_a_bom_row_each_give_one_finding
+    - id: IR-226
+      block: RV-1
+      test: test_a_verification_row_whose_criteria_drifted_from_its_requirement_gives_one_finding
   defers:
     - id: IR-029
       to: assembly-steps-and-coupons
@@ -55,7 +61,7 @@ blocks:
   - id: RV-1
     title: Verification rows by header name
     size: S
-    requirements: [REQ-1]
+    requirements: [REQ-1, REQ-9]
     depends_on: []
   - id: RV-2
     title: A not_applicable verification result
@@ -80,7 +86,7 @@ blocks:
   - id: RV-6
     title: Missing inputs only from the stage that produces them
     size: S
-    requirements: [REQ-6]
+    requirements: [REQ-6, REQ-8]
     depends_on: []
   - id: RV-7
     title: Axial retainers from design_rules.py
@@ -132,6 +138,8 @@ Direct edits of `hw/` are caught as findings, not prevented (`docs/design-plan.m
 - **REQ-5.** The torque-path type adds `weld`, `braze` and `solder`, each needing a joining operation on the route. Source: IR-094.
 - **REQ-6.** validate reports a missing record document only from the stage that produces it, as it already does for the part records from LAYOUT on (`packages/benchhand-core/src/benchhand_core/record/validate.py:24`). Source: IR-077.
 - **REQ-7.** Each rule added here keeps the migrate reference records clean: they still migrate and validate with no findings (`packages/benchhand-core/tests/record/test_migrate_service.py:52`). A new rule's tests use synthetic records, never test-project geometry (RULE-22), and a malformed document gives a named finding, never a crash (RULE-08). Source: `docs/design-plan.md:610`.
+- **REQ-8.** validate reports a part folder that no occurrence uses, in the build's words, and a placed part number with no BOM row, one finding each. Source: IR-218.
+- **REQ-9.** validate gives a finding for a verification row whose criteria don't start with its requirement's current criteria, naming both. Source: IR-226.
 
 ## Interfaces
 
@@ -154,6 +162,8 @@ A contract change here that renames or restructures a prototype field needs a mi
 | IR-056 | port-fix | RV-1 | `test_shuffled_columns_and_a_byte_order_mark_read_every_row_and_a_missing_column_is_one_named_finding` |
 | IR-063 | port-fix | RV-3 | `test_a_trailing_colon_placeholder_text_and_a_missing_file_each_give_a_finding_before_release` |
 | IR-094 | contract | RV-5 | `test_a_welded_torque_path_with_its_joining_operation_validates_and_one_without_is_a_finding` |
+| IR-218 | port-fix | RV-6 | `test_an_unused_part_folder_and_a_placed_part_without_a_bom_row_each_give_one_finding` |
+| IR-226 | port-fix | RV-1 | `test_a_verification_row_whose_criteria_drifted_from_its_requirement_gives_one_finding` |
 
 | Entry | Deferred to | Why |
 |---|---|---|
@@ -200,7 +210,7 @@ Size S. No dependencies.
 
 **Scope.** Read `verification.csv` by its header names, strip a UTF-8 byte-order mark, and report a missing or an extra column by name.
 
-**Acceptance.** The IR-056 test in the table above, and the migrate reference test still passes.
+**Acceptance.** The IR-056 test in the table above, and the migrate reference test still passes. The IR-226 test, for REQ-9: a requirement's criteria change and its unchanged row gives one finding naming both, and a row re-based on the new text is clean.
 
 ### RV-2: A not_applicable verification result
 
@@ -272,4 +282,4 @@ Size S. No dependencies.
 
 **Scope.** Generalise validate's part-records rule to each record document, so a missing document is a finding only from the stage that produces it.
 
-**Acceptance.** Validate tests: an INTENT-stage record without a layout gives no finding, and a LAYOUT-stage record without one does.
+**Acceptance.** Validate tests: an INTENT-stage record without a layout gives no finding, and a LAYOUT-stage record without one does. The IR-218 test, for REQ-8: an unused part folder gives one finding, a placed part with no BOM row gives one finding, and the record with both fixed is clean.

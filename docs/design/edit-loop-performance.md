@@ -285,6 +285,16 @@ The owner answered Q1 to Q6 on 2026-11-27. Each answer is recorded where it bind
 - **Q5. `warm` in the envelope. Decided.** `warm` sits at the top level of the envelope, on every tool result.
 - **Q6. The STEP hash in the fact key. Decided.** A part's facts are keyed by the hash of the STEP data section only, ignoring the header. The whole-file sha256 stays for artifacts.
 
+### Sketch mode (owner decision, 2026-11-28)
+
+The owner, 2026-11-28, asked for a sketch mode next to the normal design build:
+
+- **A quick iterative build.** It seals nothing and runs none of the slow checks, so each edit comes back fast.
+- **Concept output only.** It gives conceptual renders and high-level checks. Nothing it produces is a version, and no gate or evidence entry counts it.
+- **Promotion.** A sketch can be promoted into a normal design build, which then seals and runs the full checks as any build does.
+
+Its phase is open. These are open too: which checks count as high-level, how promotion carries the sketch's geometry into the record, and how sketch renders are stamped. The overlay rule of 2026-11-28 stamps every concept overlay and never counts it as record geometry (RULE-47). The catalogue records it as the proposed capability `sketch-mode`.
+
 ## Beads
 
 Filed in the `bhn` ledger on 2026-11-27. The ids follow the note's numbering. Phase labels are `phase-2` to `phase-4`. B3 and B19 have priority 1, the rest priority 2.

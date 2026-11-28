@@ -12,6 +12,7 @@ not_yet_specced:
   - change-impact
   - existing-equipment
   - assembly-steps-and-coupons
+  - product-scene-structure
   - annotation-set
   - freecad-environment-pins
   - purchased-part-fidelity

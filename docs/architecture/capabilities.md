@@ -14,16 +14,16 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 |---|---|---|---|---|---|---|---|---|
 | P0 | 2 | 1 | 1 | 0 | 0 | 0 | 2 | 0 |
 | P1 | 7 | 5 | 2 | 0 | 0 | 0 | 6 | 1 |
-| P2 | 25 | 0 | 1 | 24 | 0 | 0 | 25 | 0 |
+| P2 | 26 | 0 | 1 | 24 | 1 | 0 | 25 | 1 |
 | P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
 | P4 | 29 | 0 | 0 | 23 | 6 | 0 | 23 | 6 |
 | P5 | 9 | 0 | 0 | 7 | 1 | 1 | 7 | 2 |
 | P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
-| no phase | 7 | 0 | 0 | 7 | 0 | 0 | 0 | 7 |
-| **all** | **94** | 6 | 5 | 73 | 9 | 1 | 76 | 18 |
+| no phase | 8 | 0 | 0 | 7 | 1 | 0 | 0 | 8 |
+| **all** | **96** | 6 | 5 | 73 | 11 | 1 | 76 | 20 |
 
-MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 20. Doc corrections: 1.
+MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 22. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -75,6 +75,7 @@ MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 
 | [supplier-calibration](#supplier-calibration) | Supplier data as calibration | contracts | `containers.md:record` | planned | baseline | `contracts`, `packages/benchhand-core` | 0 | 0 |
 | [product-identity](#product-identity) | Product identity fields | contracts | `containers.md:record` | planned | baseline | `contracts` | 0 | 0 |
 | [decision-manifest-hash](#decision-manifest-hash) | The manifest hash of an approval | contracts | `containers.md:record` | planned | baseline | `contracts` | 0 | 0 |
+| [product-scene-structure](#product-scene-structure) | Product and scene exports by occurrence role | core | `containers.md:record` | proposed | deferred | `contracts`, `packages/benchhand-core` | 0 | 0 |
 
 ### P3
 
@@ -165,6 +166,7 @@ MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 
 | [policy-provider](#policy-provider) | Default policy provider | providers | `containers.md:policy` | planned | deferred | `providers/policy-default` | 0 | 0 |
 | [container-launcher](#container-launcher) | Container launcher | distribution | `layers.md:containerDir` | planned | deferred | `packages/benchhand`, `container` | 0 | 2 |
 | [hazards-risk-assessment](#hazards-risk-assessment) | Hazards and risk assessment | contracts | `containers.md:record` | planned | deferred | `contracts`, `packages/benchhand-core` | 0 | 0 |
+| [sketch-mode](#sketch-mode) | Sketch mode | providers | `containers.md:kernels` | proposed | deferred | `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d` | 0 | 0 |
 
 ## Dependency graph
 
@@ -211,6 +213,7 @@ flowchart LR
     supplier_calibration["Supplier data as calibration<br/>P2, planned"]:::planned
     product_identity["Product identity fields<br/>P2, planned"]:::planned
     decision_manifest_hash["The manifest hash of an approval<br/>P2, planned"]:::planned
+    product_scene_structure["Product and scene exports by occurrence role<br/>P2, proposed"]:::proposed
   end
   subgraph phase_P3["P3"]
     mcp_server["MCP server<br/>P3, planned"]:::planned
@@ -283,6 +286,7 @@ flowchart LR
     policy_provider["Default policy provider<br/>no phase, planned"]:::open
     container_launcher["Container launcher<br/>no phase, planned"]:::open
     hazards_risk_assessment["Hazards and risk assessment<br/>no phase, planned"]:::open
+    sketch_mode["Sketch mode<br/>no phase, proposed"]:::proposed
   end
   contract_validation --> contracts_pipeline
   provider_protocol_contract --> contracts_pipeline
@@ -471,6 +475,12 @@ flowchart LR
   edit_loop -.->|proposed| fact_cache
   edit_loop -.->|proposed| resident_kernels
   edit_loop -.->|proposed| job_service
+  product_scene_structure -.->|proposed| existing_equipment
+  product_scene_structure -.->|proposed| assembly_steps_and_coupons
+  product_scene_structure -.->|proposed| model_export
+  sketch_mode -.->|proposed| model_build
+  sketch_mode -.->|proposed| render_output
+  sketch_mode -.->|proposed| job_service
   classDef built fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b1b1b
   classDef partial fill:#f1faf3,stroke:#2e7d32,stroke-width:2px,stroke-dasharray:6 3,color:#1b1b1b
   classDef planned fill:#ffffff,stroke:#616161,stroke-width:1px,stroke-dasharray:6 4,color:#1b1b1b
@@ -729,9 +739,9 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 
 *Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped. *Pending decisions* are tools that exist only if an open question is answered yes, so they have no contract to write yet.
 
-### Missing interfaces (122)
+### Missing interfaces (124)
 
-#### Capabilities with no MCP tool (15)
+#### Capabilities with no MCP tool (17)
 
 - [scoped-reapproval](#scoped-reapproval) (P2, planned)
 - [annotation-set](#annotation-set) (P2, planned)
@@ -748,6 +758,8 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [hazards-risk-assessment](#hazards-risk-assessment) (no phase, planned)
 - [viewer-ocp](#viewer-ocp) (P5, dropped)
 - [bounded-results](#bounded-results) (P3, proposed)
+- [product-scene-structure](#product-scene-structure) (P2, proposed)
+- [sketch-mode](#sketch-mode) (no phase, proposed)
 
 #### MCP surfaces with a missing baseline (2)
 
@@ -924,9 +936,9 @@ None.
 - `run_cadquery.py` ([model-build](#model-build)): The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it.
 - `viewer.py host` ([preview-host](#preview-host)): The hidden subcommand the viewer host runs as; the preview host replaces it.
 
-### Proposals awaiting approval (92)
+### Proposals awaiting approval (94)
 
-#### Proposed capabilities (9)
+#### Proposed capabilities (11)
 
 - [bounded-results](#bounded-results) (P3): study: `lane8-agentcad.md section 6, items 1 and 2`
 - [docs-index](#docs-index) (P3): study: `lane8-agentcad.md section 6, item 5`
@@ -937,6 +949,8 @@ None.
 - [fact-cache](#fact-cache) (P4): design: `docs/design/edit-loop-performance.md:35`
 - [resident-kernels](#resident-kernels) (P4): design: `docs/design/edit-loop-performance.md:106`
 - [edit-loop](#edit-loop) (P4): design: `docs/design/edit-loop-performance.md:135`
+- [product-scene-structure](#product-scene-structure) (P2): design: `docs/design/assembly-structure.md:11`
+- [sketch-mode](#sketch-mode) (no phase): design: `docs/design/edit-loop-performance.md:288`
 
 #### Proposed tools (64)
 
@@ -1036,7 +1050,7 @@ None.
 
 None.
 
-### Dependencies on a later phase (16)
+### Dependencies on a later phase (17)
 
 - [provider-protocol-contract](#provider-protocol-contract) (P0) depends on [contracts-pipeline](#contracts-pipeline) (P1)
 - [env-doctor](#env-doctor) (P3) depends on [provider-environments](#provider-environments) (P4)
@@ -1054,6 +1068,7 @@ None.
 - [fact-cache](#fact-cache) (P4) depends on [middleware-chain](#middleware-chain) (no phase)
 - [fact-cache](#fact-cache) (P4) depends on [provider-host](#provider-host) (no phase)
 - [resident-kernels](#resident-kernels) (P4) depends on [provider-host](#provider-host) (no phase)
+- [product-scene-structure](#product-scene-structure) (P2) depends on [model-export](#model-export) (P4)
 
 ## Open questions
 
@@ -1228,6 +1243,22 @@ Can the agent run setup? The plan makes setup a CLI command that includes the ma
 - Blocking: yes. Owner: project-owner. Decision needed: Whether the agent can run setup over MCP, or setup stays a CLI command that env.doctor points to.
 - Cited by: [setup](#setup), `benchhand setup`
 
+### sketch-mode-phase
+
+The owner asked for sketch mode on 2026-11-28 and left its phase open. Which phase builds it, and what does a sketch check and carry over when it is promoted? (existing)
+
+- Pointers: `docs/design/edit-loop-performance.md:288`
+- Blocking: no; the spec that cites it decides it or works around it.
+- Cited by: [sketch-mode](#sketch-mode)
+
+### shared-parts
+
+A variant is its own project (RULE-06), so siblings copy their common parts and interfaces with no drift check. Should a part be a pinned reference to another project's part, by path and content hash, with validate reporting a changed source? (catalogue)
+
+- Pointers: `docs/migration/issue-register.yaml:6084`
+- Blocking: no; the spec that cites it decides it or works around it.
+- Cited by: [record-store](#record-store)
+
 ## Doc corrections
 
 Settled questions whose old wording is still in a page. The fix belongs in that page.
@@ -1310,6 +1341,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0017
 - Evidence: `packages/benchhand-core/src/benchhand_core/record/store.py:313`, `packages/benchhand-core/src/benchhand_core/record/documents.py`
 - Prototype: `skills/cad-record/layout.json`, `skills/cad-record/scripts/yaml_loader.py`
+- Open questions: [shared-parts](#shared-parts)
 
 ### record-validate
 
@@ -2680,3 +2712,34 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0018
 - Source: design: `docs/design/edit-loop-performance.md:135`
 - Contracts not yet published: the model.edit_loop input and output, reusing the version-diff result (design note, gain 3)
+
+### product-scene-structure
+
+**Product and scene exports by occurrence role.** The owner's structure of 2026-11-28 for every exported model, an assembly or a single part: a product.step grouped by built subassembly, then [Made] and [Purchased], with the kit; a scene.step that is never released, holding [Context], [Tooling], [Joints], [Poses], [Envelopes], [Findings] and [Construction]; hidden-by-default rules; and sections as saved views. The checks read the scene, and the release and the BOM read the product.
+
+- Layer and container: core, `containers.md:record`
+- Phase and status: P2, proposed, deferred
+- Owner: `contracts`, `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [existing-equipment](#existing-equipment), [assembly-steps-and-coupons](#assembly-steps-and-coupons), [model-export](#model-export)
+- ADRs: ADR-0017, ADR-0021
+- Note: Spec 21, assembly structure and steps, specs it. The register's IR-227 carries the lesson that asked for it.
+- Source: design: `docs/design/assembly-structure.md:11`
+- Contracts not yet published: the product and scene group names and their hidden flags on record/assembly occurrences and subassemblies
+
+### sketch-mode
+
+**Sketch mode.** A quick iterative build that seals nothing and runs none of the slow checks, giving conceptual renders and high-level checks only. Nothing it produces is a version or counts as evidence, and a sketch can be promoted into a normal design build.
+
+- Layer and container: providers, `containers.md:kernels`
+- Phase and status: no phase, proposed, deferred
+- Owner: `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [model-build](#model-build), [render-output](#render-output), [job-service](#job-service)
+- ADRs: ADR-0018
+- Source: design: `docs/design/edit-loop-performance.md:288`
+- Open questions: [sketch-mode-phase](#sketch-mode-phase)

@@ -10,63 +10,64 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 
 | Kind | Count |
 |---|---|
-| bug | 57 |
-| gap | 66 |
-| false-pass | 32 |
-| false-fail | 52 |
+| bug | 61 |
+| gap | 77 |
+| false-pass | 38 |
+| false-fail | 53 |
 | decision | 2 |
 | process | 3 |
-| total | 212 |
+| total | 234 |
 
 | Disposition | Count |
 |---|---|
-| port-fix | 104 |
-| design-input | 56 |
-| contract | 36 |
+| port-fix | 116 |
+| design-input | 62 |
+| contract | 39 |
 | already-covered | 12 |
 | not-applicable | 4 |
-| total | 212 |
+| decide | 1 |
+| total | 234 |
 
 | Phase | Count |
 |---|---|
 | Phase 1 | 4 |
-| Phase 2 | 82 |
+| Phase 2 | 86 |
 | Phase 3 | 5 |
-| Phase 4 | 105 |
-| Phase 5 | 5 |
-| Phase 6 | 3 |
-| no phase | 8 |
-| total | 212 |
+| Phase 4 | 119 |
+| Phase 5 | 7 |
+| Phase 6 | 4 |
+| no phase | 9 |
+| total | 234 |
 
 ### By area and disposition
 
 | Area | port-fix | design-input | contract | already-covered | not-applicable | decide | Issues |
 |---|---|---|---|---|---|---|---|
-| agents-and-harness |  | 4 |  |  | 3 |  | 7 |
-| cad-analysis | 3 | 1 | 1 |  |  |  | 5 |
-| cad-concept | 3 |  |  |  |  |  | 3 |
+| agents-and-harness |  | 5 |  |  | 3 |  | 8 |
+| cad-analysis | 4 | 1 | 1 |  |  |  | 6 |
+| cad-concept | 3 | 1 |  |  |  |  | 4 |
 | cad-design | 15 | 5 | 1 |  |  |  | 21 |
-| cad-drawings | 16 | 4 | 4 |  |  |  | 24 |
+| cad-drawings | 18 | 4 | 5 |  |  |  | 27 |
 | cad-fits | 5 |  | 1 |  |  |  | 6 |
-| cad-flow | 7 | 8 | 1 |  |  |  | 16 |
-| cad-model | 15 | 10 | 2 | 1 | 1 |  | 29 |
-| cad-motion | 8 | 8 | 5 | 1 |  |  | 22 |
+| cad-flow | 7 | 8 | 2 |  |  |  | 17 |
+| cad-model | 18 | 11 | 3 | 1 | 1 |  | 34 |
+| cad-motion | 9 | 10 | 5 | 1 |  |  | 25 |
 | cad-recheck | 1 |  |  |  |  |  | 1 |
-| cad-record | 25 | 14 | 21 | 10 |  |  | 70 |
-| cad-render | 4 | 2 |  |  |  |  | 6 |
+| cad-record | 30 | 14 | 21 | 10 |  | 1 | 76 |
+| cad-render | 4 | 3 |  |  |  |  | 7 |
 | cad-viewer | 2 |  |  |  |  |  | 2 |
 
 ## Bead coverage
 
-446 beads from the prototype's ledger, each referenced once: 288 in an issue's `beads`, and 158 in `bead_dispositions`.
+485 beads from the prototype's ledger, each referenced once: 322 in an issue's `beads`, and 163 in `bead_dispositions`.
 
 | Bead disposition | Count |
 |---|---|
 | port-fix | 79 |
-| design-input | 3 |
-| already-covered | 13 |
-| not-applicable | 63 |
-| total | 158 |
+| design-input | 4 |
+| already-covered | 15 |
+| not-applicable | 65 |
+| total | 163 |
 
 ## Design rules
 
@@ -120,6 +121,7 @@ The owner's standing rules. They apply everywhere.
 | RULE-44 | Owner decision of 2026-11-27 (CAD-libraries D-17). GPL and AGPL tools (slicers, gmsh, CalculiX, the FCGear addon) run only as separate processes or containers, never imported. benchhand downloads the pinned upstream file and checks its sha256, and never rehosts it. The owner signs off before a Dockerfile that fetches AGPL code ships. | cad-libraries decision D-17 | Plan section 6 states it. The solver, slicer and part-source providers (Phase 4) follow it. |
 | RULE-45 | Owner decision of 2026-11-27 (CAD-libraries D-25). A supplier's published specification counts as calibration, with the source kind supplier. It can turn UNKNOWN into pass or fail, and the record shows that the figure is supplier data. | cad-libraries decision D-25 | Not built yet; a Phase 2 record addition (catalogue supplier-calibration), read by the process checks. |
 | RULE-46 | Owner decision of 2026-11-27 (CAD-libraries D-32). A design adopted from another project is rewritten by default. A file is ported only when the owner approves that file, and then it keeps its licence notice, for example agentcad's Apache-2.0 notice on solid_compare.py or edit_risk.py. | cad-libraries decision D-32 | The plan's rewrite rule (section 4) already holds it; model.diff and model.inspect (Phase 4) follow it. |
+| RULE-47 | Owner decision of 2026-11-28 on the concept overlay. An overlay may move or hide existing parts and add simple solids or STEP parts. It never stretches a real part. Every overlay is stamped as a concept overlay and never counts as record geometry. | handoff §4; test-project tool-issues #42 | Not built yet; the render tool and viewer overlay mode of IR-213 (Phase 5). |
 
 ### Conflicts with benchhand-next
 
@@ -134,13 +136,10 @@ Both positions are recorded; the register picks no winner.
 
 ## For the owner to decide
 
-None.
+| Id | Issue | Recommendation |
+|---|---|---|
+| IR-228 | Separate projects can't share a part, so a product split into projects duplicates its common parts and interfaces with no drift check. | A part may be a pinned reference to another project's part, by path and content hash, and validate reports a reference whose source has changed. A variant stays its own project (RULE-06), so this is how its siblings share parts. The owner decides whether to build it and in which phase (catalogue question shared-parts). |
 
 ## Needs a recheck
 
-Their source was not updated in the session that wrote the register, so check the entry against the current source before acting on it.
-
-- IR-009: The access check moves rigid bodies only, so a flexible part that closes around others (a cable tie, strap or belt) can never pass. (test-project tool-issues #9; test-project brief architect-prompt-tool-issues item 7; test-project brief architect-prompt-access)
-- IR-010: Several stations or size classes in one record put each other in every access path and tool approach. (test-project tool-issues #9; test-project brief architect-prompt-tool-issues item 8; test-project brief architect-prompt-access; handoff §1.3; handoff §2)
-- IR-011: A tool that engages a part other than the operated one (a key holding a bolt) collides with it, because bought fasteners have no drive socket. (test-project tool-issues #9; test-project brief architect-prompt-tool-issues item 9; test-project brief architect-prompt-access)
-- IR-012: OS metadata files enter version snapshots and make sealed versions stale; the tools have no project ignore rules. (test-project tool-issues #10; test-project brief architect-prompt-tool-issues item 4b; test-project brief architect-prompt-gitignore)
+None.
