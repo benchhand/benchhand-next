@@ -57,7 +57,7 @@ class RecordVersionError(RecordError):
         self.found = found
 
     def findings(self) -> list[Finding]:
-        action = "Use the benchhand release that wrote this record, or migrate it; nothing was changed."
+        action = "Use the benchhand release that wrote this record; nothing was changed."
         return [
             Finding(
                 code=self.code,
