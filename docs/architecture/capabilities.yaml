@@ -292,18 +292,6 @@ open_questions:
       check and carry over when it is promoted?
     pointers:
       - docs/design/edit-loop-performance.md:288
-  - id: shared-parts
-    blocking: false
-    owner: project-owner
-    decision_needed: Whether separate projects can share a part by a
-      pinned reference with a drift finding, and in which phase.
-    origin: catalogue
-    question: A variant is its own project (RULE-06), so siblings copy
-      their common parts and interfaces with no drift check. Should a
-      part be a pinned reference to another project's part, by path
-      and content hash, with validate reporting a changed source?
-    pointers:
-      - docs/migration/issue-register.yaml:6084
 
 capabilities:
 
@@ -461,8 +449,6 @@ capabilities:
       - skills/cad-record/scripts/yaml_loader.py
     depends_on:
       - contract-validation
-    open_questions:
-      - shared-parts
     adrs:
       - 17
   - id: record-validate
@@ -3305,6 +3291,30 @@ capabilities:
       - sketch-mode-phase
     adrs:
       - 18
+  - id: shared-parts
+    title: Shared parts across projects
+    purpose: A library project releases parts at revisions. Another
+      project uses one by reference and keeps a copy of the release's
+      sealed files by digest, so it builds and releases from its own
+      copy. A check reports an unreachable or newer source, and fails
+      an edited copy. A fork turns a borrowed part into the project's
+      own part and records its origin.
+    layer: core
+    container: containers.md:record
+    phase: 4
+    status: proposed
+    scope: deferred
+    source:
+      kind: design
+      ref: docs/design/shared-parts.md:12
+    owner:
+      - packages/benchhand-core
+    depends_on:
+      - record-store
+      - object-store
+      - part-source-provider
+    adrs:
+      - 23
 
 # MCP tools. input and output are contract references or `not yet defined`;
 # output is the envelope payload, since every result is the envelope. Where

@@ -22,10 +22,9 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 |---|---|
 | port-fix | 116 |
 | design-input | 62 |
-| contract | 39 |
+| contract | 40 |
 | already-covered | 12 |
 | not-applicable | 4 |
-| decide | 1 |
 | total | 234 |
 
 | Phase | Count |
@@ -33,10 +32,10 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 | Phase 1 | 4 |
 | Phase 2 | 86 |
 | Phase 3 | 5 |
-| Phase 4 | 119 |
+| Phase 4 | 120 |
 | Phase 5 | 7 |
 | Phase 6 | 4 |
-| no phase | 9 |
+| no phase | 8 |
 | total | 234 |
 
 ### By area and disposition
@@ -53,7 +52,7 @@ The register follows the prototype at `412b5d9`. The ledger snapshot is from 202
 | cad-model | 18 | 11 | 3 | 1 | 1 |  | 34 |
 | cad-motion | 9 | 10 | 5 | 1 |  |  | 25 |
 | cad-recheck | 1 |  |  |  |  |  | 1 |
-| cad-record | 30 | 14 | 21 | 10 |  | 1 | 76 |
+| cad-record | 30 | 14 | 22 | 10 |  |  | 76 |
 | cad-render | 4 | 3 |  |  |  |  | 7 |
 | cad-viewer | 2 |  |  |  |  |  | 2 |
 
@@ -134,9 +133,7 @@ Both positions are recorded; the register picks no winner.
 
 ## For the owner to decide
 
-| Id | Issue | Recommendation |
-|---|---|---|
-| IR-228 | Separate projects can't share a part, so a product split into projects duplicates its common parts and interfaces with no drift check. | A part may be a pinned reference to another project's part, by path and content hash, and validate reports a reference whose source has changed. A variant stays its own project (RULE-06), so this is how its siblings share parts. The owner decides whether to build it and in which phase (catalogue question shared-parts). |
+None.
 
 ## Needs a recheck
 

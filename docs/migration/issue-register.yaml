@@ -6095,20 +6095,21 @@ issues:
     area: cad-record
     prototype_paths:
       - skills/cad-record/references/
-    disposition: decide
-    recommendation: A part may be a pinned reference to another project's
-      part, by path and content hash, and validate reports a reference
-      whose source has changed. A variant stays its own project (RULE-06),
-      so this is how its siblings share parts. The owner decides whether
-      to build it and in which phase (catalogue question shared-parts).
+    disposition: contract
+    pointer: docs/design/shared-parts.md
     benchhand_next:
-      action: Waits on the owner. The recommendation is a pinned part
-        reference across projects, with a drift finding.
-      phase: null
-    acceptance: 'After the decision: a validate test where two synthetic
-      projects share one part by reference, an edit to the source makes
-      the other project''s validate report the drift, and re-pinning
-      clears it.'
+      action: 'Owner decision, 2026-11-28: library projects release parts
+        at revisions; a project uses one by reference and keeps a copy
+        of the sealed files of that release by digest, and builds from its copy.
+        A check reports an unreachable or newer source and fails an edited
+        copy; a fork makes the part its own part in the project and records its
+        origin. Built with part sourcing (capability shared-parts).'
+      phase: 4
+    acceptance: 'Tests with two synthetic projects and a synthetic library:
+      the using project builds from its copy after the library is removed
+      (an information finding), a newer library revision gives a finding
+      and changes nothing until updated, an edited copy fails its digest
+      check, and a fork keeps its origin and stops following the library.'
   - id: IR-229
     title: The product id can't be renamed, because the concept scene's
       file name and its hashed handoff embed it.

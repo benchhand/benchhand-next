@@ -16,14 +16,14 @@ The general model of benchhand: each capability (a feature), the MCP tools and C
 | P1 | 7 | 5 | 2 | 0 | 0 | 0 | 6 | 1 |
 | P2 | 26 | 0 | 1 | 24 | 1 | 0 | 25 | 1 |
 | P3 | 11 | 0 | 1 | 8 | 2 | 0 | 9 | 2 |
-| P4 | 29 | 0 | 0 | 23 | 6 | 0 | 23 | 6 |
+| P4 | 30 | 0 | 0 | 23 | 7 | 0 | 23 | 7 |
 | P5 | 9 | 0 | 0 | 7 | 1 | 1 | 7 | 2 |
 | P6 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | P7 | 2 | 0 | 0 | 2 | 0 | 0 | 2 | 0 |
 | no phase | 8 | 0 | 0 | 7 | 1 | 0 | 0 | 8 |
-| **all** | **96** | 6 | 5 | 73 | 11 | 1 | 76 | 20 |
+| **all** | **97** | 6 | 5 | 73 | 12 | 1 | 76 | 21 |
 
-MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 22. Doc corrections: 1.
+MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 15 planned, 13 proposed). Prototype commands: 73. Open questions: 21. Doc corrections: 1.
 
 ## Capabilities by phase
 
@@ -126,6 +126,7 @@ MCP tools: 107 (37 planned, 64 proposed, 6 dropped). CLI commands: 30 (2 built, 
 | [fact-cache](#fact-cache) | Content-addressed fact cache | core | `containers.md:middleware` | proposed | deferred | `packages/benchhand-core` | 0 | 0 |
 | [resident-kernels](#resident-kernels) | Resident kernel providers with a worker per job | providers | `containers.md:kernels` | proposed | deferred | `providers/kernel-cadquery`, `providers/kernel-build123d`, `packages/benchhand-provider` | 0 | 0 |
 | [edit-loop](#edit-loop) | One edit-loop job | providers | `containers.md:kernels` | proposed | deferred | `packages/benchhand-core`, `providers/kernel-cadquery`, `providers/kernel-build123d` | 1 | 0 |
+| [shared-parts](#shared-parts) | Shared parts across projects | core | `containers.md:record` | proposed | deferred | `packages/benchhand-core` | 0 | 0 |
 
 ### P5
 
@@ -258,6 +259,7 @@ flowchart LR
     fact_cache["Content-addressed fact cache<br/>P4, proposed"]:::proposed
     resident_kernels["Resident kernel providers with a worker per job<br/>P4, proposed"]:::proposed
     edit_loop["One edit-loop job<br/>P4, proposed"]:::proposed
+    shared_parts["Shared parts across projects<br/>P4, proposed"]:::proposed
   end
   subgraph phase_P5["P5"]
     preview_host["Preview host<br/>P5, planned"]:::planned
@@ -481,6 +483,9 @@ flowchart LR
   sketch_mode -.->|proposed| model_build
   sketch_mode -.->|proposed| render_output
   sketch_mode -.->|proposed| job_service
+  shared_parts -.->|proposed| record_store
+  shared_parts -.->|proposed| object_store
+  shared_parts -.->|proposed| part_source_provider
   classDef built fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b1b1b
   classDef partial fill:#f1faf3,stroke:#2e7d32,stroke-width:2px,stroke-dasharray:6 3,color:#1b1b1b
   classDef planned fill:#ffffff,stroke:#616161,stroke-width:1px,stroke-dasharray:6 4,color:#1b1b1b
@@ -739,9 +744,9 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 
 *Missing interfaces* need a tool, a contract or a baseline before their spec is done. *Intentional replacements* are covered by a CLI command or by a component, with no MCP tool, by design. *Proposals awaiting approval* are names no source plans yet, and the tools this catalogue dropped. *Pending decisions* are tools that exist only if an open question is answered yes, so they have no contract to write yet.
 
-### Missing interfaces (124)
+### Missing interfaces (125)
 
-#### Capabilities with no MCP tool (17)
+#### Capabilities with no MCP tool (18)
 
 - [scoped-reapproval](#scoped-reapproval) (P2, planned)
 - [annotation-set](#annotation-set) (P2, planned)
@@ -760,6 +765,7 @@ Every command line the prototype can run at the pin, as `prototype-inventory.jso
 - [bounded-results](#bounded-results) (P3, proposed)
 - [product-scene-structure](#product-scene-structure) (P2, proposed)
 - [sketch-mode](#sketch-mode) (no phase, proposed)
+- [shared-parts](#shared-parts) (P4, proposed)
 
 #### MCP surfaces with a missing baseline (2)
 
@@ -936,9 +942,9 @@ None.
 - `run_cadquery.py` ([model-build](#model-build)): The CadQuery kernel runner that cad_model.py starts; the kernel build hook replaces it.
 - `viewer.py host` ([preview-host](#preview-host)): The hidden subcommand the viewer host runs as; the preview host replaces it.
 
-### Proposals awaiting approval (94)
+### Proposals awaiting approval (95)
 
-#### Proposed capabilities (11)
+#### Proposed capabilities (12)
 
 - [bounded-results](#bounded-results) (P3): study: `lane8-agentcad.md section 6, items 1 and 2`
 - [docs-index](#docs-index) (P3): study: `lane8-agentcad.md section 6, item 5`
@@ -951,6 +957,7 @@ None.
 - [edit-loop](#edit-loop) (P4): design: `docs/design/edit-loop-performance.md:135`
 - [product-scene-structure](#product-scene-structure) (P2): design: `docs/design/assembly-structure.md:11`
 - [sketch-mode](#sketch-mode) (no phase): design: `docs/design/edit-loop-performance.md:288`
+- [shared-parts](#shared-parts) (P4): design: `docs/design/shared-parts.md:12`
 
 #### Proposed tools (64)
 
@@ -1251,14 +1258,6 @@ The owner asked for sketch mode on 2026-11-28 and left its phase open. Which pha
 - Blocking: no; the spec that cites it decides it or works around it.
 - Cited by: [sketch-mode](#sketch-mode)
 
-### shared-parts
-
-A variant is its own project (RULE-06), so siblings copy their common parts and interfaces with no drift check. Should a part be a pinned reference to another project's part, by path and content hash, with validate reporting a changed source? (catalogue)
-
-- Pointers: `docs/migration/issue-register.yaml:6084`
-- Blocking: no; the spec that cites it decides it or works around it.
-- Cited by: [record-store](#record-store)
-
 ## Doc corrections
 
 Settled questions whose old wording is still in a page. The fix belongs in that page.
@@ -1341,7 +1340,6 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0017
 - Evidence: `packages/benchhand-core/src/benchhand_core/record/store.py:313`, `packages/benchhand-core/src/benchhand_core/record/documents.py`
 - Prototype: `skills/cad-record/layout.json`, `skills/cad-record/scripts/yaml_loader.py`
-- Open questions: [shared-parts](#shared-parts)
 
 ### record-validate
 
@@ -2743,3 +2741,17 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - ADRs: ADR-0018
 - Source: design: `docs/design/edit-loop-performance.md:288`
 - Open questions: [sketch-mode-phase](#sketch-mode-phase)
+
+### shared-parts
+
+**Shared parts across projects.** A library project releases parts at revisions. Another project uses one by reference and keeps a copy of the release's sealed files by digest, so it builds and releases from its own copy. A check reports an unreachable or newer source, and fails an edited copy. A fork turns a borrowed part into the project's own part and records its origin.
+
+- Layer and container: core, `containers.md:record`
+- Phase and status: P4, proposed, deferred
+- Owner: `packages/benchhand-core`
+- Contracts: –
+- MCP tools: –
+- CLI: –
+- Depends on: [record-store](#record-store), [object-store](#object-store), [part-source-provider](#part-source-provider)
+- ADRs: ADR-0023
+- Source: design: `docs/design/shared-parts.md:12`
