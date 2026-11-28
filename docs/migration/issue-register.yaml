@@ -139,16 +139,13 @@ design_rules:
       used.
     sources:
       - handoff §2
-    benchhand_next: Every owned contract has one TypeSpec source
-      that emits JSON Schema 2020-12.
+    benchhand_next: 'Owner decision, 2026-11-28: superseded for benchhand-next
+      by ADR-0017. Every owned contract has one TypeSpec source that
+      emits JSON Schema 2020-12, and the JSON Schema, the Python models
+      and the TypeScript types are generated from it, with a CI drift
+      check. The rule binds the prototype only, which keeps hand-written
+      JSON Schema (prototype PR 352, bead benchhand-6im).'
     pointer: docs/adr/0017-contracts.md
-    conflict:
-      prototype: The prototype keeps hand-written JSON Schema as
-        the single contract source and documented that it uses no
-        TypeSpec (prototype PR 352, bead benchhand-6im).
-      benchhand_next: ADR-0017 makes TypeSpec the single source
-        and generates the JSON Schema, the Python models and the
-        TypeScript types from it, with a CI drift check.
   - id: RULE-12
     rule: A production-class project may close a physical obligation
       as check-before-use only per obligation, through an approved

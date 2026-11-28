@@ -85,7 +85,7 @@ The owner's standing rules. They apply everywhere.
 | RULE-08 | Malformed input gives a named finding (exit 1), never a crash. Exit 2 is only for usage or infrastructure errors. | handoff §2; design t4-t5 Q5; findings T2 | MCP tools report a malformed record as findings in the result envelope (status `error` with findings); the CLI keeps exit 2 for usage errors. |
 | RULE-09 | The test project's verification record uses the working_prototype service class. | handoff §2; handoff §1.3 | The phase gates verify on a copy of the test project's record, which keeps its service class. |
 | RULE-10 | Procurement specifications live in the part's own sources folder; the shared manufacturing sources folder is for calibration and tool evidence. | handoff §2; handoff §1.2 | Comes with the port of prototype PR 359 (IR-023). |
-| RULE-11 | JSON Schema is the contract source, and TypeSpec is not used. | handoff §2 | Every owned contract has one TypeSpec source that emits JSON Schema 2020-12. |
+| RULE-11 | JSON Schema is the contract source, and TypeSpec is not used. | handoff §2 | Owner decision, 2026-11-28: superseded for benchhand-next by ADR-0017. Every owned contract has one TypeSpec source that emits JSON Schema 2020-12, and the JSON Schema, the Python models and the TypeScript types are generated from it, with a CI drift check. The rule binds the prototype only, which keeps hand-written JSON Schema (prototype PR 352, bead benchhand-6im). |
 | RULE-12 | A production-class project may close a physical obligation as check-before-use only per obligation, through an approved evidence-policy entry, and a safety-critical one never. | design T3-scope O1; handoff §2 | Not built yet; the check-before-use disposition (IR-050) carries it. |
 | RULE-13 | Below the production class, loads that declare no combination are independent, so each is covered by some analysis case. For production and safety-critical, they form one envelope unless the user declares a combination. | design T3-scope O2; handoff §2 | Not built yet; the load-combination field (IR-168) carries it. |
 | RULE-14 | In the key-gates approval profile, the variant gate means CONCEPT. | design T3-scope O3; handoff §2 | The flow contract's approval profile names its gates; the CONCEPT mapping is set with the Phase 2 flow. |
@@ -127,8 +127,6 @@ The owner's standing rules. They apply everywhere.
 
 Both positions are recorded; the register picks no winner.
 
-- **RULE-11.** Prototype: The prototype keeps hand-written JSON Schema as the single contract source and documented that it uses no TypeSpec (prototype PR 352, bead benchhand-6im).
-  benchhand-next: ADR-0017 makes TypeSpec the single source and generates the JSON Schema, the Python models and the TypeScript types from it, with a CI drift check.
 - **RULE-17.** Prototype: The t4-t5 design decided that a designation from an unlisted standards body is kept, with an unknown identity finding that names the field.
   benchhand-next: The record/part 1.2.0 commodity designation (the prototype PR 331 port) allows only ISO, DIN, EN, ASME, ANSI and JIS in standard, so schema validation refuses any other body before a parser can record the finding.
 - **RULE-30.** Prototype: The near-support check for metals stays behind a feature flag until every shipped metal profile has a sourced gauge.
