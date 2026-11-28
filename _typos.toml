@@ -1,5 +1,8 @@
 [files]
 extend-exclude = [
+  # Spec Kit v1.4.5, written by `specify init`; refreshed by `specify`, not edited here.
+  ".specify/",
+  ".pi/prompts/speckit.*.md",
   # The prototype, kept verbatim as a behavioural oracle.
   "reference/",
   # Written by tools/gen from contracts/*.tsp; a fix belongs in the source.

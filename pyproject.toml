@@ -31,6 +31,8 @@ line-length = 110
 target-version = "py312"
 extend-exclude = [
   "reference",
+  # Spec Kit v1.4.5, written by `specify init`; refreshed by `specify`, not edited here.
+  ".specify",
   "packages/benchhand-contracts/src/benchhand_contracts/models",
   "packages/benchhand-contracts/src/benchhand_contracts/schemas",
   "packages/benchhand-contracts/src/benchhand_contracts/examples",

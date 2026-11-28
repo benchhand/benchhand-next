@@ -101,3 +101,10 @@ path = ["research/cel-neutral/conformance/suite.json", "research/cel-neutral/con
 precedence = "override"
 SPDX-FileCopyrightText = ["Google LLC", "2024-2026 Buf Technologies, Inc."]
 SPDX-License-Identifier = "Apache-2.0"
+
+# Spec Kit (github/spec-kit v1.4.5): files written by `specify init --integration pi` from its MIT templates
+[[annotations]]
+path = [".specify/**", ".pi/prompts/speckit.*.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "GitHub, Inc."
+SPDX-License-Identifier = "MIT"

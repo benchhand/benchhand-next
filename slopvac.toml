@@ -3,6 +3,9 @@
 profile = "normal"
 
 exclude = [
+  # Spec Kit v1.4.5, written by `specify init`; refreshed by `specify`, not edited here.
+  ".specify/**",
+  ".pi/prompts/speckit.*.md",
   "**/node_modules/**",
   "**/.venv/**",
   "reference/**",
