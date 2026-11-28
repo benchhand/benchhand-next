@@ -2,6 +2,9 @@
   "packages": [
     "npm:@srobroek/pi-lang-python",
     "npm:@srobroek/pi-lang-typescript",
-    "npm:@srobroek/pi-design"
+    "npm:@srobroek/pi-design",
+    "npm:@srobroek/pi-beads-enforcer",
+    "npm:pi-beads-companion",
+    "npm:@srobroek/pi-speckit-beads"
   ]
 }
