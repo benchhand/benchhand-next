@@ -213,6 +213,18 @@
           "type": "object",
           "propertyNames": { "pattern": "^[0-9]+$" },
           "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+        },
+        "brief_item_hashes": {
+          "description": "Per numbered item of the test project's tool-issues brief, a SHA-256 prefix of its text. Absent in a snapshot written before items were tracked, so every item reads as new.",
+          "type": "object",
+          "propertyNames": { "pattern": "^[0-9]+[a-z]?$" },
+          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+        },
+        "lead_file_hashes": {
+          "description": "Per tracked test-project lead file, a SHA-256 prefix of its text outside the issues or items hashed on their own. Absent in a snapshot written before lead files were tracked, so every file reads as new.",
+          "type": "object",
+          "propertyNames": { "pattern": "^[a-z0-9-]+\\.md$" },
+          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
         }
       }
     }

@@ -227,9 +227,12 @@ issues *args:
     PYTHONPATH=tools/issues:tools/map uv run python -m issue_register check {{args}}
 
 # Local only (CI has no ledger): compare the register with the prototype's ledger (`--ledger` or
-# BENCHHAND_PROTOTYPE_LEDGER) and the test project's tool-issues log (`--lead` or BENCHHAND_TEST_PROJECT_LEAD); both
-# are required. Exits 1 when something needs triage. `--update-snapshot --acknowledge` records bead statuses, a date
-# and per-issue hashes once the report is triaged; the new file must pass `just issues` before it is written.
+# BENCHHAND_PROTOTYPE_LEDGER) and the test project's lead folder (`--lead` or BENCHHAND_TEST_PROJECT_LEAD); both are
+# required. It hashes the lead files listed in TRACKED_LEAD_FILES (tools/issues/issue_register/sync.py): each issue
+# of the tool-issues log, each numbered item of the owner's tool-issues brief, and the rest of each tracked file.
+# Exits 1 when something needs triage. `--update-snapshot --acknowledge` records bead statuses, a date and the hashes
+# once the report is triaged; the new file must pass `just issues`, which needs every recorded tool issue and brief
+# item cited, before it is written.
 issues-sync *args:
     PYTHONPATH=tools/issues:tools/map uv run python -m issue_register sync {{args}}
 

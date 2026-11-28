@@ -28,6 +28,8 @@ SNAPSHOT_KEY = "ledger_snapshot"
 _SNAPSHOT_LINE = re.compile(rf"^{SNAPSHOT_KEY}:", re.MULTILINE)
 _TOP_LEVEL_KEY = re.compile(r"^[A-Za-z_]", re.MULTILINE)
 _TOOL_ISSUE_SOURCE = re.compile(r"^test-project tool-issues #([0-9]+)$")
+BRIEF_SOURCE = "test-project brief architect-prompt-tool-issues"
+_BRIEF_ITEM_SOURCE = re.compile(rf"^{BRIEF_SOURCE} item ([0-9]+[a-z]?)$")
 _ISSUE_MENTION = re.compile(r"\bIR-[0-9]{3}\b")
 PRIVATE_PATTERNS_ENV = "BENCHHAND_PRIVATE_PATTERNS"
 PRIVATE_PATTERNS_FILE = "tools/issues/private-patterns.txt"
@@ -71,6 +73,11 @@ class Register:
     def cited_tool_issues(self) -> set[str]:
         """The test-project tool-issues numbers that some issue cites."""
         cited = (_TOOL_ISSUE_SOURCE.match(source) for issue in self.issues for source in issue["sources"])
+        return {match.group(1) for match in cited if match}
+
+    def cited_brief_items(self) -> set[str]:
+        """The numbered items of the owner's tool-issues brief that some issue cites."""
+        cited = (_BRIEF_ITEM_SOURCE.match(source) for issue in self.issues for source in issue["sources"])
         return {match.group(1) for match in cited if match}
 
 
@@ -208,7 +215,7 @@ def _duplicate_targets(register: Register) -> list[str]:
 
 
 def snapshot_problems(register: Register) -> list[str]:
-    """The snapshot names exactly the register's beads, and every recorded tool issue is cited."""
+    """The snapshot names exactly the register's beads, and every recorded tool issue and brief item is cited."""
     referenced = set(register.bead_references())
     recorded = set(register.snapshot["statuses"])
     problems = [f"{bead} has no {SNAPSHOT_KEY} status" for bead in sorted(referenced - recorded)]
@@ -219,7 +226,17 @@ def snapshot_problems(register: Register) -> list[str]:
     problems += [
         f"test-project tool-issues #{number}: no issue cites it" for number in sorted(uncited, key=int)
     ]
+    uncited_items = set(register.snapshot.get("brief_item_hashes", {})) - register.cited_brief_items()
+    problems += [
+        f"{BRIEF_SOURCE} item {item}: no issue cites it" for item in sorted(uncited_items, key=item_order)
+    ]
     return problems
+
+
+def item_order(number: str) -> tuple[int, str]:
+    """Brief item numbers in order: `4` before `4b` before `5`."""
+    digits = number.rstrip("abcdefghijklmnopqrstuvwxyz")
+    return int(digits), number[len(digits) :]
 
 
 def _pointers(register: Register) -> Iterator[tuple[str, str]]:

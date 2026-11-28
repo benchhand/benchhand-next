@@ -6,7 +6,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
+import subprocess
 import textwrap
 from pathlib import Path
 
@@ -25,7 +27,19 @@ from issue_register.register import (
     load_register,
 )
 from issue_register.render import render_register
-from issue_register.sync import LEAD_ENV, LEDGER_ENV, ledger_statuses, tool_issue_hashes, triage
+from issue_register.sync import (
+    BRIEF_FILE,
+    LEAD_ENV,
+    LEDGER_ENV,
+    TOOL_ISSUES_FILE,
+    TRACKED_LEAD_FILES,
+    LeadHashes,
+    lead_hashes,
+    ledger_statuses,
+    read_ledger,
+    tool_issue_hashes,
+    triage,
+)
 
 MAP = """\
 reference_commit: abc1234
@@ -89,6 +103,24 @@ Private text that must never reach the register.
 More private text.
 """
 
+BRIEF = """\
+# Brief: private title
+
+1. **A first item.** Private text.
+   - a private sub-point.
+
+4b. **A lettered item.** Private text.
+
+    An indented private paragraph of item 4b.
+
+Out of scope: a private paragraph outside every item.
+
+## Deliverable
+- a private list outside every item.
+"""
+
+BRIEF_ITEM = "test-project brief architect-prompt-tool-issues item"
+
 
 def _repo(tmp_path: Path, register: str = REGISTER) -> Path:
     files = {
@@ -119,6 +151,7 @@ def test_a_valid_register_loads_and_counts_every_bead_once(tmp_path: Path) -> No
     register = load_register(_repo(tmp_path))
     assert register.bead_references() == ["benchhand-aaa", "benchhand-bbb"]
     assert register.cited_tool_issues() == {"1"}
+    assert register.cited_brief_items() == set()
 
 
 @pytest.mark.parametrize(
@@ -136,6 +169,11 @@ def test_a_valid_register_loads_and_counts_every_bead_once(tmp_path: Path) -> No
             "{'1': 0123456789abcdef}",
             "{'1': 0123456789abcdef, '7': 0123456789abcdef}",
             "tool-issues #7: no issue",
+        ),
+        (
+            "  tool_issue_hashes: {'1': 0123456789abcdef}\n",
+            "  tool_issue_hashes: {'1': 0123456789abcdef}\n  brief_item_hashes: {'4b': 0123456789abcdef}\n",
+            "architect-prompt-tool-issues item 4b: no issue cites it",
         ),
     ],
 )
@@ -257,33 +295,134 @@ def test_each_issue_hash_covers_its_headings_and_bodies_and_carries_no_text() ->
     assert (follow_up["1"] != hashes["1"], follow_up["2"]) == (True, hashes["2"])
 
 
+def test_each_issue_hash_is_the_one_older_snapshots_recorded() -> None:
+    """Tracking more lead files leaves the per-issue hashes as they were, so an old snapshot still matches."""
+    section = "## 1 (open, 2026-11-26): a check passes with no limit\nPrivate text that must never reach the register."
+    assert tool_issue_hashes(LOG)["1"] == hashlib.sha256(section.encode("utf-8")).hexdigest()[:16]
+
+
+def test_each_brief_item_hash_covers_its_indented_lines_and_the_file_hash_covers_the_rest() -> None:
+    hashes = lead_hashes({TOOL_ISSUES_FILE: LOG, BRIEF_FILE: BRIEF})
+    assert list(hashes.brief_items) == ["1", "4b"]
+    assert list(hashes.files) == [TOOL_ISSUES_FILE, BRIEF_FILE]
+    every = [*hashes.tool_issues.values(), *hashes.brief_items.values(), *hashes.files.values()]
+    assert all(len(value) == 16 and value not in BRIEF + LOG for value in every)
+    item = lead_hashes({TOOL_ISSUES_FILE: LOG, BRIEF_FILE: BRIEF.replace("An indented", "A changed")})
+    assert (item.brief_items["1"], item.brief_items["4b"] != hashes.brief_items["4b"]) == (
+        hashes.brief_items["1"],
+        True,
+    )
+    assert item.files == hashes.files
+    frame = lead_hashes(
+        {TOOL_ISSUES_FILE: LOG, BRIEF_FILE: BRIEF.replace("Out of scope", "Also out of scope")}
+    )
+    assert (frame.brief_items, frame.files[BRIEF_FILE] != hashes.files[BRIEF_FILE]) == (
+        hashes.brief_items,
+        True,
+    )
+    title = lead_hashes({TOOL_ISSUES_FILE: LOG.replace("# Tool issues", "# The log"), BRIEF_FILE: BRIEF})
+    assert (title.tool_issues, title.files[TOOL_ISSUES_FILE] != hashes.files[TOOL_ISSUES_FILE]) == (
+        hashes.tool_issues,
+        True,
+    )
+
+
+def test_a_file_that_is_not_tracked_is_not_hashed() -> None:
+    assert list(lead_hashes({TOOL_ISSUES_FILE: LOG, "unit-brief.md": "Project work."}).files) == [
+        TOOL_ISSUES_FILE
+    ]
+
+
 def test_triage_reports_new_changed_and_vanished_beads_and_issues(tmp_path: Path) -> None:
     register = load_register(_repo(tmp_path))
     ledger = ledger_statuses(
         [{"id": "benchhand-aaa", "status": "closed"}, {"id": "benchhand-ccc", "status": "open"}]
     )
-    hashes = {"1": "fedcba9876543210", "2": "0123456789abcdef"}
-    found = triage(register, ledger, hashes)
+    files = dict.fromkeys(TRACKED_LEAD_FILES, "0123456789abcdef")
+    lead = LeadHashes({"1": "fedcba9876543210", "2": "0123456789abcdef"}, {}, files)
+    found = triage(register, ledger, lead)
     assert found.lines() == [
         "benchhand-ccc (open): not in the register",
         "benchhand-aaa: open -> closed since the snapshot",
         "benchhand-bbb: in the register, not in the ledger",
         "test-project tool-issues #2: new",
         "test-project tool-issues #1: its text changed",
+        *(f"test-project lead file {name}: new" for name in TRACKED_LEAD_FILES),
     ]
+
+
+def test_triage_reports_brief_items_and_lead_files_and_a_tracked_file_gone_missing(tmp_path: Path) -> None:
+    snapshot = (
+        "  brief_item_hashes: {'1': 0123456789abcdef, '2': 0123456789abcdef}\n"
+        f"  lead_file_hashes: {{{TOOL_ISSUES_FILE}: 0123456789abcdef, {BRIEF_FILE}: 0123456789abcdef}}\n"
+    )
+    cited = f"sources: [findings 1.2, '{BRIEF_ITEM} 1', '{BRIEF_ITEM} 2']"
+    register = load_register(_repo(tmp_path, (REGISTER + snapshot).replace("sources: [findings 1.2]", cited)))
+    files = {
+        TOOL_ISSUES_FILE: "0123456789abcdef",
+        BRIEF_FILE: "fedcba9876543210",
+        TRACKED_LEAD_FILES[2]: "0" * 16,
+    }
+    lead = LeadHashes({"1": "0123456789abcdef"}, {"1": "fedcba9876543210", "4b": "0" * 16}, files)
+    found = triage(register, {"benchhand-aaa": "open", "benchhand-bbb": "closed"}, lead)
+    assert found.lines() == [
+        f"{BRIEF_ITEM} 4b: new",
+        f"{BRIEF_ITEM} 1: its text changed",
+        f"{BRIEF_ITEM} 2: no longer in the brief",
+        f"test-project lead file {TRACKED_LEAD_FILES[2]}: new",
+        f"test-project lead file {BRIEF_FILE}: its text changed",
+        *(
+            f"test-project lead file {name}: tracked, but not in the lead folder"
+            for name in TRACKED_LEAD_FILES[3:]
+        ),
+    ]
+
+
+def test_the_ledger_is_read_from_its_folder_even_when_the_environment_names_another(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    seen: dict[str, object] = {}
+
+    def run(command: list[str], **options: object) -> subprocess.CompletedProcess[str]:
+        seen.update(options)
+        return subprocess.CompletedProcess(command, 0, stdout='[{"id": "benchhand-aaa", "status": "open"}]')
+
+    monkeypatch.setenv("BEADS_DIR", str(tmp_path / "other" / ".beads"))
+    monkeypatch.setattr(subprocess, "run", run)
+    assert read_ledger(tmp_path) == {"benchhand-aaa": "open"}
+    assert seen["cwd"] == tmp_path
+    assert "BEADS_DIR" not in seen["env"]  # type: ignore[operator]
 
 
 FIRST_ISSUE = LOG.split("## 2")[0]
 LEDGER = {"benchhand-aaa": "open", "benchhand-bbb": "closed"}
+LEAD_TEXTS = {
+    **{name: f"# Private notes in {name}\n" for name in TRACKED_LEAD_FILES},
+    TOOL_ISSUES_FILE: FIRST_ISSUE,
+    BRIEF_FILE: BRIEF,
+}
+OLD_SNAPSHOT = "  tool_issue_hashes: {'1': 0123456789abcdef}\n"
+CITES_THE_BRIEF = f"sources: ['test-project tool-issues #1', '{BRIEF_ITEM} 1', '{BRIEF_ITEM} 4b']"
 
 
-def _in_sync(tmp_path: Path) -> tuple[Path, Path]:
-    """A repository whose snapshot matches LEDGER and a lead folder whose log holds issue 1 only."""
-    snapshot_hash = tool_issue_hashes(FIRST_ISSUE)["1"]
-    root = _repo(tmp_path / "repo", REGISTER.replace("0123456789abcdef", snapshot_hash))
+def _in_sync(tmp_path: Path, *, old_snapshot: bool = False) -> tuple[Path, Path]:
+    """A repository whose snapshot matches LEDGER and a lead folder holding every tracked file.
+
+    ``old_snapshot`` keeps the snapshot format from before brief items and lead files were tracked.
+    """
+    hashes = lead_hashes(LEAD_TEXTS)
+    snapshot = {"tool_issue_hashes": hashes.tool_issues}
+    if not old_snapshot:
+        snapshot |= {"brief_item_hashes": hashes.brief_items, "lead_file_hashes": hashes.files}
+    block = textwrap.indent(yaml.safe_dump(snapshot, sort_keys=False, width=200), "  ")
+    register = REGISTER.replace(OLD_SNAPSHOT, block).replace(
+        "sources: ['test-project tool-issues #1']", CITES_THE_BRIEF
+    )
+    root = _repo(tmp_path / "repo", register)
     lead = tmp_path / "lead"
     lead.mkdir()
-    (lead / "tool-issues.md").write_text(FIRST_ISSUE, encoding="utf-8")
+    for name, text in {**LEAD_TEXTS, "unit-brief.md": "Project work, not tracked.\n"}.items():
+        (lead / name).write_text(text, encoding="utf-8")
     return root, lead
 
 
@@ -368,8 +507,49 @@ def test_updating_the_snapshot_writes_statuses_and_hashes_only(
     snapshot = yaml.safe_load(after)["ledger_snapshot"]
     assert snapshot["statuses"] == {"benchhand-aaa": "closed", "benchhand-bbb": "closed"}
     assert snapshot["tool_issue_hashes"] == tool_issue_hashes(FIRST_ISSUE)
-    assert "Private text" not in after
+    assert snapshot["brief_item_hashes"] == lead_hashes(LEAD_TEXTS).brief_items
+    assert list(snapshot["lead_file_hashes"]) == list(TRACKED_LEAD_FILES)
+    assert "Private" not in after
     assert "passes with no limit" not in textwrap.dedent(after[after.index("ledger_snapshot:") :])
+
+
+def test_a_snapshot_from_before_lead_files_were_tracked_reports_them_new_until_acknowledged(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    root, lead = _in_sync(tmp_path, old_snapshot=True)
+    assert _sync(monkeypatch, (root, lead), LEDGER) == 1
+    out = capsys.readouterr().out
+    assert f"{BRIEF_ITEM} 1: new" in out
+    assert f"{BRIEF_ITEM} 4b: new" in out
+    assert all(f"lead file {name}: new" in out for name in TRACKED_LEAD_FILES)
+    assert "tool-issues #1" not in out
+    assert "unit-brief.md" not in out
+    assert _sync(monkeypatch, (root, lead), LEDGER, update=True, acknowledge=True) == 0
+    assert _sync(monkeypatch, (root, lead), LEDGER) == 0
+
+
+def test_a_changed_brief_item_and_a_missing_tracked_file_need_triage(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    root, lead = _in_sync(tmp_path)
+    (lead / BRIEF_FILE).write_text(BRIEF.replace("A first item", "A reworded item"), encoding="utf-8")
+    assert _sync(monkeypatch, (root, lead), LEDGER, update=True, acknowledge=True) == 0
+    assert f"{BRIEF_ITEM} 1: its text changed" in capsys.readouterr().out
+    (lead / TRACKED_LEAD_FILES[-1]).unlink()
+    assert _sync(monkeypatch, (root, lead), LEDGER, update=True, acknowledge=True) == 1
+    assert f"{TRACKED_LEAD_FILES[-1]}: tracked, but not in the lead folder" in capsys.readouterr().out
+    assert _sync(monkeypatch, (root, lead), LEDGER) == 1
+
+
+def test_an_uncited_brief_item_keeps_the_snapshot_from_being_written(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    root, lead = _in_sync(tmp_path)
+    (lead / BRIEF_FILE).write_text(BRIEF + "\n7. **A new item.** Text.\n", encoding="utf-8")
+    before = (root / REGISTER_FILE).read_text(encoding="utf-8")
+    with pytest.raises(RegisterError, match="architect-prompt-tool-issues item 7: no issue cites it"):
+        _sync(monkeypatch, (root, lead), LEDGER, update=True, acknowledge=True)
+    assert (root / REGISTER_FILE).read_text(encoding="utf-8") == before
 
 
 def test_a_snapshot_that_fails_the_checks_is_never_written(

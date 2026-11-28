@@ -116,7 +116,10 @@ def render_register(register: Register) -> str:
         "project, the product test's report and the ledger are private.",
         "",
         f"The register follows the prototype at `{register.data['reference_commit'][:7]}`. The ledger "
-        f"snapshot is from {register.snapshot['date']}; `just issues-sync` reports what changed since.",
+        f"snapshot is from {register.snapshot['date']}; `just issues-sync` reports what changed since, in the "
+        "ledger and in the test project's tracked lead files: each logged tool issue, each numbered item of the "
+        "owner's tool-issues brief, and the side briefs and gate reports. Every tool issue and brief item is "
+        "cited by at least one entry.",
         "",
         "## Issues",
         "",
