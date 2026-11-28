@@ -1,0 +1,143 @@
+# SPDX-FileCopyrightText: 2026 Sjors Robroek
+#
+# SPDX-License-Identifier: MPL-2.0
+
+# The private files `just issues-sync` compares with the issue register:
+# the one list of them.
+#
+# Each entry is a glob relative to a root, never an absolute path:
+#   lead       the test project's lead folder (`--lead` or
+#              BENCHHAND_TEST_PROJECT_LEAD); its parent folders hold the
+#              project's studies and its record
+#   challenge  the prototype challenge's handover folder (`--challenge`
+#              or BENCHHAND_CHALLENGE_DIR)
+# split: how each matched file is cut into sections, each hashed on its
+# own, so the report names the section:
+#   issues     one section per `## <number>` issue (cited as
+#              `test-project tool-issues #N`), the rest by heading
+#   items      one section per numbered item at the margin (cited as
+#              `test-project brief architect-prompt-tool-issues item N`),
+#              the rest by heading
+#   headings   one section per Markdown heading, and one for any text
+#              above the first heading
+# optional: true for a glob that may match nothing yet; a required glob
+# that matches nothing is reported.
+# what: what the files are.
+#
+# The lead folder's other files (unit briefs of finished work, scratch
+# scripts and their output) are project work and stay untracked. Study
+# results and project decisions are test-project data: only the generic
+# tool lessons they carry enter the register.
+
+sources:
+  - root: lead
+    glob: HANDOVER.md
+    split: headings
+    what: the lead's index of project state, checks, final-gate
+      blockers, decisions and next steps
+  - root: lead
+    glob: tool-issues.md
+    split: issues
+    what: the tool-issue log, a section per issue and per status update
+  - root: lead
+    glob: architect-prompt-tool-issues.md
+    split: items
+    what: the owner's brief on every logged tool issue, as numbered items
+  - root: lead
+    glob: architect-prompt-reference-geometry.md
+    split: headings
+    what: side brief on customer-furnished reference geometry (current)
+  - root: lead
+    glob: architect-prompt-inclined-bores.md
+    split: headings
+    what: side brief on drawing features off the frame axes (current)
+  - root: lead
+    glob: architect-prompt-cad-libraries.md
+    split: headings
+    what: side brief on geometry libraries and external tools (current)
+  - root: lead
+    glob: architect-prompt-access.md
+    split: headings
+    what: older side brief on the access check's tools, paths and
+      scenes (2026-11-25)
+  - root: lead
+    glob: architect-prompt-gitignore.md
+    split: headings
+    what: older side brief on a per-project ignore file for
+      snapshots (2026-11-25)
+  - root: lead
+    glob: agent-prompt-drawing-fix.md
+    split: headings
+    what: older upstream fix brief for three drawing defects, with
+      causes and tests (2026-11-25)
+  - root: lead
+    glob: gate-v1[0-9]-blockers.md
+    split: headings
+    what: gate reports listing the blockers of one version, by obligation
+  - root: lead
+    glob: brief-detail-layout3.md
+    split: headings
+    what: a detail-rework brief to two parallel work units, with the
+      scratch-build and id-range rules they ran under
+  - root: lead
+    glob: cradle-r2-free-lengths.md
+    split: headings
+    what: a work unit's calculated free lengths, copied so a
+      decision can cite a file
+  - root: lead
+    glob: ../study-rocking/notes2.md
+    split: headings
+    what: a layout study's working notes
+  - root: lead
+    glob: ../study-rocking/layouts.md
+    split: headings
+    what: the same study's candidate layouts
+  - root: lead
+    glob: ../study-rocking/summary.md
+    split: headings
+    what: the same study's summary
+  - root: lead
+    glob: ../study-rocking/progress.md
+    split: headings
+    what: the same study's progress log, with the tools it had to write
+  - root: lead
+    glob: ../study-clamp-concepts/scoring.md
+    split: headings
+    what: a concept study's scoring of candidate concepts
+  - root: lead
+    glob: ../study-clamp-concepts/progress.md
+    split: headings
+    what: the same study's progress log
+  - root: lead
+    glob: ../../hw/decisions/DR-049-*.md
+    split: headings
+    what: the project's decision records from the detail rework on
+  - root: lead
+    glob: ../../hw/decisions/DR-0[5-9][0-9]-*.md
+    split: headings
+    what: the project's later decision records
+  - root: lead
+    glob: ../../hw/decisions/DR-[1-9][0-9][0-9]-*.md
+    split: headings
+    what: the project's decision records from DR-100 on
+    optional: true
+  - root: challenge
+    glob: handoff-migration.md
+    split: headings
+    what: the prototype challenge's migration handoff (cited as `handoff §x`)
+  - root: challenge
+    glob: findings-2026-11-26.md
+    split: headings
+    what: the challenge's findings (cited as `findings <area.number>`)
+  - root: challenge
+    glob: bead-map.md
+    split: headings
+    what: the map from the challenge's findings to prototype beads
+  - root: challenge
+    glob: design-*.md
+    split: headings
+    what: the challenge's design notes (cited as `design <name> <section>`)
+  - root: challenge
+    glob: owner-direction-*.md
+    split: headings
+    what: the owner's directions to the challenge, one file each

@@ -220,11 +220,23 @@
           "propertyNames": { "pattern": "^[0-9]+[a-z]?$" },
           "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
         },
-        "lead_file_hashes": {
-          "description": "Per tracked test-project lead file, a SHA-256 prefix of its text outside the issues or items hashed on their own. Absent in a snapshot written before lead files were tracked, so every file reads as new.",
+        "source_hashes": {
+          "description": "Per tracked file, keyed by a SHA-256 prefix of its `root:path` label so no private name is written: the hash of its whole text, and of each heading section that is neither a tool issue nor a brief item, keyed by a SHA-256 prefix of its title. Absent in a snapshot written before files were tracked this way, so every file reads as new.",
           "type": "object",
-          "propertyNames": { "pattern": "^[a-z0-9-]+\\.md$" },
-          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+          "propertyNames": { "pattern": "^[0-9a-f]{16}$" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "sections"],
+            "properties": {
+              "file": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+              "sections": {
+                "type": "object",
+                "propertyNames": { "pattern": "^[0-9a-f]{16}$" },
+                "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+              }
+            }
+          }
         }
       }
     }

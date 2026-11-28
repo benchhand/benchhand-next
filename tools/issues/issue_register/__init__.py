@@ -8,5 +8,6 @@
 the prototype's lead sessions, and every bead in the prototype's ledger, with how benchhand-next addresses
 it. ``python -m issue_register check`` validates it against ``tools/issues/issue-register.schema.json`` and
 the reference map; ``--write`` regenerates ``docs/migration/issue-register.md``. ``python -m issue_register
-sync`` compares it with the live ledger and the test project's tracked lead files; it runs locally only.
+sync`` compares it with the live ledger and the private files listed in ``tools/issues/tracked-sources.yaml``;
+it runs locally only.
 """

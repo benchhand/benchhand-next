@@ -6,7 +6,7 @@
 # `just issues` checks this file against tools/issues/issue-register.schema.json
 # and the reference map, and writes docs/migration/issue-register.md from it
 # (`--write`). `just issues-sync` (local only) compares it with the live ledger
-# and the test project's tool-issues log.
+# and the private files listed in tools/issues/tracked-sources.yaml.
 #
 # This repository is public; the test project and the ledger are not. Every
 # entry describes the tool's behaviour in generic terms and cites its source
