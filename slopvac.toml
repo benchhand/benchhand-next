@@ -52,8 +52,9 @@ max_errors = 0
 min_score = 0
 
 # Until the 1.0 user docs exist, every document here is for developers, and citing ADRs is its job.
+# Spec Kit specs in specs/ are internal specifications, which cite ADRs and rules too.
 [[overrides]]
-files = ["docs/**", "README.md", "AGENTS.md", "tools/**/README.md"]
+files = ["docs/**", "specs/**", "README.md", "AGENTS.md", "tools/**/README.md"]
 
 [overrides.rules]
 "docs-discipline.internal-refs" = "off"
