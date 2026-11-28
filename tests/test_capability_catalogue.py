@@ -105,11 +105,11 @@ def _catalogue() -> dict[str, Any]:
                 "name": "record migrate",
                 "capability": "jobs",
                 "status": "built",
-                "evidence": ["packages/benchhand/src/benchhand/cli.py:34"],
+                "evidence": ["packages/benchhand/src/benchhand/cli.py:43"],
                 "phase": 1,
                 "access": "write",
                 "role": "admin",
-                "source": {"kind": "code", "ref": "packages/benchhand/src/benchhand/cli.py:33"},
+                "source": {"kind": "code", "ref": "packages/benchhand/src/benchhand/cli.py:42"},
             }
         ],
         "prototype_commands": [

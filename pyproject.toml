@@ -94,8 +94,9 @@ exclude = [
   "*/tools/probe/*",
 ]
 ignore_decorators = [
-  "@pytest.fixture", # called by pytest
-  "@record.command", # a typer command (packages/benchhand/src/benchhand/cli.py)
+  "@pytest.fixture",  # called by pytest
+  "@record.command",  # a typer command (packages/benchhand/src/benchhand/cli.py)
+  "@record.callback", # a typer group callback (packages/benchhand/src/benchhand/cli.py)
 ]
 ignore_names = [
   "model_config",       # read by pydantic

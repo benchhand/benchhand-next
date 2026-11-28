@@ -54,7 +54,7 @@ open_questions:
       - source: docs/adr/0001-mcp-only-interface.md:11
         says: ADR-0001 lists mcp, serve, install, doctor, setup, policy
           and debug call, without rules compile (ADR-0020 adds it).
-      - source: packages/benchhand/src/benchhand/cli.py:15
+      - source: packages/benchhand/src/benchhand/cli.py:17
         says: main has version and record migrate, and neither list
           names them.
   - id: record-migrate-tool
@@ -505,7 +505,7 @@ capabilities:
     scope: baseline
     evidence:
       - packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674
-      - packages/benchhand/src/benchhand/cli.py:34
+      - packages/benchhand/src/benchhand/cli.py:43
     owner:
       - packages/benchhand-core
       - packages/benchhand
@@ -1388,7 +1388,7 @@ capabilities:
     status: partial
     scope: baseline
     evidence:
-      - packages/benchhand/src/benchhand/cli.py:15
+      - packages/benchhand/src/benchhand/cli.py:17
     note: Only version and record migrate are on main; the plan's
       subcommands arrive in Phases 3 to 6.
     owner:
@@ -4741,20 +4741,20 @@ cli:
     capability: cli-app
     status: built
     evidence:
-      - packages/benchhand/src/benchhand/cli.py:26
+      - packages/benchhand/src/benchhand/cli.py:28
     phase: 1
     access: read
     role: admin
     source:
       kind: code
-      ref: packages/benchhand/src/benchhand/cli.py:26
+      ref: packages/benchhand/src/benchhand/cli.py:28
     open_questions:
       - cli-command-list
   - name: record migrate
     capability: record-migrate
     status: built
     evidence:
-      - packages/benchhand/src/benchhand/cli.py:34
+      - packages/benchhand/src/benchhand/cli.py:43
     phase: 1
     mcp:
       - record.migrate
@@ -4762,7 +4762,7 @@ cli:
     role: admin
     source:
       kind: code
-      ref: packages/benchhand/src/benchhand/cli.py:33
+      ref: packages/benchhand/src/benchhand/cli.py:42
     open_questions:
       - cli-command-list
       - record-migrate-tool

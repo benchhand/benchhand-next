@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Annotated
 
 import typer
 
+from benchhand.flags import FLAGS_FILE, RECORD_MIGRATION, FlagDecisions, decide, file_provider
+
 if TYPE_CHECKING:
     from benchhand_core.record.migrate import Migration
 
@@ -30,8 +32,16 @@ def version() -> None:
     typer.echo(v("benchhand"))
 
 
+@record.callback()
+def record_group(ctx: typer.Context) -> None:
+    """Work on a project's hw/ record."""
+    if not isinstance(ctx.obj, FlagDecisions):
+        ctx.obj = decide(file_provider())
+
+
 @record.command("migrate")
 def record_migrate(
+    ctx: typer.Context,
     hw: Annotated[Path | None, typer.Argument(help="The project's hw/ directory.")] = None,
     apply: Annotated[bool, typer.Option("--apply", help="Write the changes; else print them.")] = False,
     resume: Annotated[
@@ -42,9 +52,14 @@ def record_migrate(
         typer.Option("--undo", help="Put back the files an apply changed, from BACKUP.", metavar="BACKUP"),
     ] = None,
 ) -> None:
-    """Migrate a prototype record (record_version 2) to record version 3. A dry run unless --apply, which
-    first backs up the files it changes to .benchhand/migrate-backups/. Stop every other process that writes
-    under hw/ first."""
+    """Experimental, not offered in this release: migrate a prototype record (record_version 2) to record
+    version 3. Off unless the record-migration feature flag is on.
+
+    A dry run unless --apply, which first backs up the files it changes to .benchhand/migrate-backups/. Stop
+    every other process that writes under hw/ first."""
+    decisions = ctx.find_object(FlagDecisions)
+    if decisions is None or not decisions.record_migration:
+        _refuse_disabled()
     from benchhand_core.record.migrate import migrate
     from benchhand_core.record.migrate import undo as undo_migration
 
@@ -59,6 +74,18 @@ def record_migrate(
         raise typer.Exit(2)
     result = migrate(hw.absolute().parent, apply=apply, resume=resume)
     _print_migration(result, diffs=not apply, undoing=False)
+
+
+def _refuse_disabled() -> None:
+    """Print the feature.disabled finding for record migrate and exit 1, as for any refusal."""
+    typer.echo(
+        f"error feature.disabled {RECORD_MIGRATION.key}: benchhand record migrate is not offered in this "
+        "release; nothing was changed"
+    )
+    typer.echo(
+        f'  fix: to try it anyway, set flags.{RECORD_MIGRATION.key}.defaultVariant to "on" in {FLAGS_FILE}'
+    )
+    raise typer.Exit(1)
 
 
 def _print_migration(result: "Migration", *, diffs: bool, undoing: bool) -> None:

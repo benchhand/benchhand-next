@@ -614,8 +614,8 @@ ADR-0018 makes a tool the baseline for readable content: each resource, prompt a
 
 | Command | Capability | Status | Phase | MCP equivalent | Access | Role | Source |
 |---|---|---|---|---|---|---|---|
-| `benchhand version` | [cli-app](#cli-app) | built | P1 | – | read | admin | code: `packages/benchhand/src/benchhand/cli.py:26` |
-| `benchhand record migrate` | [record-migrate](#record-migrate) | built | P1 | `record.migrate` | write | admin | code: `packages/benchhand/src/benchhand/cli.py:33` |
+| `benchhand version` | [cli-app](#cli-app) | built | P1 | – | read | admin | code: `packages/benchhand/src/benchhand/cli.py:28` |
+| `benchhand record migrate` | [record-migrate](#record-migrate) | built | P1 | `record.migrate` | write | admin | code: `packages/benchhand/src/benchhand/cli.py:42` |
 | `benchhand mcp` | [mcp-server](#mcp-server) | planned | P3 | – | write | launcher | plan: `docs/design-plan.md:246` |
 | `benchhand mcp --http` | [mcp-server](#mcp-server) | planned | P3 | – | write | launcher | plan: `docs/design-plan.md:246` |
 | `benchhand mcp --container` | [container-launcher](#container-launcher) | planned | no phase | – | write | launcher | plan: `docs/design-plan.md:10` |
@@ -1065,7 +1065,7 @@ Which subcommands does the CLI have? The lists differ, and `main` has two comman
 - Pointers: `docs/design-plan.md:9`, `docs/adr/0001-mcp-only-interface.md:11`, `docs/architecture/layers.md:157`
 - `docs/design-plan.md:9`: D1 lists mcp, serve, install, doctor, setup, policy, rules compile and debug call.
 - `docs/adr/0001-mcp-only-interface.md:11`: ADR-0001 lists mcp, serve, install, doctor, setup, policy and debug call, without rules compile (ADR-0020 adds it).
-- `packages/benchhand/src/benchhand/cli.py:15`: main has version and record migrate, and neither list names them.
+- `packages/benchhand/src/benchhand/cli.py:17`: main has version and record migrate, and neither list names them.
 - Blocking: yes. Owner: project-owner. Decision needed: The CLI subcommand list, reconciling D1, ADR-0001 and the version and record migrate commands on main, before the cli-app spec.
 - Cited by: [record-migrate](#record-migrate), [mcp-server](#mcp-server), [cli-app](#cli-app), `benchhand version`, `benchhand record migrate`, `benchhand rules compile`
 
@@ -1349,7 +1349,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: `benchhand record migrate`
 - Depends on: [record-store](#record-store), [record-validate](#record-validate)
 - ADRs: ADR-0015, ADR-0017
-- Evidence: `packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674`, `packages/benchhand/src/benchhand/cli.py:34`
+- Evidence: `packages/benchhand-core/src/benchhand_core/record/migrate/service.py:674`, `packages/benchhand/src/benchhand/cli.py:43`
 - Open questions: [record-migrate-tool](#record-migrate-tool), [cli-command-list](#cli-command-list)
 
 ### evidence-assessment
@@ -1774,7 +1774,7 @@ Settled questions whose old wording is still in a page. The fix belongs in that 
 - CLI: `benchhand version`
 - Depends on: [record-migrate](#record-migrate)
 - ADRs: ADR-0001
-- Evidence: `packages/benchhand/src/benchhand/cli.py:15`
+- Evidence: `packages/benchhand/src/benchhand/cli.py:17`
 - Note: Only version and record migrate are on main; the plan's subcommands arrive in Phases 3 to 6.
 - Open questions: [cli-command-list](#cli-command-list), [read-only-cli](#read-only-cli)
 
