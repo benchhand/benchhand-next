@@ -88,13 +88,13 @@
               "path": "hw/product.yaml",
               "pointer": "/record_version",
               "message": "record_version 2 is not supported; this release reads record_version 3",
-              "action": "Migrate the record; nothing was changed."
+              "action": "Use the benchhand release that wrote this record; nothing was changed."
             }
           ],
           "next_actions": [
             {
-              "tool": "record.migrate",
-              "reason": "the record is at version 2",
+              "tool": "project.open",
+              "reason": "open a project whose record is at version 3",
               "needs_user": true
             }
           ]
@@ -383,13 +383,13 @@
                 "path": "hw/product.yaml",
                 "pointer": "/record_version",
                 "message": "record_version 2 is not supported; this release reads record_version 3",
-                "action": "Migrate the record; nothing was changed."
+                "action": "Use the benchhand release that wrote this record; nothing was changed."
               }
             ],
             "next_actions": [
               {
-                "tool": "record.migrate",
-                "reason": "the record is at version 2",
+                "tool": "project.open",
+                "reason": "open a project whose record is at version 3",
                 "needs_user": true
               }
             ]
@@ -408,13 +408,13 @@
                 "path": "hw/product.yaml",
                 "pointer": "/record_version",
                 "message": "record_version 2 is not supported; this release reads record_version 3",
-                "action": "Migrate the record; nothing was changed."
+                "action": "Use the benchhand release that wrote this record; nothing was changed."
               }
             ],
             "next_actions": [
               {
-                "tool": "record.migrate",
-                "reason": "the record is at version 2",
+                "tool": "project.open",
+                "reason": "open a project whose record is at version 3",
                 "needs_user": true
               }
             ],
@@ -434,13 +434,13 @@
                 "path": "hw/product.yaml",
                 "pointer": "/record_version",
                 "message": "record_version 2 is not supported; this release reads record_version 3",
-                "action": "Migrate the record; nothing was changed."
+                "action": "Use the benchhand release that wrote this record; nothing was changed."
               }
             ],
             "next_actions": [
               {
-                "tool": "record.migrate",
-                "reason": "the record is at version 2",
+                "tool": "project.open",
+                "reason": "open a project whose record is at version 3",
                 "needs_user": true
               }
             ]

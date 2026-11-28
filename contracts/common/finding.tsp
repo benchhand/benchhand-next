@@ -50,7 +50,7 @@ model Finding {
     path: "hw/product.yaml",
     pointer: "/record_version",
     message: "record_version 2 is not supported; this release reads record_version 3",
-    action: "Migrate the record; nothing was changed.",
+    action: "Use the benchhand release that wrote this record; nothing was changed.",
   }
 );
 @@example(
